@@ -1,0 +1,257 @@
+import { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Play, Pause, CheckCircle, Clock } from 'lucide-react';
+import { useReading } from '@/contexts/ReadingContext';
+import useAudioRecording from '@/hooks/useAudioRecording';
+import { submitReadingRecording } from '@/lib/azure';
+import { useToast } from '@/hooks/use-toast';
+
+const ReadingControls = () => {
+  const { 
+    isReading, 
+    isPaused, 
+    currentContent, 
+    currentSession,
+    startReading, 
+    pauseReading, 
+    resumeReading, 
+    stopReading,
+    setHighlightedText,
+    setPronunciationResults,
+    updateSessionProgress
+  } = useReading();
+  
+  const { toast } = useToast();
+  const [pronunciationScore, setPronunciationScore] = useState(0);
+  const [fluencyScore, setFluencyScore] = useState(0);
+  const [wordsRead, setWordsRead] = useState(0);
+  
+  // Set up audio recording
+  const { 
+    isRecording, 
+    startRecording, 
+    stopRecording,
+    audioUrl,
+    recordingDuration
+  } = useAudioRecording({
+    onRecordingComplete: async (blob) => {
+      if (currentContent) {
+        try {
+          // Get the current highlighted text for assessment
+          const recordedText = currentHighlightedText || 'Test recording';
+          
+          // Send recording for assessment
+          const results = await submitReadingRecording(
+            blob, 
+            currentContent.id, 
+            recordedText
+          );
+          
+          // Update scores
+          setPronunciationScore(results.pronunciationScore);
+          setFluencyScore(results.fluencyScore);
+          
+          // Update words read
+          const newWordsRead = Math.min(
+            (currentContent?.wordCount || 0),
+            wordsRead + (recordedText.split(/\s+/).length || 0)
+          );
+          setWordsRead(newWordsRead);
+          updateSessionProgress(newWordsRead);
+          
+          // Store pronunciation results
+          setPronunciationResults(results);
+          
+          toast({
+            title: "Reading Processed",
+            description: "Your reading has been analyzed",
+          });
+        } catch (error) {
+          console.error("Error processing reading:", error);
+          toast({
+            title: "Processing Error",
+            description: "Could not process your reading",
+            variant: "destructive",
+          });
+        }
+      }
+    }
+  });
+  
+  // Current text being read
+  const [currentHighlightedText, setCurrentHighlightedText] = useState('');
+  
+  // Simulate reading progress for demo purposes
+  useEffect(() => {
+    let timeoutId: number;
+    
+    if (isReading && !isPaused && currentContent) {
+      // Get the sample text to be read
+      const sampleTexts = [
+        "Container gardening is a great way to grow plants when you have limited space.",
+        "You can put containers on patios, balconies, or even windowsills.",
+        "This makes gardening possible for people who live in apartments or have small yards."
+      ];
+      
+      // Cycle through different text segments
+      const currentIndex = wordsRead % sampleTexts.length;
+      const nextText = sampleTexts[currentIndex];
+      
+      setCurrentHighlightedText(nextText);
+      setHighlightedText(nextText);
+      
+      // Start recording for this segment
+      startRecording();
+      
+      // After a few seconds, stop recording and move to next segment
+      timeoutId = window.setTimeout(() => {
+        stopRecording();
+      }, 5000);
+    }
+    
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [isReading, isPaused, wordsRead, currentContent, startRecording, stopRecording, setHighlightedText]);
+  
+  const handleStartReading = () => {
+    if (isReading) {
+      stopReading();
+    } else {
+      setWordsRead(0);
+      setPronunciationScore(0);
+      setFluencyScore(0);
+      startReading();
+    }
+  };
+  
+  const handlePauseResume = () => {
+    if (isPaused) {
+      resumeReading();
+    } else {
+      pauseReading();
+    }
+  };
+  
+  if (!currentContent) return null;
+  
+  return (
+    <Card className="mb-6">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Reading Practice</h2>
+          <div className={`flex items-center ${
+            isReading ? 'text-accent' : 'text-success'
+          }`}>
+            {isReading ? (
+              <>
+                <Clock className="w-5 h-5 mr-1" />
+                <span>Reading in progress</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-5 h-5 mr-1" />
+                <span>Ready to start</span>
+              </>
+            )}
+          </div>
+        </div>
+        
+        <div className="flex flex-col md:flex-row gap-4 items-center md:items-start mb-6">
+          <div className="flex-1 w-full">
+            <div className="bg-secondary bg-opacity-30 rounded-lg p-4 mb-4">
+              <p className="font-medium mb-2">Instructions:</p>
+              <p className="text-textColor">
+                Click 'Start Reading' and read the highlighted text aloud. 
+                I'll listen and help you improve your pronunciation.
+              </p>
+            </div>
+            
+            <div className="flex gap-3">
+              <Button
+                onClick={handleStartReading}
+                className={`flex-1 font-medium ${
+                  isReading ? 'bg-red-500 hover:bg-red-600' : 'bg-primary'
+                }`}
+                size="lg"
+              >
+                {isReading ? (
+                  <>
+                    <span className="w-5 h-5 mr-2">□</span>
+                    Stop Reading
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-5 h-5 mr-2" />
+                    Start Reading
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={handlePauseResume}
+                variant="outline"
+                className="flex-1 font-medium"
+                size="lg"
+                disabled={!isReading}
+              >
+                <Pause className="w-5 h-5 mr-2" />
+                {isPaused ? 'Resume' : 'Pause'}
+              </Button>
+            </div>
+          </div>
+          
+          <div className="w-full md:w-72 bg-secondary bg-opacity-20 rounded-lg p-4">
+            <div className="text-center mb-3">
+              <div className="inline-flex items-center justify-center rounded-full bg-primary bg-opacity-10 w-16 h-16 mb-2">
+                <svg className="w-8 h-8 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                </svg>
+              </div>
+              <h3 className="font-medium">Practice Progress</h3>
+            </div>
+            
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span>Words Read</span>
+                  <span>{wordsRead}/{currentContent.wordCount}</span>
+                </div>
+                <Progress value={(wordsRead / currentContent.wordCount) * 100} className="h-2" />
+              </div>
+              
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span>Pronunciation Score</span>
+                  <span className="text-success">{pronunciationScore}%</span>
+                </div>
+                <Progress 
+                  value={pronunciationScore} 
+                  className="h-2 bg-secondary" 
+                  indicatorClassName="bg-success" 
+                />
+              </div>
+              
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span>Reading Fluency</span>
+                  <span className="text-accent">{fluencyScore}%</span>
+                </div>
+                <Progress 
+                  value={fluencyScore} 
+                  className="h-2 bg-secondary" 
+                  indicatorClassName="bg-accent" 
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default ReadingControls;
