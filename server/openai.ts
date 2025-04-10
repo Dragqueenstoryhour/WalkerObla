@@ -294,11 +294,18 @@ export async function generateSampleContent(): Promise<ReadingContent> {
 /**
  * Generate a speech response from text using OpenAI text-to-speech
  */
-export async function generateSpeechResponse(text: string, voice: string = "cora"): Promise<Buffer> {
+export async function generateSpeechResponse(text: string, voice: string = "alloy"): Promise<Buffer> {
   try {
+    // OpenAI only accepts specific voice options: nova, shimmer, echo, onyx, fable, alloy, ash, sage, or coral
+    // If voice is invalid, default to alloy
+    const validVoices = ["nova", "shimmer", "echo", "onyx", "fable", "alloy", "ash", "sage", "coral"];
+    const safeVoice = validVoices.includes(voice) ? voice : "alloy";
+    
+    console.log(`Generating speech with voice: ${safeVoice}`);
+    
     const mp3 = await openai.audio.speech.create({
       model: "tts-1",
-      voice: voice,
+      voice: safeVoice,
       input: text,
     });
     
