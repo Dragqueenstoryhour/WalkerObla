@@ -31,18 +31,57 @@ if (!isAzureConfigured) {
 }
 
 /**
+ * Helper function to generate mock pronunciation assessment results for testing
+ */
+function createMockAssessmentResults(referenceText: string): PronunciationAssessmentResult {
+  // Extract some actual words from the reference text to use in the mock results
+  const words = referenceText.split(/\s+/).filter(w => w.length > 2);
+  const sampleWords = words.slice(0, Math.min(5, words.length));
+  
+  // Create mock word level results based on actual text
+  const wordLevelResults = sampleWords.map(word => {
+    const score = Math.floor(Math.random() * 40) + 60; // Random score between 60-99
+    return {
+      word,
+      accuracyScore: score,
+      errorType: score < 75 ? "Mispronunciation" : undefined
+    };
+  });
+  
+  // Return mock results with words from the actual text
+  return {
+    pronunciationScore: 86,
+    fluencyScore: 72,
+    completenessScore: 94,
+    accuracyScore: 89,
+    prosodyScore: 78,
+    wordLevelResults: wordLevelResults.length ? wordLevelResults : [
+      { word: "today", accuracyScore: 60, errorType: "Mispronunciation" },
+      { word: "news", accuracyScore: 92 },
+      { word: "headlines", accuracyScore: 75, errorType: "Mispronunciation" },
+    ],
+  };
+}
+
+/**
  * Assess pronunciation from audio buffer
  */
 export async function assessPronunciation(audioBuffer: Buffer, referenceText: string): Promise<PronunciationAssessmentResult> {
   try {
-    // Write the buffer to a temporary file
-    const tempFilePath = `/tmp/pronunciation-${Date.now()}.wav`;
-    fs.writeFileSync(tempFilePath, audioBuffer);
-
-    // Set up the speech config
+    // Log diagnostic information
+    console.log(`Processing audio buffer length: ${audioBuffer.length} bytes`);
+    console.log(`Reference text: "${referenceText}"`);
+    
+    // For demo purposes or when no Azure key is available
+    if (speechKey === "dummy-key-for-development") {
+      console.log("Using dummy key - returning mock pronunciation results");
+      return createMockAssessmentResults(referenceText);
+    }
+    
+    // Set up the speech config for real Azure processing
     const speechConfig = sdk.SpeechConfig.fromSubscription(speechKey, speechRegion);
     
-    // Use the PushAudioInputStream method to create an audio config from the buffer
+    // Create a push stream for the audio data
     const pushStream = sdk.AudioInputStream.createPushStream();
     const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
     
@@ -50,18 +89,17 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
     pushStream.write(audioBuffer);
     pushStream.close();
     
-    // Create pronunciation assessment config with more detailed options
+    // Create pronunciation assessment config
     const pronunciationConfig = new sdk.PronunciationAssessmentConfig(
       referenceText,
       sdk.PronunciationAssessmentGradingSystem.HundredMark,
-      sdk.PronunciationAssessmentGranularity.Phoneme, // Phoneme level for more detailed analysis
+      sdk.PronunciationAssessmentGranularity.Phoneme,
       true // Enable miscue detection
     );
     
-    // Enable prosody assessment for better feedback on intonation, rhythm, and stress
-    // Note: This may only be available in newer SDK versions
+    // Try to enable prosody assessment
     try {
-      // @ts-ignore - Handle potential API differences across SDK versions
+      // @ts-ignore - Handle SDK version differences
       pronunciationConfig.enableProsodyAssessment();
     } catch (error) {
       console.log("Prosody assessment not available in this SDK version");
@@ -69,69 +107,45 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
     
     // Create speech recognizer
     const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
-    
-    // Apply pronunciation assessment config
     pronunciationConfig.applyTo(recognizer);
     
+    // Process the audio and get assessment results
     return new Promise((resolve, reject) => {
-      // Start recognition
-      recognizer.recognizeOnceAsync(result => {
-        // Clean up
-        recognizer.close();
-        fs.unlinkSync(tempFilePath);
-        
-        if (result.reason === sdk.ResultReason.RecognizedSpeech) {
-          // Get pronunciation assessment results
-          const pronunciationResult = sdk.PronunciationAssessmentResult.fromResult(result);
+      recognizer.recognizeOnceAsync(
+        (result) => {
+          recognizer.close();
           
-          // Create simplified word-level results focusing on core assessment data
-          const wordLevelResults = pronunciationResult.detailResult?.Words?.map(word => {
-            return {
+          if (result.reason === sdk.ResultReason.RecognizedSpeech) {
+            const pronunciationResult = sdk.PronunciationAssessmentResult.fromResult(result);
+            
+            // Extract word-level results
+            const wordLevelResults = pronunciationResult.detailResult?.Words?.map(word => ({
               word: word.Word,
               accuracyScore: word.PronunciationAssessment?.AccuracyScore || 0,
               errorType: word.PronunciationAssessment?.ErrorType
-            };
-          }) || [];
-          
-          // Create a mock assessment result when using dummy key
-          if (speechKey === "dummy-key-for-development") {
-            resolve({
-              pronunciationScore: 86,
-              fluencyScore: 72,
-              completenessScore: 94,
-              accuracyScore: 89,
-              prosodyScore: 78, // Added prosody score
-              wordLevelResults: [
-                { word: "container", accuracyScore: 60, errorType: "Mispronunciation" },
-                { word: "gardening", accuracyScore: 92 },
-                { word: "advantage", accuracyScore: 75, errorType: "Mispronunciation" },
-              ],
-            });
-          } else {
-            // Process real assessment results with prosody score if available
+            })) || [];
+            
             resolve({
               pronunciationScore: pronunciationResult.pronunciationScore || 0,
               fluencyScore: pronunciationResult.fluencyScore || 0,
               completenessScore: pronunciationResult.completenessScore || 0,
               accuracyScore: pronunciationResult.accuracyScore || 0,
               prosodyScore: pronunciationResult.prosodyScore,
-              wordLevelResults,
+              wordLevelResults
             });
+          } else {
+            reject(new Error(`Speech recognition failed: ${result.reason}`));
           }
-        } else {
-          // Handle recognition errors
-          reject(new Error(`Speech recognition failed: ${result.reason}`));
+        },
+        (error) => {
+          recognizer.close();
+          reject(error);
         }
-      }, error => {
-        // Clean up on error
-        recognizer.close();
-        fs.existsSync(tempFilePath) && fs.unlinkSync(tempFilePath);
-        reject(error);
-      });
+      );
     });
   } catch (error) {
     console.error("Error assessing pronunciation:", error);
-    throw new Error("Failed to assess pronunciation");
+    throw new Error(`Failed to assess pronunciation: ${error.message}`);
   }
 }
 
@@ -144,6 +158,20 @@ export async function getWordPronunciation(word: string): Promise<string> {
   
   // Convert word to a simplified phonetic form
   const phonetics: Record<string, string> = {
+    // General news words
+    "headlines": "hed-lahynz",
+    "today": "tuh-dey",
+    "news": "nooz",
+    "latest": "ley-tist",
+    "breaking": "brey-king",
+    "report": "ri-pawrt",
+    "election": "ih-lek-shuhn",
+    "president": "prez-i-duhnt",
+    "government": "guhv-ern-muhnt",
+    "economy": "ih-kon-uh-mee",
+    "technology": "tek-nol-uh-jee",
+    
+    // Original gardening words
     "container": "kun-tey-ner",
     "gardening": "gar-den-ing",
     "advantage": "uhd-van-tij",

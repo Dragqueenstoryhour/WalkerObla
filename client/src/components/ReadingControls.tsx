@@ -42,20 +42,33 @@ const ReadingControls = () => {
           // Get the current highlighted text for assessment
           const recordedText = currentHighlightedText || 'Test recording';
           
+          console.log(`Processing recording with text: "${recordedText}"`);
+          console.log(`Recording blob size: ${blob.size} bytes, type: ${blob.type}`);
+          
           // Show loading toast
           toast({
             title: "Processing Recording",
             description: "Analyzing your pronunciation...",
           });
           
+          // Create a copy of the blob specifically formatted for Azure
+          // Azure expects specific audio formats
+          const azureBlob = new Blob([await blob.arrayBuffer()], {
+            type: 'audio/wav' // Ensure WAV format which works best with Azure
+          });
+          
           // Send recording for assessment
           const results = await submitReadingRecording(
-            blob, 
+            azureBlob, 
             currentContent.id, 
             recordedText
           );
           
           console.log("Pronunciation assessment results:", results);
+          
+          if (!results || typeof results.pronunciationScore !== 'number') {
+            throw new Error("Invalid assessment results received");
+          }
           
           // Update scores
           setPronunciationScore(results.pronunciationScore);
@@ -80,7 +93,7 @@ const ReadingControls = () => {
           console.error("Error processing reading:", error);
           toast({
             title: "Processing Error",
-            description: "Could not process your reading. Please check your microphone and try again.",
+            description: "Could not process your reading. This could be due to a microphone issue or the Azure service needing API credentials.",
             variant: "destructive",
           });
         }
