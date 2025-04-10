@@ -49,6 +49,13 @@ export function useEnhancedVoice({
       
       // Process voice command result
       if (data.result && onVoiceResult) {
+        // Handle AI response with message for stroke recovery patients
+        if (data.result.message) {
+          // If the system is about to generate content, tell the user we're processing
+          // and return the supportive message from the AI
+          setTranscribedText(data.result.message);
+        }
+        
         onVoiceResult(data.result);
       }
       

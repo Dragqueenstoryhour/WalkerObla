@@ -171,17 +171,33 @@ const VoiceControl = () => {
           
           <div className="flex-1">
             {transcribedText ? (
-              <div className={isPlaying ? "" : "animate-pulse"}>
+              <div className={isPlaying ? "border-l-4 border-accent pl-3" : "animate-pulse"}>
                 <p className="text-sm text-textColor opacity-70 mb-1">
                   {isPlaying ? "AI Response:" : "I heard:"}
                 </p>
                 <p className="font-medium">{transcribedText}</p>
+                {isPlaying && (
+                  <div className="mt-2 pt-2 border-t border-gray-200 text-sm text-textColor opacity-90 italic">
+                    <p>ReadAssist is speaking...</p>
+                  </div>
+                )}
               </div>
             ) : (
-              <>
-                <p className="text-sm text-textColor opacity-70 mb-1">Try saying:</p>
-                <p className="font-medium">{voicePrompt}</p>
-              </>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-textColor opacity-70 mb-1">Try saying:</p>
+                  <p className="font-medium">{voicePrompt}</p>
+                </div>
+                <div className="text-sm text-textColor opacity-70">
+                  <p className="font-medium mb-1">Voice commands:</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Find me an article about [topic]</li>
+                    <li>I want to read about [topic]</li>
+                    <li>Show me an easy article on [topic]</li>
+                    <li>Help me practice reading</li>
+                  </ul>
+                </div>
+              </div>
             )}
           </div>
         </div>
