@@ -27,6 +27,16 @@ const VoiceControl = () => {
     const blob = new Blob([Buffer.from(audioData, 'base64')], { type: 'audio/mp3' });
     const url = URL.createObjectURL(blob);
     
+    // Update transcribed text immediately for real-time feedback
+    if (transcribedText) {
+      setCurrentContent({
+        id: Date.now(),
+        title: "Voice Input",
+        content: transcribedText,
+        difficulty: "medium"
+      });
+    }
+    
     // Clean up old URL if it exists
     if (audioRef.current.src) {
       URL.revokeObjectURL(audioRef.current.src);
