@@ -21,8 +21,13 @@ const upload = multer({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize OpenAI client
   const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY || "sk-dummy-key-for-development",
+    apiKey: process.env.OPENAI_API_KEY,
   });
+  
+  // Check if OpenAI API key is provided
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn("WARNING: OPENAI_API_KEY is not set. AI features will not work properly.");
+  }
 
   // Content endpoints
   app.get('/api/content/sample', async (req, res) => {
@@ -151,6 +156,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Store audio responses in memory (in a production app, you'd use a database or file storage)
+  const audioResponses = new Map<string, Buffer>();
+
   // Enhanced voice processing endpoints for the gpt-4o model with search capabilities
   app.post('/api/voice/enhanced', upload.single('audio'), async (req, res) => {
     try {
@@ -173,17 +181,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate speech audio
       const audioResponse = await openaiService.generateSpeechResponse(responseText);
       
+      // Store the audio response with a unique ID
+      const audioId = Date.now().toString();
+      audioResponses.set(audioId, audioResponse);
+      
       // Return the comprehensive response
       res.json({
         transcript,
         result,
-        audioUrl: `/api/voice/audio/${Date.now()}`, // Client can fetch the audio from this URL
+        audioUrl: `/api/voice/audio/${audioId}`, // Client can fetch the audio from this URL
       });
       
     } catch (error) {
       console.error('Error processing enhanced voice command:', error);
       res.status(500).json({ error: 'Failed to process voice command' });
     }
+  });
+  
+  // Endpoint to serve audio responses
+  app.get('/api/voice/audio/:id', (req, res) => {
+    const audioId = req.params.id;
+    const audioBuffer = audioResponses.get(audioId);
+    
+    if (!audioBuffer) {
+      return res.status(404).json({ error: 'Audio not found' });
+    }
+    
+    res.setHeader('Content-Type', 'audio/mp3');
+    res.send(audioBuffer);
+    
+    // Clean up after sending (optional, depending on your use case)
+    audioResponses.delete(audioId);
   });
   
   // Create a simple HTTP server

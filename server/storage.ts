@@ -49,7 +49,7 @@ export class MemStorage implements IStorage {
     const session: ReadingSession = { 
       ...insertSession, 
       id,
-      createdAt: new Date().toISOString() 
+      createdAt: new Date()
     };
     this.readingSessions.set(id, session);
     return session;

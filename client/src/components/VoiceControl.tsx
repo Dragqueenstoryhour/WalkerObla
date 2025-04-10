@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { FiMic, FiVolume2 } from 'react-icons/fi';
 import { useToast } from '@/hooks/use-toast';
-import useRealTimeVoice from '@/hooks/useRealTimeVoice';
+import useEnhancedVoice from '@/hooks/useEnhancedVoice';
 import { generateReadingContent } from '@/lib/openai';
 import { useReading } from '@/contexts/ReadingContext';
 import { Card, CardContent } from '@/components/ui/card';
@@ -61,17 +61,25 @@ const VoiceControl = () => {
     }
   };
 
-  // Set up realtime voice recognition
+  // Set up enhanced voice recognition with GPT-4o
   const { 
     isListening, 
     isProcessing,
-    transcribedText: realtimeTranscript, 
+    transcribedText: enhancedTranscript, 
     startListening, 
     stopListening 
-  } = useRealTimeVoice({
+  } = useEnhancedVoice({
     onVoiceResult: handleVoiceResult,
-    onVoiceResponse: handleVoiceResponse,
-    onStreamingResponse: (text) => setTranscribedText(text),
+    onAudioResponse: (audioUrl) => {
+      if (!audioRef.current) {
+        audioRef.current = new Audio();
+      }
+      audioRef.current.src = audioUrl;
+      audioRef.current.onplay = () => setIsPlaying(true);
+      audioRef.current.onended = () => setIsPlaying(false);
+      audioRef.current.play().catch(err => console.error('Error playing audio:', err));
+    },
+    onTranscript: (text) => setTranscribedText(text),
     onError: (error) => {
       console.error('Voice recognition error:', error);
       toast({
@@ -83,7 +91,7 @@ const VoiceControl = () => {
     },
   });
 
-  // Update component status based on realtime hook state
+  // Update component status based on enhanced voice hook state
   useEffect(() => {
     if (isListening) {
       setStatus('listening');
@@ -93,11 +101,11 @@ const VoiceControl = () => {
       setStatus('idle');
     }
     
-    // If we have a transcript from the realtime service, use it
-    if (realtimeTranscript) {
-      setTranscribedText(realtimeTranscript);
+    // If we have a transcript from the enhanced voice service, use it
+    if (enhancedTranscript) {
+      setTranscribedText(enhancedTranscript);
     }
-  }, [isListening, isProcessing, realtimeTranscript]);
+  }, [isListening, isProcessing, enhancedTranscript]);
 
   // Clean up audio resources when component unmounts
   useEffect(() => {
@@ -142,19 +150,31 @@ const VoiceControl = () => {
         </div>
         
         <div className="bg-secondary bg-opacity-30 rounded-lg p-4 flex items-center">
-          <button 
-            onClick={toggleListening}
-            className={`${
-              status === 'listening' ? 'bg-red-500' : 'bg-primary'
-            } text-white rounded-full p-2 mr-4 cursor-pointer hover:bg-opacity-90 transition-all`}
-            aria-label={status === 'listening' ? 'Stop listening' : 'Start listening'}
-          >
-            <FiMic className="w-6 h-6" />
-          </button>
+          <div className="flex items-center mr-4">
+            <button 
+              onClick={toggleListening}
+              className={`${
+                status === 'listening' ? 'bg-red-500' : 'bg-primary'
+              } text-white rounded-full p-2 mr-2 cursor-pointer hover:bg-opacity-90 transition-all`}
+              aria-label={status === 'listening' ? 'Stop listening' : 'Start listening'}
+              disabled={isPlaying}
+            >
+              <FiMic className="w-6 h-6" />
+            </button>
+            
+            {isPlaying && (
+              <div className="rounded-full bg-accent p-2 animate-pulse">
+                <FiVolume2 className="w-6 h-6 text-white" />
+              </div>
+            )}
+          </div>
+          
           <div className="flex-1">
             {transcribedText ? (
-              <div className="animate-pulse">
-                <p className="text-sm text-textColor opacity-70 mb-1">I heard:</p>
+              <div className={isPlaying ? "" : "animate-pulse"}>
+                <p className="text-sm text-textColor opacity-70 mb-1">
+                  {isPlaying ? "AI Response:" : "I heard:"}
+                </p>
                 <p className="font-medium">{transcribedText}</p>
               </div>
             ) : (
