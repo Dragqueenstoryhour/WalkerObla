@@ -12,32 +12,6 @@ interface PronunciationAssessmentResult {
     word: string;
     accuracyScore: number;
     errorType?: string;         // None, Omission, Insertion, Mispronunciation, UnexpectedBreak, MissingBreak, Monotone
-    syllables?: {
-      syllable: string;
-      accuracyScore: number;
-      offset: number;
-      duration: number;
-    }[];
-    phonemes?: {
-      phoneme: string;
-      accuracyScore: number;
-      offset: number;
-      duration: number;
-    }[];
-    prosodyFeatures?: {
-      breakScore?: number;      // Score related to breaks in speech
-      intonationScore?: number; // Score related to intonation
-      rhythmScore?: number;     // Score related to rhythm
-      unexpectedBreak?: {
-        confidence: number;
-      };
-      missingBreak?: {
-        confidence: number;
-      };
-      monotone?: {
-        confidence: number;
-      };
-    };
   }[];
 }
 
@@ -74,7 +48,13 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
     );
     
     // Enable prosody assessment for better feedback on intonation, rhythm, and stress
-    pronunciationConfig.enableProsodyAssessment();
+    // Note: This may only be available in newer SDK versions
+    try {
+      // @ts-ignore - Handle potential API differences across SDK versions
+      pronunciationConfig.enableProsodyAssessment();
+    } catch (error) {
+      console.log("Prosody assessment not available in this SDK version");
+    }
     
     // Create speech recognizer
     const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
@@ -93,12 +73,14 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
           // Get pronunciation assessment results
           const pronunciationResult = sdk.PronunciationAssessmentResult.fromResult(result);
           
-          // Create word-level results
-          const wordLevelResults = pronunciationResult.detailResult?.Words?.map(word => ({
-            word: word.Word,
-            accuracyScore: word.PronunciationAssessment?.AccuracyScore || 0,
-            errorType: word.PronunciationAssessment?.ErrorType,
-          })) || [];
+          // Create simplified word-level results focusing on core assessment data
+          const wordLevelResults = pronunciationResult.detailResult?.Words?.map(word => {
+            return {
+              word: word.Word,
+              accuracyScore: word.PronunciationAssessment?.AccuracyScore || 0,
+              errorType: word.PronunciationAssessment?.ErrorType
+            };
+          }) || [];
           
           // Create a mock assessment result when using dummy key
           if (speechKey === "dummy-key-for-development") {
@@ -107,19 +89,21 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
               fluencyScore: 72,
               completenessScore: 94,
               accuracyScore: 89,
+              prosodyScore: 78, // Added prosody score
               wordLevelResults: [
-                { word: "container", accuracyScore: 60, errorType: "mispronunciation" },
+                { word: "container", accuracyScore: 60, errorType: "Mispronunciation" },
                 { word: "gardening", accuracyScore: 92 },
-                { word: "advantage", accuracyScore: 75, errorType: "mispronunciation" },
+                { word: "advantage", accuracyScore: 75, errorType: "Mispronunciation" },
               ],
             });
           } else {
-            // Process real assessment results
+            // Process real assessment results with prosody score if available
             resolve({
               pronunciationScore: pronunciationResult.pronunciationScore || 0,
               fluencyScore: pronunciationResult.fluencyScore || 0,
               completenessScore: pronunciationResult.completenessScore || 0,
               accuracyScore: pronunciationResult.accuracyScore || 0,
+              prosodyScore: pronunciationResult.prosodyScore,
               wordLevelResults,
             });
           }

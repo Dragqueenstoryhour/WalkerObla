@@ -60,9 +60,10 @@ export interface PronunciationAssessmentResult {
   fluencyScore: number;
   completenessScore: number;
   accuracyScore: number;
+  prosodyScore?: number;  // Added prosody score from Azure documentation
   wordLevelResults: {
     word: string;
     accuracyScore: number;
-    errorType?: string;
+    errorType?: string;  // None, Omission, Insertion, Mispronunciation, UnexpectedBreak, MissingBreak, Monotone
   }[];
 }

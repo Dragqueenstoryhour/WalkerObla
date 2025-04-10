@@ -46,9 +46,11 @@ const FeedbackPanel = () => {
       
       setPronunciationIssues(issues);
       
-      // Generate feedback based on results
+      // Generate feedback based on results - including prosody assessment if available
       if (pronunciationResults.fluencyScore < 70) {
         setGeneralFeedback("Focus on maintaining a steady reading rhythm");
+      } else if (pronunciationResults.prosodyScore && pronunciationResults.prosodyScore < 70) {
+        setGeneralFeedback("Focus on natural speech patterns, intonation, and rhythm");
       } else if (pronunciationResults.pronunciationScore < 70) {
         setGeneralFeedback("Focus on word endings and pronouncing each syllable");
       } else {
@@ -70,6 +72,15 @@ const FeedbackPanel = () => {
         exercises.push({
           title: "Rhythm Builder",
           description: "Improve your reading pace and fluency",
+          type: "rhythm"
+        });
+      }
+      
+      // Add prosody exercise if prosody score is low
+      if (pronunciationResults.prosodyScore && pronunciationResults.prosodyScore < 75) {
+        exercises.push({
+          title: "Intonation Practice",
+          description: "Work on natural speech patterns and expression",
           type: "rhythm"
         });
       }
