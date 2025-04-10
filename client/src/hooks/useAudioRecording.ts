@@ -47,14 +47,22 @@ export function useAudioRecording({
       
       // Handle recording stop
       mediaRecorder.onstop = () => {
-        // Use WAV format which works better with Azure Speech Services
-        const audioBlob = new Blob(chunksRef.current, { type: 'audio/wav' });
-        const url = URL.createObjectURL(audioBlob);
+        // Get the original audio format from chunks
+        const originalMimeType = mediaRecorderRef.current?.mimeType || 'audio/webm';
+        console.log(`Original recording mime type: ${originalMimeType}`);
         
+        // Create the audio blob with the original format to preserve quality
+        const audioBlob = new Blob(chunksRef.current, { type: originalMimeType });
+        console.log(`Created audio blob of size: ${audioBlob.size} bytes with type: ${audioBlob.type}`);
+        
+        // Create URL for local playback
+        const url = URL.createObjectURL(audioBlob);
         setAudioUrl(url);
         setIsRecording(false);
         
+        // Notify parent component with the audio blob for processing
         if (onRecordingComplete) {
+          console.log('Sending recording to parent component for processing');
           onRecordingComplete(audioBlob);
         }
         

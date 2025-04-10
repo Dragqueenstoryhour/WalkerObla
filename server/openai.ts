@@ -17,26 +17,39 @@ const MODEL = "gpt-4o";
  */
 export async function transcribeAudio(audioBuffer: Buffer): Promise<string> {
   try {
+    console.log(`Transcribing audio with Whisper: buffer size = ${audioBuffer.length} bytes`);
+    
+    // Determine file extension based on audio content analysis (if possible)
+    // Default to .webm which is common for browser recordings
+    const fileExtension = '.webm';
+    const tempFilePath = `/tmp/voice-command-${Date.now()}${fileExtension}`;
+    
     // Write the buffer to a temporary file
-    const tempFilePath = `/tmp/voice-command-${Date.now()}.webm`;
     fs.writeFileSync(tempFilePath, audioBuffer);
-
+    console.log(`Audio saved to temporary file: ${tempFilePath}`);
+    
     // Create a file stream for the API
     const fileStream = fs.createReadStream(tempFilePath);
-
-    // Transcribe the audio
+    
+    console.log('Sending audio to OpenAI Whisper for transcription...');
+    
+    // Transcribe the audio using Whisper model
     const transcription = await openai.audio.transcriptions.create({
       file: fileStream,
       model: "whisper-1",
+      language: "en", // Specify English for better accuracy with stroke patients
+      response_format: "text",
     });
-
+    
     // Clean up the temporary file
     fs.unlinkSync(tempFilePath);
-
+    
+    console.log(`Whisper transcription result: "${transcription.text}"`);
+    
     return transcription.text;
   } catch (error) {
-    console.error("Error transcribing audio:", error);
-    throw new Error("Failed to transcribe audio");
+    console.error("Error transcribing audio with Whisper:", error);
+    throw new Error("Failed to transcribe audio with Whisper");
   }
 }
 

@@ -25,17 +25,24 @@ export function useEnhancedVoice({
   const processAudio = useCallback(async (audioBlob: Blob) => {
     setIsProcessing(true);
     try {
+      console.log(`Processing voice command: blob type=${audioBlob.type}, size=${audioBlob.size} bytes`);
+      
       // Create form data to send the audio
       const formData = new FormData();
       formData.append('audio', audioBlob);
-
+      
+      console.log('Sending audio to server for enhanced voice processing...');
+      
       // Send to the enhanced voice processing endpoint
+      // This will use OpenAI Whisper for transcription on the server
       const response = await fetch('/api/voice/enhanced', {
         method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Server error (${response.status}): ${errorText}`);
         throw new Error(`Server responded with status: ${response.status}`);
       }
 

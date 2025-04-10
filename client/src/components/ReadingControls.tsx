@@ -54,21 +54,19 @@ const ReadingControls = () => {
           // Log the original audio format
           console.log(`Original recording format: ${blob.type}`);
           
-          // Ensure audio is in correct format for Azure
-          if (!blob.type.includes('audio/wav')) {
-            console.warn('Recording is not in WAV format, Azure may reject it');
-          }
+          // Log detailed information about the audio blob
+          console.log(`Processing audio blob: type=${blob.type}, size=${blob.size} bytes`);
           
+          // Get the audio buffer data
           const audioBuffer = await blob.arrayBuffer();
           console.log(`Audio buffer size: ${audioBuffer.byteLength} bytes`);
           
-          const azureBlob = new Blob([audioBuffer], {
-            type: 'audio/wav' // Ensure WAV format which works best with Azure
-          });
+          // Send recording for assessment using the original blob format
+          // The server will handle any necessary format conversion
+          console.log(`Sending recording for assessment: contentId=${currentContent.id}, text="${recordedText}"`);
           
-          // Send recording for assessment
           const results = await submitReadingRecording(
-            azureBlob, 
+            blob, 
             currentContent.id, 
             recordedText
           );
