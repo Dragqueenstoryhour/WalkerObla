@@ -239,8 +239,17 @@ const ReadingControls = () => {
             {isReading && currentHighlightedText && (
               <div className="bg-primary bg-opacity-10 rounded-lg p-4 mb-4 border-l-4 border-primary">
                 <p className="font-medium mb-2">Read this text aloud:</p>
-                <p className={`text-lg ${isRecording ? 'text-primary font-medium' : ''}`}>
-                  {currentHighlightedText}
+                <p className="text-lg">
+                  {currentHighlightedText.split(' ').map((word, index) => (
+                    <span 
+                      key={index}
+                      className={`inline-block mr-1 transition-colors duration-200 ${
+                        isRecording ? 'text-primary/50' : 'text-primary'
+                      }`}
+                    >
+                      {word}
+                    </span>
+                  ))}
                 </p>
                 {isRecording && (
                   <div className="mt-2 flex items-center text-sm text-accent">

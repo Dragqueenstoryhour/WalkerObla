@@ -53,6 +53,15 @@ export function useRealTimeVoice({
           setTranscribedText(data.content);
           if (onStreamingResponse) {
             onStreamingResponse(data.content);
+            // Update the spoken words highlighting
+            const spokenWords = document.querySelectorAll('.text-primary/50');
+            const transcribedWords = data.content.toLowerCase().split(' ');
+            spokenWords.forEach((wordSpan: Element) => {
+              if (transcribedWords.includes(wordSpan.textContent?.toLowerCase())) {
+                wordSpan.classList.remove('text-primary/50');
+                wordSpan.classList.add('text-black');
+              }
+            });
           }
         } else if (data.type === 'action') {
           // Handle action response from the model
