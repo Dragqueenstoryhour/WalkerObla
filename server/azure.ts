@@ -30,8 +30,13 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
     // Set up the speech config
     const speechConfig = sdk.SpeechConfig.fromSubscription(speechKey, speechRegion);
     
-    // Create audio config from the file
-    const audioConfig = sdk.AudioConfig.fromWavFileInput(tempFilePath);
+    // Use the PushAudioInputStream method to create an audio config from the buffer
+    const pushStream = sdk.AudioInputStream.createPushStream();
+    const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
+    
+    // Push the audio data to the stream
+    pushStream.write(audioBuffer);
+    pushStream.close();
     
     // Create pronunciation assessment config
     const pronunciationConfig = new sdk.PronunciationAssessmentConfig(

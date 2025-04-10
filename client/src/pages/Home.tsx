@@ -9,6 +9,7 @@ import SettingsModal from '@/components/modals/SettingsModal';
 import HelpModal from '@/components/modals/HelpModal';
 import { useQuery } from '@tanstack/react-query';
 import { useReading } from '@/contexts/ReadingContext';
+import { ReadingContent as ReadingContentType } from '@/lib/types';
 
 const Home = () => {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -24,7 +25,11 @@ const Home = () => {
   // Use useEffect to set the initial content when loaded
   useEffect(() => {
     if (!currentContent && initialContent && !isLoading) {
-      setCurrentContent(initialContent);
+      // Make sure we have all required fields before setting the content
+      const content = initialContent as any;
+      if (content && content.id && content.title && content.content) {
+        setCurrentContent(content as ReadingContentType);
+      }
     }
   }, [currentContent, initialContent, isLoading, setCurrentContent]);
 

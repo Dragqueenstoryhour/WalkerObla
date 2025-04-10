@@ -188,16 +188,26 @@ export async function generateReadingContent(topic: string, difficulty: string):
     let response;
     try {
       // The search-enabled model has different parameter requirements
+      // Web search doesn't support JSON response format, so we'll need to parse the text output
+      const webSearchPrompt = `
+Please generate an appropriate reading passage about "${topic}" based on the latest news or information at ${difficulty} difficulty level for a stroke recovery patient. Include recent developments, updates, or current information about the topic.
+
+Return your response in this specific JSON format without any additional text:
+{
+  "title": "Title of the passage",
+  "content": "Full text content with paragraphs separated by newlines",
+  "source": "Source of information (website, article, etc.)",
+  "wordCount": number of words in the content,
+  "readingTime": estimated reading time in seconds
+}
+`;
+
       response = await openai.chat.completions.create({
         model: SEARCH_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
-          { 
-            role: "user", 
-            content: `Please generate an appropriate reading passage about "${topic}" based on the latest news or information at ${difficulty} difficulty level for a stroke recovery patient. Include recent developments, updates, or current information about the topic.` 
-          },
+          { role: "user", content: webSearchPrompt }
         ],
-        response_format: { type: "json_object" },
         web_search_options: {
           search_context_size: "medium" // Balance between quality and speed
         },
