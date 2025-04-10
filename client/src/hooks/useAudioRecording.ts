@@ -47,7 +47,8 @@ export function useAudioRecording({
       
       // Handle recording stop
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        // Use WAV format which works better with Azure Speech Services
+        const audioBlob = new Blob(chunksRef.current, { type: 'audio/wav' });
         const url = URL.createObjectURL(audioBlob);
         
         setAudioUrl(url);

@@ -143,12 +143,27 @@ const ReadingControls = () => {
         setHighlightedText(nextText);
         
         // Start recording for this segment
-        startRecording();
+        if (!isRecording) {
+          startRecording();
+          console.log('Started recording for segment');
+        }
         
         // After a reasonable time, stop recording and move to next segment
         timeoutId = window.setTimeout(() => {
-          stopRecording();
-        }, 10000); // 10 seconds per segment for adequate recording time
+          if (isRecording) {
+            console.log('Stopping recording for segment');
+            stopRecording();
+          }
+          
+          // Update words read to progress to next segment
+          const words = nextText.split(/\s+/).length;
+          const newWordsRead = Math.min(
+            (currentContent?.wordCount || 0),
+            wordsRead + words
+          );
+          setWordsRead(newWordsRead);
+          updateSessionProgress(newWordsRead);
+        }, 8000); // 8 seconds per segment for adequate recording time
       }
     }
     
@@ -157,7 +172,7 @@ const ReadingControls = () => {
         clearTimeout(timeoutId);
       }
     };
-  }, [isReading, isPaused, wordsRead, currentContent, startRecording, stopRecording, setHighlightedText]);
+  }, [isReading, isPaused, wordsRead, currentContent, isRecording, startRecording, stopRecording, setHighlightedText, updateSessionProgress]);
   
   const handleStartReading = () => {
     if (isReading) {
