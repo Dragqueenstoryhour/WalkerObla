@@ -4,9 +4,11 @@ import { storage } from "./storage";
 import OpenAI from "openai";
 import * as openaiService from "./openai";
 import * as azureService from "./azure";
+import * as realtimeService from "./realtime";
 import multer from 'multer';
 import { z } from "zod";
 import { insertReadingContentSchema, insertReadingSessionSchema } from "@shared/schema";
+import { WebSocket } from "ws";
 
 // Configure multer for file uploads (in-memory storage)
 const upload = multer({ 
