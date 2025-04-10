@@ -184,22 +184,40 @@ export async function generateReadingContent(topic: string, difficulty: string):
       - readingTime: Estimated reading time in seconds (use 3 seconds per word for stroke patients)
     `;
 
-    // Use search-enabled model to get latest information
-    const response = await openai.chat.completions.create({
-      model: SEARCH_MODEL,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { 
-          role: "user", 
-          content: `Please generate an appropriate reading passage about "${topic}" based on the latest news or information at ${difficulty} difficulty level for a stroke recovery patient. Include recent developments, updates, or current information about the topic.` 
+    // Use search-enabled model or fall back to regular model
+    let response;
+    try {
+      // The search-enabled model has different parameter requirements
+      response = await openai.chat.completions.create({
+        model: SEARCH_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { 
+            role: "user", 
+            content: `Please generate an appropriate reading passage about "${topic}" based on the latest news or information at ${difficulty} difficulty level for a stroke recovery patient. Include recent developments, updates, or current information about the topic.` 
+          },
+        ],
+        response_format: { type: "json_object" },
+        web_search_options: {
+          search_context_size: "medium" // Balance between quality and speed
         },
-      ],
-      temperature: 0.7, // Slightly higher for more engaging content
-      response_format: { type: "json_object" },
-      web_search_options: {
-        search_context_size: "medium" // Balance between quality and speed
-      },
-    });
+      });
+    } catch (error) {
+      console.warn("Search model failed, falling back to standard model:", error);
+      // Fall back to standard model if search model fails
+      response = await openai.chat.completions.create({
+        model: MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { 
+            role: "user", 
+            content: `Please generate an appropriate reading passage about "${topic}" at ${difficulty} difficulty level for a stroke recovery patient.` 
+          },
+        ],
+        temperature: 0.7, // Slightly higher for more engaging content
+        response_format: { type: "json_object" },
+      });
+    }
 
     const content = response.choices[0].message.content;
     if (!content) {

@@ -1,6 +1,18 @@
 import * as sdk from "microsoft-cognitiveservices-speech-sdk";
-import { PronunciationAssessmentResult } from "@shared/schema";
 import fs from "fs";
+
+// Define the PronunciationAssessmentResult interface
+interface PronunciationAssessmentResult {
+  pronunciationScore: number;
+  fluencyScore: number;
+  completenessScore: number;
+  accuracyScore: number;
+  wordLevelResults: {
+    word: string;
+    accuracyScore: number;
+    errorType?: string;
+  }[];
+}
 
 // Azure Speech Service configuration
 const speechKey = process.env.AZURE_SPEECH_KEY || "dummy-key-for-development";
@@ -119,6 +131,9 @@ export async function synthesizeSpeech(text: string, voice = "default"): Promise
     // Configure speech service
     const speechConfig = sdk.SpeechConfig.fromSubscription(speechKey, speechRegion);
     
+    // Set output format for better browser compatibility
+    speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3;
+    
     // Set speech synthesis voice
     switch (voice) {
       case "male":
@@ -138,8 +153,13 @@ export async function synthesizeSpeech(text: string, voice = "default"): Promise
     
     // For demo purposes when using dummy key
     if (speechKey === "dummy-key-for-development") {
-      // Return a small empty audio buffer as a placeholder
-      return Buffer.from([]);
+      console.log("Using dummy key for speech synthesis, returning demo audio buffer");
+      // Return a small valid MP3 buffer to avoid playback errors
+      // This is a minimal MP3 header
+      return Buffer.from([
+        0xFF, 0xFB, 0x90, 0x44, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+      ]);
     }
     
     // Set up audio config for file output
@@ -149,25 +169,47 @@ export async function synthesizeSpeech(text: string, voice = "default"): Promise
     const synthesizer = new sdk.SpeechSynthesizer(speechConfig, audioConfig);
     
     return new Promise((resolve, reject) => {
-      // Start synthesis
-      synthesizer.speakTextAsync(
-        text,
+      // Add logging for debugging
+      console.log(`Synthesizing speech for text: "${text}"`);
+      
+      // Start synthesis with SSML to ensure proper pronunciation
+      const ssml = `
+        <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
+          <voice name="${speechConfig.speechSynthesisVoiceName}">
+            <prosody rate="medium" pitch="medium">
+              ${text}
+            </prosody>
+          </voice>
+        </speak>
+      `;
+      
+      synthesizer.speakSsmlAsync(
+        ssml,
         result => {
           // Close synthesizer
           synthesizer.close();
           
           if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
+            console.log("Speech synthesis completed successfully");
             // Read the audio file
-            const audioData = fs.readFileSync(tempFilePath);
-            // Clean up
-            fs.unlinkSync(tempFilePath);
-            resolve(audioData);
+            try {
+              const audioData = fs.readFileSync(tempFilePath);
+              // Clean up
+              fs.unlinkSync(tempFilePath);
+              console.log(`Audio data size: ${audioData.length} bytes`);
+              resolve(audioData);
+            } catch (readError) {
+              console.error("Error reading speech output file:", readError);
+              reject(new Error("Failed to read speech output file"));
+            }
           } else {
+            console.error(`Speech synthesis failed with reason: ${result.reason}`);
             reject(new Error(`Speech synthesis failed: ${result.reason}`));
           }
         },
         error => {
           // Clean up on error
+          console.error("Speech synthesis error:", error);
           synthesizer.close();
           fs.existsSync(tempFilePath) && fs.unlinkSync(tempFilePath);
           reject(error);

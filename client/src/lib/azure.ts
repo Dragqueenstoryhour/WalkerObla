@@ -60,6 +60,8 @@ export async function getWordPronunciation(word: string): Promise<string> {
  */
 export async function synthesizeSpeech(text: string, voice = 'default'): Promise<string> {
   try {
+    console.log(`Requesting speech synthesis for: "${text}"`);
+    
     const response = await fetch('/api/speech/synthesize', {
       method: 'POST',
       headers: {
@@ -73,9 +75,28 @@ export async function synthesizeSpeech(text: string, voice = 'default'): Promise
       throw new Error(`Error synthesizing speech: ${response.statusText}`);
     }
 
+    // Check if we received audio data
+    const contentType = response.headers.get('Content-Type');
+    if (!contentType || !contentType.includes('audio/')) {
+      console.warn(`Expected audio content type but got: ${contentType}`);
+    }
+    
+    // Log content length to help debug
+    const contentLength = response.headers.get('Content-Length');
+    console.log(`Received audio data: ${contentLength} bytes`);
+
     // Create blob URL for audio playback
     const blob = await response.blob();
-    return URL.createObjectURL(blob);
+    
+    if (blob.size === 0) {
+      throw new Error('Received empty audio data from server');
+    }
+    
+    console.log(`Created blob with size: ${blob.size} bytes and type: ${blob.type}`);
+    
+    // Create a valid audio URL
+    const url = URL.createObjectURL(new Blob([blob], { type: 'audio/mp3' }));
+    return url;
   } catch (error) {
     console.error('Error synthesizing speech:', error);
     throw error;
