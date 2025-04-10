@@ -22,7 +22,7 @@ const ReadingContent = () => {
         'music', 'technology', 'health', 'science', 'nature'
       ];
       const randomTopic = topics[Math.floor(Math.random() * topics.length)];
-      
+
       const content = await generateReadingContent(randomTopic, difficulty);
       setCurrentContent(content);
       toast({
@@ -44,19 +44,19 @@ const ReadingContent = () => {
   // Toggle difficulty and automatically regenerate content with new difficulty
   const toggleDifficulty = async () => {
     let newDifficulty: 'easy' | 'medium' | 'hard';
-    
+
     if (difficulty === 'easy') newDifficulty = 'medium';
     else if (difficulty === 'medium') newDifficulty = 'hard';
     else newDifficulty = 'easy';
-    
+
     setDifficulty(newDifficulty);
-    
+
     // Show toast about difficulty change
     toast({
       title: `Difficulty: ${newDifficulty.charAt(0).toUpperCase() + newDifficulty.slice(1)}`,
       description: "Generating new content with updated difficulty level...",
     });
-    
+
     // Generate new content with the updated difficulty after a short delay
     setTimeout(async () => {
       setIsGenerating(true);
@@ -73,17 +73,17 @@ const ReadingContent = () => {
   };
 
   useEffect(() => {
-    if (readingContentRef.current && currentContent) {
+    if (readingContentRef.current && currentContent && typeof currentContent.content === 'string') {
       // Create spans for text highlighting
       const paragraphs = currentContent.content.split('\n\n');
-      
+
       readingContentRef.current.innerHTML = paragraphs
         .map(paragraph => {
           const sentences = paragraph.split('. ');
           const formattedSentences = sentences
             .map(sentence => `<span>${sentence}</span>`)
             .join('. ');
-          
+
           return `<p>${formattedSentences}</p>`;
         })
         .join('');
@@ -97,18 +97,18 @@ const ReadingContent = () => {
       spans.forEach(span => {
         span.classList.remove('text-primary', 'bg-primary/10', 'font-medium');
       });
-      
+
       // Add highlight to matching span
       Array.from(spans).forEach(span => {
         if (span.textContent?.trim() === currentHighlightedText.trim()) {
           span.classList.add('text-primary', 'bg-primary/10', 'font-medium');
-          
+
           // Scroll into view if needed
           const rect = span.getBoundingClientRect();
-          
+
           if (readingContentRef.current) {
             const contentRect = readingContentRef.current.getBoundingClientRect();
-            
+
             if (rect.top < contentRect.top || rect.bottom > contentRect.bottom) {
               span.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
@@ -146,7 +146,7 @@ const ReadingContent = () => {
             </Button>
           </div>
         </div>
-        
+
         <div className="mb-4 border-b border-secondary pb-2">
           <h3 className="font-semibold text-lg mb-2">{currentContent.title}</h3>
           <p className="text-sm text-textColor opacity-70 mb-1">
@@ -155,7 +155,7 @@ const ReadingContent = () => {
             {' '}{currentContent.wordCount} words
           </p>
         </div>
-        
+
         <div 
           ref={readingContentRef}
           className="prose max-w-none text-lg leading-relaxed"
