@@ -16,17 +16,24 @@ const ReadingContent = () => {
   const generateNewContent = async () => {
     setIsGenerating(true);
     try {
-      const topic = 'random'; // Could be more specific based on user preference
-      const content = await generateReadingContent(topic, difficulty);
+      // Use a variety of topics for content generation
+      const topics = [
+        'gardening', 'cooking', 'travel', 'animals', 'history', 
+        'music', 'technology', 'health', 'science', 'nature'
+      ];
+      const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+      
+      const content = await generateReadingContent(randomTopic, difficulty);
       setCurrentContent(content);
       toast({
         title: "New Content Generated",
         description: `Generated: ${content.title}`,
       });
     } catch (error) {
+      console.error("Error generating content:", error);
       toast({
         title: "Error",
-        description: "Failed to generate new content",
+        description: "Failed to generate new content. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -34,10 +41,35 @@ const ReadingContent = () => {
     }
   };
 
-  const toggleDifficulty = () => {
-    if (difficulty === 'easy') setDifficulty('medium');
-    else if (difficulty === 'medium') setDifficulty('hard');
-    else setDifficulty('easy');
+  // Toggle difficulty and automatically regenerate content with new difficulty
+  const toggleDifficulty = async () => {
+    let newDifficulty: 'easy' | 'medium' | 'hard';
+    
+    if (difficulty === 'easy') newDifficulty = 'medium';
+    else if (difficulty === 'medium') newDifficulty = 'hard';
+    else newDifficulty = 'easy';
+    
+    setDifficulty(newDifficulty);
+    
+    // Show toast about difficulty change
+    toast({
+      title: `Difficulty: ${newDifficulty.charAt(0).toUpperCase() + newDifficulty.slice(1)}`,
+      description: "Generating new content with updated difficulty level...",
+    });
+    
+    // Generate new content with the updated difficulty after a short delay
+    setTimeout(async () => {
+      setIsGenerating(true);
+      try {
+        const currentTopic = currentContent?.title.split(' ').slice(0, 2).join(' ').toLowerCase() || 'random';
+        const content = await generateReadingContent(currentTopic, newDifficulty);
+        setCurrentContent(content);
+      } catch (error) {
+        console.error("Error generating content with new difficulty:", error);
+      } finally {
+        setIsGenerating(false);
+      }
+    }, 500);
   };
 
   useEffect(() => {
@@ -67,21 +99,22 @@ const ReadingContent = () => {
       });
       
       // Add highlight to matching span
-      for (const span of spans) {
+      Array.from(spans).forEach(span => {
         if (span.textContent?.trim() === currentHighlightedText.trim()) {
           span.classList.add('text-primary', 'bg-primary/10', 'font-medium');
           
           // Scroll into view if needed
           const rect = span.getBoundingClientRect();
-          const contentRect = readingContentRef.current.getBoundingClientRect();
           
-          if (rect.top < contentRect.top || rect.bottom > contentRect.bottom) {
-            span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if (readingContentRef.current) {
+            const contentRect = readingContentRef.current.getBoundingClientRect();
+            
+            if (rect.top < contentRect.top || rect.bottom > contentRect.bottom) {
+              span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
           }
-          
-          break;
         }
-      }
+      });
     }
   }, [currentHighlightedText, isReading]);
 

@@ -28,7 +28,7 @@ const ReadingControls = () => {
   const [fluencyScore, setFluencyScore] = useState(0);
   const [wordsRead, setWordsRead] = useState(0);
   
-  // Set up audio recording
+  // Set up audio recording with proper pronunciation assessment
   const { 
     isRecording, 
     startRecording, 
@@ -42,12 +42,20 @@ const ReadingControls = () => {
           // Get the current highlighted text for assessment
           const recordedText = currentHighlightedText || 'Test recording';
           
+          // Show loading toast
+          toast({
+            title: "Processing Recording",
+            description: "Analyzing your pronunciation...",
+          });
+          
           // Send recording for assessment
           const results = await submitReadingRecording(
             blob, 
             currentContent.id, 
             recordedText
           );
+          
+          console.log("Pronunciation assessment results:", results);
           
           // Update scores
           setPronunciationScore(results.pronunciationScore);
@@ -66,17 +74,22 @@ const ReadingControls = () => {
           
           toast({
             title: "Reading Processed",
-            description: "Your reading has been analyzed",
+            description: `Pronunciation: ${results.pronunciationScore}%, Fluency: ${results.fluencyScore}%`,
           });
         } catch (error) {
           console.error("Error processing reading:", error);
           toast({
             title: "Processing Error",
-            description: "Could not process your reading",
+            description: "Could not process your reading. Please check your microphone and try again.",
             variant: "destructive",
           });
         }
       }
+    },
+    audioConstraints: {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
     }
   });
   

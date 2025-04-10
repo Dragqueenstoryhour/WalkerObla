@@ -1,7 +1,10 @@
-import { PronunciationAssessmentResult } from "./types";
+import { PronunciationAssessmentResult } from './types';
 
-// This client-side module handles communication with our backend Azure service
+// This client-side module handles communication with our backend Azure services
 
+/**
+ * Submit a reading recording for pronunciation assessment
+ */
 export async function submitReadingRecording(
   audioBlob: Blob,
   contentId: number,
@@ -10,7 +13,7 @@ export async function submitReadingRecording(
   try {
     const formData = new FormData();
     formData.append('audio', audioBlob);
-    formData.append('contentId', contentId.toString());
+    formData.append('contentId', String(contentId));
     formData.append('text', text);
 
     const response = await fetch('/api/pronunciation/assess', {
@@ -25,14 +28,18 @@ export async function submitReadingRecording(
 
     return await response.json();
   } catch (error) {
-    console.error('Error submitting reading recording:', error);
+    console.error('Error submitting audio for assessment:', error);
     throw error;
   }
 }
 
+/**
+ * Get phonetic pronunciation for a word
+ */
 export async function getWordPronunciation(word: string): Promise<string> {
   try {
     const response = await fetch(`/api/pronunciation/word?word=${encodeURIComponent(word)}`, {
+      method: 'GET',
       credentials: 'include',
     });
 
@@ -48,6 +55,9 @@ export async function getWordPronunciation(word: string): Promise<string> {
   }
 }
 
+/**
+ * Synthesize speech from text
+ */
 export async function synthesizeSpeech(text: string, voice = 'default'): Promise<string> {
   try {
     const response = await fetch('/api/speech/synthesize', {
@@ -63,6 +73,7 @@ export async function synthesizeSpeech(text: string, voice = 'default'): Promise
       throw new Error(`Error synthesizing speech: ${response.statusText}`);
     }
 
+    // Create blob URL for audio playback
     const blob = await response.blob();
     return URL.createObjectURL(blob);
   } catch (error) {

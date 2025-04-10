@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { FiMic } from 'react-icons/fi';
 import { useToast } from '@/hooks/use-toast';
 import useVoiceRecognition from '@/hooks/useVoiceRecognition';
-import { processVoiceCommand } from '@/lib/openai';
+import { processVoiceCommand, generateReadingContent } from '@/lib/openai';
 import { useReading } from '@/contexts/ReadingContext';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -13,21 +13,33 @@ const VoiceControl = () => {
   const [voicePrompt, setVoicePrompt] = useState(
     "\"Find me an article about gardening\" or \"I want to read about space exploration\""
   );
+  const [transcribedText, setTranscribedText] = useState<string>('');
 
   const onVoiceResult = async (result: { transcript: string, isFinal: boolean }) => {
+    // Update the displayed transcription as the user speaks
+    setTranscribedText(result.transcript);
+    
     if (result.isFinal) {
       setStatus('processing');
       try {
+        toast({
+          title: "Processing command",
+          description: `"${result.transcript}"`,
+        });
+        
         const response = await processVoiceCommand(result.transcript);
         
-        if (response.action === 'generateContent' && response.content) {
-          setCurrentContent(response.content);
+        if (response.action === 'generateContent' && response.topic) {
+          // Generate content based on the topic
+          const content = await generateReadingContent(response.topic, 'easy');
+          setCurrentContent(content);
           toast({
             title: "Content Generated",
             description: `Generated content about "${response.topic}"`,
           });
         }
       } catch (error) {
+        console.error("Error processing voice command:", error);
         toast({
           title: "Error",
           description: "Failed to process voice command",
@@ -36,6 +48,8 @@ const VoiceControl = () => {
       } finally {
         setStatus('idle');
         stopListening();
+        // Clear the transcribed text after processing
+        setTimeout(() => setTranscribedText(''), 3000);
       }
     }
   };
@@ -104,8 +118,17 @@ const VoiceControl = () => {
             <FiMic className="w-6 h-6" />
           </button>
           <div className="flex-1">
-            <p className="text-sm text-textColor opacity-70 mb-1">Try saying:</p>
-            <p className="font-medium">{voicePrompt}</p>
+            {transcribedText ? (
+              <div className="animate-pulse">
+                <p className="text-sm text-textColor opacity-70 mb-1">I heard:</p>
+                <p className="font-medium">{transcribedText}</p>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-textColor opacity-70 mb-1">Try saying:</p>
+                <p className="font-medium">{voicePrompt}</p>
+              </>
+            )}
           </div>
         </div>
       </CardContent>
