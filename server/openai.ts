@@ -192,7 +192,7 @@ export async function generateReadingContent(topic: string, difficulty: string):
       const webSearchPrompt = `
 Please generate an appropriate reading passage about "${topic}" based on the latest news or information at ${difficulty} difficulty level for a stroke recovery patient. Include recent developments, updates, or current information about the topic.
 
-Return your response in this specific JSON format without any additional text:
+Return your response in this specific JSON format without any markdown backticks or additional text:
 {
   "title": "Title of the passage",
   "content": "Full text content with paragraphs separated by newlines",
@@ -234,7 +234,17 @@ Return your response in this specific JSON format without any additional text:
       throw new Error("Empty response from OpenAI");
     }
     
-    const generatedContent = JSON.parse(content);
+    // Clean up the content to handle markdown formatting that might be added by the model
+    let cleanedContent = content;
+    
+    // Remove any markdown backticks from the response
+    if (cleanedContent.includes('```json')) {
+      cleanedContent = cleanedContent.replace(/```json\n|\n```/g, '');
+    } else if (cleanedContent.includes('```')) {
+      cleanedContent = cleanedContent.replace(/```\n|\n```/g, '');
+    }
+    
+    const generatedContent = JSON.parse(cleanedContent);
     
     return {
       id: Date.now(), // Generate a temporary ID

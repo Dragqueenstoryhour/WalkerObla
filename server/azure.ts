@@ -3,14 +3,41 @@ import fs from "fs";
 
 // Define the PronunciationAssessmentResult interface
 interface PronunciationAssessmentResult {
-  pronunciationScore: number;
-  fluencyScore: number;
-  completenessScore: number;
-  accuracyScore: number;
+  pronunciationScore: number;   // Overall score, referred to as PronScore in docs
+  fluencyScore: number;         // How closely the speech matches a native speaker's use of silent breaks between words
+  completenessScore: number;    // Calculated by the ratio of pronounced words to the input reference text
+  accuracyScore: number;        // How closely the phonemes match a native speaker's pronunciation
+  prosodyScore?: number;        // Indicates how natural the given speech is (stress, intonation, rhythm, etc.)
   wordLevelResults: {
     word: string;
     accuracyScore: number;
-    errorType?: string;
+    errorType?: string;         // None, Omission, Insertion, Mispronunciation, UnexpectedBreak, MissingBreak, Monotone
+    syllables?: {
+      syllable: string;
+      accuracyScore: number;
+      offset: number;
+      duration: number;
+    }[];
+    phonemes?: {
+      phoneme: string;
+      accuracyScore: number;
+      offset: number;
+      duration: number;
+    }[];
+    prosodyFeatures?: {
+      breakScore?: number;      // Score related to breaks in speech
+      intonationScore?: number; // Score related to intonation
+      rhythmScore?: number;     // Score related to rhythm
+      unexpectedBreak?: {
+        confidence: number;
+      };
+      missingBreak?: {
+        confidence: number;
+      };
+      monotone?: {
+        confidence: number;
+      };
+    };
   }[];
 }
 
@@ -38,12 +65,16 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
     pushStream.write(audioBuffer);
     pushStream.close();
     
-    // Create pronunciation assessment config
+    // Create pronunciation assessment config with more detailed options
     const pronunciationConfig = new sdk.PronunciationAssessmentConfig(
       referenceText,
       sdk.PronunciationAssessmentGradingSystem.HundredMark,
-      sdk.PronunciationAssessmentGranularity.Word
+      sdk.PronunciationAssessmentGranularity.Phoneme, // Phoneme level for more detailed analysis
+      true // Enable miscue detection
     );
+    
+    // Enable prosody assessment for better feedback on intonation, rhythm, and stress
+    pronunciationConfig.enableProsodyAssessment();
     
     // Create speech recognizer
     const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
