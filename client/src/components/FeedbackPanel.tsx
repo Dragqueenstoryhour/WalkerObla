@@ -89,13 +89,40 @@ const FeedbackPanel = () => {
   // Play word pronunciation
   const playWordPronunciation = async (word: string) => {
     try {
+      // Show loading toast
+      toast({
+        title: "Loading Pronunciation",
+        description: "Preparing audio playback...",
+      });
+      
+      // Get the audio URL from the server
       const audioUrl = await synthesizeSpeech(word);
+      
+      // Create and play the audio element
       const audio = new Audio(audioUrl);
-      audio.play();
+      
+      audio.onerror = (e) => {
+        console.error('Audio playback error:', e);
+        toast({
+          title: "Playback Error",
+          description: "Could not play the audio. Please try again.",
+          variant: "destructive",
+        });
+      };
+      
+      // Play the audio and handle success
+      await audio.play();
+      
+      // Show success toast
+      toast({
+        title: "Playing Pronunciation",
+        description: `Pronouncing: "${word}"`,
+      });
     } catch (error) {
+      console.error("Error playing pronunciation:", error);
       toast({
         title: "Error",
-        description: "Could not play pronunciation",
+        description: "Could not play pronunciation. The audio feature may not be supported in your browser.",
         variant: "destructive",
       });
     }

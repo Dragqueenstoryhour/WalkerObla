@@ -73,20 +73,35 @@ const ReadingContent = () => {
   };
 
   useEffect(() => {
-    if (readingContentRef.current && currentContent && typeof currentContent.content === 'string') {
-      // Create spans for text highlighting
-      const paragraphs = currentContent.content.split('\n\n');
-
-      readingContentRef.current.innerHTML = paragraphs
-        .map(paragraph => {
-          const sentences = paragraph.split('. ');
-          const formattedSentences = sentences
-            .map(sentence => `<span>${sentence}</span>`)
-            .join('. ');
-
-          return `<p>${formattedSentences}</p>`;
-        })
-        .join('');
+    if (readingContentRef.current && currentContent) {
+      try {
+        // Ensure content is a string before proceeding
+        const contentStr = typeof currentContent.content === 'string' 
+          ? currentContent.content 
+          : JSON.stringify(currentContent.content);
+        
+        // Create spans for text highlighting
+        const paragraphs = contentStr.split('\n\n');
+  
+        readingContentRef.current.innerHTML = paragraphs
+          .map(paragraph => {
+            const sentences = paragraph.split('. ');
+            const formattedSentences = sentences
+              .map(sentence => `<span>${sentence}</span>`)
+              .join('. ');
+  
+            return `<p>${formattedSentences}</p>`;
+          })
+          .join('');
+      } catch (error) {
+        console.error('Error formatting content:', error);
+        // Fallback rendering in case of error
+        if (typeof currentContent.content === 'string') {
+          readingContentRef.current.innerHTML = `<p>${currentContent.content}</p>`;
+        } else {
+          readingContentRef.current.innerHTML = '<p>Unable to display content. Please try generating a new article.</p>';
+        }
+      }
     }
   }, [currentContent]);
 

@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Play, Pause, CheckCircle, Clock } from 'lucide-react';
+import { Play, Pause, CheckCircle, Clock, Volume2 } from 'lucide-react';
 import { useReading } from '@/contexts/ReadingContext';
 import useAudioRecording from '@/hooks/useAudioRecording';
 import { submitReadingRecording } from '@/lib/azure';
@@ -259,6 +259,31 @@ const ReadingControls = () => {
                   indicatorClassName="bg-accent" 
                 />
               </div>
+              
+              {audioUrl && (
+                <div className="pt-2 mt-2 border-t border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Your Recording</span>
+                    <Button 
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-8 px-2"
+                      onClick={() => {
+                        const audio = new Audio(audioUrl);
+                        audio.play().catch(e => console.error("Error playing audio:", e));
+                      }}
+                    >
+                      <Volume2 className="h-4 w-4 mr-1" />
+                      Play
+                    </Button>
+                  </div>
+                  {recordingDuration > 0 && (
+                    <p className="text-xs text-textColor mt-1">
+                      {recordingDuration} seconds recorded
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

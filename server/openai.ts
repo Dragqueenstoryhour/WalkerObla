@@ -7,7 +7,9 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "sk-dummy-key-for-development",
 });
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+// Using web search-enabled models where available to get latest information
+const SEARCH_MODEL = "gpt-4o-search-preview";
+// Fallback for other cases
 const MODEL = "gpt-4o";
 
 /**
@@ -182,17 +184,21 @@ export async function generateReadingContent(topic: string, difficulty: string):
       - readingTime: Estimated reading time in seconds (use 3 seconds per word for stroke patients)
     `;
 
+    // Use search-enabled model to get latest information
     const response = await openai.chat.completions.create({
-      model: MODEL,
+      model: SEARCH_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
         { 
           role: "user", 
-          content: `Please generate an appropriate reading passage about "${topic}" at ${difficulty} difficulty level for a stroke recovery patient.` 
+          content: `Please generate an appropriate reading passage about "${topic}" based on the latest news or information at ${difficulty} difficulty level for a stroke recovery patient. Include recent developments, updates, or current information about the topic.` 
         },
       ],
       temperature: 0.7, // Slightly higher for more engaging content
       response_format: { type: "json_object" },
+      web_search_options: {
+        search_context_size: "medium" // Balance between quality and speed
+      },
     });
 
     const content = response.choices[0].message.content;

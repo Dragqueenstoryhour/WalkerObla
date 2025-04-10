@@ -48,13 +48,17 @@ const Home = () => {
               <p className="text-red-500">Error loading content. Please try again.</p>
             </div>
           ) : currentContent ? (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Reading Material on the left */}
+              <div className="lg:col-span-7">
                 <ReadingContent />
-                <ReadingControls />
               </div>
-              <div className="lg:col-span-1">
-                <FeedbackPanel />
+              {/* Reading Practice on the right */}
+              <div className="lg:col-span-5">
+                <ReadingControls />
+                <div className="mt-6">
+                  <FeedbackPanel />
+                </div>
               </div>
             </div>
           ) : null}
