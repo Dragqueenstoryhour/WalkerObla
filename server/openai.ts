@@ -189,7 +189,23 @@ export async function generateReadingContent(topic: string, difficulty: string):
     try {
       // The search-enabled model has different parameter requirements
       // Web search doesn't support JSON response format, so we'll need to parse the text output
-      const webSearchPrompt = `
+      let webSearchPrompt;
+      
+      if (topic.includes("latest news")) {
+        webSearchPrompt = `
+Please generate a summary of the latest major news events from the past 24 hours at ${difficulty} difficulty level for a stroke recovery patient. Start with "As of ${new Date().toLocaleDateString()}, here are the latest news highlights:" and then include 3-4 short summaries of major news stories from different categories (politics, technology, health, etc.).
+
+Return your response in this specific JSON format without any markdown backticks or additional text:
+{
+  "title": "Latest News: Today's Headlines",
+  "content": "Full text content with paragraphs separated by newlines",
+  "source": "Various news sources",
+  "wordCount": number of words in the content,
+  "readingTime": estimated reading time in seconds
+}
+`;
+      } else {
+        webSearchPrompt = `
 Please generate an appropriate reading passage about "${topic}" based on the latest news or information at ${difficulty} difficulty level for a stroke recovery patient. Include recent developments, updates, or current information about the topic.
 
 Return your response in this specific JSON format without any markdown backticks or additional text:
@@ -201,6 +217,7 @@ Return your response in this specific JSON format without any markdown backticks
   "readingTime": estimated reading time in seconds
 }
 `;
+      }
 
       response = await openai.chat.completions.create({
         model: SEARCH_MODEL,
@@ -215,14 +232,19 @@ Return your response in this specific JSON format without any markdown backticks
     } catch (error) {
       console.warn("Search model failed, falling back to standard model:", error);
       // Fall back to standard model if search model fails
+      // Create a fallback prompt based on the topic
+      let fallbackContent;
+      if (topic.includes("latest news")) {
+        fallbackContent = `Please generate a summary of the latest major news events from the past 24 hours at ${difficulty} difficulty level for a stroke recovery patient. Start with "As of ${new Date().toLocaleDateString()}, here are the latest news highlights:" and then include 3-4 short summaries of major news stories from different categories.`;
+      } else {
+        fallbackContent = `Please generate an appropriate reading passage about "${topic}" at ${difficulty} difficulty level for a stroke recovery patient.`;
+      }
+      
       response = await openai.chat.completions.create({
         model: MODEL,
         messages: [
           { role: "system", content: systemPrompt },
-          { 
-            role: "user", 
-            content: `Please generate an appropriate reading passage about "${topic}" at ${difficulty} difficulty level for a stroke recovery patient.` 
-          },
+          { role: "user", content: fallbackContent },
         ],
         temperature: 0.7, // Slightly higher for more engaging content
         response_format: { type: "json_object" },
@@ -263,10 +285,10 @@ Return your response in this specific JSON format without any markdown backticks
 }
 
 /**
- * Generate a sample content piece for initial display
+ * Generate a sample content piece for initial display with latest news
  */
 export async function generateSampleContent(): Promise<ReadingContent> {
-  return generateReadingContent("container gardening", "easy");
+  return generateReadingContent("latest news summary from the past 24 hours", "easy");
 }
 
 /**

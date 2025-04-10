@@ -96,32 +96,47 @@ const ReadingControls = () => {
   // Current text being read
   const [currentHighlightedText, setCurrentHighlightedText] = useState('');
   
-  // Simulate reading progress for demo purposes
+  // Set up reading segments from the current content
   useEffect(() => {
     let timeoutId: number;
     
     if (isReading && !isPaused && currentContent) {
-      // Get the sample text to be read
-      const sampleTexts = [
-        "Container gardening is a great way to grow plants when you have limited space.",
-        "You can put containers on patios, balconies, or even windowsills.",
-        "This makes gardening possible for people who live in apartments or have small yards."
-      ];
+      // Get text segments from the current content
+      const contentText = currentContent.content;
+      // Split into sentences (roughly)
+      const sentences = contentText.split(/(?<=[.!?])\s+/);
+      // Group into reasonable chunks (1-2 sentences at a time)
+      const textSegments = [];
       
-      // Cycle through different text segments
-      const currentIndex = wordsRead % sampleTexts.length;
-      const nextText = sampleTexts[currentIndex];
+      for (let i = 0; i < sentences.length; i += 2) {
+        if (i + 1 < sentences.length) {
+          textSegments.push(sentences[i] + ' ' + sentences[i + 1]);
+        } else {
+          textSegments.push(sentences[i]);
+        }
+      }
       
-      setCurrentHighlightedText(nextText);
-      setHighlightedText(nextText);
+      // Use at least the first few segments
+      const readableSegments = textSegments.slice(0, Math.min(5, textSegments.length));
       
-      // Start recording for this segment
-      startRecording();
+      // Cycle through text segments
+      const currentIndex = Math.min(Math.floor(wordsRead / 20), readableSegments.length - 1);
+      const nextText = readableSegments[currentIndex];
       
-      // After a few seconds, stop recording and move to next segment
-      timeoutId = window.setTimeout(() => {
-        stopRecording();
-      }, 5000);
+      console.log(`Reading segment ${currentIndex + 1} of ${readableSegments.length}`);
+      
+      if (nextText) {
+        setCurrentHighlightedText(nextText);
+        setHighlightedText(nextText);
+        
+        // Start recording for this segment
+        startRecording();
+        
+        // After a reasonable time, stop recording and move to next segment
+        timeoutId = window.setTimeout(() => {
+          stopRecording();
+        }, 10000); // 10 seconds per segment for adequate recording time
+      }
     }
     
     return () => {
@@ -183,6 +198,21 @@ const ReadingControls = () => {
                 I'll listen and help you improve your pronunciation.
               </p>
             </div>
+            
+            {isReading && currentHighlightedText && (
+              <div className="bg-primary bg-opacity-10 rounded-lg p-4 mb-4 border-l-4 border-primary">
+                <p className="font-medium mb-2">Read this text aloud:</p>
+                <p className={`text-lg ${isRecording ? 'text-primary font-medium' : ''}`}>
+                  {currentHighlightedText}
+                </p>
+                {isRecording && (
+                  <div className="mt-2 flex items-center text-sm text-accent">
+                    <span className="inline-block w-3 h-3 rounded-full bg-red-500 mr-2 animate-pulse"></span>
+                    Recording in progress...
+                  </div>
+                )}
+              </div>
+            )}
             
             <div className="flex gap-3">
               <Button

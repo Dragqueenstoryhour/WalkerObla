@@ -19,6 +19,17 @@ interface PronunciationAssessmentResult {
 const speechKey = process.env.AZURE_SPEECH_KEY || "dummy-key-for-development";
 const speechRegion = process.env.AZURE_SPEECH_REGION || "eastus";
 
+// Check if Azure key is properly configured
+const isAzureConfigured = speechKey !== "dummy-key-for-development";
+
+// Log Azure setup status on startup
+if (!isAzureConfigured) {
+  console.warn("⚠️ WARNING: Using dummy Azure key. Speech services will use demo data.");
+  console.warn("To use actual Azure Speech services, set AZURE_SPEECH_KEY and AZURE_SPEECH_REGION in environment variables.");
+} else {
+  console.log("✅ Azure Speech Services configured successfully.");
+}
+
 /**
  * Assess pronunciation from audio buffer
  */
