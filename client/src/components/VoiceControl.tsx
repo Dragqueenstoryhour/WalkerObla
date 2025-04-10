@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { FiMic } from 'react-icons/fi';
+import { useState, useEffect, useRef } from 'react';
+import { FiMic, FiVolume2 } from 'react-icons/fi';
 import { useToast } from '@/hooks/use-toast';
-import useVoiceRecognition from '@/hooks/useVoiceRecognition';
-import { processVoiceCommand, generateReadingContent } from '@/lib/openai';
+import useRealTimeVoice from '@/hooks/useRealTimeVoice';
+import { generateReadingContent } from '@/lib/openai';
 import { useReading } from '@/contexts/ReadingContext';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -14,50 +14,64 @@ const VoiceControl = () => {
     "\"Find me an article about gardening\" or \"I want to read about space exploration\""
   );
   const [transcribedText, setTranscribedText] = useState<string>('');
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const onVoiceResult = async (result: { transcript: string, isFinal: boolean }) => {
-    // Update the displayed transcription as the user speaks
-    setTranscribedText(result.transcript);
+  // Handler for when audio response is received
+  const handleVoiceResponse = (audioData: string) => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+    }
     
-    if (result.isFinal) {
-      setStatus('processing');
+    // Create a blob URL from the base64 audio data
+    const blob = new Blob([Buffer.from(audioData, 'base64')], { type: 'audio/mp3' });
+    const url = URL.createObjectURL(blob);
+    
+    // Clean up old URL if it exists
+    if (audioRef.current.src) {
+      URL.revokeObjectURL(audioRef.current.src);
+    }
+    
+    // Set the new audio source and play it
+    audioRef.current.src = url;
+    audioRef.current.onplay = () => setIsPlaying(true);
+    audioRef.current.onended = () => setIsPlaying(false);
+    audioRef.current.play().catch(err => console.error('Error playing audio:', err));
+  };
+
+  // Handler for voice command results
+  const handleVoiceResult = async (result: { action: string; topic?: string; parameters?: any }) => {
+    if (result.action === 'generateContent' && result.topic) {
       try {
+        // Generate content based on the topic
+        const content = await generateReadingContent(result.topic, result.parameters?.difficulty || 'easy');
+        setCurrentContent(content);
         toast({
-          title: "Processing command",
-          description: `"${result.transcript}"`,
+          title: "Content Generated",
+          description: `Generated content about "${result.topic}"`,
         });
-        
-        const response = await processVoiceCommand(result.transcript);
-        
-        if (response.action === 'generateContent' && response.topic) {
-          // Generate content based on the topic
-          const content = await generateReadingContent(response.topic, 'easy');
-          setCurrentContent(content);
-          toast({
-            title: "Content Generated",
-            description: `Generated content about "${response.topic}"`,
-          });
-        }
       } catch (error) {
-        console.error("Error processing voice command:", error);
+        console.error("Error generating content:", error);
         toast({
           title: "Error",
-          description: "Failed to process voice command",
+          description: "Failed to generate content",
           variant: "destructive",
         });
-      } finally {
-        setStatus('idle');
-        stopListening();
-        // Clear the transcribed text after processing
-        setTimeout(() => setTranscribedText(''), 3000);
       }
     }
   };
 
-  const { isListening, startListening, stopListening } = useVoiceRecognition({
-    continuous: false,
-    interimResults: true,
-    onResult: onVoiceResult,
+  // Set up realtime voice recognition
+  const { 
+    isListening, 
+    isProcessing,
+    transcribedText: realtimeTranscript, 
+    startListening, 
+    stopListening 
+  } = useRealTimeVoice({
+    onVoiceResult: handleVoiceResult,
+    onVoiceResponse: handleVoiceResponse,
+    onStreamingResponse: (text) => setTranscribedText(text),
     onError: (error) => {
       console.error('Voice recognition error:', error);
       toast({
@@ -69,18 +83,38 @@ const VoiceControl = () => {
     },
   });
 
+  // Update component status based on realtime hook state
   useEffect(() => {
     if (isListening) {
       setStatus('listening');
+    } else if (isProcessing) {
+      setStatus('processing');
+    } else {
+      setStatus('idle');
     }
-  }, [isListening]);
+    
+    // If we have a transcript from the realtime service, use it
+    if (realtimeTranscript) {
+      setTranscribedText(realtimeTranscript);
+    }
+  }, [isListening, isProcessing, realtimeTranscript]);
+
+  // Clean up audio resources when component unmounts
+  useEffect(() => {
+    return () => {
+      if (audioRef.current?.src) {
+        URL.revokeObjectURL(audioRef.current.src);
+      }
+    };
+  }, []);
 
   const toggleListening = () => {
     if (status === 'idle') {
+      // Clear previous transcript before starting new listening session
+      setTranscribedText('');
       startListening();
     } else if (status === 'listening') {
       stopListening();
-      setStatus('idle');
     }
   };
 

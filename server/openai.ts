@@ -143,3 +143,23 @@ export async function generateReadingContent(topic: string, difficulty: string):
 export async function generateSampleContent(): Promise<ReadingContent> {
   return generateReadingContent("container gardening", "easy");
 }
+
+/**
+ * Generate a speech response from text using OpenAI text-to-speech
+ */
+export async function generateSpeechResponse(text: string, voice: string = "nova"): Promise<Buffer> {
+  try {
+    const mp3 = await openai.audio.speech.create({
+      model: "tts-1",
+      voice: voice,
+      input: text,
+    });
+    
+    // Convert to buffer for sending over HTTP
+    const buffer = Buffer.from(await mp3.arrayBuffer());
+    return buffer;
+  } catch (error) {
+    console.error("Error generating speech response:", error);
+    throw new Error("Failed to generate speech response");
+  }
+}

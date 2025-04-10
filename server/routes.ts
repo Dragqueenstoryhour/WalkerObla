@@ -8,7 +8,7 @@ import * as realtimeService from "./realtime";
 import multer from 'multer';
 import { z } from "zod";
 import { insertReadingContentSchema, insertReadingSessionSchema } from "@shared/schema";
-import { WebSocket } from "ws";
+import WebSocket from "ws";
 
 // Configure multer for file uploads (in-memory storage)
 const upload = multer({ 
@@ -151,6 +151,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced voice processing endpoints for the gpt-4o model with search capabilities
+  app.post('/api/voice/enhanced', upload.single('audio'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No audio file uploaded' });
+      }
+      
+      // Process audio with optimized speech-to-text
+      const audioBuffer = req.file.buffer;
+      const transcript = await openaiService.transcribeAudio(audioBuffer);
+      
+      // Process transcript with gpt-4o model to determine user intent
+      const result = await openaiService.processVoiceCommand(transcript);
+      
+      // Generate speech response based on the result
+      const responseText = result.action === 'generateContent' 
+        ? `I'll find a reading passage about ${result.topic} for you.`
+        : (result.message || 'I processed your request');
+      
+      // Generate speech audio
+      const audioResponse = await openaiService.generateSpeechResponse(responseText);
+      
+      // Return the comprehensive response
+      res.json({
+        transcript,
+        result,
+        audioUrl: `/api/voice/audio/${Date.now()}`, // Client can fetch the audio from this URL
+      });
+      
+    } catch (error) {
+      console.error('Error processing enhanced voice command:', error);
+      res.status(500).json({ error: 'Failed to process voice command' });
+    }
+  });
+  
+  // Create a simple HTTP server
   const httpServer = createServer(app);
   return httpServer;
 }

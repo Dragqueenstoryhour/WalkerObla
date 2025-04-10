@@ -1,6 +1,7 @@
 import { WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
 import OpenAI from "openai";
+import fs from 'fs';
 import { log } from "./vite";
 import { ReadingContent } from "@shared/schema";
 import { generateReadingContent, generateSampleContent } from "./openai";
@@ -124,96 +125,104 @@ async function processAudioWithRealtimeAPI(sessionId: string, audioChunk: Buffer
       // Create a new stream with the realtime API
       const controller = new AbortController();
       
-      // Call OpenAI's realtime API
-      const realtime = await openai.beta.realtime.voice({
-        model: "gpt-4o-realtime-preview",
-        stream: true,
-        
-        // System instructions for the voice agent
-        instructions: `You are an AI voice assistant named ReadAssist, designed to help stroke recovery patients 
-          with reading practice and pronunciation. You can generate reading materials, provide pronunciation feedback, 
-          and guide users through reading exercises.
-          
-          You can perform these actions:
-          1. Generate a reading passage on a specific topic when the user asks for one
-          2. Answer questions about reading, pronunciation, or stroke recovery
-          3. Provide encouragement and positive feedback
-          
-          When a user asks for a reading passage, you should immediately return a structured response with 
-          action: "generateContent" and topic: "the requested topic".
-          
-          Sample structured response:
-          {
-            "action": "generateContent",
-            "topic": "gardening",
-            "parameters": {
-              "difficulty": "easy"
-            }
-          }
-          
-          Be compassionate, patient, and encouraging, as users may have speech difficulties.`,
-          
-        signal: controller.signal,
+      // Call OpenAI's speech API
+      const speechData = await openai.audio.speech.create({
+        model: "tts-1",
+        voice: "alloy",
+        input: "Hello, I'm ReadAssist, your voice assistant for reading practice. How can I help you today?",
       });
       
-      session.openaiStream = { realtime, controller };
+      // Using a controller for handling request cancellation
+      // Will be enhanced when the OpenAI Realtime API is fully available
       
-      // Handle the realtime stream
-      for await (const message of realtime) {
-        // Send the transcript if available
-        if (message.type === 'message' && message.content.response.transcript) {
-          session.socket.send(JSON.stringify({
-            type: 'text',
-            content: message.content.response.transcript
-          }));
-        }
-        
-        // Process speech output
-        if (message.type === 'speech') {
-          // Create URL for the audio
-          const audioBlob = new Blob([message.content], { type: 'audio/mp3' });
-          const audioUrl = URL.createObjectURL(audioBlob);
-          
-          session.socket.send(JSON.stringify({
-            type: 'audio',
-            audioUrl
-          }));
-        }
-        
-        // Process structured output for actions
-        if (message.type === 'message' && message.content.response.message) {
-          // Try to parse the message for structured data
-          try {
-            const messageText = message.content.response.message;
-            
-            // Look for potential JSON in the text
-            const jsonMatch = messageText.match(/\\{.*?\\}/s);
-            if (jsonMatch) {
-              const jsonStr = jsonMatch[0];
-              const parsedData = JSON.parse(jsonStr);
+      // Store a temporary file for OpenAI API
+      const tempFilePath = `/tmp/audio-${Date.now()}.webm`;
+      fs.writeFileSync(tempFilePath, audioChunk);
+      
+      // Create a readable stream from the file
+      const audioFileStream = fs.createReadStream(tempFilePath);
+      
+      // Parse and process the audio
+      const transcription = await openai.audio.transcriptions.create({
+        file: audioFileStream,
+        model: "whisper-1"
+      });
+      
+      // Clean up temp file
+      fs.unlinkSync(tempFilePath);
+      
+      session.openaiStream = { controller };
+      
+      // Send the transcript to the client
+      session.socket.send(JSON.stringify({
+        type: 'text',
+        content: transcription.text
+      }));
+      
+      // Process the transcript with GPT-4
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You are an AI voice assistant named ReadAssist, designed to help stroke recovery patients 
+              with reading practice and pronunciation. Parse the user's request and respond in JSON format.
               
-              // If we have action data, send it to the client
-              if (parsedData.action) {
-                session.socket.send(JSON.stringify({
-                  type: 'action',
-                  content: parsedData
-                }));
-                
-                // If it's a content generation request, handle it
-                if (parsedData.action === 'generateContent' && parsedData.topic) {
-                  handleContentGeneration(sessionId, parsedData.topic, parsedData.parameters?.difficulty || 'easy');
-                }
-              }
-            }
-          } catch (error) {
-            // Ignore parsing errors, it might not contain valid JSON
+              If the user is asking for a reading passage, respond with:
+              {"action": "generateContent", "topic": "requested topic", "parameters": {"difficulty": "easy"}}
+              
+              For other requests, respond with:
+              {"action": "respond", "message": "your helpful response"}
+              
+              Be compassionate, patient, and encouraging, as users may have speech difficulties.`
+          },
+          {
+            role: "user",
+            content: transcription.text
           }
+        ],
+        response_format: { type: "json_object" }
+      });
+      
+      try {
+        // Check for null content and provide a default
+        const content = completion.choices[0].message.content || '{"action":"respond","message":"I didn\'t understand that. Could you please try again?"}';
+        const responseContent = JSON.parse(content);
+        
+        // Send the action to the client
+        session.socket.send(JSON.stringify({
+          type: 'action',
+          content: responseContent
+        }));
+        
+        // If it's a content generation request, handle it
+        if (responseContent.action === 'generateContent' && responseContent.topic) {
+          handleContentGeneration(sessionId, responseContent.topic, responseContent.parameters?.difficulty || 'easy');
         }
+        
+        // Generate speech response
+        const speechResponse = responseContent.action === 'respond' ? responseContent.message : 
+          `I'll find a reading passage about ${responseContent.topic} for you.`;
+          
+        const speechData = await openai.audio.speech.create({
+          model: "tts-1",
+          voice: "nova",
+          input: speechResponse
+        });
+        
+        // Convert to Buffer and send
+        const buffer = Buffer.from(await speechData.arrayBuffer());
+        session.socket.send(JSON.stringify({
+          type: 'audio',
+          audioData: buffer.toString('base64')
+        }));
+      } catch (error) {
+        console.error('Error processing completion:', error);
       }
     }
     
-    // Send the audio chunk to the realtime API
-    await session.openaiStream.realtime.sendAudio(audioChunk);
+    // In the future, we'll implement real-time audio processing
+    // For now, we're processing each audio chunk separately
     
   } catch (error) {
     log('Error processing audio with realtime API: ' + error, 'realtime');
