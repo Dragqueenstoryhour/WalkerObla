@@ -141,20 +141,20 @@ export async function generateReadingContent(topic: string, difficulty: string):
       case 'hard':
         wordCount = 300;
         complexity = "moderate complexity";
-        formatting = "use medium-length paragraphs with clear transitions";
+        formatting = "use medium-length paragraphs with clear transitions. Replace section headers (like **Politics**) with lead-in phrases (like 'In politics,'). Never include URLs at the end of paragraphs.";
         vocabulary = "use more varied vocabulary but avoid extremely rare or technical words";
         break;
       case 'medium':
         wordCount = 200;
         complexity = "gentle complexity";
-        formatting = "use short paragraphs with very clear transitions";
+        formatting = "use short paragraphs with very clear transitions. Replace section headers (like **Politics**) with lead-in phrases (like 'In politics,'). Never include URLs at the end of paragraphs.";
         vocabulary = "use common vocabulary with occasional new words";
         break;
       case 'easy':
       default:
         wordCount = 150;
         complexity = "simple structure";
-        formatting = "use very short paragraphs (3-4 sentences each)";
+        formatting = "use very short paragraphs (3-4 sentences each). Replace section headers (like **Politics**) with lead-in phrases (like 'In politics,'). Never include URLs at the end of paragraphs.";
         vocabulary = "use common, everyday words";
         break;
     }
@@ -294,7 +294,7 @@ export async function generateSampleContent(): Promise<ReadingContent> {
 /**
  * Generate a speech response from text using OpenAI text-to-speech
  */
-export async function generateSpeechResponse(text: string, voice: string = "nova"): Promise<Buffer> {
+export async function generateSpeechResponse(text: string, voice: string = "cora"): Promise<Buffer> {
   try {
     const mp3 = await openai.audio.speech.create({
       model: "tts-1",

@@ -76,9 +76,17 @@ const ReadingContent = () => {
     if (readingContentRef.current && currentContent) {
       try {
         // Ensure content is a string before proceeding
-        const contentStr = typeof currentContent.content === 'string' 
+        let contentStr = typeof currentContent.content === 'string' 
           ? currentContent.content 
           : JSON.stringify(currentContent.content);
+        
+        // Remove any URLs in parentheses at the end of paragraphs
+        contentStr = contentStr.replace(/\(\[?[\w\.]+\]?\(https?:\/\/[^\)]*\)\)/g, '');
+        
+        // Replace section headers like **Politics** with lead-in phrases
+        contentStr = contentStr.replace(/\*\*([\w\s]+)\*\*/g, (match, topic) => {
+          return `In ${topic.toLowerCase()},`;
+        });
         
         // Create spans for text highlighting
         const paragraphs = contentStr.split('\n\n');
