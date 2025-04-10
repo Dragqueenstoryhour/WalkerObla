@@ -51,9 +51,18 @@ const ReadingControls = () => {
             description: "Analyzing your pronunciation...",
           });
           
-          // Create a copy of the blob specifically formatted for Azure
-          // Azure expects specific audio formats
-          const azureBlob = new Blob([await blob.arrayBuffer()], {
+          // Log the original audio format
+          console.log(`Original recording format: ${blob.type}`);
+          
+          // Ensure audio is in correct format for Azure
+          if (!blob.type.includes('audio/wav')) {
+            console.warn('Recording is not in WAV format, Azure may reject it');
+          }
+          
+          const audioBuffer = await blob.arrayBuffer();
+          console.log(`Audio buffer size: ${audioBuffer.byteLength} bytes`);
+          
+          const azureBlob = new Blob([audioBuffer], {
             type: 'audio/wav' // Ensure WAV format which works best with Azure
           });
           

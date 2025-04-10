@@ -37,7 +37,7 @@ function createMockAssessmentResults(referenceText: string): PronunciationAssess
   // Extract some actual words from the reference text to use in the mock results
   const words = referenceText.split(/\s+/).filter(w => w.length > 2);
   const sampleWords = words.slice(0, Math.min(5, words.length));
-  
+
   // Create mock word level results based on actual text
   const wordLevelResults = sampleWords.map(word => {
     const score = Math.floor(Math.random() * 40) + 60; // Random score between 60-99
@@ -47,7 +47,7 @@ function createMockAssessmentResults(referenceText: string): PronunciationAssess
       errorType: score < 75 ? "Mispronunciation" : undefined
     };
   });
-  
+
   // Return mock results with words from the actual text
   return {
     pronunciationScore: 86,
@@ -71,24 +71,24 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
     // Log diagnostic information
     console.log(`Processing audio buffer length: ${audioBuffer.length} bytes`);
     console.log(`Reference text: "${referenceText}"`);
-    
+
     // For demo purposes or when no Azure key is available
     if (speechKey === "dummy-key-for-development") {
       console.log("Using dummy key - returning mock pronunciation results");
       return createMockAssessmentResults(referenceText);
     }
-    
+
     // Set up the speech config for real Azure processing
     const speechConfig = sdk.SpeechConfig.fromSubscription(speechKey, speechRegion);
-    
+
     // Create a push stream for the audio data
     const pushStream = sdk.AudioInputStream.createPushStream();
     const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
-    
+
     // Push the audio data to the stream
     pushStream.write(audioBuffer);
     pushStream.close();
-    
+
     // Create pronunciation assessment config
     const pronunciationConfig = new sdk.PronunciationAssessmentConfig(
       referenceText,
@@ -96,7 +96,7 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
       sdk.PronunciationAssessmentGranularity.Phoneme,
       true // Enable miscue detection
     );
-    
+
     // Try to enable prosody assessment
     try {
       // @ts-ignore - Handle SDK version differences
@@ -104,27 +104,27 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
     } catch (error) {
       console.log("Prosody assessment not available in this SDK version");
     }
-    
+
     // Create speech recognizer
     const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
     pronunciationConfig.applyTo(recognizer);
-    
+
     // Process the audio and get assessment results
     return new Promise((resolve, reject) => {
       recognizer.recognizeOnceAsync(
         (result) => {
           recognizer.close();
-          
+
           if (result.reason === sdk.ResultReason.RecognizedSpeech) {
             const pronunciationResult = sdk.PronunciationAssessmentResult.fromResult(result);
-            
+
             // Extract word-level results
             const wordLevelResults = pronunciationResult.detailResult?.Words?.map(word => ({
               word: word.Word,
               accuracyScore: word.PronunciationAssessment?.AccuracyScore || 0,
               errorType: word.PronunciationAssessment?.ErrorType
             })) || [];
-            
+
             resolve({
               pronunciationScore: pronunciationResult.pronunciationScore || 0,
               fluencyScore: pronunciationResult.fluencyScore || 0,
@@ -155,7 +155,7 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
 export async function getWordPronunciation(word: string): Promise<string> {
   // This would typically use a dictionary API or Azure's lexical services
   // For simplicity, we'll use a basic implementation
-  
+
   // Convert word to a simplified phonetic form
   const phonetics: Record<string, string> = {
     // General news words
@@ -170,7 +170,7 @@ export async function getWordPronunciation(word: string): Promise<string> {
     "government": "guhv-ern-muhnt",
     "economy": "ih-kon-uh-mee",
     "technology": "tek-nol-uh-jee",
-    
+
     // Original gardening words
     "container": "kun-tey-ner",
     "gardening": "gar-den-ing",
@@ -178,7 +178,7 @@ export async function getWordPronunciation(word: string): Promise<string> {
     "apartment": "uh-part-ment",
     "balcony": "bal-kuh-nee",
   };
-  
+
   return phonetics[word.toLowerCase()] || word.split('').join('-');
 }
 
@@ -189,10 +189,10 @@ export async function synthesizeSpeech(text: string, voice = "default"): Promise
   try {
     // Configure speech service
     const speechConfig = sdk.SpeechConfig.fromSubscription(speechKey, speechRegion);
-    
+
     // Set output format for better browser compatibility
     speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3;
-    
+
     // Set speech synthesis voice
     switch (voice) {
       case "male":
@@ -206,10 +206,10 @@ export async function synthesizeSpeech(text: string, voice = "default"): Promise
         speechConfig.speechSynthesisVoiceName = "en-US-JennyNeural";
         break;
     }
-    
+
     // Create temporary output file
     const tempFilePath = `/tmp/synthesized-${Date.now()}.mp3`;
-    
+
     // For demo purposes when using dummy key
     if (speechKey === "dummy-key-for-development") {
       console.log("Using dummy key for speech synthesis, returning demo audio buffer");
@@ -220,17 +220,17 @@ export async function synthesizeSpeech(text: string, voice = "default"): Promise
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
       ]);
     }
-    
+
     // Set up audio config for file output
     const audioConfig = sdk.AudioConfig.fromAudioFileOutput(tempFilePath);
-    
+
     // Create speech synthesizer
     const synthesizer = new sdk.SpeechSynthesizer(speechConfig, audioConfig);
-    
+
     return new Promise((resolve, reject) => {
       // Add logging for debugging
       console.log(`Synthesizing speech for text: "${text}"`);
-      
+
       // Start synthesis with SSML to ensure proper pronunciation
       const ssml = `
         <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
@@ -241,13 +241,13 @@ export async function synthesizeSpeech(text: string, voice = "default"): Promise
           </voice>
         </speak>
       `;
-      
+
       synthesizer.speakSsmlAsync(
         ssml,
         result => {
           // Close synthesizer
           synthesizer.close();
-          
+
           if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
             console.log("Speech synthesis completed successfully");
             // Read the audio file
