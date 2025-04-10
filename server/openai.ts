@@ -44,9 +44,14 @@ export async function transcribeAudio(audioBuffer: Buffer): Promise<string> {
     // Clean up the temporary file
     fs.unlinkSync(tempFilePath);
     
-    console.log(`Whisper transcription result: "${transcription.text}"`);
+    // Handle different response formats from OpenAI
+    const transcriptionText = typeof transcription === 'string' 
+      ? transcription 
+      : (transcription as any).text || '';
     
-    return transcription.text;
+    console.log(`Whisper transcription result: "${transcriptionText}"`);
+    
+    return transcriptionText;
   } catch (error) {
     console.error("Error transcribing audio with Whisper:", error);
     throw new Error("Failed to transcribe audio with Whisper");
