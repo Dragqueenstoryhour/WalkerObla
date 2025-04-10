@@ -89,7 +89,7 @@ export function SimpleRecorder({
         }
         
         try {
-          // Create audio blob for playback
+          // Create the original audio blob for playback
           const originalBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
           console.log(`Created audio blob: ${originalBlob.size} bytes, type: ${originalBlob.type}`);
           
@@ -97,8 +97,25 @@ export function SimpleRecorder({
           const url = URL.createObjectURL(originalBlob);
           setAudioUrl(url);
           
-          // Process the recording with Azure Speech
-          await processRecording(originalBlob);
+          // Check if we need to convert the audio format for Azure compatibility
+          // Azure works best with WAV format for pronunciation assessment
+          try {
+            // Try to use the audio context to convert the format (client-side conversion)
+            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const arrayBuffer = await originalBlob.arrayBuffer();
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            
+            // Convert to WAV format
+            const wavBlob = await convertToWav(audioBuffer, audioContext);
+            console.log(`Converted to WAV format: ${wavBlob.size} bytes`);
+            
+            // Process the recording with the WAV format for better Azure compatibility
+            await processRecording(wavBlob);
+          } catch (conversionError) {
+            console.warn('Audio conversion failed, trying with original format:', conversionError);
+            // Fallback to original format if conversion fails
+            await processRecording(originalBlob);
+          }
         } catch (error) {
           console.error('Error processing recording:', error);
           toast({
@@ -206,6 +223,66 @@ export function SimpleRecorder({
     };
   }, [audioUrl]);
 
+  // Helper function to convert AudioBuffer to WAV format
+  const convertToWav = async (audioBuffer: AudioBuffer, audioContext: AudioContext): Promise<Blob> => {
+    // WAV file format specifications
+    const numOfChannels = audioBuffer.numberOfChannels;
+    const sampleRate = audioBuffer.sampleRate;
+    const bytesPerSample = 2; // 16-bit PCM
+    const bitsPerSample = bytesPerSample * 8;
+    
+    // Get PCM data from AudioBuffer
+    const pcmData = audioBuffer.getChannelData(0); // Get mono channel for simplicity
+    
+    // Calculate file size
+    const blockAlign = numOfChannels * bytesPerSample;
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = pcmData.length * bytesPerSample;
+    const bufferSize = 44 + dataSize; // 44 bytes for WAV header
+    
+    // Create buffer for WAV file
+    const buffer = new ArrayBuffer(bufferSize);
+    const view = new DataView(buffer);
+    
+    // Write WAV header
+    // "RIFF" chunk descriptor
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true); // File size - 8
+    writeString(view, 8, 'WAVE');
+    
+    // "fmt " sub-chunk
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true); // Sub-chunk size
+    view.setUint16(20, 1, true); // AudioFormat (1 = PCM)
+    view.setUint16(22, numOfChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitsPerSample, true);
+    
+    // "data" sub-chunk
+    writeString(view, 36, 'data');
+    view.setUint32(40, dataSize, true);
+    
+    // Write PCM data
+    let offset = 44;
+    for (let i = 0; i < pcmData.length; i++, offset += 2) {
+      const sample = Math.max(-1, Math.min(1, pcmData[i]));
+      // Convert to 16-bit signed integer
+      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+    }
+    
+    // Create Blob with proper MIME type
+    return new Blob([buffer], { type: 'audio/wav' });
+  };
+  
+  // Helper function to write strings to DataView
+  const writeString = (view: DataView, offset: number, string: string) => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  };
+  
   // Format seconds to MM:SS
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
