@@ -198,7 +198,7 @@ export async function generateReadingContent(topic: string, difficulty: string):
     
     // Prepare request payload - model names in Perplexity API are case-sensitive
     const requestBody = {
-      model: "sonar-small-online", // Using correct Perplexity model name
+      model: "sonar", // Using correct Perplexity model name from documentation
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: `Generate an article about ${topic} for stroke recovery patients.` }
