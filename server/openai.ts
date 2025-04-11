@@ -184,17 +184,7 @@ export async function generateReadingContent(topic: string, difficulty: string):
     }
     
     const systemPrompt = `
-      You are a news summarizer for stroke recovery patients who need ${languageLevel} language.
-      Create a short, simple summary of the latest news about "${topic}" using ${languageLevel} vocabulary.
-      
-      Guidelines:
-      1. Use ${languageLevel} words only
-      2. Keep sentences short and clear (${sentenceLength} per sentence on average)
-      3. Focus on the most important recent events from the past week
-      4. Absolutely avoid complex terminology, jargon, or rare words
-      5. Break information into small, digestible paragraphs (2-3 sentences each)
-      6. Include the date of the events when relevant
-      7. Keep the total length to ${wordLimit} words
+      You are a helpful assistant. Please provide a brief summary about "${topic}" in simple words.
       
       Return the response in JSON format with:
       - title: A clear, simple title
@@ -208,7 +198,7 @@ export async function generateReadingContent(topic: string, difficulty: string):
     
     // Prepare request payload - model names in Perplexity API are case-sensitive
     const requestBody = {
-      model: "llama-3-sonar-small-online", // Updated to use a valid Perplexity model
+      model: "pplx-7b-online", // Using a valid Perplexity model
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: `Generate an article about ${topic} for stroke recovery patients.` }
