@@ -157,6 +157,36 @@ export async function processVoiceCommand(command: string): Promise<any> {
  * Generate reading content based on a topic and difficulty level,
  * with special considerations for stroke recovery patients
  */
+// Helper function to create default content structure
+function createDefaultContent(topic: string, rawContent: string): any {
+  // Extract a title from the content if possible
+  let title = `${topic.charAt(0).toUpperCase() + topic.slice(1)} News`;
+  
+  // Look for potential heading pattern at the beginning
+  const titleMatch = rawContent.match(/^(?:##+\s*|\*\*|__)?([^#\n\*_]+)(?:\*\*|__|##+)?/);
+  if (titleMatch && titleMatch[1].trim()) {
+    title = titleMatch[1].trim();
+  }
+  
+  // Clean up content by removing markdown code blocks and JSON syntax
+  let cleanContent = rawContent
+    .replace(/```(?:json)?\s*({[\s\S]*?})\s*```/g, '') // Remove code blocks with JSON
+    .replace(/```[\s\S]*?```/g, '')  // Remove any other code blocks
+    .replace(/^\s*{\s*"title":[^}]*}/g, '') // Remove JSON title object
+    .trim();
+    
+  // If the content is now empty, use the original
+  if (!cleanContent) {
+    cleanContent = rawContent;
+  }
+  
+  return {
+    title: title,
+    content: cleanContent,
+    source: "Latest News Summary by ReadAssist"
+  };
+}
+
 export async function generateReadingContent(topic: string, difficulty: string): Promise<ReadingContent> {
   try {
     // Adjust language complexity based on difficulty level
@@ -184,14 +214,25 @@ export async function generateReadingContent(topic: string, difficulty: string):
     }
     
     const systemPrompt = `
-      You are a helpful assistant. Please provide a brief summary about "${topic}" in simple words.
+      You are a specialized news summarizer for stroke recovery patients who need ${languageLevel} language.
       
-      Return the response in JSON format with:
-      - title: A clear, simple title
-      - content: The formatted content with proper paragraph breaks
-      - source: "Latest News Summary by ReadAssist"
-      - wordCount: The actual word count
-      - readingTime: Estimated reading time in seconds (use 3 seconds per word)
+      Create a summary about "${topic}" with these guidelines:
+      1. Use ${languageLevel} words only
+      2. Keep sentences short and clear
+      3. Focus on actual recent events and news (from the past week)
+      4. Avoid complex terminology, jargon or rare words
+      5. Make the content informative but easy to read and comprehend
+      
+      Format your response as a JSON object with these fields:
+      {
+        "title": "A clear, simple title",
+        "content": "The formatted content with proper paragraph breaks",
+        "source": "Latest News Summary by ReadAssist",
+        "wordCount": 150,
+        "readingTime": 450
+      }
+      
+      Ensure the "content" contains actual formatted text with paragraph breaks, not markdown.
     `;
 
     console.log(`Using Perplexity API to generate content about "${topic}" with difficulty "${difficulty}"`);
@@ -201,7 +242,14 @@ export async function generateReadingContent(topic: string, difficulty: string):
       model: "sonar", // Using correct Perplexity model name from documentation
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Generate an article about ${topic} for stroke recovery patients.` }
+        { role: "user", content: `
+          Generate a well-structured article about ${topic} for stroke recovery patients.
+          Include an introduction, 2-3 main content paragraphs, and a brief conclusion.
+          Also include any recent news or developments related to ${topic} if relevant.
+          Make each paragraph 2-3 sentences long using ${languageLevel} vocabulary.
+          Keep sentences short and clear (${sentenceLength} per sentence on average).
+          Total length should be ${wordLimit} words.
+        ` }
       ],
       temperature: 0.7
     };
@@ -230,26 +278,55 @@ export async function generateReadingContent(topic: string, difficulty: string):
     
     let content;
     try {
-      // The API might return JSON directly or as a string that needs parsing
-      if (typeof result.choices[0].message.content === 'string') {
-        try {
-          content = JSON.parse(result.choices[0].message.content);
-        } catch (parseError) {
-          console.log("Could not parse as JSON, treating as raw text");
-          // If not valid JSON, create our own structured content
-          content = {
-            title: `${topic.charAt(0).toUpperCase() + topic.slice(1)} News`,
-            content: result.choices[0].message.content,
-            source: "Latest News Summary by ReadAssist"
-          };
+      // Get the response content
+      const responseContent = result.choices[0].message.content;
+      console.log("Raw response content:", responseContent);
+      
+      // The API might return JSON directly, as a string, or with markdown formatting
+      if (typeof responseContent === 'string') {
+        // Try to extract JSON from the response which might be wrapped in markdown code blocks
+        const jsonMatch = responseContent.match(/```(?:json)?\s*({[\s\S]*?})\s*```/);
+        
+        if (jsonMatch && jsonMatch[1]) {
+          // Found JSON inside markdown code blocks
+          try {
+            content = JSON.parse(jsonMatch[1]);
+            console.log("Successfully parsed JSON from markdown block");
+          } catch (parseError) {
+            console.log("Failed to parse extracted JSON, using default structure");
+            content = createDefaultContent(topic, responseContent);
+          }
+        } else {
+          // Try parsing the whole response as JSON
+          try {
+            content = JSON.parse(responseContent);
+            console.log("Successfully parsed response as JSON");
+          } catch (parseError) {
+            console.log("Could not parse as JSON, treating as raw text");
+            content = createDefaultContent(topic, responseContent);
+          }
         }
+      } else if (typeof responseContent === 'object') {
+        // Response is already an object
+        content = responseContent;
+        console.log("Response was already a parsed object");
       } else {
-        content = result.choices[0].message.content;
+        console.log("Unexpected response format, using default structure");
+        content = createDefaultContent(topic, String(responseContent));
+      }
+      
+      // Make sure we have all required fields
+      if (!content.title || !content.content) {
+        console.log("Parsed content missing required fields, using default structure");
+        content = createDefaultContent(topic, JSON.stringify(content));
       }
     } catch (err) {
       console.error("Error processing API response:", err);
-      throw new Error("Failed to process Perplexity API response");
+      // Create a default content as fallback
+      content = createDefaultContent(topic, result.choices[0].message.content || "Content unavailable");
     }
+    
+    // No need for helper function line here since we've moved it to the top level
     
     // Calculate word count if not provided in the content
     const calculatedWordCount = content.content.split(/\s+/).filter(Boolean).length;
