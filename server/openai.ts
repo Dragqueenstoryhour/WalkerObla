@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import fs from "fs";
 import { ReadingContent } from "@shared/schema";
+import fetch from 'node-fetch';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -11,6 +12,10 @@ const openai = new OpenAI({
 const SEARCH_MODEL = "gpt-4o-search-preview";
 // Fallback for other cases
 const MODEL = "gpt-4o";
+
+// Initialize Perplexity API key
+const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY || "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";
+const PERPLEXITY_API_URL = "https://api.perplexity.ai/chat/completions";
 
 /**
  * Transcribe audio to text using OpenAI Whisper
@@ -153,35 +158,32 @@ export async function processVoiceCommand(command: string): Promise<any> {
  */
 export async function generateReadingContent(topic: string, difficulty: string): Promise<ReadingContent> {
   try {
-    // Format word count and complexity based on difficulty, optimized for stroke patients
     let wordCount, complexity, formatting, vocabulary;
     switch (difficulty) {
       case 'hard':
         wordCount = 300;
         complexity = "moderate complexity";
-        formatting = "use medium-length paragraphs with clear transitions. Replace section headers (like **Politics**) with lead-in phrases (like 'In politics,'). Never include URLs at the end of paragraphs.";
+        formatting = "use medium-length paragraphs with clear transitions";
         vocabulary = "use more varied vocabulary but avoid extremely rare or technical words";
         break;
       case 'medium':
         wordCount = 200;
         complexity = "gentle complexity";
-        formatting = "use short paragraphs with very clear transitions. Replace section headers (like **Politics**) with lead-in phrases (like 'In politics,'). Never include URLs at the end of paragraphs.";
+        formatting = "use short paragraphs with very clear transitions";
         vocabulary = "use common vocabulary with occasional new words";
         break;
       case 'easy':
       default:
         wordCount = 150;
         complexity = "simple structure";
-        formatting = "use very short paragraphs (3-4 sentences each). Replace section headers (like **Politics**) with lead-in phrases (like 'In politics,'). Never include URLs at the end of paragraphs.";
+        formatting = "use very short paragraphs (3-4 sentences each)";
         vocabulary = "use common, everyday words";
         break;
     }
 
     const systemPrompt = `
       You are a specialized educational content creator for stroke recovery patients practicing reading.
-      Your audience may have reading difficulties, aphasia, or other language processing challenges.
-      
-      Guidelines for creating content for stroke patients:
+      Create a short, engaging article about "${topic}" following these guidelines:
       1. Use ${complexity} with clear sentence structure
       2. ${formatting}
       3. ${vocabulary}
@@ -190,111 +192,47 @@ export async function generateReadingContent(topic: string, difficulty: string):
       6. Use encouraging, positive language throughout
       7. Focus on uplifting, interesting topics that promote recovery mindset
       8. Format text with visual clarity in mind
-      
-      Create a short, engaging article about "${topic}" following these guidelines.
       The text should be approximately ${wordCount} words.
-      
-      Format your response as JSON with these fields:
+
+      Return the response in JSON format with:
       - title: A clear, simple title
       - content: The formatted content with proper paragraph breaks
-      - source: Attribute as "AI-Generated for ReadAssist"
+      - source: "AI-Generated for ReadAssist"
       - wordCount: The actual word count
-      - readingTime: Estimated reading time in seconds (use 3 seconds per word for stroke patients)
+      - readingTime: Estimated reading time in seconds (use 3 seconds per word)
     `;
 
-    // Use search-enabled model or fall back to regular model
-    let response;
-    try {
-      // The search-enabled model has different parameter requirements
-      // Web search doesn't support JSON response format, so we'll need to parse the text output
-      let webSearchPrompt;
-      
-      if (topic.includes("latest news")) {
-        webSearchPrompt = `
-Please generate a summary of the latest major news events from the past 24 hours at ${difficulty} difficulty level for a stroke recovery patient. Start with "As of ${new Date().toLocaleDateString()}, here are the latest news highlights:" and then include 3-4 short summaries of major news stories from different categories (politics, technology, health, etc.).
-
-Return your response in this specific JSON format without any markdown backticks or additional text:
-{
-  "title": "Latest News: Today's Headlines",
-  "content": "Full text content with paragraphs separated by newlines",
-  "source": "Various news sources",
-  "wordCount": number of words in the content,
-  "readingTime": estimated reading time in seconds
-}
-`;
-      } else {
-        webSearchPrompt = `
-Please generate an appropriate reading passage about "${topic}" based on the latest news or information at ${difficulty} difficulty level for a stroke recovery patient. Include recent developments, updates, or current information about the topic.
-
-Return your response in this specific JSON format without any markdown backticks or additional text:
-{
-  "title": "Title of the passage",
-  "content": "Full text content with paragraphs separated by newlines",
-  "source": "Source of information (website, article, etc.)",
-  "wordCount": number of words in the content,
-  "readingTime": estimated reading time in seconds
-}
-`;
-      }
-
-      response = await openai.chat.completions.create({
-        model: SEARCH_MODEL,
+    const response = await fetch(PERPLEXITY_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${PERPLEXITY_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "sonar-medium-online",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: webSearchPrompt }
-        ],
-        web_search_options: {
-          search_context_size: "medium" // Balance between quality and speed
-        },
-      });
-    } catch (error) {
-      console.warn("Search model failed, falling back to standard model:", error);
-      // Fall back to standard model if search model fails
-      // Create a fallback prompt based on the topic
-      let fallbackContent;
-      if (topic.includes("latest news")) {
-        fallbackContent = `Please generate a summary of the latest major news events from the past 24 hours at ${difficulty} difficulty level for a stroke recovery patient. Start with "As of ${new Date().toLocaleDateString()}, here are the latest news highlights:" and then include 3-4 short summaries of major news stories from different categories.`;
-      } else {
-        fallbackContent = `Please generate an appropriate reading passage about "${topic}" at ${difficulty} difficulty level for a stroke recovery patient.`;
-      }
-      
-      response = await openai.chat.completions.create({
-        model: MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: fallbackContent },
-        ],
-        temperature: 0.7, // Slightly higher for more engaging content
-        response_format: { type: "json_object" },
-      });
+          { role: "user", content: `Generate an article about ${topic} for stroke recovery patients.` }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Perplexity API error: ${response.statusText}`);
     }
 
-    const content = response.choices[0].message.content;
-    if (!content) {
-      throw new Error("Empty response from OpenAI");
-    }
-    
-    // Clean up the content to handle markdown formatting that might be added by the model
-    let cleanedContent = content;
-    
-    // Remove any markdown backticks from the response
-    if (cleanedContent.includes('```json')) {
-      cleanedContent = cleanedContent.replace(/```json\n|\n```/g, '');
-    } else if (cleanedContent.includes('```')) {
-      cleanedContent = cleanedContent.replace(/```\n|\n```/g, '');
-    }
-    
-    const generatedContent = JSON.parse(cleanedContent);
-    
+    const result = await response.json();
+    const content = JSON.parse(result.choices[0].message.content);
+
     return {
-      id: Date.now(), // Generate a temporary ID
-      title: generatedContent.title,
-      content: generatedContent.content,
-      source: generatedContent.source || "AI-Generated for ReadAssist",
-      wordCount: generatedContent.wordCount || wordCount,
-      readingTime: generatedContent.readingTime || wordCount * 3, // Using 3 seconds per word for stroke patients
+      id: Date.now(),
+      title: content.title,
+      content: content.content,
+      source: content.source || "AI-Generated for ReadAssist",
+      wordCount: content.wordCount || wordCount,
+      readingTime: content.readingTime || wordCount * 3,
       difficulty: difficulty,
-      createdAt: new Date(),
+      createdAt: new Date().toISOString(),
     };
   } catch (error) {
     console.error("Error generating reading content:", error);
