@@ -8,14 +8,10 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "sk-dummy-key-for-development",
 });
 
-// Using web search-enabled models where available to get latest information
-const SEARCH_MODEL = "gpt-4o-search-preview";
-// Fallback for other cases
-const MODEL = "gpt-4o";
-
-// Initialize Perplexity API key
-const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY || "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";
-const PERPLEXITY_API_URL = "https://api.perplexity.ai/chat/completions";
+// Use cost-effective model for most tasks
+const MODEL = "gpt-3.5-turbo";
+// Use more capable model only when needed
+const ADVANCED_MODEL = "gpt-4o";
 
 /**
  * Transcribe audio to text using OpenAI Whisper
@@ -69,62 +65,28 @@ export async function transcribeAudio(audioBuffer: Buffer): Promise<string> {
  */
 export async function processVoiceCommand(command: string): Promise<any> {
   try {
-    // Using a system prompt specifically designed for stroke patients
-    const systemPrompt = `
-      You are a specialized voice assistant for ReadAssist that helps find latest news summaries.
-      Your goal is to understand voice commands that may have speech impairments or difficulties.
-      Be extremely patient and understanding, focusing on the core intent rather than exact wording.
-      
-      Guidelines:
-      1. Interpret commands even when speech is unclear or partially formed
-      2. Focus on identifying the news topic the user wants to learn about
-      3. Be forgiving of grammar, pronunciation, or word order issues
-      4. If uncertain, lean toward the most helpful interpretation
-      5. Respond with supportive, encouraging language
-      6. Always treat requests as news/information queries unless explicitly stated otherwise
-      
-      When analyzing commands, return a JSON object with:
-      - 'action': The primary intent (generateContent, startReading, pauseReading, etc.)
-      - 'topic': For content requests, what topic they want to read about
-      - 'parameters': Any additional parameters like difficulty level
-      - 'message': A supportive message to speak back to the user
-      
-      Example 1: "Find me an article about gardening"
-      Response: { 
-        "action": "generateContent", 
-        "topic": "gardening",
-        "message": "I'll find a great reading passage about gardening for you. Nice choice!"
-      }
-      
-      Example 2: "I want to start reading now"
-      Response: { 
-        "action": "startReading",
-        "message": "Starting your reading session now. You're doing great with your practice!"
-      }
-      
-      Example 3: "Show me how to pronounce container"
-      Response: { 
-        "action": "pronunciationHelp", 
-        "word": "container",
-        "message": "Let me help you with pronouncing 'container'. We'll work on this together."
-      }
-      
-      Example 4: "Something about space ex...exploration"
-      Response: {
-        "action": "generateContent",
-        "topic": "space exploration",
-        "message": "Space exploration is fascinating! I'll find a good article about it for you."
-      }
-    `;
+    // Using a more concise system prompt to reduce token usage
+    const systemPrompt = `You're ReadAssist, helping patients with speech issues. 
+Return a JSON with: 
+- 'action': generateContent, startReading, pauseReading, pronunciationHelp, etc.
+- 'topic': For content requests
+- 'word': For pronunciation requests
+- 'message': Short, encouraging response
+
+Examples:
+"Find about gardening" → {"action":"generateContent","topic":"gardening"}
+"Start reading" → {"action":"startReading"}
+"How to say container" → {"action":"pronunciationHelp","word":"container"}`;
     
-    // Using GPT-4o for better understanding of impaired speech patterns
+    // Using a cheaper model to save tokens
     const response = await openai.chat.completions.create({
-      model: MODEL,
+      model: MODEL, // Using cheaper model defined earlier
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: command }
       ],
-      temperature: 0.2, // Lower temperature for more predictable responses
+      temperature: 0.2,
+      max_tokens: 150, // Limiting token output
       response_format: { type: "json_object" }
     });
     
@@ -138,11 +100,11 @@ export async function processVoiceCommand(command: string): Promise<any> {
     // Add default encouragement for stroke patients if none provided
     if (!result.message) {
       if (result.action === 'generateContent') {
-        result.message = `I'll find a great reading passage about ${result.topic} for you. Nice choice!`;
+        result.message = `I'll find a reading about ${result.topic} for you.`;
       } else if (result.action === 'help') {
-        result.message = "I'm here to help. You're doing great with your reading practice.";
+        result.message = "I'm here to help. You're doing great.";
       } else {
-        result.message = "I understood your request. You're making excellent progress.";
+        result.message = "I understood your request.";
       }
     }
     
@@ -189,158 +151,90 @@ function createDefaultContent(topic: string, rawContent: string): any {
 
 export async function generateReadingContent(topic: string, difficulty: string): Promise<ReadingContent> {
   try {
-    // Adjust language complexity based on difficulty level
+    // Adjust language complexity based on difficulty level - keeping very concise for token efficiency
     let languageLevel = "";
-    let wordLimit = "";
+    let maxWords = 150; // Default max words to conserve tokens
     let sentenceLength = "";
     
     switch(difficulty) {
       case "easy":
-        languageLevel = "very simple, elementary school level (grades 1-3)";
-        wordLimit = "150-200";
+        languageLevel = "very simple, grades 1-3";
+        maxWords = 150;
         sentenceLength = "5-7 words";
         break;
       case "medium":
-        languageLevel = "simple, elementary school level (grades 4-6)";
-        wordLimit = "200-300";
+        languageLevel = "simple, grades 4-6";
+        maxWords = 175;
         sentenceLength = "8-10 words";
         break;
       case "hard":
       default:
-        languageLevel = "straightforward, middle school level";
-        wordLimit = "300-400";
+        languageLevel = "straightforward, middle school";
+        maxWords = 200;
         sentenceLength = "10-12 words";
         break;
     }
     
-    const systemPrompt = `
-      You are a specialized news summarizer for stroke recovery patients who need ${languageLevel} language.
-      
-      Create a summary about "${topic}" with these guidelines:
-      1. Use ${languageLevel} words only
-      2. Keep sentences short and clear
-      3. Focus on actual recent events and news (from the past week)
-      4. Avoid complex terminology, jargon or rare words
-      5. Make the content informative but easy to read and comprehend
-      
-      Format your response as a JSON object with these fields:
-      {
-        "title": "A clear, simple title",
-        "content": "The formatted content with proper paragraph breaks",
-        "source": "Latest News Summary by ReadAssist",
-        "wordCount": 150,
-        "readingTime": 450
-      }
-      
-      Ensure the "content" contains actual formatted text with paragraph breaks, not markdown.
-    `;
+    // Using a more concise prompt to reduce token usage
+    const systemPrompt = `You are creating short, ${languageLevel} level reading content about "${topic}" for stroke patients.
+Keep it under ${maxWords} words total. Use short sentences (${sentenceLength}).
+Return ONLY a JSON object with: {"title": "short title", "content": "simple content with paragraphs", "source": "ReadAssist"}`;
 
-    console.log(`Using Perplexity API to generate content about "${topic}" with difficulty "${difficulty}"`);
+    console.log(`Using OpenAI to generate content about "${topic}" with difficulty "${difficulty}"`);
     
-    // Prepare request payload - model names in Perplexity API are case-sensitive
-    const requestBody = {
-      model: "sonar", // Using correct Perplexity model name from documentation
+    // Using OpenAI with max_tokens to strictly limit response size
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo", // Using a cheaper model to conserve tokens
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `
-          Generate a well-structured article about ${topic} for stroke recovery patients.
-          Include an introduction, 2-3 main content paragraphs, and a brief conclusion.
-          Also include any recent news or developments related to ${topic} if relevant.
-          Make each paragraph 2-3 sentences long using ${languageLevel} vocabulary.
-          Keep sentences short and clear (${sentenceLength} per sentence on average).
-          Total length should be ${wordLimit} words.
-        ` }
+        { role: "user", content: `Write a short, ${maxWords}-word max article about ${topic}. 
+Use ${languageLevel} vocabulary and ${sentenceLength} sentences. 
+Include 2-3 very short paragraphs with breaks between them.
+IMPORTANT: Keep it under ${maxWords} words total. Do not exceed this limit.` }
       ],
-      temperature: 0.7
-    };
-    
-    console.log("Perplexity API request payload:", JSON.stringify(requestBody));
-    
-    const response = await fetch(PERPLEXITY_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${PERPLEXITY_API_KEY}`
-      },
-      body: JSON.stringify(requestBody)
+      temperature: 0.7,
+      max_tokens: 300, // Strict token limit to prevent large responses
+      response_format: { type: "json_object" } // Ensure JSON format
     });
 
-    // Enhanced error handling with response body for better debugging
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Perplexity API error [${response.status}]: ${response.statusText}`);
-      console.error(`Error details: ${errorText}`);
-      throw new Error(`Perplexity API error: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    console.log("Perplexity API response:", JSON.stringify(result));
+    const responseContent = completion.choices[0].message.content;
+    console.log("Raw response content:", responseContent);
     
     let content;
     try {
-      // Get the response content
-      const responseContent = result.choices[0].message.content;
-      console.log("Raw response content:", responseContent);
-      
-      // The API might return JSON directly, as a string, or with markdown formatting
-      if (typeof responseContent === 'string') {
-        // Try to extract JSON from the response which might be wrapped in markdown code blocks
-        const jsonMatch = responseContent.match(/```(?:json)?\s*({[\s\S]*?})\s*```/);
-        
-        if (jsonMatch && jsonMatch[1]) {
-          // Found JSON inside markdown code blocks
-          try {
-            content = JSON.parse(jsonMatch[1]);
-            console.log("Successfully parsed JSON from markdown block");
-          } catch (parseError) {
-            console.log("Failed to parse extracted JSON, using default structure");
-            content = createDefaultContent(topic, responseContent);
-          }
-        } else {
-          // Try parsing the whole response as JSON
-          try {
-            content = JSON.parse(responseContent);
-            console.log("Successfully parsed response as JSON");
-          } catch (parseError) {
-            console.log("Could not parse as JSON, treating as raw text");
-            content = createDefaultContent(topic, responseContent);
-          }
-        }
-      } else if (typeof responseContent === 'object') {
-        // Response is already an object
-        content = responseContent;
-        console.log("Response was already a parsed object");
-      } else {
-        console.log("Unexpected response format, using default structure");
-        content = createDefaultContent(topic, String(responseContent));
-      }
+      // Parse the JSON response
+      content = JSON.parse(responseContent || "{}");
       
       // Make sure we have all required fields
       if (!content.title || !content.content) {
         console.log("Parsed content missing required fields, using default structure");
-        content = createDefaultContent(topic, JSON.stringify(content));
+        content = createDefaultContent(topic, responseContent || "");
       }
     } catch (err) {
       console.error("Error processing API response:", err);
       // Create a default content as fallback
-      content = createDefaultContent(topic, result.choices[0].message.content || "Content unavailable");
+      content = createDefaultContent(topic, responseContent || "Content unavailable");
     }
     
-    // No need for helper function line here since we've moved it to the top level
-    
-    // Calculate word count if not provided in the content
+    // Calculate word count
     const calculatedWordCount = content.content.split(/\s+/).filter(Boolean).length;
 
-    // Create reading content object with proper typing
-    return {
+    // Create the object first to avoid type compatibility issues
+    const readingContent = {
       id: Date.now(),
       title: content.title,
       content: content.content,
       source: content.source || "AI-Generated for ReadAssist",
-      wordCount: content.wordCount || calculatedWordCount,
-      readingTime: content.readingTime || calculatedWordCount * 3,
-      difficulty: difficulty as any, // Cast to match expected string literal types
-      createdAt: new Date(), // Use actual Date object instead of string
+      wordCount: Math.min(calculatedWordCount, maxWords), // Ensure word count doesn't exceed our limit
+      readingTime: calculatedWordCount * 3,
+      difficulty: difficulty as "easy" | "medium" | "hard", 
+      createdAt: new Date(), // Use Date object for database
+    };
+    
+    // For client use, convert to match the client-side type which uses strings
+    return {
+      ...readingContent,
+      createdAt: readingContent.createdAt.toISOString()
     };
   } catch (error) {
     console.error("Error generating reading content:", error);
