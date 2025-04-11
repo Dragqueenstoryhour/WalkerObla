@@ -71,16 +71,17 @@ export async function processVoiceCommand(command: string): Promise<any> {
   try {
     // Using a system prompt specifically designed for stroke patients
     const systemPrompt = `
-      You are a specialized voice assistant for ReadAssist, a reading app designed for stroke recovery patients.
+      You are a specialized voice assistant for ReadAssist that helps find latest news summaries.
       Your goal is to understand voice commands that may have speech impairments or difficulties.
       Be extremely patient and understanding, focusing on the core intent rather than exact wording.
       
-      Guidelines for working with stroke recovery patients:
+      Guidelines:
       1. Interpret commands even when speech is unclear or partially formed
-      2. Focus on key intent words like "read", "article", "about", "topic", etc.
+      2. Focus on identifying the news topic the user wants to learn about
       3. Be forgiving of grammar, pronunciation, or word order issues
       4. If uncertain, lean toward the most helpful interpretation
       5. Respond with supportive, encouraging language
+      6. Always treat requests as news/information queries unless explicitly stated otherwise
       
       When analyzing commands, return a JSON object with:
       - 'action': The primary intent (generateContent, startReading, pauseReading, etc.)
@@ -158,46 +159,21 @@ export async function processVoiceCommand(command: string): Promise<any> {
  */
 export async function generateReadingContent(topic: string, difficulty: string): Promise<ReadingContent> {
   try {
-    let wordCount, complexity, formatting, vocabulary;
-    switch (difficulty) {
-      case 'hard':
-        wordCount = 300;
-        complexity = "moderate complexity";
-        formatting = "use medium-length paragraphs with clear transitions";
-        vocabulary = "use more varied vocabulary but avoid extremely rare or technical words";
-        break;
-      case 'medium':
-        wordCount = 200;
-        complexity = "gentle complexity";
-        formatting = "use short paragraphs with very clear transitions";
-        vocabulary = "use common vocabulary with occasional new words";
-        break;
-      case 'easy':
-      default:
-        wordCount = 150;
-        complexity = "simple structure";
-        formatting = "use very short paragraphs (3-4 sentences each)";
-        vocabulary = "use common, everyday words";
-        break;
-    }
-
     const systemPrompt = `
-      You are a specialized educational content creator for stroke recovery patients practicing reading.
-      Create a short, engaging article about "${topic}" following these guidelines:
-      1. Use ${complexity} with clear sentence structure
-      2. ${formatting}
-      3. ${vocabulary}
-      4. Use generous spacing between paragraphs
-      5. Include a brief but supportive introduction and conclusion
-      6. Use encouraging, positive language throughout
-      7. Focus on uplifting, interesting topics that promote recovery mindset
-      8. Format text with visual clarity in mind
-      The text should be approximately ${wordCount} words.
-
+      You are a news summarizer for stroke recovery patients.
+      Create a short, simple summary of the latest news about "${topic}".
+      Guidelines:
+      1. Use simple, everyday words
+      2. Keep sentences short and clear
+      3. Focus on the most important recent events
+      4. Avoid complex terminology
+      5. Break information into small, digestible paragraphs
+      6. Include the date of the events when relevant
+      
       Return the response in JSON format with:
       - title: A clear, simple title
       - content: The formatted content with proper paragraph breaks
-      - source: "AI-Generated for ReadAssist"
+      - source: "Latest News Summary by ReadAssist"
       - wordCount: The actual word count
       - readingTime: Estimated reading time in seconds (use 3 seconds per word)
     `;
