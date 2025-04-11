@@ -159,16 +159,42 @@ export async function processVoiceCommand(command: string): Promise<any> {
  */
 export async function generateReadingContent(topic: string, difficulty: string): Promise<ReadingContent> {
   try {
+    // Adjust language complexity based on difficulty level
+    let languageLevel = "";
+    let wordLimit = "";
+    let sentenceLength = "";
+    
+    switch(difficulty) {
+      case "easy":
+        languageLevel = "very simple, elementary school level (grades 1-3)";
+        wordLimit = "150-200";
+        sentenceLength = "5-7 words";
+        break;
+      case "medium":
+        languageLevel = "simple, elementary school level (grades 4-6)";
+        wordLimit = "200-300";
+        sentenceLength = "8-10 words";
+        break;
+      case "hard":
+      default:
+        languageLevel = "straightforward, middle school level";
+        wordLimit = "300-400";
+        sentenceLength = "10-12 words";
+        break;
+    }
+    
     const systemPrompt = `
-      You are a news summarizer for stroke recovery patients.
-      Create a short, simple summary of the latest news about "${topic}".
+      You are a news summarizer for stroke recovery patients who need ${languageLevel} language.
+      Create a short, simple summary of the latest news about "${topic}" using ${languageLevel} vocabulary.
+      
       Guidelines:
-      1. Use simple, everyday words
-      2. Keep sentences short and clear
-      3. Focus on the most important recent events
-      4. Avoid complex terminology
-      5. Break information into small, digestible paragraphs
+      1. Use ${languageLevel} words only
+      2. Keep sentences short and clear (${sentenceLength} per sentence on average)
+      3. Focus on the most important recent events from the past week
+      4. Absolutely avoid complex terminology, jargon, or rare words
+      5. Break information into small, digestible paragraphs (2-3 sentences each)
       6. Include the date of the events when relevant
+      7. Keep the total length to ${wordLimit} words
       
       Return the response in JSON format with:
       - title: A clear, simple title
@@ -178,27 +204,62 @@ export async function generateReadingContent(topic: string, difficulty: string):
       - readingTime: Estimated reading time in seconds (use 3 seconds per word)
     `;
 
+    console.log(`Using Perplexity API to generate content about "${topic}" with difficulty "${difficulty}"`);
+    
+    // Prepare request payload - model names in Perplexity API are case-sensitive
+    const requestBody = {
+      model: "llama-3-sonar-small-online", // Updated to use a valid Perplexity model
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Generate an article about ${topic} for stroke recovery patients.` }
+      ],
+      temperature: 0.7
+    };
+    
+    console.log("Perplexity API request payload:", JSON.stringify(requestBody));
+    
     const response = await fetch(PERPLEXITY_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${PERPLEXITY_API_KEY}`
       },
-      body: JSON.stringify({
-        model: "sonar-medium-online",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Generate an article about ${topic} for stroke recovery patients.` }
-        ]
-      })
+      body: JSON.stringify(requestBody)
     });
 
+    // Enhanced error handling with response body for better debugging
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Perplexity API error [${response.status}]: ${response.statusText}`);
+      console.error(`Error details: ${errorText}`);
       throw new Error(`Perplexity API error: ${response.statusText}`);
     }
 
     const result = await response.json();
-    const content = JSON.parse(result.choices[0].message.content);
+    console.log("Perplexity API response:", JSON.stringify(result));
+    
+    let content;
+    try {
+      // The API might return JSON directly or as a string that needs parsing
+      if (typeof result.choices[0].message.content === 'string') {
+        try {
+          content = JSON.parse(result.choices[0].message.content);
+        } catch (parseError) {
+          console.log("Could not parse as JSON, treating as raw text");
+          // If not valid JSON, create our own structured content
+          content = {
+            title: `${topic.charAt(0).toUpperCase() + topic.slice(1)} News`,
+            content: result.choices[0].message.content,
+            source: "Latest News Summary by ReadAssist"
+          };
+        }
+      } else {
+        content = result.choices[0].message.content;
+      }
+    } catch (err) {
+      console.error("Error processing API response:", err);
+      throw new Error("Failed to process Perplexity API response");
+    }
     
     // Calculate word count if not provided in the content
     const calculatedWordCount = content.content.split(/\s+/).filter(Boolean).length;
