@@ -199,16 +199,20 @@ export async function generateReadingContent(topic: string, difficulty: string):
 
     const result = await response.json();
     const content = JSON.parse(result.choices[0].message.content);
+    
+    // Calculate word count if not provided in the content
+    const calculatedWordCount = content.content.split(/\s+/).filter(Boolean).length;
 
+    // Create reading content object with proper typing
     return {
       id: Date.now(),
       title: content.title,
       content: content.content,
       source: content.source || "AI-Generated for ReadAssist",
-      wordCount: content.wordCount || wordCount,
-      readingTime: content.readingTime || wordCount * 3,
-      difficulty: difficulty,
-      createdAt: new Date().toISOString(),
+      wordCount: content.wordCount || calculatedWordCount,
+      readingTime: content.readingTime || calculatedWordCount * 3,
+      difficulty: difficulty as any, // Cast to match expected string literal types
+      createdAt: new Date(), // Use actual Date object instead of string
     };
   } catch (error) {
     console.error("Error generating reading content:", error);

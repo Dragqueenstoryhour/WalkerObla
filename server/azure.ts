@@ -94,8 +94,9 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
       speechConfig.speechRecognitionLanguage = "en-US";
       
       // Create audio config from the file path
-      // The SDK expects a string path to a file
-      const audioConfig = sdk.AudioConfig.fromWavFileInput(tempFilePath);
+      // The SDK expects a string path to a file, not a Buffer
+      // Use type assertion to make TypeScript happy, since we know we're using a valid file path string
+      const audioConfig = sdk.AudioConfig.fromWavFileInput(tempFilePath as any);
       
       // Clean, normalize, and validate the reference text
       const cleanedText = referenceText
