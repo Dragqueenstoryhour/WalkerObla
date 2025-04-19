@@ -47,12 +47,12 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
   useEffect(() => {
     const characters: ('chicken' | 'penguin' | 'frog' | 'tiger' | 'monkey')[] = ['chicken', 'penguin', 'frog', 'tiger', 'monkey'];
     let index = 0;
-    
+
     const interval = setInterval(() => {
       index = (index + 1) % characters.length;
       setCurrentCharacter(characters[index]);
     }, 2000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -68,7 +68,7 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-[#264653]/80 backdrop-blur-sm overflow-hidden"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-[#264653]/80 backdrop-blur-sm overflow-y-auto py-6 px-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -83,7 +83,7 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
         <FloatingElement delay={0.5} x={-120} y={120}>
           <Sun className="h-14 w-14 text-[#e76f51]" />
         </FloatingElement>
-        
+
         <motion.div
           className="max-w-lg w-full mx-4 relative"
           initial={{ scale: 0.9, y: 20 }}
@@ -108,7 +108,7 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
                     ></path>
                   </svg>
                 </div>
-                
+
                 <motion.div
                   initial={{ scale: 0.7, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -122,7 +122,7 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
                       <Trophy size={60} className="text-[#e76f51]" />
                     </motion.div>
                   </div>
-                  
+
                   <motion.h2 
                     className="text-5xl font-bold mb-2"
                     animate={{ 
@@ -136,7 +136,7 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
                   >
                     Level {level.levelNumber}
                   </motion.h2>
-                  
+
                   <motion.h3 
                     className="text-2xl"
                     initial={{ opacity: 0, y: 10 }}
@@ -177,7 +177,7 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
                         />
                       </motion.div>
                     </div>
-                  
+
                     <p className="text-center text-[#264653] mb-6 font-medium text-lg">
                       {level.description}
                     </p>
@@ -203,7 +203,7 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
                           {level.difficulty}
                         </div>
                       </div>
-                      
+
                       <div className="bg-white rounded-lg p-4 text-center shadow-md border-2 border-[#e9c46a]">
                         <motion.div
                           animate={{ 
