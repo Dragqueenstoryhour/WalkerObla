@@ -2,12 +2,13 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { MicIcon, StopCircleIcon, VolumeIcon, XIcon, CheckCircle2 } from 'lucide-react';
+import { MicIcon, StopCircleIcon, VolumeIcon, XIcon, CheckCircle2, Award, Volume2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { submitReadingRecording } from '@/lib/azure';
 import { Exercise, PronunciationAssessmentResult } from '@/lib/types';
 import useAudioRecording from '@/hooks/useAudioRecording';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 
 interface GameExerciseRecorderProps {
   exercise: Exercise;
@@ -99,8 +100,34 @@ export function GameExerciseRecorder({
         // Notify parent component only if score is sufficient and not in retry mode
         onComplete(results);
         
+        // Celebration for great performance
+        if (results.pronunciationScore >= 90) {
+          // Trigger confetti effect for excellent scores
+          confetti({
+            particleCount: 150,
+            spread: 80,
+            origin: { y: 0.6 }
+          });
+          
+          setTimeout(() => {
+            confetti({
+              particleCount: 50,
+              angle: 60,
+              spread: 55,
+              origin: { x: 0, y: 0.6 }
+            });
+            
+            confetti({
+              particleCount: 50,
+              angle: 120,
+              spread: 55,
+              origin: { x: 1, y: 0.6 }
+            });
+          }, 600);
+        }
+        
         toast({
-          title: 'Great Job!',
+          title: results.pronunciationScore >= 90 ? '🌟 Outstanding!' : 'Great Job!',
           description: `Pronunciation: ${results.pronunciationScore.toFixed(1)}%, Fluency: ${results.fluencyScore.toFixed(1)}%`,
           variant: 'default',
         });

@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GameLevel } from '@/lib/types';
-import { Trophy, Star, Zap, Palmtree, Umbrella, Sun, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
+import { Trophy, Star, Zap, Palmtree, Umbrella, Sun, ChevronLeft, ChevronRight, Lock, X as XIcon } from 'lucide-react';
 import { Avatar } from './Avatar';
 import { useToast } from '@/hooks/use-toast';
 import confetti from 'canvas-confetti';
@@ -44,19 +44,39 @@ const FloatingElement = ({ children, delay, x, y }: {
 export function LevelIntro({ level, onStart }: LevelIntroProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [currentCharacter, setCurrentCharacter] = useState<'chicken' | 'coolChicken' | 'penguin' | 'frog' | 'tiger' | 'monkey'>('coolChicken');
+  const [selectedCharacter, setSelectedCharacter] = useState<'chicken' | 'coolChicken' | 'penguin' | 'frog' | 'tiger' | 'monkey'>('coolChicken');
+  const [showAvatarSelection, setShowAvatarSelection] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const { toast } = useToast();
 
-  // Cycle through characters every few seconds
+  // Available characters based on level
+  const characters: {
+    type: 'chicken' | 'coolChicken' | 'penguin' | 'frog' | 'tiger' | 'monkey';
+    name: string;
+    unlockLevel: number;
+  }[] = [
+    { type: 'coolChicken', name: 'Rubber Chicken', unlockLevel: 1 },
+    { type: 'chicken', name: 'Basic Chicken', unlockLevel: 1 },
+    { type: 'penguin', name: 'Cool Penguin', unlockLevel: 2 },
+    { type: 'frog', name: 'Friendly Frog', unlockLevel: 3 },
+    { type: 'tiger', name: 'Tough Tiger', unlockLevel: 4 },
+    { type: 'monkey', name: 'Magical Monkey', unlockLevel: 5 },
+  ];
+
+  // Cycle through characters every few seconds if not in selection mode
   useEffect(() => {
-    const characters: ('chicken' | 'coolChicken' | 'penguin' | 'frog' | 'tiger' | 'monkey')[] = ['coolChicken', 'chicken', 'penguin', 'frog', 'tiger', 'monkey'];
-    let index = 0;
-
-    const interval = setInterval(() => {
-      index = (index + 1) % characters.length;
-      setCurrentCharacter(characters[index]);
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, []);
+    if (!showAvatarSelection) {
+      const interval = setInterval(() => {
+        const availableCharacters = characters.filter(char => char.unlockLevel <= level.levelNumber);
+        if (availableCharacters.length > 0) {
+          setCurrentIndex((prevIndex) => (prevIndex + 1) % availableCharacters.length);
+          setCurrentCharacter(availableCharacters[currentIndex].type);
+        }
+      }, 2000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [currentIndex, level.levelNumber, showAvatarSelection]);
 
   useEffect(() => {
     // Show details after a short delay
@@ -66,6 +86,27 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
 
     return () => clearTimeout(timer);
   }, []);
+  
+  // Handle character selection
+  const handleSelectCharacter = (character: 'chicken' | 'coolChicken' | 'penguin' | 'frog' | 'tiger' | 'monkey') => {
+    setSelectedCharacter(character);
+    setCurrentCharacter(character);
+    setShowAvatarSelection(false);
+    localStorage.setItem('selectedCharacter', character);
+    
+    toast({
+      title: "Avatar Selected!",
+      description: `You've chosen a new companion for your journey!`,
+      variant: "default",
+    });
+    
+    // Trigger confetti effect
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 }
+    });
+  };
 
   return (
     <AnimatePresence>
@@ -154,38 +195,89 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
               <AnimatePresence>
                 {showDetails && (
                   <motion.div
-                    className="p-8"
+                    className="p-5 max-h-[70vh] overflow-y-auto"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
                   >
-                    <div className="flex justify-center -mt-16 mb-4">
-                      <motion.div 
-                        className="bg-white rounded-full p-1 shadow-xl"
-                        animate={{ 
-                          y: [0, -5, 0],
-                        }}
-                        transition={{ 
-                          repeat: Infinity, 
-                          repeatType: "reverse", 
-                          duration: 1.5,
-                          delay: 1
-                        }}
-                      >
-                        <Avatar 
-                          size="lg" 
-                          character={currentCharacter}
-                          selectedRewards={{ accessory: 'sunglasses' }}
-                        />
-                      </motion.div>
-                    </div>
+                    {/* Avatar Display or Selection */}
+                    {!showAvatarSelection ? (
+                      <div className="flex justify-center -mt-16 mb-4 relative">
+                        <motion.div 
+                          className="bg-white rounded-full p-1 shadow-xl"
+                          animate={{ 
+                            y: [0, -5, 0],
+                          }}
+                          transition={{ 
+                            repeat: Infinity, 
+                            repeatType: "reverse", 
+                            duration: 1.5,
+                            delay: 1
+                          }}
+                          onClick={() => setShowAvatarSelection(true)}
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          <Avatar 
+                            size="lg" 
+                            character={currentCharacter}
+                            selectedRewards={{ accessory: 'sunglasses' }}
+                          />
+                          <div className="absolute bottom-0 right-0 bg-[#57cc99] rounded-full p-1 shadow-md border-2 border-white">
+                            <Star className="h-4 w-4 text-white" />
+                          </div>
+                        </motion.div>
+                      </div>
+                    ) : (
+                      <div className="bg-white rounded-lg p-4 shadow-md border-2 border-[#57cc99] mb-6 -mt-10 relative max-h-52 overflow-y-auto">
+                        <div className="flex justify-between items-center mb-2">
+                          <h4 className="font-bold text-[#264653] text-md">Select Your Character</h4>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-7 w-7 p-0 rounded-full" 
+                            onClick={() => setShowAvatarSelection(false)}
+                          >
+                            <XIcon className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                          {characters.map((char) => {
+                            const isUnlocked = char.unlockLevel <= level.levelNumber;
+                            return (
+                              <motion.div
+                                key={char.type}
+                                className={`
+                                  border-2 rounded-lg p-2 flex flex-col items-center relative
+                                  ${isUnlocked ? 'border-[#57cc99] cursor-pointer' : 'border-gray-300 opacity-70'}
+                                `}
+                                whileHover={isUnlocked ? { scale: 1.05 } : {}}
+                                onClick={() => isUnlocked && handleSelectCharacter(char.type)}
+                              >
+                                <Avatar size="md" character={char.type} />
+                                <div className="text-xs mt-1 font-medium text-center">{char.name}</div>
+                                {!isUnlocked && (
+                                  <div className="absolute inset-0 bg-black/20 rounded-lg flex items-center justify-center">
+                                    <div className="bg-[#264653] text-white text-xs px-2 py-1 rounded flex items-center">
+                                      <Lock className="h-3 w-3 mr-1" />
+                                      Level {char.unlockLevel}
+                                    </div>
+                                  </div>
+                                )}
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
 
-                    <p className="text-center text-[#264653] mb-6 font-medium text-lg">
+                    <p className="text-center text-[#264653] mb-4 font-medium text-md">
                       {level.description}
                     </p>
 
-                    <div className="grid grid-cols-2 gap-6 mb-8">
-                      <div className="bg-white rounded-lg p-4 text-center shadow-md border-2 border-[#e9c46a]">
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="bg-white rounded-lg p-3 text-center shadow-md border-2 border-[#57cc99]">
                         <motion.div
                           animate={{ 
                             rotate: [0, 10, 0, -10, 0],
@@ -196,17 +288,17 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
                             duration: 3,
                             delay: 0.5
                           }}
-                          className="mb-2"
+                          className="mb-1"
                         >
-                          <Star className="h-8 w-8 mx-auto text-[#e9c46a]" />
+                          <Star className="h-6 w-6 mx-auto text-[#57cc99]" />
                         </motion.div>
-                        <div className="font-bold text-[#264653]">Difficulty</div>
-                        <div className="text-sm text-[#2a9d8f] capitalize font-medium">
+                        <div className="font-bold text-[#264653] text-sm">Difficulty</div>
+                        <div className="text-xs text-[#2a9d8f] capitalize font-medium">
                           {level.difficulty}
                         </div>
                       </div>
 
-                      <div className="bg-white rounded-lg p-4 text-center shadow-md border-2 border-[#e9c46a]">
+                      <div className="bg-white rounded-lg p-3 text-center shadow-md border-2 border-[#57cc99]">
                         <motion.div
                           animate={{ 
                             scale: [1, 1.2, 1],
@@ -217,45 +309,24 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
                             duration: 2,
                             delay: 0.2
                           }}
-                          className="mb-2"
+                          className="mb-1"
                         >
-                          <Zap className="h-8 w-8 mx-auto text-[#e76f51]" />
+                          <Zap className="h-6 w-6 mx-auto text-[#57cc99]" />
                         </motion.div>
-                        <div className="font-bold text-[#264653]">XP Reward</div>
-                        <div className="text-sm text-[#2a9d8f] font-medium">
+                        <div className="font-bold text-[#264653] text-sm">XP Reward</div>
+                        <div className="text-xs text-[#2a9d8f] font-medium">
                           Up to {level.levelNumber * 100} XP
                         </div>
                       </div>
                     </div>
 
-                    {level.unlockableRewards && (
-                      <motion.div 
-                        className="bg-gradient-to-r from-[#f4a261]/30 to-[#e9c46a]/30 rounded-lg p-5 mb-8 border-2 border-[#f4a261]"
-                        animate={{ 
-                          boxShadow: [
-                            '0 0 0 rgba(228, 155, 15, 0)',
-                            '0 0 20px rgba(228, 155, 15, 0.5)',
-                            '0 0 0 rgba(228, 155, 15, 0)'
-                          ]
-                        }}
-                        transition={{ 
-                          repeat: Infinity, 
-                          duration: 3
-                        }}
-                      >
-                        <h4 className="font-bold text-center mb-2 text-[#264653] text-lg">Unlockable Rewards</h4>
-                        <div className="text-center text-[#264653]">
-                          Complete this level to unlock special customization items!
-                        </div>
-                      </motion.div>
-                    )}
-
                     <motion.div
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
+                      className="mt-4"
                     >
                       <Button 
-                        className="w-full py-6 text-xl bg-gradient-to-r from-[#2a9d8f] to-[#264653] hover:from-[#264653] hover:to-[#2a9d8f] text-white border-none shadow-lg" 
+                        className="w-full py-4 text-lg bg-[#57cc99] hover:bg-[#38b37a] text-white border-none shadow-lg" 
                         onClick={onStart}
                       >
                         Start Level

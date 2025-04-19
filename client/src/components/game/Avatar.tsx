@@ -19,7 +19,7 @@ export function Avatar({
   selectedRewards = {},
   size = 'md', 
   className,
-  character = 'default',
+  character = 'coolChicken',
   animate = true
 }: AvatarProps) {
   const [blinking, setBlinking] = useState(false);
