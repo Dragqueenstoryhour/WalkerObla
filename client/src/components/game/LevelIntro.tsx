@@ -3,8 +3,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GameLevel } from '@/lib/types';
-import { Trophy, Star, Zap, Palmtree, Umbrella, Sun } from 'lucide-react';
+import { Trophy, Star, Zap, Palmtree, Umbrella, Sun, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 import { Avatar } from './Avatar';
+import { useToast } from '@/hooks/use-toast';
+import confetti from 'canvas-confetti';
 
 interface LevelIntroProps {
   level: GameLevel;
