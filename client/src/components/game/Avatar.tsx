@@ -2,13 +2,15 @@ import { useState, useEffect } from 'react';
 import { AvatarStyle, SelectedRewards } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+// Import the image with the correct path format
+import coolChickenImage from '../../assets/cool-chicken.jpg';
 
 interface AvatarProps {
   avatarStyle?: AvatarStyle;
   selectedRewards?: SelectedRewards;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
-  character?: 'chicken' | 'penguin' | 'frog' | 'tiger' | 'monkey' | 'default';
+  character?: 'chicken' | 'coolChicken' | 'penguin' | 'frog' | 'tiger' | 'monkey' | 'default';
   animate?: boolean;
 }
 
@@ -52,6 +54,15 @@ export function Avatar({
       <div className="w-full h-full relative">
         {character === 'chicken' && (
           <ChickenAvatar 
+            size={size}
+            blinking={blinking}
+            animate={animate}
+            accessories={selectedRewards}
+          />
+        )}
+        
+        {character === 'coolChicken' && (
+          <CoolChickenAvatar 
             size={size}
             blinking={blinking}
             animate={animate}
@@ -373,6 +384,71 @@ function MonkeyAvatar({ size, blinking, animate, accessories }: CharacterProps) 
         <div className="absolute left-[35%] top-[10%] w-[30%] h-[20%]">
           <div className="relative w-full h-full">
             <div className="absolute bottom-0 w-full h-[60%] bg-gradient-to-t from-yellow-300 to-yellow-400 rounded-lg transform rotate-12"></div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CoolChickenAvatar({ size, blinking, animate, accessories }: CharacterProps) {
+  return (
+    <div className="relative w-full h-full">
+      {/* Use the image as background but add interactive elements */}
+      <motion.div
+        className="absolute inset-0 bg-cover bg-center rounded-full shadow-lg overflow-hidden"
+        animate={animate ? { 
+          scale: [1, 1.03, 1],
+          rotate: [0, 2, -2, 0]
+        } : {}}
+        transition={{ 
+          repeat: Infinity, 
+          duration: 4, 
+          ease: "easeInOut"
+        }}
+        style={{ backgroundImage: `url(${coolChickenImage})` }}
+      />
+      
+      {/* Add a subtle pulsing effect */}
+      <motion.div
+        className="absolute inset-0 bg-orange-500 rounded-full opacity-0"
+        animate={{ opacity: [0, 0.1, 0] }}
+        transition={{ 
+          repeat: Infinity, 
+          duration: 2,
+          ease: "easeInOut"
+        }}
+      />
+      
+      {/* Add tooltip on hover */}
+      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300">
+        <div className="bg-white/80 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-center text-orange-800 transform -translate-y-8">
+          Cool Chicken
+        </div>
+      </div>
+      
+      {/* Additional accessories if needed */}
+      {accessories?.hat === 'crown' && (
+        <div className="absolute left-[30%] top-[0%] w-[40%] h-[20%]">
+          <div className="relative w-full h-full">
+            <motion.div 
+              className="absolute bottom-0 w-full h-[60%] bg-gradient-to-t from-yellow-400 to-yellow-300 rounded-t-lg"
+              animate={{ y: [0, -2, 0], rotate: [0, 2, 0, -2, 0] }}
+              transition={{ repeat: Infinity, duration: 5 }}
+            />
+            <div className="absolute top-[10%] left-[25%] w-[10%] h-[40%] bg-gradient-to-t from-yellow-500 to-yellow-300 rounded-t-lg"></div>
+            <div className="absolute top-[0%] left-[45%] w-[10%] h-[50%] bg-gradient-to-t from-yellow-500 to-yellow-300 rounded-t-lg"></div>
+            <div className="absolute top-[10%] left-[65%] w-[10%] h-[40%] bg-gradient-to-t from-yellow-500 to-yellow-300 rounded-t-lg"></div>
+            <motion.div 
+              className="absolute top-[25%] left-[35%] w-[8%] h-[8%] rounded-full bg-gradient-to-br from-red-400 to-red-600"
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ repeat: Infinity, duration: 2 }}
+            />
+            <motion.div 
+              className="absolute top-[25%] left-[55%] w-[8%] h-[8%] rounded-full bg-gradient-to-br from-blue-400 to-blue-600"
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ repeat: Infinity, duration: 2, delay: 0.5 }}
+            />
           </div>
         </div>
       )}
