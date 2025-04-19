@@ -1,0 +1,65 @@
+speech_config = speechsdk.SpeechConfig(subscription=SPEECH_KEY, region=SERVICE_REGION)
+        audio_config = speechsdk.audio.AudioConfig(filename=AUDIO_FILE)
+        
+        pronunciation_config = speechsdk.PronunciationAssessmentConfig(
+            reference_text=reference_text,
+            grading_system=speechsdk.PronunciationAssessmentGradingSystem.HundredMark,
+            granularity=speechsdk.PronunciationAssessmentGranularity.Phoneme,
+            enable_miscue=True
+        )
+
+        recognizer = speechsdk.SpeechRecognizer(
+            speech_config=speech_config,
+            audio_config=audio_config,
+            language="en-US"
+        )
+        pronunciation_config.apply_to(recognizer)
+
+        result = recognizer.recognize_once()
+        
+        if result.reason == speechsdk.ResultReason.RecognizedSpeech:
+            json_result = json.loads(result.properties.get(speechsdk.PropertyId.SpeechServiceResponse_JsonResult))
+            print("Azure Response:", json.dumps(json_result, indent=2))  # Debug log
+            
+            if not json_result.get('NBest'):
+                return jsonify({"error": "No assessment results"}), 400
+                
+            best = json_result['NBest'][0]
+            response_data = {
+                "success": True,
+                "score": float(best['PronunciationAssessment']['PronScore']),
+                "text": best['Display'],
+                "details": {
+                    "accuracy": float(best['PronunciationAssessment']['AccuracyScore']),
+                    "fluency": float(best['PronunciationAssessment']['FluencyScore']),
+                    "completeness": float(best['PronunciationAssessment']['CompletenessScore'])
+                }
+            }
+            print("Sending response:", json.dumps(response_data, indent=2))  # Debug log
+            return jsonify(response_data)
+        else:
+            error_response = {
+                "success": False,
+                "error": "Assessment failed",
+                "details": result.reason.name
+            }
+            print("Error response:", json.dumps(error_response, indent=2))  # Debug log
+            return jsonify(error_response), 400
+            
+    except Exception as e:
+        error_response = {
+            "success": False,
+            "error": "Processing error",
+            "details": str(e)
+        }
+        print("Exception:", str(e))  # Debug log
+        return jsonify(error_response), 500
+
+@app.route('/random-sentence')
+def random_sentence():
+    sentence = random.choice(PRACTICE_SENTENCES)
+    return jsonify({"sentence": sentence})
+
+if __name__ == '__main__':
+    os.makedirs(os.path.dirname(AUDIO_FILE), exist_ok=True)
+    app.run(port=3000, debug=True)
