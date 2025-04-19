@@ -32,33 +32,52 @@ if (!isAzureConfigured) {
 
 /**
  * Helper function to generate mock pronunciation assessment results for testing
+ * This is only used in development mode when no Azure key is available
  */
 function createMockAssessmentResults(referenceText: string): PronunciationAssessmentResult {
-  // Extract some actual words from the reference text to use in the mock results
-  const words = referenceText.split(/\s+/).filter(w => w.length > 2);
-  const sampleWords = words.slice(0, Math.min(5, words.length));
-
-  // Create mock word level results based on actual text
-  const wordLevelResults = sampleWords.map(word => {
-    const score = Math.floor(Math.random() * 40) + 60; // Random score between 60-99
+  // Extract all words from the reference text to use in the mock results
+  const words = referenceText.split(/\s+/).filter(w => w.trim().length > 0);
+  
+  // Create word level results for each word in the reference text
+  const wordLevelResults = words.map(word => {
+    // Generate realistic scores with more variation
+    const accuracyScore = Math.floor(Math.random() * 30) + 70; // Score between 70-99
+    
+    // Determine error type based on score threshold
+    let errorType: string | undefined;
+    if (accuracyScore < 75) {
+      errorType = "Mispronunciation";
+    } else if (accuracyScore < 85 && Math.random() > 0.7) {
+      errorType = "UnexpectedBreak";
+    } else {
+      errorType = undefined; // No error
+    }
+    
     return {
-      word,
-      accuracyScore: score,
-      errorType: score < 75 ? "Mispronunciation" : undefined
+      word: word.replace(/[.,?!]/g, ''), // Remove punctuation from words
+      accuracyScore,
+      errorType
     };
   });
 
-  // Return mock results with words from the actual text
+  // Calculate global scores based on word-level results for more realistic relationship
+  const avgAccuracy = wordLevelResults.reduce((sum, w) => sum + w.accuracyScore, 0) / wordLevelResults.length;
+  
+  // Generate related scores that would be typical from Azure (fluency usually lower than accuracy)
+  const fluencyScore = Math.max(50, Math.min(100, avgAccuracy - 5 - Math.floor(Math.random() * 15)));
+  const pronunciationScore = Math.max(60, Math.min(100, (avgAccuracy + fluencyScore) / 2 + (Math.random() * 10 - 5)));
+  const completenessScore = Math.max(70, Math.min(100, avgAccuracy + 10 - Math.floor(Math.random() * 10)));
+  const prosodyScore = Math.max(60, Math.min(100, fluencyScore + (Math.random() * 20 - 10)));
+  
+  // Return mock results with words from the actual text and realistic score relationships
   return {
-    pronunciationScore: 86,
-    fluencyScore: 72,
-    completenessScore: 94,
-    accuracyScore: 89,
-    prosodyScore: 78,
+    pronunciationScore,
+    fluencyScore,
+    completenessScore,
+    accuracyScore: avgAccuracy,
+    prosodyScore,
     wordLevelResults: wordLevelResults.length ? wordLevelResults : [
-      { word: "today", accuracyScore: 60, errorType: "Mispronunciation" },
-      { word: "news", accuracyScore: 92 },
-      { word: "headlines", accuracyScore: 75, errorType: "Mispronunciation" },
+      { word: "sample", accuracyScore: 75, errorType: "Mispronunciation" },
     ],
   };
 }
@@ -95,7 +114,6 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
       
       // Create audio config from the file path
       // The SDK expects a string path to a file, not a Buffer
-      // Use type assertion to make TypeScript happy, since we know we're using a valid file path string
       const audioConfig = sdk.AudioConfig.fromWavFileInput(tempFilePath as any);
       
       // Clean, normalize, and validate the reference text
@@ -107,11 +125,11 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
       
       console.log(`Cleaned reference text: "${cleanedText}"`);
       
-      // Create pronunciation assessment config with cleaned text
+      // Create pronunciation assessment config with cleaned text matching the app.py implementation
       const pronunciationConfig = new sdk.PronunciationAssessmentConfig(
         cleanedText,
         sdk.PronunciationAssessmentGradingSystem.HundredMark,
-        sdk.PronunciationAssessmentGranularity.Phoneme,
+        sdk.PronunciationAssessmentGranularity.Word, // Changed to Word level for more detailed feedback
         true // Enable miscue detection
       );
       
@@ -139,7 +157,7 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
         }
       };
       
-      // Process the audio and get assessment results
+      // Process the audio and get assessment results - similar approach to app.py
       return new Promise((resolve, reject) => {
         recognizer.recognizeOnceAsync(
           (result) => {
@@ -152,6 +170,7 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
               
               if (result.reason === sdk.ResultReason.RecognizedSpeech) {
                 try {
+                  // First try the SDK's built-in assessment result parser
                   const pronunciationResult = sdk.PronunciationAssessmentResult.fromResult(result);
                   console.log(`Received pronunciation scores - Overall: ${pronunciationResult.pronunciationScore}`);
                   
@@ -173,6 +192,40 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
                       };
                     });
                   } else {
+                    // Try the approach from app.py - directly accessing the JSON response
+                    try {
+                      // Get the raw JSON result from the properties
+                      const jsonResult = JSON.parse(result.properties.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult));
+                      console.log("Azure Raw Response:", JSON.stringify(jsonResult, null, 2));
+                      
+                      if (jsonResult && jsonResult.NBest && jsonResult.NBest.length > 0) {
+                        const best = jsonResult.NBest[0];
+                        
+                        if (best.PronunciationAssessment) {
+                          // Get the pronunciation scores directly from the JSON
+                          const pronScores = best.PronunciationAssessment;
+                          
+                          // Return all the scores in the same format as app.py
+                          resolve({
+                            pronunciationScore: parseFloat(pronScores.PronScore) || 0,
+                            fluencyScore: parseFloat(pronScores.FluencyScore) || 0,
+                            completenessScore: parseFloat(pronScores.CompletenessScore) || 0,
+                            accuracyScore: parseFloat(pronScores.AccuracyScore) || 0,
+                            prosodyScore: parseFloat(pronScores.ProsodyScore || 0),
+                            wordLevelResults: (best.Words || []).map((word: any) => ({
+                              word: word.Word,
+                              accuracyScore: parseFloat(word.PronunciationAssessment?.AccuracyScore || 0),
+                              errorType: word.PronunciationAssessment?.ErrorType
+                            }))
+                          });
+                          return;
+                        }
+                      }
+                    } catch (jsonError) {
+                      console.error("Error parsing JSON result:", jsonError);
+                      // Continue with the fallback approach if JSON parsing fails
+                    }
+                    
                     // Fallback for when we don't get word-level results but the overall scores work
                     console.log('No word-level results found, creating fallback');
                     wordLevelResults = cleanedText.split(/\s+/).map(word => ({
@@ -187,7 +240,7 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
                     fluencyScore: pronunciationResult.fluencyScore || 0,
                     completenessScore: pronunciationResult.completenessScore || 0,
                     accuracyScore: pronunciationResult.accuracyScore || 0,
-                    prosodyScore: pronunciationResult.prosodyScore,
+                    prosodyScore: pronunciationResult.prosodyScore || 0,
                     wordLevelResults
                   });
                 } catch (resultError) {
@@ -198,7 +251,9 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
                 }
               } else {
                 console.warn(`Recognition didn't complete successfully: ${result.reason}`);
-                resolve(createMockAssessmentResults(cleanedText));
+                
+                // Don't use mock results in production, return a proper error
+                reject(new Error(`Speech recognition failed: ${result.reason}`));
               }
             } catch (processingError) {
               console.error("Error processing recognition result:", processingError);
@@ -244,8 +299,7 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
     }
   } catch (error) {
     console.error("Error assessing pronunciation:", error);
-    // Return mock results as a fallback
-    return createMockAssessmentResults(referenceText);
+    throw error; // Don't return mock results, properly propagate the error
   }
 }
 
