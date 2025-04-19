@@ -1,6 +1,6 @@
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { LevelProgress } from '@/lib/types';
 import { Avatar } from './Avatar';

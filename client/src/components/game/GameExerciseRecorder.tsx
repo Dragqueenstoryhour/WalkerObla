@@ -339,92 +339,275 @@ export function GameExerciseRecorder({
             
             {/* Assessment results preview */}
             {assessmentResults && (
-              <div className="border-2 border-[#f4a261] rounded-lg bg-[#fdf1d6] p-6 mt-4 relative overflow-hidden shadow-md">
-                <div className="absolute top-0 left-0 w-full h-2 bg-[#f4a261]"></div>
-                <div className="absolute bottom-0 right-0 w-8 h-8 bg-[#e9c46a] rounded-tl-xl"></div>
+              <div className="border-2 border-[#57cc99] rounded-lg bg-[#f5f7fa] p-6 mt-4 relative overflow-hidden shadow-md">
+                <div className="absolute top-0 left-0 w-full h-2 bg-[#57cc99]"></div>
+                <div className="absolute bottom-0 right-0 w-8 h-8 bg-[#c2f8d7] rounded-tl-xl"></div>
                 
-                <h4 className="font-bold text-[#264653] mb-4 text-lg">Results:</h4>
+                {/* Score result with large animated number */}
+                <div className="flex flex-col items-center mb-6">
+                  <div className="mb-1 text-[#264653] font-medium">Your Total Score</div>
+                  
+                  <div className="relative">
+                    <motion.div 
+                      className={`
+                        text-5xl font-bold tabular-nums
+                        ${assessmentResults.pronunciationScore >= 90 ? 'text-[#38b37a]' : 
+                          assessmentResults.pronunciationScore >= 75 ? 'text-[#57cc99]' : 
+                          assessmentResults.pronunciationScore >= 60 ? 'text-[#ffbc42]' : 
+                          'text-[#e76f51]'}
+                      `}
+                      initial={{ scale: 0.5, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ 
+                        type: "spring", 
+                        stiffness: 300, 
+                        damping: 15 
+                      }}
+                    >
+                      {Math.round(assessmentResults.pronunciationScore)}%
+                    </motion.div>
+                    
+                    {/* Award icon for high scores */}
+                    {assessmentResults.pronunciationScore >= 90 && (
+                      <motion.div 
+                        className="absolute -top-4 -right-4"
+                        initial={{ rotate: -45, scale: 0 }}
+                        animate={{ rotate: 0, scale: 1 }}
+                        transition={{ delay: 0.5, type: "spring" }}
+                      >
+                        <Award className="h-8 w-8 text-yellow-500 drop-shadow-md" />
+                      </motion.div>
+                    )}
+                  </div>
+                  
+                  {/* Feedback message based on score */}
+                  <motion.div 
+                    className="mt-2 text-sm font-medium text-center"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    {assessmentResults.pronunciationScore >= 90 ? (
+                      <span className="text-[#38b37a]">Perfect! You're a natural!</span>
+                    ) : assessmentResults.pronunciationScore >= 75 ? (
+                      <span className="text-[#57cc99]">Great job! Keep practicing!</span>
+                    ) : assessmentResults.pronunciationScore >= 60 ? (
+                      <span className="text-[#ffbc42]">Good effort! Try again for better results.</span>
+                    ) : (
+                      <span className="text-[#e76f51]">Keep practicing, you'll improve!</span>
+                    )}
+                  </motion.div>
+                </div>
+                
+                {/* Playback your recording section */}
+                {audioUrl && (
+                  <div className="bg-white/80 border border-[#57cc99] rounded-md p-3 mb-4 flex items-center justify-between">
+                    <div className="text-sm font-medium text-[#264653]">Listen to your recording:</div>
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="bg-[#57cc99] text-white rounded-full p-2 flex items-center justify-center shadow-md hover:bg-[#38b37a] transition-colors"
+                      onClick={() => {
+                        const audio = new Audio(audioUrl);
+                        audio.play();
+                      }}
+                    >
+                      <Volume2 className="h-5 w-5" />
+                    </motion.button>
+                  </div>
+                )}
                 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   {/* Pronunciation Score */}
-                  <div className="bg-white rounded-lg p-3 shadow-sm border border-[#e9c46a]">
+                  <div className="bg-white rounded-lg p-3 shadow-sm border border-[#ddf4e4]">
                     <div className="text-[#264653] text-sm font-medium mb-1">Pronunciation</div>
                     <div className="relative pt-1">
-                      <div className="overflow-hidden h-4 flex rounded-full bg-gray-200">
+                      <div className="overflow-hidden h-5 flex rounded-full bg-gray-100">
                         <motion.div
                           initial={{ width: 0 }}
-                          animate={{ width: `${assessmentResults.pronunciationScore}%` }}
-                          transition={{ duration: 1, ease: "easeOut" }}
+                          animate={{ 
+                            width: `${assessmentResults.pronunciationScore}%`,
+                            transition: { duration: 1, ease: "easeOut" }
+                          }}
                           className={`
-                            flex flex-col justify-center rounded-full text-center text-white text-xs
-                            ${assessmentResults.pronunciationScore >= 80 ? 'bg-green-500' : 
-                              assessmentResults.pronunciationScore >= 60 ? 'bg-yellow-500' : 'bg-red-500'}
+                            relative flex flex-col justify-center rounded-full text-center text-white text-xs
+                            ${assessmentResults.pronunciationScore >= 80 ? 'bg-[#57cc99]' : 
+                              assessmentResults.pronunciationScore >= 60 ? 'bg-[#ffbc42]' : 'bg-[#e76f51]'}
                           `}
                         >
-                          <span className="px-2 font-bold">{assessmentResults.pronunciationScore.toFixed(0)}%</span>
+                          <motion.span 
+                            className="px-2 font-bold z-10"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.5 }}
+                          >
+                            {assessmentResults.pronunciationScore.toFixed(0)}%
+                          </motion.span>
+                          
+                          {/* Liquid fill wave effect */}
+                          <motion.div 
+                            className="absolute inset-0 bg-white/20"
+                            animate={{
+                              backgroundImage: [
+                                'linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.2) 100%)',
+                                'linear-gradient(90deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.4) 100%)',
+                                'linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.2) 100%)'
+                              ],
+                              x: ['-100%', '0%', '100%']
+                            }}
+                            transition={{
+                              repeat: Infinity,
+                              duration: 3,
+                              ease: "linear"
+                            }}
+                          />
                         </motion.div>
                       </div>
                     </div>
                   </div>
                   
                   {/* Fluency Score */}
-                  <div className="bg-white rounded-lg p-3 shadow-sm border border-[#e9c46a]">
+                  <div className="bg-white rounded-lg p-3 shadow-sm border border-[#ddf4e4]">
                     <div className="text-[#264653] text-sm font-medium mb-1">Fluency</div>
                     <div className="relative pt-1">
-                      <div className="overflow-hidden h-4 flex rounded-full bg-gray-200">
+                      <div className="overflow-hidden h-5 flex rounded-full bg-gray-100">
                         <motion.div
                           initial={{ width: 0 }}
-                          animate={{ width: `${assessmentResults.fluencyScore}%` }}
-                          transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
+                          animate={{ 
+                            width: `${assessmentResults.fluencyScore}%`,
+                            transition: { duration: 1, ease: "easeOut", delay: 0.2 }
+                          }}
                           className={`
-                            flex flex-col justify-center rounded-full text-center text-white text-xs
-                            ${assessmentResults.fluencyScore >= 80 ? 'bg-green-500' : 
-                              assessmentResults.fluencyScore >= 60 ? 'bg-yellow-500' : 'bg-red-500'}
+                            relative flex flex-col justify-center rounded-full text-center text-white text-xs
+                            ${assessmentResults.fluencyScore >= 80 ? 'bg-[#57cc99]' : 
+                              assessmentResults.fluencyScore >= 60 ? 'bg-[#ffbc42]' : 'bg-[#e76f51]'}
                           `}
                         >
-                          <span className="px-2 font-bold">{assessmentResults.fluencyScore.toFixed(0)}%</span>
+                          <motion.span 
+                            className="px-2 font-bold z-10"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.7 }}
+                          >
+                            {assessmentResults.fluencyScore.toFixed(0)}%
+                          </motion.span>
+                          
+                          {/* Liquid fill wave effect */}
+                          <motion.div 
+                            className="absolute inset-0 bg-white/20"
+                            animate={{
+                              backgroundImage: [
+                                'linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.2) 100%)',
+                                'linear-gradient(90deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.4) 100%)',
+                                'linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.2) 100%)'
+                              ],
+                              x: ['-100%', '0%', '100%']
+                            }}
+                            transition={{
+                              repeat: Infinity,
+                              duration: 3,
+                              ease: "linear",
+                              delay: 0.3
+                            }}
+                          />
                         </motion.div>
                       </div>
                     </div>
                   </div>
                   
                   {/* Completeness Score */}
-                  <div className="bg-white rounded-lg p-3 shadow-sm border border-[#e9c46a]">
+                  <div className="bg-white rounded-lg p-3 shadow-sm border border-[#ddf4e4]">
                     <div className="text-[#264653] text-sm font-medium mb-1">Completeness</div>
                     <div className="relative pt-1">
-                      <div className="overflow-hidden h-4 flex rounded-full bg-gray-200">
+                      <div className="overflow-hidden h-5 flex rounded-full bg-gray-100">
                         <motion.div
                           initial={{ width: 0 }}
-                          animate={{ width: `${assessmentResults.completenessScore}%` }}
-                          transition={{ duration: 1, ease: "easeOut", delay: 0.4 }}
+                          animate={{ 
+                            width: `${assessmentResults.completenessScore}%`,
+                            transition: { duration: 1, ease: "easeOut", delay: 0.4 }
+                          }}
                           className={`
-                            flex flex-col justify-center rounded-full text-center text-white text-xs
-                            ${assessmentResults.completenessScore >= 80 ? 'bg-green-500' : 
-                              assessmentResults.completenessScore >= 60 ? 'bg-yellow-500' : 'bg-red-500'}
+                            relative flex flex-col justify-center rounded-full text-center text-white text-xs
+                            ${assessmentResults.completenessScore >= 80 ? 'bg-[#57cc99]' : 
+                              assessmentResults.completenessScore >= 60 ? 'bg-[#ffbc42]' : 'bg-[#e76f51]'}
                           `}
                         >
-                          <span className="px-2 font-bold">{assessmentResults.completenessScore.toFixed(0)}%</span>
+                          <motion.span 
+                            className="px-2 font-bold z-10"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.9 }}
+                          >
+                            {assessmentResults.completenessScore.toFixed(0)}%
+                          </motion.span>
+                          
+                          {/* Liquid fill wave effect */}
+                          <motion.div 
+                            className="absolute inset-0 bg-white/20"
+                            animate={{
+                              backgroundImage: [
+                                'linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.2) 100%)',
+                                'linear-gradient(90deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.4) 100%)',
+                                'linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.2) 100%)'
+                              ],
+                              x: ['-100%', '0%', '100%']
+                            }}
+                            transition={{
+                              repeat: Infinity,
+                              duration: 3,
+                              ease: "linear",
+                              delay: 0.6
+                            }}
+                          />
                         </motion.div>
                       </div>
                     </div>
                   </div>
                   
                   {/* Accuracy Score */}
-                  <div className="bg-white rounded-lg p-3 shadow-sm border border-[#e9c46a]">
+                  <div className="bg-white rounded-lg p-3 shadow-sm border border-[#ddf4e4]">
                     <div className="text-[#264653] text-sm font-medium mb-1">Accuracy</div>
                     <div className="relative pt-1">
-                      <div className="overflow-hidden h-4 flex rounded-full bg-gray-200">
+                      <div className="overflow-hidden h-5 flex rounded-full bg-gray-100">
                         <motion.div
                           initial={{ width: 0 }}
-                          animate={{ width: `${assessmentResults.accuracyScore}%` }}
-                          transition={{ duration: 1, ease: "easeOut", delay: 0.6 }}
+                          animate={{ 
+                            width: `${assessmentResults.accuracyScore}%`,
+                            transition: { duration: 1, ease: "easeOut", delay: 0.6 }
+                          }}
                           className={`
-                            flex flex-col justify-center rounded-full text-center text-white text-xs
-                            ${assessmentResults.accuracyScore >= 80 ? 'bg-green-500' : 
-                              assessmentResults.accuracyScore >= 60 ? 'bg-yellow-500' : 'bg-red-500'}
+                            relative flex flex-col justify-center rounded-full text-center text-white text-xs
+                            ${assessmentResults.accuracyScore >= 80 ? 'bg-[#57cc99]' : 
+                              assessmentResults.accuracyScore >= 60 ? 'bg-[#ffbc42]' : 'bg-[#e76f51]'}
                           `}
                         >
-                          <span className="px-2 font-bold">{assessmentResults.accuracyScore.toFixed(0)}%</span>
+                          <motion.span 
+                            className="px-2 font-bold z-10"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 1.1 }}
+                          >
+                            {assessmentResults.accuracyScore.toFixed(0)}%
+                          </motion.span>
+                          
+                          {/* Liquid fill wave effect */}
+                          <motion.div 
+                            className="absolute inset-0 bg-white/20"
+                            animate={{
+                              backgroundImage: [
+                                'linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.2) 100%)',
+                                'linear-gradient(90deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.4) 100%)',
+                                'linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.2) 100%)'
+                              ],
+                              x: ['-100%', '0%', '100%']
+                            }}
+                            transition={{
+                              repeat: Infinity,
+                              duration: 3,
+                              ease: "linear",
+                              delay: 0.9
+                            }}
+                          />
                         </motion.div>
                       </div>
                     </div>
@@ -433,41 +616,56 @@ export function GameExerciseRecorder({
                 
                 {/* Low score feedback section */}
                 {assessmentResults.pronunciationScore < 75 && lowScoreAudio && (
-                  <div className="mb-4 p-4 bg-white rounded-lg border border-amber-200">
-                    <h5 className="font-medium text-[#264653] mb-2">Listen to Your Recording</h5>
+                  <div className="mb-4 p-4 bg-white rounded-lg border-2 border-[#ffbc42] shadow-md">
+                    <h5 className="font-medium text-[#264653] mb-2 flex items-center">
+                      <motion.div 
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ repeat: 2, duration: 1 }}
+                        className="text-[#ffbc42] mr-2"
+                      >
+                        ⚠️
+                      </motion.div>
+                      Practice Makes Perfect!
+                    </h5>
                     <p className="text-sm text-[#264653] mb-3">
-                      Your score is below 75%. Listen to your recording and decide if you'd like to try again or continue.
+                      Your score is below 75%. Listen to your recording and decide if you'd like to try again for a better score.
                     </p>
                     
                     <div className="flex items-center justify-center gap-4 mt-3">
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          const audio = new Audio(lowScoreAudio);
-                          audio.play();
-                        }}
-                        className="bg-white border-[#2a9d8f] text-[#2a9d8f] hover:bg-[#2a9d8f] hover:text-white"
-                      >
-                        <VolumeIcon className="mr-2 h-4 w-4" />
-                        Play Recording
-                      </Button>
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            const audio = new Audio(lowScoreAudio);
+                            audio.play();
+                          }}
+                          className="bg-white border-[#57cc99] text-[#57cc99] hover:bg-[#57cc99] hover:text-white"
+                        >
+                          <Volume2 className="mr-2 h-4 w-4" />
+                          Play Recording
+                        </Button>
+                      </motion.div>
                       
                       <div className="flex gap-2 flex-1">
-                        <Button
-                          variant="outline"
-                          onClick={handleRetry}
-                          className="flex-1 bg-white border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
-                        >
-                          Try Again
-                        </Button>
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex-1">
+                          <Button
+                            variant="default"
+                            onClick={handleRetry}
+                            className="w-full bg-[#57cc99] hover:bg-[#38b37a] text-white"
+                          >
+                            Try Again
+                          </Button>
+                        </motion.div>
                         
-                        <Button
-                          variant="outline"
-                          onClick={handleAccept}
-                          className="flex-1 bg-white border-[#264653] text-[#264653] hover:bg-[#264653] hover:text-white"
-                        >
-                          Continue Anyway
-                        </Button>
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex-1">
+                          <Button
+                            variant="outline"
+                            onClick={handleAccept}
+                            className="w-full border-[#ffbc42] text-[#ffbc42] hover:bg-[#ffbc42] hover:text-white"
+                          >
+                            Continue Anyway
+                          </Button>
+                        </motion.div>
                       </div>
                     </div>
                   </div>
@@ -475,12 +673,28 @@ export function GameExerciseRecorder({
                 
                 {/* Only show continue button for scores above 75% or if it's not in retry mode */}
                 {(assessmentResults.pronunciationScore >= 75 || !lowScoreAudio) && (
-                  <Button
-                    className="w-full bg-[#2a9d8f] hover:bg-[#264653] text-white"
-                    onClick={() => onComplete(assessmentResults)}
+                  <motion.div 
+                    whileHover={{ scale: 1.03 }} 
+                    whileTap={{ scale: 0.97 }}
+                    className="mt-6"
                   >
-                    Continue
-                  </Button>
+                    <Button
+                      className="w-full bg-[#57cc99] hover:bg-[#38b37a] text-white py-5 text-lg"
+                      onClick={() => {
+                        // Play confetti effect when the user scores well and proceeds
+                        if (assessmentResults.pronunciationScore >= 85) {
+                          confetti({
+                            particleCount: 100,
+                            spread: 70,
+                            origin: { y: 0.7 }
+                          });
+                        }
+                        onComplete(assessmentResults);
+                      }}
+                    >
+                      Continue
+                    </Button>
+                  </motion.div>
                 )}
               </div>
             )}
