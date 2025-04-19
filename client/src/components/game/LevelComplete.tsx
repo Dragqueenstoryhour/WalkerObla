@@ -64,7 +64,7 @@ export function LevelComplete({
   const [showRewards, setShowRewards] = useState(false);
   const [showNextLevel, setShowNextLevel] = useState(false);
   const [confettiVisible, setConfettiVisible] = useState(true);
-  const [selectedCharacter, setSelectedCharacter] = useState<'chicken' | 'penguin' | 'frog' | 'tiger' | 'monkey'>('chicken');
+  const [selectedCharacter, setSelectedCharacter] = useState<'chicken' | 'coolChicken' | 'penguin' | 'frog' | 'tiger' | 'monkey'>('coolChicken');
   
   useEffect(() => {
     // Show rewards after a delay
@@ -78,8 +78,8 @@ export function LevelComplete({
     }, 2000);
     
     // Cycle through the characters
-    const characters: ('chicken' | 'penguin' | 'frog' | 'tiger' | 'monkey')[] = 
-      ['chicken', 'penguin', 'frog', 'tiger', 'monkey'];
+    const characters: ('chicken' | 'coolChicken' | 'penguin' | 'frog' | 'tiger' | 'monkey')[] = 
+      ['coolChicken', 'chicken', 'penguin', 'frog', 'tiger', 'monkey'];
     let index = 0;
     
     const characterTimer = setInterval(() => {

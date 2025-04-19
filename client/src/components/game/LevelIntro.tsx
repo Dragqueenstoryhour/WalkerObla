@@ -41,11 +41,11 @@ const FloatingElement = ({ children, delay, x, y }: {
 
 export function LevelIntro({ level, onStart }: LevelIntroProps) {
   const [showDetails, setShowDetails] = useState(false);
-  const [currentCharacter, setCurrentCharacter] = useState<'chicken' | 'penguin' | 'frog' | 'tiger' | 'monkey'>('chicken');
+  const [currentCharacter, setCurrentCharacter] = useState<'chicken' | 'coolChicken' | 'penguin' | 'frog' | 'tiger' | 'monkey'>('coolChicken');
 
   // Cycle through characters every few seconds
   useEffect(() => {
-    const characters: ('chicken' | 'penguin' | 'frog' | 'tiger' | 'monkey')[] = ['chicken', 'penguin', 'frog', 'tiger', 'monkey'];
+    const characters: ('chicken' | 'coolChicken' | 'penguin' | 'frog' | 'tiger' | 'monkey')[] = ['coolChicken', 'chicken', 'penguin', 'frog', 'tiger', 'monkey'];
     let index = 0;
 
     const interval = setInterval(() => {
