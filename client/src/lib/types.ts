@@ -67,3 +67,90 @@ export interface PronunciationAssessmentResult {
     errorType?: string;  // None, Omission, Insertion, Mispronunciation, UnexpectedBreak, MissingBreak, Monotone
   }[];
 }
+
+// User and Progress Types for Gamified System
+export interface User {
+  id: number;
+  username: string;
+  level: number;
+  xp: number;
+  totalExercisesCompleted: number;
+  streakDays: number;
+  lastActivityDate?: string;
+  unlockedRewards?: any;
+  createdAt: string;
+}
+
+export interface UserProfile {
+  id: number;
+  userId: number;
+  displayName?: string;
+  avatarStyle?: AvatarStyle;
+  selectedRewards?: SelectedRewards;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AvatarStyle {
+  skinTone: string;
+  hairStyle: string;
+  hairColor: string;
+  faceShape: string;
+  eyeColor: string;
+  eyebrowStyle: string;
+  noseStyle: string;
+  mouthStyle: string;
+  facialHair?: string;
+  glasses?: string;
+}
+
+export interface SelectedRewards {
+  hat?: string;
+  outfit?: string;
+  accessory?: string;
+  background?: string;
+  badge?: string;
+}
+
+export interface GameLevel {
+  id: number;
+  levelNumber: number;
+  name: string;
+  description: string;
+  requiredXP: number;
+  unlockableRewards?: any;
+  difficulty: 'easy' | 'medium' | 'hard';
+  createdAt: string;
+}
+
+export interface Exercise {
+  id: number;
+  levelId: number;
+  type: 'word' | 'phrase' | 'sentence';
+  content: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  xpReward: number;
+  order: number;
+  createdAt: string;
+}
+
+export interface UserExercise {
+  id: number;
+  userId: number;
+  exerciseId: number;
+  completed: boolean;
+  pronunciationScore?: number;
+  attemptCount: number;
+  lastAttemptAt?: string;
+  createdAt: string;
+}
+
+export interface LevelProgress {
+  currentLevel: GameLevel;
+  nextLevel?: GameLevel;
+  currentXP: number;
+  xpToNextLevel: number;
+  progress: number; // 0-100 percentage
+  exercisesCompleted: number;
+  totalExercises: number;
+}
