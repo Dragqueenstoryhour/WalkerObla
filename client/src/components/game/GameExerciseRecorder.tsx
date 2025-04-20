@@ -214,6 +214,14 @@ export function GameExerciseRecorder({
               </Button>
             </div>
 
+            {!assessmentResults && (
+              <div className="mb-4 p-3 bg-orange-100 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-900/50">
+                <div className="text-xl font-medium text-center text-orange-800 dark:text-orange-200">
+                  {exercise.content}
+                </div>
+              </div>
+            )}
+
             <div className="mb-6">
               {isRecording && (
                 <Alert className="mb-4 border-red-200 bg-red-100 dark:bg-red-900/20 dark:border-red-900/50">
