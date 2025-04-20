@@ -43,11 +43,13 @@ const FloatingElement = ({ children, delay, x, y }: {
 
 export function LevelIntro({ level, onStart }: LevelIntroProps) {
   const [showDetails, setShowDetails] = useState(false);
-  const [currentCharacter, setCurrentCharacter] = useState<'chicken' | 'coolChicken' | 'penguin' | 'frog' | 'tiger' | 'monkey'>('coolChicken');
-  const [selectedCharacter, setSelectedCharacter] = useState<'chicken' | 'coolChicken' | 'penguin' | 'frog' | 'tiger' | 'monkey'>('coolChicken');
   const [showAvatarSelection, setShowAvatarSelection] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const { toast } = useToast();
+  
+  // Try to get the saved character from localStorage, default to coolChicken
+  const savedCharacter = localStorage.getItem('selectedCharacter') as 'chicken' | 'coolChicken' | 'penguin' | 'frog' | 'tiger' | 'monkey' | null;
+  const [currentCharacter, setCurrentCharacter] = useState<'chicken' | 'coolChicken' | 'penguin' | 'frog' | 'tiger' | 'monkey'>(savedCharacter || 'coolChicken');
+  const [selectedCharacter, setSelectedCharacter] = useState<'chicken' | 'coolChicken' | 'penguin' | 'frog' | 'tiger' | 'monkey'>(savedCharacter || 'coolChicken');
 
   // Available characters based on level
   const characters: {
@@ -62,21 +64,6 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
     { type: 'tiger', name: 'Tough Tiger', unlockLevel: 4 },
     { type: 'monkey', name: 'Magical Monkey', unlockLevel: 5 },
   ];
-
-  // Cycle through characters every few seconds if not in selection mode
-  useEffect(() => {
-    if (!showAvatarSelection) {
-      const interval = setInterval(() => {
-        const availableCharacters = characters.filter(char => char.unlockLevel <= level.levelNumber);
-        if (availableCharacters.length > 0) {
-          setCurrentIndex((prevIndex) => (prevIndex + 1) % availableCharacters.length);
-          setCurrentCharacter(availableCharacters[currentIndex].type);
-        }
-      }, 2000);
-      
-      return () => clearInterval(interval);
-    }
-  }, [currentIndex, level.levelNumber, showAvatarSelection]);
 
   useEffect(() => {
     // Show details after a short delay
@@ -142,8 +129,8 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
                   background: `linear-gradient(to right, #2a9d8f, #264653)`
                 }}
               >
-                {/* Decorative wave pattern */}
-                <div className="absolute -bottom-8 left-0 right-0 h-16">
+                {/* Decorative wave pattern - adjusted to not cut off elements */}
+                <div className="absolute bottom-0 left-0 right-0 h-20">
                   <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="absolute bottom-0 w-full h-full">
                     <path 
                       d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" 

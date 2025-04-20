@@ -148,9 +148,9 @@ const FeedbackPanel = () => {
   };
 
   return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-4">
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardContent className="p-4 lg:p-6">
+        <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-semibold">Feedback & Assistance</h2>
           <Button onClick={shareProgress} variant="outline" size="sm" className="text-sm">
             <Share2 className="w-4 h-4 mr-1" />
@@ -158,9 +158,9 @@ const FeedbackPanel = () => {
           </Button>
         </div>
         
-        <div className="border-l-4 border-accent pl-4 mb-6">
-          <p className="text-lg font-medium mb-2">{generalFeedback}</p>
-          <p className="text-textColor">
+        <div className="border-l-4 border-accent pl-4 mb-4">
+          <p className="text-lg font-medium mb-1">{generalFeedback}</p>
+          <p className="text-textColor text-sm">
             {generalFeedback === "Focus on word endings"
               ? "I noticed you tend to skip the endings of some words. Try to fully pronounce each syllable, especially the last one."
               : generalFeedback === "Focus on maintaining a steady reading rhythm" 
@@ -169,29 +169,31 @@ const FeedbackPanel = () => {
           </p>
         </div>
         
-        {/* Pronunciation Help */}
-        <div className="bg-secondary bg-opacity-30 rounded-lg p-4 mb-6">
-          <h3 className="font-medium mb-2">Word Pronunciation Help</h3>
-          <div className="space-y-3">
+        {/* Pronunciation Help - Horizontal layout for better space usage */}
+        <div className="bg-secondary bg-opacity-30 rounded-lg p-3 mb-4">
+          <h3 className="font-medium mb-2 text-sm">Word Pronunciation Help</h3>
+          <div className="grid grid-cols-2 gap-3">
             {pronunciationIssues.map((issue, index) => (
               <div key={index} className="flex items-start">
                 <button 
                   onClick={() => playWordPronunciation(issue.word)}
-                  className="flex-shrink-0 text-primary hover:text-accent transition-colors mr-2 mt-1"
+                  className="flex-shrink-0 text-primary hover:text-accent transition-colors mr-2"
                   aria-label={`Play pronunciation for ${issue.word}`}
                 >
-                  <Volume2 className="w-5 h-5" />
+                  <Volume2 className="w-4 h-4" />
                 </button>
                 <div className="flex-1">
-                  <p className="font-medium">{issue.word}</p>
-                  <p className="text-sm text-textColor">{issue.phonetic}</p>
-                  <div className="h-1 bg-secondary rounded-full overflow-hidden mt-1">
-                    <div 
-                      className={`h-full ${
-                        issue.score < 60 ? 'bg-red-500' : issue.score < 80 ? 'bg-accent' : 'bg-success'
-                      }`} 
-                      style={{ width: `${issue.score}%` }}
-                    />
+                  <p className="font-medium text-sm">{issue.word}</p>
+                  <div className="flex items-center space-x-1">
+                    <div className="h-1 bg-secondary rounded-full overflow-hidden flex-1">
+                      <div 
+                        className={`h-full ${
+                          issue.score < 60 ? 'bg-red-500' : issue.score < 80 ? 'bg-accent' : 'bg-success'
+                        }`} 
+                        style={{ width: `${issue.score}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-muted-foreground">{issue.score}%</span>
                   </div>
                 </div>
               </div>
@@ -199,27 +201,27 @@ const FeedbackPanel = () => {
           </div>
         </div>
         
-        {/* Suggested Exercises */}
+        {/* Suggested Exercises - Compact horizontal layout */}
         <div>
-          <h3 className="font-medium mb-3">Suggested Exercises</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <h3 className="font-medium mb-2 text-sm">Suggested Exercises</h3>
+          <div className="grid grid-cols-2 gap-2">
             {suggestedExercises.map((exercise, index) => (
               <button 
                 key={index}
-                className="bg-white border border-secondary rounded-lg p-4 text-left hover:border-primary transition-colors flex items-start"
+                className="bg-white border border-secondary rounded-lg p-2 text-left hover:border-primary transition-colors flex items-start"
               >
-                <div className="flex-shrink-0 bg-primary bg-opacity-10 p-2 rounded-full mr-3">
+                <div className="flex-shrink-0 bg-primary bg-opacity-10 p-1 rounded-full mr-2">
                   {exercise.type === 'pronunciation' ? (
-                    <Mic className="w-5 h-5 text-primary" />
+                    <Mic className="w-4 h-4 text-primary" />
                   ) : (
-                    <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg className="w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
                     </svg>
                   )}
                 </div>
                 <div>
-                  <p className="font-medium">{exercise.title}</p>
-                  <p className="text-sm text-textColor">{exercise.description}</p>
+                  <p className="font-medium text-sm">{exercise.title}</p>
+                  <p className="text-xs text-textColor">{exercise.description}</p>
                 </div>
               </button>
             ))}

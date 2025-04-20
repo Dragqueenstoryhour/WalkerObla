@@ -132,96 +132,163 @@ export function LevelPath({ onSelectLevel }: LevelPathProps) {
         Recovery Journey
       </h1>
       
-      <div className="relative w-full flex justify-center">
-        {/* Vertical path with connecting lines */}
-        <div className="absolute left-1/2 top-16 bottom-0 transform -translate-x-1/2 w-2 bg-green-200 rounded-full z-0"></div>
+      <div className="relative w-full py-10">
+        {/* Winding curved path SVG */}
+        <svg 
+          className="absolute h-full w-full top-0 left-0" 
+          viewBox="0 0 100 540" 
+          preserveAspectRatio="none"
+        >
+          {/* Main curved path */}
+          <path 
+            d="M50,0 Q70,60 30,120 Q10,180 50,240 Q80,300 40,360 Q15,420 50,480 Q75,540 50,540" 
+            className="stroke-green-200" 
+            strokeWidth="3" 
+            fill="none" 
+            strokeLinecap="round"
+            strokeDasharray="5,2.5"
+          />
+          {/* Path overlay for animation effect */}
+          <path 
+            d="M50,0 Q70,60 30,120 Q10,180 50,240 Q80,300 40,360 Q15,420 50,480 Q75,540 50,540" 
+            className="stroke-green-300" 
+            strokeWidth="3" 
+            fill="none" 
+            strokeLinecap="round"
+            strokeDasharray="2,20"
+          >
+            <animate 
+              attributeName="stroke-dashoffset" 
+              from="0" 
+              to="50" 
+              dur="3s" 
+              repeatCount="indefinite" 
+            />
+          </path>
+        </svg>
         
-        {/* Levels arranged vertically */}
-        <div className="relative z-10 flex flex-col items-center space-y-20 mt-8">
+        {/* Levels arranged along the path */}
+        <div className="relative z-10">
           {mockLevels.map((level, index) => {
             const status = getLevelStatus(level);
             const medal = getLevelMedal(level);
             
+            // Calculate position along winding path
+            const positionStyles = {
+              left: index % 2 === 0 ? '50%' : index % 3 === 0 ? '65%' : '35%',
+              top: `${20 + index * 90}px`,
+              transform: index % 2 === 0 ? 'translateX(-50%)' : index % 3 === 0 ? 'translateX(-65%)' : 'translateX(-35%)'
+            };
+            
             return (
-              <div key={level.id} className="relative flex items-center justify-center">
-                {/* Floating token or bonus icon (for certain levels) */}
-                {index % 2 === 0 && status !== 'locked' && (
-                  <motion.div 
-                    className="absolute -top-10 -right-10"
-                    initial={{ y: 0 }}
-                    animate={{ y: [-4, 4, -4] }}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                  >
-                    <div className="relative flex items-center justify-center bg-yellow-400 rounded-full p-2 shadow-lg">
-                      <Coins className="h-5 w-5 text-yellow-800" />
-                      <span className="absolute -top-2 -right-2 bg-white rounded-full text-xs font-bold w-5 h-5 flex items-center justify-center border border-yellow-400">
-                        {level.levelNumber * 5}
-                      </span>
-                    </div>
-                  </motion.div>
-                )}
-                
-                {/* Level Button */}
-                <motion.button
-                  className={`
-                    relative w-16 h-16 rounded-full flex items-center justify-center
-                    ${status === 'locked' ? 'bg-gray-300 cursor-not-allowed' : 
-                    status === 'completed' ? 'bg-green-500 text-white' :
-                    status === 'active' ? 'bg-blue-500 text-white ring-4 ring-blue-300 animate-pulse' :
-                    status === 'inProgress' ? 'bg-yellow-400 text-yellow-900' :
-                    'bg-white border-2 border-green-400 text-green-800'}
-                    shadow-lg z-10
-                  `}
-                  whileHover={status !== 'locked' ? { scale: 1.1 } : {}}
-                  whileTap={status !== 'locked' ? { scale: 0.95 } : {}}
-                  onClick={() => handleLevelClick(level)}
-                >
-                  {status === 'locked' ? (
-                    <Lock className="h-6 w-6 text-gray-500" />
-                  ) : (
-                    <span className="text-xl font-bold">{level.levelNumber}</span>
-                  )}
-                  
-                  {/* Show current user avatar at active level */}
-                  {status === 'active' && (
-                    <div className="absolute -right-8 transform scale-75">
-                      <Avatar />
-                    </div>
-                  )}
-                  
-                  {/* Level name label */}
-                  <div className="absolute left-20 whitespace-nowrap">
-                    <span className={`font-medium ${status === 'locked' ? 'text-gray-400' : 'text-green-800'}`}>
-                      {level.name}
-                    </span>
-                  </div>
-                  
-                  {/* Medal for completed levels */}
-                  {medal && (
+              <div key={level.id} className="absolute" style={positionStyles}>
+                <div className="relative flex items-center justify-center">
+                  {/* Floating coins/rewards (only show if not locked and not on all levels to reduce clutter) */}
+                  {(index === 1 || index === 4) && status !== 'locked' && (
                     <motion.div 
-                      className="absolute -right-6 -bottom-2"
-                      initial={{ scale: 0, rotate: -45 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      transition={{ type: 'spring', delay: 0.2 }}
+                      className="absolute -top-12 -right-8"
+                      initial={{ y: 0 }}
+                      animate={{ y: [-4, 4, -4] }}
+                      transition={{ repeat: Infinity, duration: 2 }}
                     >
-                      {medal === 'gold' && (
-                        <div className="flex items-center justify-center w-8 h-8 bg-yellow-500 rounded-full border-2 border-yellow-600 shadow-md">
-                          <Trophy className="h-4 w-4 text-yellow-100" />
-                        </div>
-                      )}
-                      {medal === 'silver' && (
-                        <div className="flex items-center justify-center w-8 h-8 bg-gray-300 rounded-full border-2 border-gray-400 shadow-md">
-                          <Trophy className="h-4 w-4 text-white" />
-                        </div>
-                      )}
-                      {medal === 'bronze' && (
-                        <div className="flex items-center justify-center w-8 h-8 bg-amber-600 rounded-full border-2 border-amber-700 shadow-md">
-                          <Trophy className="h-4 w-4 text-amber-200" />
-                        </div>
-                      )}
+                      <div className="relative flex items-center justify-center bg-yellow-400 rounded-full p-2 shadow-lg">
+                        <Coins className="h-5 w-5 text-yellow-800" />
+                        <span className="absolute -top-2 -right-2 bg-white rounded-full text-xs font-bold w-5 h-5 flex items-center justify-center border border-yellow-400">
+                          {level.levelNumber * 5}
+                        </span>
+                      </div>
                     </motion.div>
                   )}
-                </motion.button>
+                  
+                  {/* Level Button with animation */}
+                  <motion.button
+                    className={`
+                      relative w-16 h-16 rounded-full flex items-center justify-center shadow-lg z-10
+                      ${status === 'locked' ? 'bg-gray-300 cursor-not-allowed' : 
+                      status === 'completed' ? 'bg-green-500 text-white' :
+                      status === 'active' ? 'bg-blue-500 text-white' :
+                      status === 'inProgress' ? 'bg-yellow-400 text-yellow-900' :
+                      'bg-white border-2 border-green-400 text-green-800'}
+                    `}
+                    whileHover={status !== 'locked' ? { 
+                      scale: 1.1,
+                      boxShadow: '0 0 15px rgba(34, 197, 94, 0.5)'
+                    } : {}}
+                    whileTap={status !== 'locked' ? { 
+                      scale: 0.95,
+                      boxShadow: '0 0 8px rgba(34, 197, 94, 0.5)' 
+                    } : {}}
+                    animate={status === 'active' ? {
+                      boxShadow: ['0 0 0 4px rgba(59, 130, 246, 0.3)', '0 0 0 8px rgba(59, 130, 246, 0)', '0 0 0 4px rgba(59, 130, 246, 0.3)']
+                    } : {}}
+                    transition={status === 'active' ? {
+                      duration: 2,
+                      repeat: Infinity
+                    } : {}}
+                    onClick={() => handleLevelClick(level)}
+                  >
+                    {status === 'locked' ? (
+                      <Lock className="h-6 w-6 text-gray-500" />
+                    ) : (
+                      <motion.span 
+                        className="text-xl font-bold"
+                        animate={status === 'active' ? {
+                          scale: [1, 1.1, 1],
+                        } : {}}
+                        transition={status === 'active' ? {
+                          duration: 2,
+                          repeat: Infinity
+                        } : {}}
+                      >
+                        {level.levelNumber}
+                      </motion.span>
+                    )}
+                    
+                    {/* Level name label */}
+                    <div className={`absolute ${index % 2 === 0 ? 'left-20' : '-left-40'} whitespace-nowrap`}>
+                      <span className={`font-medium ${status === 'locked' ? 'text-gray-400' : 'text-green-800'}`}>
+                        {level.name}
+                      </span>
+                    </div>
+                    
+                    {/* Show current user avatar at active level */}
+                    {status === 'active' && (
+                      <motion.div 
+                        className="absolute -right-8 transform scale-75"
+                        animate={{ y: [-3, 3, -3] }}
+                        transition={{ repeat: Infinity, duration: 2 }}
+                      >
+                        <Avatar />
+                      </motion.div>
+                    )}
+                    
+                    {/* Medal for completed levels */}
+                    {medal && (
+                      <motion.div 
+                        className="absolute -right-5 -bottom-2"
+                        initial={{ scale: 0, rotate: -45 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{ type: 'spring', delay: 0.2 }}
+                      >
+                        {medal === 'gold' && (
+                          <div className="flex items-center justify-center w-8 h-8 bg-yellow-500 rounded-full border-2 border-yellow-600 shadow-md">
+                            <Trophy className="h-4 w-4 text-yellow-100" />
+                          </div>
+                        )}
+                        {medal === 'silver' && (
+                          <div className="flex items-center justify-center w-8 h-8 bg-gray-300 rounded-full border-2 border-gray-400 shadow-md">
+                            <Trophy className="h-4 w-4 text-white" />
+                          </div>
+                        )}
+                        {medal === 'bronze' && (
+                          <div className="flex items-center justify-center w-8 h-8 bg-amber-600 rounded-full border-2 border-amber-700 shadow-md">
+                            <Trophy className="h-4 w-4 text-amber-200" />
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                  </motion.button>
+                </div>
               </div>
             );
           })}
