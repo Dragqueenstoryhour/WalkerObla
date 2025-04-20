@@ -96,48 +96,80 @@ export function GameExerciseRecorder({
       // Update assessment results
       setAssessmentResults(results);
       
-      if (!retryMode && results.pronunciationScore >= 75) {
-        // Notify parent component only if score is sufficient and not in retry mode
-        onComplete(results);
+      // Generate voice feedback based on score
+      const provideFeedback = () => {
+        // Create feedback message based on score
+        let feedbackMessage = "";
         
-        // Celebration for great performance
         if (results.pronunciationScore >= 90) {
-          // Trigger confetti effect for excellent scores
-          confetti({
-            particleCount: 150,
-            spread: 80,
-            origin: { y: 0.6 }
-          });
-          
-          setTimeout(() => {
-            confetti({
-              particleCount: 50,
-              angle: 60,
-              spread: 55,
-              origin: { x: 0, y: 0.6 }
-            });
-            
-            confetti({
-              particleCount: 50,
-              angle: 120,
-              spread: 55,
-              origin: { x: 1, y: 0.6 }
-            });
-          }, 600);
+          feedbackMessage = "Excellent job! Your pronunciation is outstanding!";
+        } else if (results.pronunciationScore >= 75) {
+          feedbackMessage = "Great job! Your pronunciation is very clear.";
+        } else if (results.pronunciationScore >= 60) {
+          feedbackMessage = "Not bad, but you can improve with practice. Listen carefully and try again.";
+        } else {
+          feedbackMessage = "Let's practice more. Listen to the correct pronunciation and try again.";
         }
         
-        toast({
-          title: results.pronunciationScore >= 90 ? '🌟 Outstanding!' : 'Great Job!',
-          description: `Pronunciation: ${results.pronunciationScore.toFixed(1)}%, Fluency: ${results.fluencyScore.toFixed(1)}%`,
-          variant: 'default',
-        });
-      } else if (!retryMode) {
-        toast({
-          title: 'Practice Needed',
-          description: `Score: ${results.pronunciationScore.toFixed(1)}%. Listen to your recording and try again.`,
-          variant: 'destructive',
-        });
-      }
+        // Speak the feedback message
+        const speech = new SpeechSynthesisUtterance(feedbackMessage);
+        window.speechSynthesis.speak(speech);
+        
+        // After feedback completes, update UI and proceed
+        speech.onend = () => {
+          if (!retryMode && results.pronunciationScore >= 75) {
+            // Notify parent component only if score is sufficient and not in retry mode
+            onComplete(results);
+            
+            // Celebration for great performance
+            if (results.pronunciationScore >= 90) {
+              // Trigger confetti effect for excellent scores
+              confetti({
+                particleCount: 150,
+                spread: 80,
+                origin: { y: 0.6 }
+              });
+              
+              setTimeout(() => {
+                confetti({
+                  particleCount: 50,
+                  angle: 60,
+                  spread: 55,
+                  origin: { x: 0, y: 0.6 }
+                });
+                
+                confetti({
+                  particleCount: 50,
+                  angle: 120,
+                  spread: 55,
+                  origin: { x: 1, y: 0.6 }
+                });
+              }, 600);
+            }
+            
+            toast({
+              title: results.pronunciationScore >= 90 ? '🌟 Outstanding!' : 'Great Job!',
+              description: `Pronunciation: ${results.pronunciationScore.toFixed(1)}%, Fluency: ${results.fluencyScore.toFixed(1)}%`,
+              variant: 'default',
+            });
+          } else if (!retryMode) {
+            toast({
+              title: 'Practice Needed',
+              description: `Score: ${results.pronunciationScore.toFixed(1)}%. Listen to your recording and try again.`,
+              variant: 'destructive',
+            });
+            
+            // Automatically play the correct pronunciation after a short delay
+            setTimeout(() => {
+              const correctPronunciation = new SpeechSynthesisUtterance(exercise.content);
+              correctPronunciation.rate = 0.9; // Slightly slower for better clarity
+              window.speechSynthesis.speak(correctPronunciation);
+            }, 1500);
+          }
+        };
+      };
+      
+      provideFeedback();
       
     } catch (error) {
       console.error('Error assessing pronunciation:', error);
@@ -156,14 +188,14 @@ export function GameExerciseRecorder({
     setRetryMode(false);
     setLowScoreAudio(null);
     startRecording();
-  }
+  };
   
   // Function to accept current recording despite low score
   const handleAccept = () => {
     if (assessmentResults) {
       onComplete(assessmentResults);
     }
-  }
+  };
   
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-background/80 backdrop-blur-sm overflow-y-auto">
@@ -484,32 +516,13 @@ export function GameExerciseRecorder({
                           `}
                         >
                           <motion.span 
-                            className="px-2 font-bold z-10"
+                            className="px-2 font-bold"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: 0.7 }}
                           >
                             {assessmentResults.fluencyScore.toFixed(0)}%
                           </motion.span>
-                          
-                          {/* Liquid fill wave effect */}
-                          <motion.div 
-                            className="absolute inset-0 bg-white/20"
-                            animate={{
-                              backgroundImage: [
-                                'linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.2) 100%)',
-                                'linear-gradient(90deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.4) 100%)',
-                                'linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.2) 100%)'
-                              ],
-                              x: ['-100%', '0%', '100%']
-                            }}
-                            transition={{
-                              repeat: Infinity,
-                              duration: 3,
-                              ease: "linear",
-                              delay: 0.3
-                            }}
-                          />
                         </motion.div>
                       </div>
                     </div>
@@ -533,32 +546,13 @@ export function GameExerciseRecorder({
                           `}
                         >
                           <motion.span 
-                            className="px-2 font-bold z-10"
+                            className="px-2 font-bold"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: 0.9 }}
                           >
                             {assessmentResults.completenessScore.toFixed(0)}%
                           </motion.span>
-                          
-                          {/* Liquid fill wave effect */}
-                          <motion.div 
-                            className="absolute inset-0 bg-white/20"
-                            animate={{
-                              backgroundImage: [
-                                'linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.2) 100%)',
-                                'linear-gradient(90deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.4) 100%)',
-                                'linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.2) 100%)'
-                              ],
-                              x: ['-100%', '0%', '100%']
-                            }}
-                            transition={{
-                              repeat: Infinity,
-                              duration: 3,
-                              ease: "linear",
-                              delay: 0.6
-                            }}
-                          />
                         </motion.div>
                       </div>
                     </div>
@@ -582,119 +576,37 @@ export function GameExerciseRecorder({
                           `}
                         >
                           <motion.span 
-                            className="px-2 font-bold z-10"
+                            className="px-2 font-bold"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: 1.1 }}
                           >
                             {assessmentResults.accuracyScore.toFixed(0)}%
                           </motion.span>
-                          
-                          {/* Liquid fill wave effect */}
-                          <motion.div 
-                            className="absolute inset-0 bg-white/20"
-                            animate={{
-                              backgroundImage: [
-                                'linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.2) 100%)',
-                                'linear-gradient(90deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.4) 100%)',
-                                'linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.2) 100%)'
-                              ],
-                              x: ['-100%', '0%', '100%']
-                            }}
-                            transition={{
-                              repeat: Infinity,
-                              duration: 3,
-                              ease: "linear",
-                              delay: 0.9
-                            }}
-                          />
                         </motion.div>
                       </div>
                     </div>
                   </div>
                 </div>
                 
-                {/* Low score feedback section */}
-                {assessmentResults.pronunciationScore < 75 && lowScoreAudio && (
-                  <div className="mb-4 p-4 bg-white rounded-lg border-2 border-[#ffbc42] shadow-md">
-                    <h5 className="font-medium text-[#264653] mb-2 flex items-center">
-                      <motion.div 
-                        animate={{ scale: [1, 1.2, 1] }}
-                        transition={{ repeat: 2, duration: 1 }}
-                        className="text-[#ffbc42] mr-2"
-                      >
-                        ⚠️
-                      </motion.div>
-                      Practice Makes Perfect!
-                    </h5>
-                    <p className="text-sm text-[#264653] mb-3">
-                      Your score is below 75%. Listen to your recording and decide if you'd like to try again for a better score.
-                    </p>
-                    
-                    <div className="flex items-center justify-center gap-4 mt-3">
-                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            const audio = new Audio(lowScoreAudio);
-                            audio.play();
-                          }}
-                          className="bg-white border-[#57cc99] text-[#57cc99] hover:bg-[#57cc99] hover:text-white"
-                        >
-                          <Volume2 className="mr-2 h-4 w-4" />
-                          Play Recording
-                        </Button>
-                      </motion.div>
-                      
-                      <div className="flex gap-2 flex-1">
-                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex-1">
-                          <Button
-                            variant="default"
-                            onClick={handleRetry}
-                            className="w-full bg-[#57cc99] hover:bg-[#38b37a] text-white"
-                          >
-                            Try Again
-                          </Button>
-                        </motion.div>
-                        
-                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex-1">
-                          <Button
-                            variant="outline"
-                            onClick={handleAccept}
-                            className="w-full border-[#ffbc42] text-[#ffbc42] hover:bg-[#ffbc42] hover:text-white"
-                          >
-                            Continue Anyway
-                          </Button>
-                        </motion.div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Only show continue button for scores above 75% or if it's not in retry mode */}
-                {(assessmentResults.pronunciationScore >= 75 || !lowScoreAudio) && (
-                  <motion.div 
-                    whileHover={{ scale: 1.03 }} 
-                    whileTap={{ scale: 0.97 }}
-                    className="mt-6"
-                  >
-                    <Button
-                      className="w-full bg-[#57cc99] hover:bg-[#38b37a] text-white py-5 text-lg"
-                      onClick={() => {
-                        // Play confetti effect when the user scores well and proceeds
-                        if (assessmentResults.pronunciationScore >= 85) {
-                          confetti({
-                            particleCount: 100,
-                            spread: 70,
-                            origin: { y: 0.7 }
-                          });
-                        }
-                        onComplete(assessmentResults);
-                      }}
+                {/* Actions for low scores */}
+                {retryMode && (
+                  <div className="flex space-x-3 mt-6">
+                    <Button 
+                      onClick={handleRetry} 
+                      className="flex-1"
                     >
-                      Continue
+                      Try Again
                     </Button>
-                  </motion.div>
+                    
+                    <Button 
+                      variant="outline" 
+                      onClick={handleAccept}
+                      className="flex-1"
+                    >
+                      Accept Score
+                    </Button>
+                  </div>
                 )}
               </div>
             )}

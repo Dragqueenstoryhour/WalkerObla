@@ -67,7 +67,7 @@ function RecordingTestContent() {
         <LevelComplete
           user={game.currentUser}
           completedLevel={game.currentLevel}
-          nextLevel={game.levelProgress.nextLevel}
+          nextLevel={game.levelProgress.nextLevel || undefined}
           stats={{
             exercisesCompleted: game.levelProgress.exercisesCompleted,
             totalExercises: game.levelProgress.totalExercises,
@@ -206,17 +206,100 @@ function RecordingTestContent() {
                   Complete levels to unlock new customization options for your avatar.
                 </p>
                 
-                <div className="bg-muted/30 rounded-lg p-4 mb-6">
-                  <h4 className="font-medium mb-2">Currently Unlocked</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-background rounded-lg p-4">
-                      <p className="text-sm text-muted-foreground">Base Avatar</p>
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-medium">Your Tokens</h4>
+                    <div className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 px-3 py-1 rounded-full text-sm font-medium flex items-center">
+                      <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M12 17V17.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M12 13.5C14.5 12 14.5 9.5 12 8C9.5 6.5 9.5 9 12 10.5C14.5 12 14.5 15 12 16.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      {game.currentUser?.tokens || 0} Tokens
                     </div>
-                    {game.currentUser?.level && game.currentUser.level >= 1 && (
-                      <div className="bg-background rounded-lg p-4">
-                        <p className="text-sm text-muted-foreground">Baseball Cap</p>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg p-4 mb-6 border border-primary/20">
+                  <h4 className="font-medium mb-4">Avatar Customization</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="bg-background rounded-lg p-4 text-center relative opacity-100">
+                      <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center">
+                        ✓
                       </div>
-                    )}
+                      <div className="h-12 w-12 mx-auto mb-2 flex items-center justify-center">
+                        👤
+                      </div>
+                      <p className="text-sm">Base Avatar</p>
+                      <p className="text-xs text-muted-foreground">Unlocked</p>
+                    </div>
+                    
+                    <div className={`bg-background rounded-lg p-4 text-center relative ${(game.currentUser?.level || 0) >= 1 ? "opacity-100" : "opacity-50"}`}>
+                      {(game.currentUser?.level || 0) >= 1 ? (
+                        <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center">
+                          ✓
+                        </div>
+                      ) : (
+                        <div className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs rounded-full px-2 py-1 text-center text-[10px]">
+                          Lvl 1
+                        </div>
+                      )}
+                      <div className="h-12 w-12 mx-auto mb-2 flex items-center justify-center">
+                        🧢
+                      </div>
+                      <p className="text-sm">Baseball Cap</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(game.currentUser?.level || 0) >= 1 ? "Unlocked" : "Locked"}
+                      </p>
+                    </div>
+                    
+                    <div className={`bg-background rounded-lg p-4 text-center relative cursor-pointer hover:bg-primary/5 transition-colors`}>
+                      <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full px-2 py-1">
+                        25 🪙
+                      </div>
+                      <div className="h-12 w-12 mx-auto mb-2 flex items-center justify-center">
+                        🕶️
+                      </div>
+                      <p className="text-sm">Sunglasses</p>
+                      <p className="text-xs text-muted-foreground">Available</p>
+                    </div>
+                    
+                    <div className={`bg-background rounded-lg p-4 text-center relative cursor-pointer hover:bg-primary/5 transition-colors`}>
+                      <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full px-2 py-1">
+                        40 🪙
+                      </div>
+                      <div className="h-12 w-12 mx-auto mb-2 flex items-center justify-center">
+                        👑
+                      </div>
+                      <p className="text-sm">Crown</p>
+                      <p className="text-xs text-muted-foreground">Available</p>
+                    </div>
+                    
+                    <div className={`bg-background rounded-lg p-4 text-center relative cursor-pointer hover:bg-primary/5 transition-colors`}>
+                      <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full px-2 py-1">
+                        30 🪙
+                      </div>
+                      <div className="h-12 w-12 mx-auto mb-2 flex items-center justify-center">
+                        🎭
+                      </div>
+                      <p className="text-sm">Mask</p>
+                      <p className="text-xs text-muted-foreground">Available</p>
+                    </div>
+                    
+                    <div className={`bg-background rounded-lg p-4 text-center relative opacity-70`}>
+                      <div className="absolute -top-2 -right-2 bg-gray-500 text-white text-xs rounded-full px-2 py-1 text-center text-[10px]">
+                        Lvl 3
+                      </div>
+                      <div className="h-12 w-12 mx-auto mb-2 flex items-center justify-center">
+                        🎸
+                      </div>
+                      <p className="text-sm">Guitar</p>
+                      <p className="text-xs text-muted-foreground">Locked</p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 text-xs text-center text-muted-foreground">
+                    Complete exercises to earn tokens and unlock new items!
                   </div>
                 </div>
                 
@@ -234,19 +317,117 @@ function RecordingTestContent() {
                 
                 {game.currentUser && (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div className="bg-muted/50 rounded-lg p-4 text-center">
-                        <div className="text-muted-foreground text-sm mb-1">Level</div>
-                        <div className="text-2xl font-bold">{game.currentUser.level}</div>
+                    <div className="grid grid-cols-3 gap-3 mb-6">
+                      <div className="bg-muted/50 rounded-lg p-3 text-center">
+                        <div className="text-muted-foreground text-xs mb-1">Level</div>
+                        <div className="text-2xl font-bold">{game.currentUser.level || 1}</div>
                       </div>
                       
-                      <div className="bg-muted/50 rounded-lg p-4 text-center">
-                        <div className="text-muted-foreground text-sm mb-1">Total XP</div>
+                      <div className="bg-muted/50 rounded-lg p-3 text-center">
+                        <div className="text-muted-foreground text-xs mb-1">Total XP</div>
                         <div className="text-2xl font-bold text-blue-500">{game.currentUser.xp}</div>
+                      </div>
+                      
+                      <div className="bg-muted/50 rounded-lg p-3 text-center">
+                        <div className="text-muted-foreground text-xs mb-1">Tokens</div>
+                        <div className="text-2xl font-bold text-amber-500">{game.currentUser.tokens || 0}</div>
                       </div>
                     </div>
                     
-                    <div className="bg-muted/50 rounded-lg p-4 text-center">
+                    <div className="rounded-lg border p-4 mb-6">
+                      <h4 className="font-medium text-sm mb-4">Pronunciation Progress</h4>
+                      <div className="h-[200px] mb-4 relative">
+                        {/* Simple chart using div heights */}
+                        <div className="absolute bottom-0 left-0 w-full flex items-end justify-between h-[180px] pr-8">
+                          {/* X Axis labels */}
+                          <div className="absolute bottom-0 left-0 w-full flex justify-between px-6 border-t pt-1 text-xs text-muted-foreground">
+                            <div>Day 1</div>
+                            <div>Day 2</div>
+                            <div>Day 3</div>
+                            <div>Day 4</div>
+                            <div>Day 5</div>
+                            <div>Today</div>
+                          </div>
+                          
+                          {/* Y Axis labels */}
+                          <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-muted-foreground">
+                            <div>100%</div>
+                            <div>75%</div>
+                            <div>50%</div>
+                            <div>25%</div>
+                            <div>0%</div>
+                          </div>
+                          
+                          {/* Fake chart bars */}
+                          <div className="flex items-end justify-between w-full pl-8">
+                            <div className="w-8 bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-sm mx-1" style={{height: '50px'}}></div>
+                            <div className="w-8 bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-sm mx-1" style={{height: '65px'}}></div>
+                            <div className="w-8 bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-sm mx-1" style={{height: '60px'}}></div>
+                            <div className="w-8 bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-sm mx-1" style={{height: '85px'}}></div>
+                            <div className="w-8 bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-sm mx-1" style={{height: '95px'}}></div>
+                            <div className="w-8 bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-sm mx-1" style={{height: '110px'}}></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-xs text-center text-muted-foreground">
+                        Your pronunciation score is improving over time!
+                      </div>
+                    </div>
+                    
+                    <div className="rounded-lg border p-4 mb-6">
+                      <h4 className="font-medium text-sm mb-4">Performance Breakdown</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <h5 className="text-xs font-medium mb-1">Average Pronunciation</h5>
+                          <div className="h-3 bg-muted rounded-full overflow-hidden mb-1">
+                            <div className="h-full bg-green-500 rounded-full" style={{width: '78%'}}></div>
+                          </div>
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>0%</span>
+                            <span>78%</span>
+                            <span>100%</span>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <h5 className="text-xs font-medium mb-1">Average Fluency</h5>
+                          <div className="h-3 bg-muted rounded-full overflow-hidden mb-1">
+                            <div className="h-full bg-blue-500 rounded-full" style={{width: '72%'}}></div>
+                          </div>
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>0%</span>
+                            <span>72%</span>
+                            <span>100%</span>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <h5 className="text-xs font-medium mb-1">Average Completeness</h5>
+                          <div className="h-3 bg-muted rounded-full overflow-hidden mb-1">
+                            <div className="h-full bg-amber-500 rounded-full" style={{width: '83%'}}></div>
+                          </div>
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>0%</span>
+                            <span>83%</span>
+                            <span>100%</span>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <h5 className="text-xs font-medium mb-1">Average Accuracy</h5>
+                          <div className="h-3 bg-muted rounded-full overflow-hidden mb-1">
+                            <div className="h-full bg-purple-500 rounded-full" style={{width: '76%'}}></div>
+                          </div>
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>0%</span>
+                            <span>76%</span>
+                            <span>100%</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-muted/50 rounded-lg p-4 text-center mb-6">
                       <div className="text-muted-foreground text-sm mb-1">Exercises Completed</div>
                       <div className="text-2xl font-bold">{game.currentUser.totalExercisesCompleted}</div>
                     </div>
