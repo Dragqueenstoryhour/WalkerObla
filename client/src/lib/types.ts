@@ -78,6 +78,7 @@ export interface User {
   streakDays: number;
   lastActivityDate?: string;
   unlockedRewards?: any;
+  tokens: number;
   createdAt: string;
 }
 
@@ -147,7 +148,7 @@ export interface UserExercise {
 
 export interface LevelProgress {
   currentLevel: GameLevel;
-  nextLevel?: GameLevel;
+  nextLevel?: GameLevel | null;
   currentXP: number;
   xpToNextLevel: number;
   progress: number; // 0-100 percentage

@@ -74,6 +74,7 @@ const mockUser: User = {
   username: 'player1',
   level: 1,
   xp: 0,
+  tokens: 30,
   totalExercisesCompleted: 0,
   streakDays: 0,
   createdAt: new Date().toISOString()
@@ -335,10 +336,14 @@ export function GameProvider({ children, initialUsername = 'player1' }: GameProv
         lastAttemptAt: new Date().toISOString()
       };
       
-      // Award XP to user
+      // Award XP and tokens to user
+      const tokensAwarded = result.pronunciationScore >= 90 ? 15 : 
+                            result.pronunciationScore >= 75 ? 10 : 5;
+      
       const updatedUser = {
         ...currentUser,
-        xp: currentUser.xp + exercise.xpReward
+        xp: currentUser.xp + exercise.xpReward,
+        tokens: currentUser.tokens + tokensAwarded
       };
       
       // Update state

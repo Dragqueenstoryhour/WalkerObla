@@ -166,8 +166,8 @@ export function GameExerciseRecorder({
   }
   
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-      <div className="max-w-md w-full mx-4">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-background/80 backdrop-blur-sm overflow-y-auto">
+      <div className="max-w-md w-full mx-4 my-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex justify-between items-center mb-4">
@@ -220,7 +220,7 @@ export function GameExerciseRecorder({
                             px-4 py-2 rounded-lg text-lg font-medium
                             relative overflow-hidden
                             ${
-                              assessmentResults?.wordLevelResults.find(w => w.word === word)?.accuracyScore < 70
+                              (assessmentResults?.wordLevelResults.find(w => w.word === word)?.accuracyScore || 100) < 70
                               ? 'bg-[#e76f51] text-white' 
                               : 'bg-[#e9c46a] text-[#264653]'
                             }
