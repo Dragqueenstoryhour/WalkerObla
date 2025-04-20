@@ -25,16 +25,10 @@ export function LevelPath({ onSelectLevel }: LevelPathProps) {
   const [medalLevel, setMedalLevel] = useState<GameLevel | null>(null);
 
   // Function to determine if a level is locked
+  // All levels are now unlocked as requested
   const isLevelLocked = (levelNumber: number) => {
-    // Level 1 is always unlocked
-    if (levelNumber === 1) return false;
-    
-    // If previous level is completed, this level is unlocked
-    const previousLevelCompleted = userExercises.some(ex => 
-      ex.levelId === levelNumber - 1 && ex.isCompleted
-    );
-    
-    return !previousLevelCompleted;
+    // All levels are unlocked
+    return false;
   };
   
   // Function to determine level status
@@ -116,14 +110,14 @@ export function LevelPath({ onSelectLevel }: LevelPathProps) {
     }, 5000);
   };
   
-  // Generate mock levels for demonstration
+  // Generate levels with updated descriptions and more complex phrases for levels 4-6
   const mockLevels: GameLevel[] = [
-    { id: 1, levelNumber: 1, name: "Basic Greetings", description: "Practice simple hello and goodbye phrases", difficulty: "easy", requiredXP: 100, isActive: true, isCompleted: false, exercises: 3 },
-    { id: 2, levelNumber: 2, name: "Personal Info", description: "Learn to share your name and basic details", difficulty: "easy", requiredXP: 200, isActive: false, isCompleted: false, exercises: 3 },
-    { id: 3, levelNumber: 3, name: "Daily Routines", description: "Practice describing your daily activities", difficulty: "easy", requiredXP: 300, isActive: false, isCompleted: false, exercises: 3 },
-    { id: 4, levelNumber: 4, name: "Food & Dining", description: "Learn food vocabulary and ordering phrases", difficulty: "medium", requiredXP: 400, isActive: false, isCompleted: false, exercises: 3 },
-    { id: 5, levelNumber: 5, name: "Directions", description: "Practice asking for and giving directions", difficulty: "medium", requiredXP: 500, isActive: false, isCompleted: false, exercises: 3 },
-    { id: 6, levelNumber: 6, name: "Health", description: "Learn to describe symptoms and emergency phrases", difficulty: "hard", requiredXP: 600, isActive: false, isCompleted: false, exercises: 3 }
+    { id: 1, levelNumber: 1, name: "Basic Words", description: "Practice simple words like 'hello', 'thank you', and 'goodbye'", difficulty: "easy", requiredXP: 100, isActive: true, isCompleted: false, exercises: 3 },
+    { id: 2, levelNumber: 2, name: "Simple Phrases", description: "Practice everyday phrases like 'How are you?' and 'My name is...'", difficulty: "easy", requiredXP: 200, isActive: false, isCompleted: false, exercises: 3 },
+    { id: 3, levelNumber: 3, name: "Short Sentences", description: "Practice complete sentences like 'I would like a glass of water'", difficulty: "easy", requiredXP: 300, isActive: false, isCompleted: false, exercises: 3 },
+    { id: 4, levelNumber: 4, name: "Complex Phrases", description: "Practice challenging phrases like 'Could you please help me find the nearest pharmacy?'", difficulty: "medium", requiredXP: 400, isActive: false, isCompleted: false, exercises: 4 },
+    { id: 5, levelNumber: 5, name: "Multi-part Sentences", description: "Practice sentences with multiple parts like 'When I finish my therapy today, I would like to go to the park'", difficulty: "medium", requiredXP: 500, isActive: false, isCompleted: false, exercises: 4 },
+    { id: 6, levelNumber: 6, name: "Conversation Flow", description: "Practice fluid conversation patterns and improve overall speech rhythm and fluency", difficulty: "hard", requiredXP: 600, isActive: false, isCompleted: false, exercises: 5 }
   ];
   
   return (

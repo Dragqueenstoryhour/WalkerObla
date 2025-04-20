@@ -187,7 +187,7 @@ export default function RecordingTest() {
               </Button>
             </div>
             
-            {/* Level Path (Vertical journey map) */}
+            {/* Level Path (Journey map) */}
             <LevelPath onSelectLevel={handleStartLevel} />
             
             {/* Medal system popup */}
@@ -197,87 +197,6 @@ export default function RecordingTest() {
                 console.log('Medal acknowledged for level:', levelId);
               }}
             />
-            
-            {/* Legacy grid of levels (can be kept as alternative view) */}
-            <div className="mt-10">
-              <h3 className="text-xl font-bold mb-4">Classic Level Selection</h3>
-              <div className="grid gap-6 md:grid-cols-2">
-                {/* Level 1 */}
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="text-xl font-bold mb-1">Level 1</h3>
-                        <p className="text-muted-foreground">Beginner Words</p>
-                      </div>
-                      <div className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs font-medium">
-                        Easy
-                      </div>
-                    </div>
-                    
-                    <p className="mb-4">Practice simple words to build your pronunciation skills.</p>
-                    
-                    <Button 
-                      className="w-full" 
-                      onClick={() => handleStartLevel(1)}
-                    >
-                      Start Level
-                      <ChevronRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </CardContent>
-                </Card>
-                
-                {/* Level 2 */}
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="text-xl font-bold mb-1">Level 2</h3>
-                        <p className="text-muted-foreground">Simple Phrases</p>
-                      </div>
-                      <div className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs font-medium">
-                        Easy
-                      </div>
-                    </div>
-                    
-                    <p className="mb-4">Practice short phrases to improve your fluency.</p>
-                    
-                    <Button 
-                      className="w-full" 
-                      onClick={() => handleStartLevel(2)}
-                    >
-                      Start Level
-                      <ChevronRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </CardContent>
-                </Card>
-                
-                {/* Level 3 */}
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="text-xl font-bold mb-1">Level 3</h3>
-                        <p className="text-muted-foreground">Complete Sentences</p>
-                      </div>
-                      <div className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 px-2 py-1 rounded-full text-xs font-medium">
-                        Medium
-                      </div>
-                    </div>
-                    
-                    <p className="mb-4">Practice complete sentences for better speech rhythm.</p>
-                    
-                    <Button 
-                      className="w-full" 
-                      onClick={() => handleStartLevel(3)}
-                    >
-                      Start Level
-                      <ChevronRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
           </TabsContent>
           
           <TabsContent value="rewards">
