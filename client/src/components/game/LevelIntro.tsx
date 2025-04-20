@@ -143,28 +143,30 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
                     </motion.div>
                   </div>
 
-                  <motion.h2 
-                    className="text-3xl font-bold mb-0.5"
-                    animate={{ 
-                      scale: [1, 1.05, 1],
-                    }}
-                    transition={{ 
-                      repeat: Infinity, 
-                      repeatType: "reverse", 
-                      duration: 2
-                    }}
-                  >
-                    Level {level.levelNumber}
-                  </motion.h2>
+                  <div className="flex items-center justify-center gap-2">
+                    <motion.h2 
+                      className="text-3xl font-bold mb-0.5"
+                      animate={{ 
+                        scale: [1, 1.05, 1],
+                      }}
+                      transition={{ 
+                        repeat: Infinity, 
+                        repeatType: "reverse", 
+                        duration: 2
+                      }}
+                    >
+                      Level {level.levelNumber}:
+                    </motion.h2>
 
-                  <motion.h3 
-                    className="text-lg"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6, duration: 0.5 }}
-                  >
-                    {level.name}
-                  </motion.h3>
+                    <motion.h3 
+                      className="text-xl font-medium"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.6, duration: 0.5 }}
+                    >
+                      {level.name}
+                    </motion.h3>
+                  </div>
                 </motion.div>
               </div>
 
@@ -179,7 +181,7 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
                   >
                     {/* Avatar Display or Selection */}
                     {!showAvatarSelection ? (
-                      <div className="flex justify-center -mt-12 mb-4 relative">
+                      <div className="flex justify-center -mt-12 mb-4 relative z-10">
                         <motion.div 
                           className="bg-white rounded-full p-0.5 shadow-xl"
                           animate={{ 

@@ -43,6 +43,22 @@ export function GameExerciseRecorder({
       });
     }
   });
+  
+  // Start recording automatically when component mounts
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!isRecording && !assessmentResults) {
+        startRecording();
+        toast({
+          title: 'Recording Started',
+          description: 'Speak now... Say the word or phrase clearly.',
+          variant: 'default',
+        });
+      }
+    }, 500); // Small delay to ensure component is mounted
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // Format time for display
   const formatTime = (seconds: number) => {
@@ -153,11 +169,7 @@ export function GameExerciseRecorder({
               variant: 'default',
             });
           } else if (!retryMode) {
-            toast({
-              title: 'Practice Needed',
-              description: `Score: ${results.pronunciationScore.toFixed(1)}%. Listen to your recording and try again.`,
-              variant: 'destructive',
-            });
+            // Don't show duplicate error popup, we have the UI for feedback
 
             // Automatically play the correct pronunciation after a short delay
             setTimeout(() => {
@@ -239,20 +251,20 @@ export function GameExerciseRecorder({
                 {!isRecording ? (
                   <Button 
                     onClick={startRecording} 
-                    className="flex-1"
+                    className="flex-1 bg-green-500 hover:bg-green-600"
                     disabled={isProcessing}
                   >
                     <MicIcon className="mr-2 h-4 w-4" />
-                    Start Recording
+                    Start Speaking
                   </Button>
                 ) : (
                   <Button 
                     onClick={stopRecording} 
                     variant="destructive"
-                    className="flex-1"
+                    className="flex-1 animate-pulse"
                   >
                     <StopCircleIcon className="mr-2 h-4 w-4" />
-                    Stop Recording
+                    Finished
                   </Button>
                 )}
 

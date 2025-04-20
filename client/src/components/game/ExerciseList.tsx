@@ -24,22 +24,10 @@ export function ExerciseList({
     return userExercises.find(ue => ue.exerciseId === exerciseId);
   };
   
-  // Function to check if an exercise is active
+  // Function to check if an exercise is active - now all exercises are active
+  // allowing users to skip around and practice any word
   const isExerciseActive = (exerciseId: number) => {
-    // An exercise is active if it's the active one or all previous exercises are completed
-    if (exerciseId === activeExerciseId) return true;
-    
-    // Find this exercise's position
-    const exerciseIndex = sortedExercises.findIndex(ex => ex.id === exerciseId);
-    if (exerciseIndex === -1) return false;
-    
-    // Check if all previous exercises are completed
-    for (let i = 0; i < exerciseIndex; i++) {
-      const prevExercise = sortedExercises[i];
-      const userExercise = getUserExercise(prevExercise.id);
-      if (!userExercise?.completed) return false;
-    }
-    
+    // All exercises are now active to allow skipping around
     return true;
   };
   
