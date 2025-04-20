@@ -1,155 +1,160 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy } from 'lucide-react';
+import { GameLevel } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Trophy } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { MedalType } from '@/lib/types';
 
-export type { MedalType };
+// Add MedalType export so we can use it in RecordingTest
+export type MedalType = 'bronze' | 'silver' | 'gold';
 
-interface MedalAward {
+interface MedalData {
   levelId: number;
-  levelNumber: number;
-  levelName: string;
-  medalType: MedalType;
+  type: MedalType;
+  acknowledged: boolean;
 }
 
 interface MedalSystemProps {
-  medals: Record<number, MedalType>;  // levelId -> medalType
-  onMedalAcknowledged?: (levelId: number) => void;
+  medals: MedalData[] | Record<number, MedalType>;
+  onMedalAcknowledged: (levelId: number) => void;
 }
 
 export function MedalSystem({ medals, onMedalAcknowledged }: MedalSystemProps) {
-  const [displayedMedal, setDisplayedMedal] = useState<MedalAward | null>(null);
-  const [acknowledgedMedals, setAcknowledgedMedals] = useState<Record<number, boolean>>({});
+  const [activeMedal, setActiveMedal] = useState<MedalData | null>(null);
+  const [showPopup, setShowPopup] = useState(false);
+  const [levelInfo, setLevelInfo] = useState<GameLevel | null>(null);
   
-  // Mock level data for demonstration purposes
-  const mockLevelData: Record<number, { levelNumber: number, name: string }> = {
-    1: { levelNumber: 1, name: "Basic Greetings" },
-    2: { levelNumber: 2, name: "Personal Info" },
-    3: { levelNumber: 3, name: "Daily Routines" },
-    4: { levelNumber: 4, name: "Food & Dining" },
-    5: { levelNumber: 5, name: "Directions" },
-    6: { levelNumber: 6, name: "Health" }
-  };
+  // Process medals to ensure we have a consistent array format
+  const processedMedals: MedalData[] = Array.isArray(medals) 
+    ? medals 
+    : Object.entries(medals).map(([levelId, type]) => ({
+        levelId: Number(levelId),
+        type,
+        acknowledged: false // Default to unacknowledged
+      }));
   
-  // Function to get level info
-  const getLevelInfo = (levelId: number) => {
-    return mockLevelData[levelId] || { levelNumber: levelId, name: `Level ${levelId}` };
-  };
-  
-  // Function to handle medal styles based on type
-  const getMedalStyles = (medalType: MedalType) => {
-    switch(medalType) {
-      case 'gold':
-        return {
-          bg: 'bg-yellow-500',
-          border: 'border-yellow-600',
-          icon: 'text-yellow-100',
-          name: 'Gold',
-          textColor: 'text-yellow-700'
-        };
-      case 'silver':
-        return {
-          bg: 'bg-gray-300',
-          border: 'border-gray-400',
-          icon: 'text-white',
-          name: 'Silver',
-          textColor: 'text-gray-700'
-        };
-      case 'bronze':
-        return {
-          bg: 'bg-amber-600',
-          border: 'border-amber-700',
-          icon: 'text-amber-200',
-          name: 'Bronze',
-          textColor: 'text-amber-700'
-        };
-    }
-  };
-  
-  // Check for unacknowledged medals whenever the medals prop changes
+  // Find the first unacknowledged medal to display
   useEffect(() => {
-    const unacknowledgedMedalIds = Object.keys(medals)
-      .filter(levelId => !acknowledgedMedals[parseInt(levelId)])
-      .map(levelId => parseInt(levelId));
-    
-    if (unacknowledgedMedalIds.length > 0 && !displayedMedal) {
-      const levelId = unacknowledgedMedalIds[0];
-      const levelInfo = getLevelInfo(levelId);
+    const unacknowledgedMedal = processedMedals.find(medal => !medal.acknowledged);
+    if (unacknowledgedMedal) {
+      setActiveMedal(unacknowledgedMedal);
+      setShowPopup(true);
       
-      setDisplayedMedal({
-        levelId,
-        levelNumber: levelInfo.levelNumber,
-        levelName: levelInfo.name,
-        medalType: medals[levelId]
-      });
-      
-      // Trigger confetti
+      // Trigger confetti effect
       confetti({
         particleCount: 100,
         spread: 70,
         origin: { y: 0.6 }
       });
+      
+      // Get level info (this would normally come from a data source)
+      // For now we'll mock it
+      const mockLevelInfo: GameLevel = {
+        id: unacknowledgedMedal.levelId,
+        levelNumber: Math.floor(unacknowledgedMedal.levelId),
+        name: `Level ${Math.floor(unacknowledgedMedal.levelId)}`,
+        description: "Great job on completing this level!",
+        difficulty: "medium",
+        requiredXP: 100,
+        isActive: false,
+        isCompleted: true,
+        exercises: 5
+      };
+      setLevelInfo(mockLevelInfo);
     }
-  }, [medals, acknowledgedMedals, displayedMedal]);
+  }, [processedMedals]);
   
-  // Function to acknowledge a medal
-  const acknowledgeMedal = (levelId: number) => {
-    setAcknowledgedMedals(prev => ({
-      ...prev,
-      [levelId]: true
-    }));
-    
-    setDisplayedMedal(null);
-    
-    if (onMedalAcknowledged) {
-      onMedalAcknowledged(levelId);
+  // Handle acknowledgment
+  const handleAcknowledge = () => {
+    if (activeMedal) {
+      onMedalAcknowledged(activeMedal.levelId);
+      setShowPopup(false);
+      setActiveMedal(null);
     }
+  };
+  
+  // Get medal color based on type
+  const getMedalColors = (type: MedalType) => {
+    switch (type) {
+      case 'gold':
+        return {
+          bg: 'bg-yellow-500',
+          border: 'border-yellow-600',
+          text: 'text-yellow-100'
+        };
+      case 'silver':
+        return {
+          bg: 'bg-gray-300',
+          border: 'border-gray-400',
+          text: 'text-white'
+        };
+      case 'bronze':
+      default:
+        return {
+          bg: 'bg-amber-600',
+          border: 'border-amber-700',
+          text: 'text-amber-200'
+        };
+    }
+  };
+  
+  // Bronze medal animations
+  const bronzeMedalAnimation = {
+    hover: { 
+      scale: 1.1, 
+      rotate: [0, -5, 5, -5, 0],
+      transition: { duration: 0.5 }
+    },
+    tap: { scale: 0.95 }
+  };
+  
+  // Medal display component
+  const Medal = ({ type, size = 'md' }: { type: MedalType, size?: 'sm' | 'md' | 'lg' }) => {
+    const colors = getMedalColors(type);
+    const sizeClasses = {
+      sm: 'w-8 h-8',
+      md: 'w-12 h-12',
+      lg: 'w-32 h-32'
+    };
+    
+    const iconSizes = {
+      sm: 'h-4 w-4',
+      md: 'h-6 w-6',
+      lg: 'h-16 w-16'
+    };
+    
+    return (
+      <motion.div
+        className={`relative ${sizeClasses[size]} rounded-full flex items-center justify-center ${colors.bg} border-4 ${colors.border} shadow-lg`}
+        whileHover={bronzeMedalAnimation.hover}
+        whileTap={bronzeMedalAnimation.tap}
+      >
+        <Trophy className={`${iconSizes[size]} ${colors.text}`} />
+        
+        <motion.div
+          className="absolute inset-0 rounded-full"
+          animate={{ 
+            boxShadow: [
+              '0 0 0 0px rgba(255,255,255,0.8)',
+              '0 0 0 5px rgba(255,255,255,0)',
+              '0 0 0 0px rgba(255,255,255,0)'
+            ]
+          }}
+          transition={{ 
+            repeat: Infinity,
+            duration: 2,
+            repeatDelay: 1
+          }}
+        />
+      </motion.div>
+    );
   };
   
   return (
     <>
-      {/* Medal Collection/Summary (can be shown in a separate tab) */}
-      {Object.keys(medals).length > 0 && (
-        <Card className="mb-6">
-          <CardContent className="p-6">
-            <h3 className="text-lg font-bold mb-4 flex items-center">
-              <Trophy className="h-5 w-5 mr-2 text-yellow-500" />
-              Your Medal Collection
-            </h3>
-            
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {Object.entries(medals).map(([levelId, medalType]) => {
-                const levelInfo = getLevelInfo(parseInt(levelId));
-                const styles = getMedalStyles(medalType);
-                
-                return (
-                  <div 
-                    key={levelId} 
-                    className="flex items-center p-3 bg-background rounded-lg border border-border"
-                  >
-                    <div className={`${styles.bg} ${styles.border} h-8 w-8 rounded-full flex items-center justify-center border-2 mr-3`}>
-                      <Trophy className={`h-4 w-4 ${styles.icon}`} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Level {levelInfo.levelNumber}</p>
-                      <p className={`text-xs ${styles.textColor} font-semibold`}>
-                        {styles.name} Medal
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      
-      {/* Medal Award Popup */}
+      {/* Medal achievement popup */}
       <AnimatePresence>
-        {displayedMedal && (
+        {showPopup && activeMedal && levelInfo && (
           <motion.div 
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
             initial={{ opacity: 0 }}
@@ -168,52 +173,19 @@ export function MedalSystem({ medals, onMedalAcknowledged }: MedalSystemProps) {
               </h2>
               
               <div className="flex justify-center mb-6">
-                <motion.div
-                  className={`
-                    relative w-32 h-32 rounded-full flex items-center justify-center
-                    ${getMedalStyles(displayedMedal.medalType).bg} 
-                    border-4 ${getMedalStyles(displayedMedal.medalType).border}
-                    shadow-lg
-                  `}
-                  initial={{ rotate: -180, scale: 0 }}
-                  animate={{ rotate: 0, scale: 1 }}
-                  transition={{ 
-                    type: 'spring', 
-                    damping: 10, 
-                    stiffness: 100,
-                    duration: 1 
-                  }}
-                >
-                  <Trophy className={`h-16 w-16 ${getMedalStyles(displayedMedal.medalType).icon}`} />
-                  
-                  <motion.div
-                    className="absolute inset-0 rounded-full"
-                    animate={{ 
-                      boxShadow: [
-                        '0 0 0 0px rgba(255,255,255,0.8)',
-                        '0 0 0 10px rgba(255,255,255,0)',
-                        '0 0 0 0px rgba(255,255,255,0)'
-                      ]
-                    }}
-                    transition={{ 
-                      repeat: 2,
-                      duration: 1.5,
-                      delay: 0.3
-                    }}
-                  />
-                </motion.div>
+                <Medal type={activeMedal.type} size="lg" />
               </div>
               
               <p className="text-center text-gray-700 mb-6">
                 You've earned a <span className="font-bold">
-                  {getMedalStyles(displayedMedal.medalType).name}
-                </span> medal for completing Level {displayedMedal.levelNumber}: {displayedMedal.levelName}!
+                  {activeMedal.type.charAt(0).toUpperCase() + activeMedal.type.slice(1)}
+                </span> medal for completing Level {levelInfo.levelNumber}: {levelInfo.name}!
               </p>
               
               <div className="flex justify-center">
                 <Button 
-                  className="px-8"
-                  onClick={() => acknowledgeMedal(displayedMedal.levelId)}
+                  className="px-8 bg-green-600 hover:bg-green-700"
+                  onClick={handleAcknowledge}
                 >
                   Continue
                 </Button>

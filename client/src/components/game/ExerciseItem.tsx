@@ -10,7 +10,7 @@ interface ExerciseItemProps {
   isActive: boolean;
   isCompleted: boolean;
   onStart: () => void;
-  onComplete: (score: number) => void;
+  onComplete: (result: PronunciationAssessmentResult) => void;
   pronunciationResults?: PronunciationAssessmentResult;
 }
 

@@ -177,19 +177,35 @@ export function LevelPath({ onSelectLevel }: LevelPathProps) {
             return (
               <div key={level.id} className="absolute" style={positionStyles}>
                 <div className="relative flex items-center justify-center">
-                  {/* Floating coins/rewards (only show if not locked and not on all levels to reduce clutter) */}
-                  {(index === 1 || index === 4) && status !== 'locked' && (
+                  {/* Bronze medal achievements (only show when user has 75% or more on all word cards) */}
+                  {(index === 1 || index === 4) && status === 'completed' && (
                     <motion.div 
                       className="absolute -top-12 -right-8"
-                      initial={{ y: 0 }}
-                      animate={{ y: [-4, 4, -4] }}
-                      transition={{ repeat: Infinity, duration: 2 }}
+                      initial={{ scale: 0, y: 0 }}
+                      animate={{ scale: 1, y: [-4, 4, -4] }}
+                      transition={{ 
+                        scale: { type: 'spring', damping: 10, stiffness: 100 },
+                        y: { repeat: Infinity, duration: 2 }
+                      }}
+                      whileHover={{ scale: 1.1, rotate: [0, -5, 5, -5, 0] }}
                     >
-                      <div className="relative flex items-center justify-center bg-yellow-400 rounded-full p-2 shadow-lg">
-                        <Coins className="h-5 w-5 text-yellow-800" />
-                        <span className="absolute -top-2 -right-2 bg-white rounded-full text-xs font-bold w-5 h-5 flex items-center justify-center border border-yellow-400">
-                          {level.levelNumber * 5}
-                        </span>
+                      <div className="relative flex items-center justify-center bg-amber-600 rounded-full p-2.5 shadow-lg border-2 border-amber-700">
+                        <Trophy className="h-6 w-6 text-amber-200" />
+                        <motion.div 
+                          className="absolute inset-0 rounded-full"
+                          animate={{ 
+                            boxShadow: [
+                              '0 0 0 0px rgba(255,255,255,0.8)',
+                              '0 0 0 5px rgba(255,255,255,0)',
+                              '0 0 0 0px rgba(255,255,255,0)'
+                            ]
+                          }}
+                          transition={{ 
+                            repeat: Infinity,
+                            duration: 2,
+                            repeatDelay: 1
+                          }}
+                        />
                       </div>
                     </motion.div>
                   )}
