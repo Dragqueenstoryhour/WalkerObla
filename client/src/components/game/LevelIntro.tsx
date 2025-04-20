@@ -124,7 +124,7 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
             <CardContent className="p-0">
               {/* Header */}
               <div 
-                className="bg-gradient-to-r from-[#2a9d8f] to-[#264653] text-white p-6 pb-3 text-center relative"
+                className="bg-gradient-to-r from-[#2a9d8f] to-[#264653] text-white p-4 pb-2 text-center relative"
                 style={{
                   background: `linear-gradient(to right, #2a9d8f, #264653)`
                 }}
@@ -134,17 +134,17 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.3, type: 'spring' }}
                 >
-                  <div className="flex justify-center mb-4">
+                  <div className="flex justify-center mb-2">
                     <motion.div 
-                      className="bg-[#fdf1d6] rounded-full p-3 shadow-lg"
+                      className="bg-[#fdf1d6] rounded-full p-2 shadow-lg"
                       whileHover={{ rotate: [0, -10, 10, -10, 10, 0], transition: { duration: 0.5 } }}
                     >
-                      <Trophy size={40} className="text-[#e76f51]" />
+                      <Trophy size={30} className="text-[#e76f51]" />
                     </motion.div>
                   </div>
 
                   <motion.h2 
-                    className="text-4xl font-bold mb-1"
+                    className="text-3xl font-bold mb-0.5"
                     animate={{ 
                       scale: [1, 1.05, 1],
                     }}
@@ -158,7 +158,7 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
                   </motion.h2>
 
                   <motion.h3 
-                    className="text-2xl"
+                    className="text-lg"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.6, duration: 0.5 }}
@@ -179,9 +179,9 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
                   >
                     {/* Avatar Display or Selection */}
                     {!showAvatarSelection ? (
-                      <div className="flex justify-center -mt-16 mb-4 relative">
+                      <div className="flex justify-center -mt-12 mb-4 relative">
                         <motion.div 
-                          className="bg-white rounded-full p-1 shadow-xl"
+                          className="bg-white rounded-full p-0.5 shadow-xl"
                           animate={{ 
                             y: [0, -5, 0],
                           }}
