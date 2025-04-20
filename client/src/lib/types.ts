@@ -121,7 +121,10 @@ export interface GameLevel {
   requiredXP: number;
   unlockableRewards?: any;
   difficulty: 'easy' | 'medium' | 'hard';
-  createdAt: string;
+  isActive?: boolean;
+  isCompleted?: boolean;
+  exercises?: number; // Number of exercises in this level
+  createdAt?: string;
 }
 
 export interface Exercise {
@@ -139,8 +142,11 @@ export interface UserExercise {
   id: number;
   userId: number;
   exerciseId: number;
+  levelId?: number; // Added for easier filtering by level
   completed: boolean;
+  isCompleted?: boolean; // Alias for completed to support both naming patterns
   pronunciationScore?: number;
+  score?: number; // Alias for pronunciationScore 
   attemptCount: number;
   lastAttemptAt?: string;
   createdAt: string;
@@ -154,4 +160,7 @@ export interface LevelProgress {
   progress: number; // 0-100 percentage
   exercisesCompleted: number;
   totalExercises: number;
+  isLevelCompleted?: boolean; // Flag to indicate if level was just completed
 }
+
+export type MedalType = 'bronze' | 'silver' | 'gold';

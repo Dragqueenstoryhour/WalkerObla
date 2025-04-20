@@ -8,9 +8,11 @@ import { LevelComplete } from '@/components/game/LevelComplete';
 import { GameExerciseRecorder } from '@/components/game/GameExerciseRecorder';
 import { ExerciseList } from '@/components/game/ExerciseList';
 import { Avatar } from '@/components/game/Avatar';
+import { LevelPath } from '@/components/game/LevelPath';
+import { MedalSystem, MedalType } from '@/components/game/MedalSystem';
 import { useGame, GameProvider } from '@/contexts/GameContext';
 import { PronunciationAssessmentResult } from '@/lib/types';
-import { BookOpen, Award, Zap, ChevronRight, ArrowLeft } from 'lucide-react';
+import { BookOpen, Award, Zap, ChevronRight, ArrowLeft, Medal, Trophy, Coins } from 'lucide-react';
 
 // The main component wrapped with GameProvider
 export default function RecordingTest() {
@@ -24,6 +26,8 @@ export default function RecordingTest() {
 function RecordingTestContent() {
   const game = useGame();
   const [activeTab, setActiveTab] = useState('levels');
+  const [awardedMedals, setAwardedMedals] = useState<Record<number, MedalType>>({});
+  const [savedProgress, setSavedProgress] = useState<boolean>(false);
   
   // Handle level selection
   const handleStartLevel = (levelNumber: number) => {
@@ -34,6 +38,59 @@ function RecordingTestContent() {
   const getActiveExercise = () => {
     if (!game.activeExerciseId) return null;
     return game.exercises.find(ex => ex.id === game.activeExerciseId) || null;
+  };
+  
+  // Calculate and award medals when level is completed
+  useEffect(() => {
+    if (!game.currentUser || !game.levelProgress || !game.levelProgress.isLevelCompleted) return;
+    
+    // If level was just completed, check for medal award
+    const levelId = game.currentLevel?.id;
+    if (!levelId) return;
+    
+    // Get all exercises for this level
+    const levelExercises = game.userExercises.filter(ex => ex.levelId === levelId && ex.isCompleted);
+    if (levelExercises.length === 0) return;
+    
+    // Calculate average score
+    const totalScore = levelExercises.reduce((sum, ex) => sum + (ex.score || ex.pronunciationScore || 0), 0);
+    const avgScore = totalScore / levelExercises.length;
+    
+    // Determine medal type
+    let medalType: MedalType | null = null;
+    if (avgScore >= 90) medalType = 'gold';
+    else if (avgScore >= 80) medalType = 'silver';
+    else if (avgScore >= 70) medalType = 'bronze';
+    
+    // Award medal if earned
+    if (medalType) {
+      setAwardedMedals(prev => ({ ...prev, [levelId]: medalType as MedalType }));
+    }
+  }, [game.levelProgress?.isLevelCompleted, game.currentLevel?.id]);
+  
+  // Function to save user progress
+  const saveProgress = () => {
+    // In a real application, this would save to a database
+    // For now, we'll just simulate saving
+    setSavedProgress(true);
+    
+    // Show saved notification
+    setTimeout(() => {
+      setSavedProgress(false);
+    }, 3000);
+    
+    // Could also be implemented using localStorage for demonstration
+    try {
+      const progressData = {
+        user: game.currentUser,
+        currentLevel: game.currentLevel,
+        userExercises: game.userExercises,
+        medals: awardedMedals
+      };
+      localStorage.setItem('speechGameProgress', JSON.stringify(progressData));
+    } catch (error) {
+      console.error("Could not save progress to localStorage:", error);
+    }
   };
   
   return (
@@ -116,81 +173,119 @@ function RecordingTestContent() {
           </TabsList>
           
           <TabsContent value="levels" className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Level 1 */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-bold mb-1">Level 1</h3>
-                      <p className="text-muted-foreground">Beginner Words</p>
+            {/* Save Progress Button */}
+            <div className="flex justify-end mb-4">
+              <Button 
+                variant={savedProgress ? "outline" : "default"}
+                size="sm" 
+                className="flex items-center gap-2" 
+                onClick={saveProgress}
+              >
+                {savedProgress ? (
+                  <>
+                    <span className="text-green-600">✓</span> Progress Saved
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M17 21V13H7V21M7 3V11H17V3M7 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Save Progress
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            {/* Level Path (Vertical journey map) */}
+            <LevelPath onSelectLevel={handleStartLevel} />
+            
+            {/* Medal system popup */}
+            <MedalSystem 
+              medals={awardedMedals} 
+              onMedalAcknowledged={(levelId) => {
+                console.log('Medal acknowledged for level:', levelId);
+              }}
+            />
+            
+            {/* Legacy grid of levels (can be kept as alternative view) */}
+            <div className="mt-10">
+              <h3 className="text-xl font-bold mb-4">Classic Level Selection</h3>
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* Level 1 */}
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="text-xl font-bold mb-1">Level 1</h3>
+                        <p className="text-muted-foreground">Beginner Words</p>
+                      </div>
+                      <div className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs font-medium">
+                        Easy
+                      </div>
                     </div>
-                    <div className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs font-medium">
-                      Easy
+                    
+                    <p className="mb-4">Practice simple words to build your pronunciation skills.</p>
+                    
+                    <Button 
+                      className="w-full" 
+                      onClick={() => handleStartLevel(1)}
+                    >
+                      Start Level
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+                
+                {/* Level 2 */}
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="text-xl font-bold mb-1">Level 2</h3>
+                        <p className="text-muted-foreground">Simple Phrases</p>
+                      </div>
+                      <div className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs font-medium">
+                        Easy
+                      </div>
                     </div>
-                  </div>
-                  
-                  <p className="mb-4">Practice simple words to build your pronunciation skills.</p>
-                  
-                  <Button 
-                    className="w-full" 
-                    onClick={() => handleStartLevel(1)}
-                  >
-                    Start Level
-                    <ChevronRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </CardContent>
-              </Card>
-              
-              {/* Level 2 */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-bold mb-1">Level 2</h3>
-                      <p className="text-muted-foreground">Simple Phrases</p>
+                    
+                    <p className="mb-4">Practice short phrases to improve your fluency.</p>
+                    
+                    <Button 
+                      className="w-full" 
+                      onClick={() => handleStartLevel(2)}
+                    >
+                      Start Level
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+                
+                {/* Level 3 */}
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="text-xl font-bold mb-1">Level 3</h3>
+                        <p className="text-muted-foreground">Complete Sentences</p>
+                      </div>
+                      <div className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 px-2 py-1 rounded-full text-xs font-medium">
+                        Medium
+                      </div>
                     </div>
-                    <div className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs font-medium">
-                      Easy
-                    </div>
-                  </div>
-                  
-                  <p className="mb-4">Practice short phrases to improve your fluency.</p>
-                  
-                  <Button 
-                    className="w-full" 
-                    onClick={() => handleStartLevel(2)}
-                  >
-                    Start Level
-                    <ChevronRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </CardContent>
-              </Card>
-              
-              {/* Level 3 */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-bold mb-1">Level 3</h3>
-                      <p className="text-muted-foreground">Complete Sentences</p>
-                    </div>
-                    <div className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 px-2 py-1 rounded-full text-xs font-medium">
-                      Medium
-                    </div>
-                  </div>
-                  
-                  <p className="mb-4">Practice complete sentences for better speech rhythm.</p>
-                  
-                  <Button 
-                    className="w-full" 
-                    onClick={() => handleStartLevel(3)}
-                  >
-                    Start Level
-                    <ChevronRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </CardContent>
-              </Card>
+                    
+                    <p className="mb-4">Practice complete sentences for better speech rhythm.</p>
+                    
+                    <Button 
+                      className="w-full" 
+                      onClick={() => handleStartLevel(3)}
+                    >
+                      Start Level
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </TabsContent>
           
