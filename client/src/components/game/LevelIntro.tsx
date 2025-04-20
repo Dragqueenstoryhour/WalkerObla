@@ -124,7 +124,7 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
             <CardContent className="p-0">
               {/* Header */}
               <div 
-                className="bg-gradient-to-r from-[#2a9d8f] to-[#264653] text-white p-8 pb-4 text-center relative"
+                className="bg-gradient-to-r from-[#2a9d8f] to-[#264653] text-white p-6 pb-3 text-center relative"
                 style={{
                   background: `linear-gradient(to right, #2a9d8f, #264653)`
                 }}
@@ -134,17 +134,17 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.3, type: 'spring' }}
                 >
-                  <div className="flex justify-center mb-6">
+                  <div className="flex justify-center mb-4">
                     <motion.div 
-                      className="bg-[#fdf1d6] rounded-full p-4 shadow-lg"
+                      className="bg-[#fdf1d6] rounded-full p-3 shadow-lg"
                       whileHover={{ rotate: [0, -10, 10, -10, 10, 0], transition: { duration: 0.5 } }}
                     >
-                      <Trophy size={60} className="text-[#e76f51]" />
+                      <Trophy size={40} className="text-[#e76f51]" />
                     </motion.div>
                   </div>
 
                   <motion.h2 
-                    className="text-5xl font-bold mb-2"
+                    className="text-4xl font-bold mb-1"
                     animate={{ 
                       scale: [1, 1.05, 1],
                     }}
