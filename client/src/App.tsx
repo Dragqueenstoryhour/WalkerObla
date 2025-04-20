@@ -5,18 +5,20 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import RecordingTest from "@/pages/RecordingTest";
+import Read from "@/pages/Read";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ReadingProvider } from "./contexts/ReadingContext";
+import { GameProvider } from "./contexts/GameContext";
 
 function Navigation() {
   return (
     <div className="bg-primary/5 border-b py-2 px-4 mb-4">
       <div className="container flex gap-4">
         <Link href="/" className="text-primary hover:underline">
-          Home
+          SpeakUp
         </Link>
-        <Link href="/recording-test" className="text-primary hover:underline">
-          Recording Test
+        <Link href="/read" className="text-primary hover:underline">
+          ReadAssist
         </Link>
       </div>
     </div>
@@ -28,8 +30,8 @@ function Router() {
     <>
       <Navigation />
       <Switch>
-        <Route path="/" component={Home} />
-        <Route path="/recording-test" component={RecordingTest} />
+        <Route path="/" component={() => <GameProvider initialUsername="player1"><RecordingTest /></GameProvider>} />
+        <Route path="/read" component={Read} />
         <Route component={NotFound} />
       </Switch>
     </>

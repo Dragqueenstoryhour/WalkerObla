@@ -10,20 +10,11 @@ import { ExerciseList } from '@/components/game/ExerciseList';
 import { Avatar } from '@/components/game/Avatar';
 import { LevelPath } from '@/components/game/LevelPath';
 import { MedalSystem, MedalType } from '@/components/game/MedalSystem';
-import { useGame, GameProvider } from '@/contexts/GameContext';
+import { useGame } from '@/contexts/GameContext';
 import { PronunciationAssessmentResult } from '@/lib/types';
 import { BookOpen, Award, Zap, ChevronRight, ArrowLeft, Medal, Trophy, Coins } from 'lucide-react';
 
-// The main component wrapped with GameProvider
 export default function RecordingTest() {
-  return (
-    <GameProvider initialUsername="player1">
-      <RecordingTestContent />
-    </GameProvider>
-  );
-}
-
-function RecordingTestContent() {
   const game = useGame();
   const [activeTab, setActiveTab] = useState('levels');
   const [awardedMedals, setAwardedMedals] = useState<Record<number, MedalType>>({});
