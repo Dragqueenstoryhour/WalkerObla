@@ -41,7 +41,7 @@ export function IslandCarousel({ onSelectLevel, onSwitchToMap }: IslandCarouselP
   ];
   
   // Determine level status
-  const getLevelStatus = (level: GameLevel) => {
+  const getLevelStatus = (level: GameLevel): 'active' | 'completed' | 'inProgress' | 'notStarted' | 'locked' => {
     // Current active level
     if (currentLevel?.id === level.id) {
       return 'active';
@@ -67,7 +67,8 @@ export function IslandCarousel({ onSelectLevel, onSwitchToMap }: IslandCarouselP
       return 'inProgress';
     }
     
-    // Locked or not started
+    // Locked or not started - for this implementation we'll just use 'notStarted'
+    // as we're not enforcing locked levels
     return 'notStarted';
   };
   
@@ -75,6 +76,11 @@ export function IslandCarousel({ onSelectLevel, onSwitchToMap }: IslandCarouselP
   const handleLevelSelect = (levelId: number) => {
     soundManager.current.playSound('select');
     onSelectLevel(levelId);
+  };
+  
+  // Play sound when changing slides
+  const handleBeforeChange = () => {
+    soundManager.current.playSound('hover');
   };
   
   // Slider settings
@@ -87,7 +93,7 @@ export function IslandCarousel({ onSelectLevel, onSwitchToMap }: IslandCarouselP
     centerMode: true,
     centerPadding: '50px',
     arrows: false,
-    beforeChange: () => soundManager.current.playSound('hover'),
+    beforeChange: handleBeforeChange,
     responsive: [
       {
         breakpoint: 768,
@@ -129,118 +135,121 @@ export function IslandCarousel({ onSelectLevel, onSwitchToMap }: IslandCarouselP
         </motion.button>
         
         {/* Slider with islands */}
-        <Slider ref={sliderRef} {...settings} className="island-carousel">
-          {islandLevels.map((level) => {
-            const status = getLevelStatus(level);
-            
-            // Determine card colors based on status
-            const cardColors = {
-              active: 'bg-blue-50 border-blue-400 shadow-blue-300/50',
-              completed: 'bg-green-50 border-green-400 shadow-green-300/50',
-              inProgress: 'bg-amber-50 border-amber-400 shadow-amber-300/50',
-              notStarted: 'bg-white border-gray-200 shadow-gray-300/30',
-              locked: 'bg-gray-100 border-gray-300 shadow-none opacity-60'
-            };
-            
-            return (
-              <div key={level.id} className="px-2 py-1">
-                <motion.div 
-                  className={`
-                    relative p-5 rounded-xl border-2 shadow-lg h-80
-                    ${cardColors[status]}
-                  `}
-                  whileHover={status !== 'locked' ? { y: -5, scale: 1.02 } : {}}
-                  onClick={() => status !== 'locked' && handleLevelSelect(level.id)}
-                >
-                  {/* Island icon or illustration */}
-                  <div className="flex justify-center mb-5">
-                    <div className="relative w-32 h-32">
-                      {/* SVG island */}
-                      <svg viewBox="0 0 100 100" width="100%" height="100%">
-                        {/* Island shape */}
-                        <path 
-                          d="M20,50 Q30,40 45,45 Q60,50 75,45 Q90,40 90,60 Q90,80 70,80 Q50,85 30,75 Q15,65 20,50 Z" 
-                          fill={status === 'locked' ? '#D1D5DB' : '#60A5FA'} 
-                          strokeWidth="1"
-                          stroke={status === 'locked' ? '#9CA3AF' : '#3B82F6'}
-                        />
-                        
-                        {/* Sand */}
-                        <path 
-                          d="M30,75 Q45,78 60,75 Q70,73 75,65 L78,75 Q60,82 40,80 Q33,78 30,75 Z" 
-                          fill={status === 'locked' ? '#E5E7EB' : '#FBBF24'} 
-                          fillOpacity="0.8"
-                        />
-                        
-                        {/* Palm tree */}
-                        <g transform="translate(65, 40) scale(0.15)">
-                          <rect x="-10" y="0" width="20" height="100" fill={status === 'locked' ? '#9CA3AF' : '#92400E'} />
+        <div className="island-carousel">
+          <Slider ref={sliderRef} {...settings}>
+            {islandLevels.map((level) => {
+              const status = getLevelStatus(level);
+              const isLevelLocked = false; // We're not enforcing locked levels
+              
+              // Determine card colors based on status
+              const cardColors = {
+                active: 'bg-blue-50 border-blue-400 shadow-blue-300/50',
+                completed: 'bg-green-50 border-green-400 shadow-green-300/50',
+                inProgress: 'bg-amber-50 border-amber-400 shadow-amber-300/50',
+                notStarted: 'bg-white border-gray-200 shadow-gray-300/30',
+                locked: 'bg-gray-100 border-gray-300 shadow-none opacity-60'
+              };
+              
+              return (
+                <div key={level.id} className="px-2 py-1">
+                  <motion.div 
+                    className={`
+                      relative p-5 rounded-xl border-2 shadow-lg h-80
+                      ${cardColors[status]}
+                    `}
+                    whileHover={!isLevelLocked ? { y: -5, scale: 1.02 } : {}}
+                    onClick={() => !isLevelLocked && handleLevelSelect(level.id)}
+                  >
+                    {/* Island icon or illustration */}
+                    <div className="flex justify-center mb-5">
+                      <div className="relative w-32 h-32">
+                        {/* SVG island */}
+                        <svg viewBox="0 0 100 100" width="100%" height="100%">
+                          {/* Island shape */}
                           <path 
-                            d="M0,-60 L-60,-20 L-70,0 L-30,-10 L-50,20 L-30,30 L-10,10 L-5,40 L5,40 L10,10 L30,30 L50,20 L30,-10 L70,0 L60,-20 L0,-60"
-                            fill={status === 'locked' ? '#9CA3AF' : '#22C55E'} 
+                            d="M20,50 Q30,40 45,45 Q60,50 75,45 Q90,40 90,60 Q90,80 70,80 Q50,85 30,75 Q15,65 20,50 Z" 
+                            fill={isLevelLocked ? '#D1D5DB' : '#60A5FA'} 
+                            strokeWidth="1"
+                            stroke={isLevelLocked ? '#9CA3AF' : '#3B82F6'}
                           />
-                        </g>
-                      </svg>
-                      
-                      {/* Level number */}
-                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                        <div className={`
-                          w-10 h-10 rounded-full flex items-center justify-center
-                          ${status === 'locked' 
-                            ? 'bg-gray-300 text-gray-600' 
-                            : 'bg-white text-blue-800 font-bold shadow-md'
-                          }
-                        `}>
-                          {level.levelNumber}
+                          
+                          {/* Sand */}
+                          <path 
+                            d="M30,75 Q45,78 60,75 Q70,73 75,65 L78,75 Q60,82 40,80 Q33,78 30,75 Z" 
+                            fill={isLevelLocked ? '#E5E7EB' : '#FBBF24'} 
+                            fillOpacity="0.8"
+                          />
+                          
+                          {/* Palm tree */}
+                          <g transform="translate(65, 40) scale(0.15)">
+                            <rect x="-10" y="0" width="20" height="100" fill={isLevelLocked ? '#9CA3AF' : '#92400E'} />
+                            <path 
+                              d="M0,-60 L-60,-20 L-70,0 L-30,-10 L-50,20 L-30,30 L-10,10 L-5,40 L5,40 L10,10 L30,30 L50,20 L30,-10 L70,0 L60,-20 L0,-60"
+                              fill={isLevelLocked ? '#9CA3AF' : '#22C55E'} 
+                            />
+                          </g>
+                        </svg>
+                        
+                        {/* Level number */}
+                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                          <div className={`
+                            w-10 h-10 rounded-full flex items-center justify-center
+                            ${isLevelLocked 
+                              ? 'bg-gray-300 text-gray-600' 
+                              : 'bg-white text-blue-800 font-bold shadow-md'
+                            }
+                          `}>
+                            {level.levelNumber}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  {/* Level details */}
-                  <h3 className={`text-center text-xl font-bold mb-2 ${status === 'locked' ? 'text-gray-500' : 'text-blue-800'}`}>
-                    {level.name}
-                  </h3>
-                  
-                  <p className={`text-center mb-4 text-sm ${status === 'locked' ? 'text-gray-500' : 'text-blue-700'}`}>
-                    {level.description}
-                  </p>
-                  
-                  {/* Level stats */}
-                  <div className="grid grid-cols-2 gap-3 mt-4">
-                    <div className={`rounded-lg p-2 text-center ${status === 'locked' ? 'bg-gray-200' : 'bg-white/80'}`}>
-                      <div className="text-xs uppercase font-medium text-gray-500">Difficulty</div>
-                      <div className={`font-medium capitalize ${status === 'locked' ? 'text-gray-500' : 'text-blue-700'}`}>
-                        {level.difficulty}
+                    
+                    {/* Level details */}
+                    <h3 className={`text-center text-xl font-bold mb-2 ${isLevelLocked ? 'text-gray-500' : 'text-blue-800'}`}>
+                      {level.name}
+                    </h3>
+                    
+                    <p className={`text-center mb-4 text-sm ${isLevelLocked ? 'text-gray-500' : 'text-blue-700'}`}>
+                      {level.description}
+                    </p>
+                    
+                    {/* Level stats */}
+                    <div className="grid grid-cols-2 gap-3 mt-4">
+                      <div className={`rounded-lg p-2 text-center ${isLevelLocked ? 'bg-gray-200' : 'bg-white/80'}`}>
+                        <div className="text-xs uppercase font-medium text-gray-500">Difficulty</div>
+                        <div className={`font-medium capitalize ${isLevelLocked ? 'text-gray-500' : 'text-blue-700'}`}>
+                          {level.difficulty}
+                        </div>
+                      </div>
+                      
+                      <div className={`rounded-lg p-2 text-center ${isLevelLocked ? 'bg-gray-200' : 'bg-white/80'}`}>
+                        <div className="text-xs uppercase font-medium text-gray-500">Exercises</div>
+                        <div className={`font-medium ${isLevelLocked ? 'text-gray-500' : 'text-blue-700'}`}>
+                          {level.exercises}
+                        </div>
                       </div>
                     </div>
                     
-                    <div className={`rounded-lg p-2 text-center ${status === 'locked' ? 'bg-gray-200' : 'bg-white/80'}`}>
-                      <div className="text-xs uppercase font-medium text-gray-500">Exercises</div>
-                      <div className={`font-medium ${status === 'locked' ? 'text-gray-500' : 'text-blue-700'}`}>
-                        {level.exercises}
+                    {/* Status indicator */}
+                    {status !== 'notStarted' && !isLevelLocked && (
+                      <div className={`
+                        absolute top-3 right-3 px-2 py-0.5 rounded-full text-xs font-medium
+                        ${status === 'active' ? 'bg-blue-100 text-blue-800' : 
+                          status === 'completed' ? 'bg-green-100 text-green-800' : 
+                          'bg-amber-100 text-amber-800'}
+                      `}>
+                        {status === 'active' ? 'Active' : 
+                        status === 'completed' ? 'Completed' : 
+                        'In Progress'}
                       </div>
-                    </div>
-                  </div>
-                  
-                  {/* Status indicator */}
-                  {status !== 'notStarted' && status !== 'locked' && (
-                    <div className={`
-                      absolute top-3 right-3 px-2 py-0.5 rounded-full text-xs font-medium
-                      ${status === 'active' ? 'bg-blue-100 text-blue-800' : 
-                        status === 'completed' ? 'bg-green-100 text-green-800' : 
-                        'bg-amber-100 text-amber-800'}
-                    `}>
-                      {status === 'active' ? 'Active' : 
-                       status === 'completed' ? 'Completed' : 
-                       'In Progress'}
-                    </div>
-                  )}
-                </motion.div>
-              </div>
-            );
-          })}
-        </Slider>
+                    )}
+                  </motion.div>
+                </div>
+              );
+            })}
+          </Slider>
+        </div>
       </div>
       
       {/* Navigation buttons */}
@@ -270,8 +279,8 @@ export function IslandCarousel({ onSelectLevel, onSwitchToMap }: IslandCarouselP
         </motion.button>
       </div>
       
-      {/* Custom CSS for carousel */}
-      <style jsx global>{`
+      <style>
+        {`
         .island-carousel .slick-dots li button:before {
           color: #3B82F6;
           opacity: 0.25;
@@ -294,7 +303,8 @@ export function IslandCarousel({ onSelectLevel, onSwitchToMap }: IslandCarouselP
           transform: scale(1.05);
           z-index: 1;
         }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 }

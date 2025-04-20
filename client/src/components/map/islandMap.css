@@ -1,0 +1,199 @@
+/* Island Map Animations and Styles */
+
+/* Ocean wave animation */
+@keyframes wave {
+  0% {
+    transform: translateX(0) translateZ(0) scaleY(1);
+  }
+  50% {
+    transform: translateX(-25%) translateZ(0) scaleY(0.8);
+  }
+  100% {
+    transform: translateX(-50%) translateZ(0) scaleY(1);
+  }
+}
+
+.wave {
+  animation: wave 12s cubic-bezier(0.36, 0.45, 0.63, 0.53) infinite;
+  transform-origin: center bottom;
+}
+
+.wave-fast {
+  animation: wave 8s cubic-bezier(0.36, 0.45, 0.63, 0.53) infinite;
+}
+
+.wave-slow {
+  animation: wave 15s cubic-bezier(0.36, 0.45, 0.63, 0.53) infinite;
+}
+
+/* Path dash animation */
+@keyframes dash {
+  to {
+    stroke-dashoffset: 1000;
+  }
+}
+
+.animate-dash {
+  animation: dash 30s linear infinite;
+}
+
+/* Float animation for islands and elements */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.float-slow {
+  animation: float 8s ease-in-out infinite;
+}
+
+.float-fast {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Sparkle animation for water highlights */
+@keyframes sparkle {
+  0% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+}
+
+.sparkle {
+  animation: sparkle 3s ease-in-out infinite;
+}
+
+/* Island Carousel Customizations */
+.island-carousel .slick-track {
+  padding: 30px 0;
+}
+
+.island-carousel .slick-slide {
+  transition: all 0.3s ease;
+}
+
+.island-carousel .slick-center {
+  transform: scale(1.05);
+  z-index: 10;
+}
+
+/* Adding depth with shadows */
+.island-shadow {
+  filter: drop-shadow(0px 10px 8px rgba(0, 0, 0, 0.2));
+}
+
+/* Parallax container */
+.parallax-container {
+  perspective: 1000px;
+  overflow: hidden;
+}
+
+/* Water effect */
+.water-effect {
+  background-image: linear-gradient(
+    to bottom,
+    rgba(4, 120, 215, 0.2),
+    rgba(5, 102, 183, 0.5)
+  );
+  background-size: 200% 200%;
+  animation: water-movement 8s ease infinite;
+}
+
+@keyframes water-movement {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+/* Cloud movement */
+@keyframes cloud-drift {
+  from {
+    transform: translateX(-5%);
+  }
+  to {
+    transform: translateX(105%);
+  }
+}
+
+.cloud-drift {
+  animation: cloud-drift 60s linear infinite;
+}
+
+.cloud-drift-slow {
+  animation: cloud-drift 90s linear infinite;
+}
+
+/* Birds flying animation */
+@keyframes bird-fly {
+  0% {
+    transform: translateX(0) translateY(0);
+  }
+  25% {
+    transform: translateX(20%) translateY(-15%);
+  }
+  50% {
+    transform: translateX(40%) translateY(0);
+  }
+  75% {
+    transform: translateX(60%) translateY(-15%);
+  }
+  100% {
+    transform: translateX(100%) translateY(0);
+  }
+}
+
+.bird-fly {
+  animation: bird-fly 20s linear infinite;
+}
+
+/* Fade in animation */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fade-in 1s ease-out forwards;
+}
+
+.fade-in-slow {
+  animation: fade-in 2s ease-out forwards;
+}
+
+/* Map drag cursor */
+.map-drag-cursor {
+  cursor: grab;
+}
+
+.map-drag-cursor:active {
+  cursor: grabbing;
+}

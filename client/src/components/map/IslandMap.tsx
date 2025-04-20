@@ -1,13 +1,13 @@
-import { useRef, useState, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import * as PIXI from 'pixi.js';
 import Draggable from 'react-draggable';
-import { useSpring, animated } from 'react-spring';
 import { useGame } from '@/contexts/GameContext';
 import { GameLevel } from '@/lib/types';
 import { Island } from './Island';
 import { OceanBackground } from './OceanBackground';
 import { SoundManager } from './SoundManager';
+import { Button } from '@/components/ui/button';
+import { ZoomIn, ZoomOut } from 'lucide-react';
 
 interface IslandMapProps {
   onSelectLevel: (levelId: number) => void;
@@ -25,6 +25,7 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [activeLevelId, setActiveLevelId] = useState<number | null>(null);
+  const [scale, setScale] = useState(1);
   const soundManager = useRef<SoundManager>(new SoundManager());
   
   // Setup islands positions along a curved path
@@ -42,7 +43,7 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
   };
   
   // Determine level status
-  const getLevelStatus = (level: GameLevel) => {
+  const getLevelStatus = (level: GameLevel): 'active' | 'completed' | 'inProgress' | 'notStarted' | 'locked' => {
     // Current active level
     if (currentLevel?.id === level.id) {
       return 'active';
@@ -68,7 +69,7 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
       return 'inProgress';
     }
     
-    // Locked or not started
+    // For simplicity, we're not implementing locked levels
     return 'notStarted';
   };
   
@@ -89,16 +90,9 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
     { id: 6, levelNumber: 6, name: "Fluency Falls", description: "Practice fluid conversation patterns and improve overall speech rhythm and fluency", difficulty: "hard", requiredXP: 600, isActive: false, isCompleted: false, exercises: 5 }
   ];
 
-  // Spring animation for map container
-  const [{ scale }, setScale] = useSpring(() => ({ 
-    scale: 1,
-    config: { mass: 1, tension: 170, friction: 15 } 
-  }));
-
   // Initialize sounds and effects
   useEffect(() => {
-    if (!isInitialized && containerRef.current) {
-      // Initialize PIXI ocean background if needed
+    if (!isInitialized) {
       // Initialize sound effects
       soundManager.current.initialize();
       
@@ -126,7 +120,7 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
         window.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isInitialized, containerRef]);
+  }, [isInitialized, islandLevels, activeLevelId]);
 
   // Play hover sound
   const handleIslandHover = () => {
@@ -148,11 +142,11 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
         }}
         onStop={() => setIsDragging(false)}
       >
-        <animated.div 
+        <div 
           ref={containerRef}
           className="absolute left-1/4 top-20 w-[1200px] h-[800px]"
           style={{ 
-            transform: scale.to(s => `scale(${s})`),
+            transform: `scale(${scale})`,
             touchAction: 'none'
           }}
         >
@@ -186,7 +180,7 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
               className="animate-dash"
             />
             {/* Decorative elements */}
-            {[1, 2, 3, 4, 5].map((_, i) => (
+            {[1, 2, 3, 4, 5].map((i) => (
               <motion.circle
                 key={i}
                 cx={300 + (i * 100) % 400}
@@ -206,33 +200,33 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
               />
             ))}
           </svg>
-        </animated.div>
+        </div>
       </Draggable>
       
       {/* Zoom controls */}
       <div className="absolute bottom-5 right-5 flex flex-col gap-2 z-20">
-        <motion.button
-          className="bg-blue-500 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
+        <Button
+          size="icon"
+          variant="secondary"
+          className="rounded-full bg-blue-500 text-white hover:bg-blue-600"
           onClick={() => {
-            setScale({ scale: scale.get() + 0.1 });
+            setScale(Math.min(2, scale + 0.1));
             soundManager.current.playSound('click');
           }}
         >
-          +
-        </motion.button>
-        <motion.button
-          className="bg-blue-500 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
+          <ZoomIn className="h-4 w-4" />
+        </Button>
+        <Button
+          size="icon"
+          variant="secondary"
+          className="rounded-full bg-blue-500 text-white hover:bg-blue-600"
           onClick={() => {
-            setScale({ scale: Math.max(0.5, scale.get() - 0.1) });
+            setScale(Math.max(0.5, scale - 0.1));
             soundManager.current.playSound('click');
           }}
         >
-          -
-        </motion.button>
+          <ZoomOut className="h-4 w-4" />
+        </Button>
       </div>
       
       {/* Compass */}

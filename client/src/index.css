@@ -11,3 +11,58 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+/* Island Map Animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes wave {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 100% 0;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: 100;
+  }
+}
+
+.float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.wave-bg {
+  background: linear-gradient(-45deg, #3B82F6, #60A5FA, #2563EB, #93C5FD);
+  background-size: 400% 400%;
+  animation: wave 15s ease infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
+.animate-dash {
+  animation: dash 20s linear infinite;
+}
