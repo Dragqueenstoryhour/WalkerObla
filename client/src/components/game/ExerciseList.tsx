@@ -18,30 +18,30 @@ export function ExerciseList({
 }: ExerciseListProps) {
   // Sort exercises by order
   const sortedExercises = [...exercises].sort((a, b) => a.order - b.order);
-  
+
   // Function to get user exercise data for a specific exercise
   const getUserExercise = (exerciseId: number) => {
     return userExercises.find(ue => ue.exerciseId === exerciseId);
   };
-  
+
   // Function to check if an exercise is active - now all exercises are active
   // allowing users to skip around and practice any word
   const isExerciseActive = (exerciseId: number) => {
     // All exercises are now active to allow skipping around
     return true;
   };
-  
+
   // Function to calculate progress percentage
   const getProgressPercentage = () => {
     const completedCount = userExercises.filter(ue => ue.completed).length;
     return Math.floor((completedCount / exercises.length) * 100);
   };
-  
+
   return (
-    <div className="space-y-4">
+    <div className="w-full max-w-4xl mx-auto px-4 space-y-4">
       {sortedExercises.map((exercise) => {
         const userExercise = getUserExercise(exercise.id);
-        
+
         return (
           <ExerciseItem 
             key={exercise.id}

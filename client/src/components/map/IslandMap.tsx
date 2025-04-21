@@ -30,16 +30,16 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
   
   // Setup islands positions along a curved path
   const getIslandPosition = (index: number, totalLevels: number) => {
-    // Create a curved path for island positioning
-    const pathWidth = 800;
-    const pathHeight = 500;
-    
-    // Calculate position based on curved path
-    const progress = index / (totalLevels - 1);
-    const x = pathWidth * 0.5 + Math.sin(progress * Math.PI * 2) * (pathWidth * 0.4);
-    const y = progress * pathHeight;
-    
-    return { x, y };
+    // Create a curved path for island positioning that matches the SVG path
+    const positions = [
+      { x: 400, y: 50 },  // Island 1
+      { x: 450, y: 200 }, // Island 2
+      { x: 500, y: 350 }, // Island 3
+      { x: 550, y: 500 }, // Island 4
+      { x: 600, y: 650 }, // Island 5
+      { x: 650, y: 800 }  // Island 6
+    ];
+    return positions[index] || { x: 0, y: 0 };
   };
   
   // Determine level status
@@ -171,11 +171,11 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
           {/* Curved path connecting all islands */}
           <svg className="absolute inset-0 z-0 pointer-events-none" width="1200" height="800">
             <path
-              d="M400,50 C500,100 300,150 450,200 C600,250 350,300 500,350 C650,400 400,450 550,500 C700,550 450,600 600,650"
+              d="M400,50 C450,100 400,150 450,200 C500,250 450,300 500,350 C550,400 500,450 550,500 C600,550 550,600 600,650 C650,700 600,750 650,800"
               fill="none"
               stroke="#2C5282"
-              strokeWidth="5"
-              strokeDasharray="10,10"
+              strokeWidth="8"
+              strokeDasharray="15,15"
               strokeLinecap="round"
               className="animate-dash"
             />
