@@ -96,36 +96,64 @@ export function Island({ level, status, position, onSelect, onHover, isActive }:
         className="absolute pointer-events-none"
       >
         {/* Island shadow */}
-        <ellipse 
-          cx="100" 
-          cy="70" 
-          rx="70" 
-          ry="40" 
-          fill="rgba(0,0,0,0.2)" 
-          transform="translate(5, 8)" 
+        <path
+          d="M30,70 Q100,120 170,70 Q100,90 30,70"
+          fill="rgba(0,0,0,0.15)"
+          transform="translate(5, 8)"
         />
         
-        {/* Island base */}
-        <ellipse 
-          cx="100" 
-          cy="70" 
-          rx="70" 
-          ry="40" 
-          fill={color} 
+        {/* Island base land mass */}
+        <path
+          d="M30,70 Q100,20 170,70 Q100,90 30,70"
+          fill={`url(#${level.levelNumber}-grass)`}
         />
         
-        {/* Island highlight/sand edges */}
-        <ellipse 
-          cx="100" 
-          cy="70" 
-          rx="70" 
-          ry="40" 
-          fill="none" 
-          stroke="#F9FAFB" 
-          strokeWidth="3" 
-          strokeOpacity="0.6" 
-          strokeDasharray="2,5" 
+        {/* Island cliff details */}
+        <path
+          d="M40,75 Q100,30 160,75"
+          fill="none"
+          stroke="#8B5E3C"
+          strokeWidth="3"
+          strokeOpacity="0.6"
         />
+        
+        {/* Define gradients for grass */}
+        <defs>
+          <linearGradient 
+            id={`${level.levelNumber}-grass`} 
+            x1="0%" 
+            y1="0%" 
+            x2="0%" 
+            y2="100%"
+          >
+            <stop offset="0%" style={{ stopColor: '#4ADE80', stopOpacity: 1 }} />
+            <stop offset="100%" style={{ stopColor: '#22C55E', stopOpacity: 1 }} />
+          </linearGradient>
+          
+          {/* Sand texture pattern */}
+          <pattern 
+            id="sandPattern" 
+            patternUnits="userSpaceOnUse" 
+            width="10" 
+            height="10"
+          >
+            <circle cx="5" cy="5" r="1" fill="#F9FAFB" fillOpacity="0.3" />
+          </pattern>
+        </defs>
+        
+        {/* Beach areas */}
+        <path
+          d="M35,72 Q100,85 165,72"
+          fill="url(#sandPattern)"
+          opacity="0.8"
+        />
+        
+        {/* Vegetation clusters */}
+        <g className="vegetation-cluster">
+          <circle cx="70" cy="50" r="8" fill="#15803D" />
+          <circle cx="130" cy="45" r="10" fill="#15803D" />
+          <circle cx="100" cy="35" r="12" fill="#15803D" />
+        </g>
       </svg>
       
       {/* Island decorations */}
