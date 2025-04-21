@@ -168,10 +168,10 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
             );
           })}
           
-          {/* Decorative path between islands */}
+          {/* Curved path connecting all islands */}
           <svg className="absolute inset-0 z-0 pointer-events-none" width="1200" height="800">
             <path
-              d="M400,50 Q450,150 300,200 Q200,250 400,300 Q550,350 300,400 Q200,450 400,500"
+              d="M400,50 C500,100 300,150 450,200 C600,250 350,300 500,350 C650,400 400,450 550,500 C700,550 450,600 600,650"
               fill="none"
               stroke="#2C5282"
               strokeWidth="5"
