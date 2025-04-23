@@ -6,8 +6,7 @@ import { GameLevel } from '@/lib/types';
 import { Island } from './Island';
 import { OceanBackground } from './OceanBackground';
 import { SoundManager } from './SoundManager';
-import { Button } from '@/components/ui/button';
-import { ZoomIn, ZoomOut } from 'lucide-react';
+import { PirateShip } from './PirateShip';
 
 interface IslandMapProps {
   onSelectLevel: (levelId: number) => void;
@@ -26,6 +25,8 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [activeLevelId, setActiveLevelId] = useState<number | null>(null);
   const [scale, setScale] = useState(1);
+  const [selectedIslandPosition, setSelectedIslandPosition] = useState<{ x: number, y: number } | null>(null);
+  const [showShip, setShowShip] = useState(false);
   const soundManager = useRef<SoundManager>(new SoundManager());
   
   // Setup islands positions along a curved path
@@ -77,10 +78,19 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
     return 'notStarted';
   };
   
-  // Handle level selection with sound effect
+  // Handle level selection with sound effect and ship animation
   const handleLevelSelect = (levelId: number) => {
     soundManager.current.playSound('select');
     setActiveLevelId(levelId);
+    
+    // Get the position of the selected island
+    const levelIndex = islandLevels.findIndex(level => level.id === levelId);
+    if (levelIndex !== -1) {
+      const position = getIslandPosition(levelIndex, islandLevels.length);
+      setSelectedIslandPosition(position);
+      setShowShip(true);
+    }
+    
     onSelectLevel(levelId);
   };
 
@@ -211,53 +221,19 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
         </div>
       </Draggable>
       
-      {/* Zoom controls */}
-      <div className="absolute bottom-5 right-5 flex flex-col gap-2 z-20">
-        <Button
-          size="icon"
-          variant="secondary"
-          className="rounded-full bg-blue-500 text-white hover:bg-blue-600"
-          onClick={() => {
-            setScale(Math.min(2, scale + 0.1));
-            soundManager.current.playSound('click');
-          }}
-        >
-          <ZoomIn className="h-4 w-4" />
-        </Button>
-        <Button
-          size="icon"
-          variant="secondary"
-          className="rounded-full bg-blue-500 text-white hover:bg-blue-600"
-          onClick={() => {
-            setScale(Math.max(0.5, scale - 0.1));
-            soundManager.current.playSound('click');
-          }}
-        >
-          <ZoomOut className="h-4 w-4" />
-        </Button>
-      </div>
+      {/* These zoom controls and compass have been hidden as they don't appear to function properly */}
       
-      {/* Compass */}
-      <motion.div 
-        className="absolute top-5 right-5 bg-white/80 rounded-full p-3 shadow-lg"
-        initial={{ scale: 0 }}
-        animate={{ scale: 1, rotate: [-5, 5, -5] }}
-        transition={{ 
-          scale: { type: 'spring', damping: 15, delay: 0.5 },
-          rotate: { repeat: Infinity, duration: 5 }
-        }}
-      >
-        <div className="w-12 h-12 relative">
-          <div className="absolute inset-0 border-4 border-blue-900 rounded-full"></div>
-          <div className="absolute left-1/2 top-0 w-1 h-1/2 bg-red-500 rounded-full transform -translate-x-1/2 origin-bottom"></div>
-          <div className="absolute left-1/2 top-1/2 w-1 h-1/2 bg-blue-500 rounded-full transform -translate-x-1/2 rotate-180 origin-top"></div>
-          <div className="absolute top-1/2 left-0 h-1 w-1/2 bg-blue-700 rounded-full transform -translate-y-1/2 origin-right"></div>
-          <div className="absolute top-1/2 left-1/2 h-1 w-1/2 bg-blue-700 rounded-full transform -translate-y-1/2 origin-left"></div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-2 h-2 bg-blue-900 rounded-full"></div>
-          </div>
-        </div>
-      </motion.div>
+      {/* Animated pirate ship */}
+      {showShip && (
+        <PirateShip
+          targetIslandPosition={selectedIslandPosition}
+          isActive={true}
+          onArrival={() => {
+            // The ship has arrived at the island
+            soundManager.current.playSound('transition');
+          }}
+        />
+      )}
       
       {/* Mobile instruction */}
       <motion.div
