@@ -38,16 +38,16 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
 
   const islandPositions = useMemo(() => {
     return [
-      { x: 150, y: 250 },  // Island 1 - Starting point
-      { x: 400, y: 300 },  // Island 2
-      { x: 650, y: 350 },  // Island 3
-      { x: 900, y: 300 },  // Island 4
-      { x: 1150, y: 250 }, // Island 5
-      { x: 1400, y: 300 }, // Island 6
-      { x: 1650, y: 350 }, // Island 7
-      { x: 1800, y: 300 }, // Island 8
-      { x: 1850, y: 250 }, // Island 9
-      { x: 1900, y: 200 }  // Island 10
+      { x: 150, y: 250 },   // Island 1 - Starting point
+      { x: 400, y: 300 },   // Island 2
+      { x: 650, y: 350 },   // Island 3
+      { x: 900, y: 300 },   // Island 4
+      { x: 1150, y: 250 },  // Island 5
+      { x: 1400, y: 300 },  // Island 6
+      { x: 1650, y: 350 },  // Island 7
+      { x: 1900, y: 300 },  // Island 8 - Moved right
+      { x: 2150, y: 250 },  // Island 9 - Moved right
+      { x: 2400, y: 200 }   // Island 10 - Moved right
     ];
   }, []);
 
@@ -124,7 +124,7 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
 
       <Draggable
         nodeRef={containerRef}
-        bounds={{ left: -1800, top: -400, right: 200, bottom: 200 }}
+        bounds={{ left: -2200, top: -400, right: 200, bottom: 200 }}
         onStart={() => { setIsDragging(true); soundManager.current.playSound('drag'); }}
         onStop={() => setIsDragging(false)}
       >
