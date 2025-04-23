@@ -32,12 +32,16 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
   const getIslandPosition = (index: number, totalLevels: number) => {
     // Create a curved path for island positioning that matches the SVG path
     const positions = [
-      { x: 400, y: 50 },  // Island 1
-      { x: 450, y: 200 }, // Island 2
-      { x: 500, y: 350 }, // Island 3
-      { x: 550, y: 500 }, // Island 4
-      { x: 600, y: 650 }, // Island 5
-      { x: 650, y: 800 }  // Island 6
+      { x: 400, y: 50 },   // Island 1
+      { x: 450, y: 200 },  // Island 2
+      { x: 500, y: 350 },  // Island 3
+      { x: 550, y: 500 },  // Island 4
+      { x: 600, y: 650 },  // Island 5
+      { x: 650, y: 800 },  // Island 6
+      { x: 700, y: 650 },  // Island 7
+      { x: 750, y: 500 },  // Island 8
+      { x: 800, y: 350 },  // Island 9
+      { x: 850, y: 200 }   // Island 10
     ];
     return positions[index] || { x: 0, y: 0 };
   };
@@ -82,12 +86,16 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
 
   // Generate levels with island theme
   const islandLevels: GameLevel[] = [
-    { id: 1, levelNumber: 1, name: "Alphabet Atoll", description: "Practice simple words like 'hello', 'thank you', and 'goodbye'", difficulty: "easy", requiredXP: 100, isActive: true, isCompleted: false, exercises: 3 },
-    { id: 2, levelNumber: 2, name: "Phrase Pier", description: "Practice everyday phrases like 'How are you?' and 'My name is...'", difficulty: "easy", requiredXP: 200, isActive: false, isCompleted: false, exercises: 3 },
-    { id: 3, levelNumber: 3, name: "Sentence Shores", description: "Practice complete sentences like 'I would like a glass of water'", difficulty: "easy", requiredXP: 300, isActive: false, isCompleted: false, exercises: 3 },
-    { id: 4, levelNumber: 4, name: "Dialog Delta", description: "Practice challenging phrases like 'Could you please help me find the nearest pharmacy?'", difficulty: "medium", requiredXP: 400, isActive: false, isCompleted: false, exercises: 4 },
-    { id: 5, levelNumber: 5, name: "Conversation Cove", description: "Practice sentences with multiple parts like 'When I finish my therapy today, I would like to go to the park'", difficulty: "medium", requiredXP: 500, isActive: false, isCompleted: false, exercises: 4 },
-    { id: 6, levelNumber: 6, name: "Fluency Falls", description: "Practice fluid conversation patterns and improve overall speech rhythm and fluency", difficulty: "hard", requiredXP: 600, isActive: false, isCompleted: false, exercises: 5 }
+    { id: 1, levelNumber: 1, name: "Mixed Easy Words Island", description: "Practice simple, mixed‑category words", difficulty: "easy", requiredXP: 0, isActive: true, isCompleted: false, exercises: 10 },
+    { id: 2, levelNumber: 2, name: "Trickier Words Isle", description: "Practice mixed words with varied sounds", difficulty: "easy", requiredXP: 100, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 3, levelNumber: 3, name: "Multisyllabic Atoll", description: "Practice words with more syllables and blends", difficulty: "medium", requiredXP: 200, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 4, levelNumber: 4, name: "Complex Words Cay", description: "Practice challenging, abstract, or multi‑syllabic words", difficulty: "medium", requiredXP: 300, isActive: false, isCompleted: false, exercises: 9 },
+    { id: 5, levelNumber: 5, name: "Fun Phrases Bay", description: "Practice short, fun phrases", difficulty: "medium", requiredXP: 400, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 6, levelNumber: 6, name: "Expressive Phrases Peninsula", description: "Practice expressive and relatable phrases", difficulty: "medium", requiredXP: 500, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 7, levelNumber: 7, name: "Advanced Phrases Archipelago", description: "Practice advanced, 8th grade level phrases", difficulty: "hard", requiredXP: 600, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 8, levelNumber: 8, name: "Simple Sentences Isle", description: "Practice simple complete sentences", difficulty: "medium", requiredXP: 700, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 9, levelNumber: 9, name: "Creative Sentences Reef", description: "Practice complex and creative sentences", difficulty: "hard", requiredXP: 800, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 10, levelNumber: 10, name: "Whimsical Sentences Lagoon", description: "Practice advanced, whimsical sentences at a 10th grade reading level", difficulty: "hard", requiredXP: 900, isActive: false, isCompleted: false, exercises: 10 }
   ];
 
   // Initialize sounds and effects
@@ -171,7 +179,7 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
           {/* Curved path connecting all islands */}
           <svg className="absolute inset-0 z-0 pointer-events-none" width="1200" height="800">
             <path
-              d="M400,50 C450,100 400,150 450,200 C500,250 450,300 500,350 C550,400 500,450 550,500 C600,550 550,600 600,650 C650,700 600,750 650,800"
+              d="M400,50 C450,100 400,150 450,200 C500,250 450,300 500,350 C550,400 500,450 550,500 C600,550 550,600 600,650 C650,700 600,750 650,800 C700,750 650,700 700,650 C750,600 700,550 750,500 C800,450 750,400 800,350 C850,300 800,250 850,200"
               fill="none"
               stroke="#2C5282"
               strokeWidth="8"
@@ -180,11 +188,11 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
               className="animate-dash"
             />
             {/* Decorative elements */}
-            {[1, 2, 3, 4, 5].map((i) => (
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <motion.circle
                 key={i}
-                cx={300 + (i * 100) % 400}
-                cy={100 + (i * 90)}
+                cx={300 + (i * 100) % 600}
+                cy={100 + (i * 90) % 500}
                 r="4"
                 fill="#90CDF4"
                 initial={{ opacity: 0.6 }}
@@ -194,7 +202,7 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
                 }}
                 transition={{ 
                   duration: 3, 
-                  delay: i * 0.5,
+                  delay: i * 0.2,
                   repeat: Infinity 
                 }}
               />

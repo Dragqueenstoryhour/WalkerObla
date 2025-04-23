@@ -87,37 +87,16 @@ export class MemStorage implements IStorage {
   }
   
   private async initializeGameLevels() {
-    // Create basic levels for testing
+    // Level 1 – Mixed Easy Words
     const level1 = await this.createGameLevel({
       levelNumber: 1,
-      name: "Beginner Words",
-      description: "Practice simple words to build your pronunciation skills",
+      name: "Mixed Easy Words",
+      description: "Practice simple, mixed‑category words",
       requiredXP: 0,
       unlockableRewards: { hat: "baseball_cap" },
       difficulty: "easy"
     });
-    
-    const level2 = await this.createGameLevel({
-      levelNumber: 2,
-      name: "Simple Phrases",
-      description: "Practice short phrases to improve your fluency",
-      requiredXP: 100,
-      unlockableRewards: { accessory: "headphones" },
-      difficulty: "easy"
-    });
-    
-    const level3 = await this.createGameLevel({
-      levelNumber: 3,
-      name: "Complete Sentences",
-      description: "Practice complete sentences for better speech rhythm",
-      requiredXP: 250,
-      unlockableRewards: { outfit: "casual_tshirt" },
-      difficulty: "medium"
-    });
-    
-    // Add some exercises to level 1 (simple words)
-    const level1Words = ["Hello", "World", "Cat", "Dog", "Book", "Water", "Apple", "Sun", "Moon", "Star", "Tree", "House"];
-    
+    const level1Words = ["Dad", "Phone", "Eat", "Sun", "Ball", "Run", "Book", "Ice", "Hat", "Dog"];
     for (let i = 0; i < level1Words.length; i++) {
       await this.createExercise({
         levelId: level1.id,
@@ -128,45 +107,257 @@ export class MemStorage implements IStorage {
         order: i + 1
       });
     }
-    
-    // Add some exercises to level 2 (phrases)
-    const level2Phrases = [
-      "Good morning",
-      "How are you",
-      "Thank you very much",
-      "Nice to meet you",
-      "What time is it",
-      "I like reading",
-      "The blue sky",
-      "A beautiful day"
-    ];
-    
-    for (let i = 0; i < level2Phrases.length; i++) {
+
+    // Level 2 – Mixed Trickier Words
+    const level2 = await this.createGameLevel({
+      levelNumber: 2,
+      name: "Mixed Trickier Words",
+      description: "Practice mixed words with varied sounds",
+      requiredXP: 100,
+      unlockableRewards: { accessory: "headphones" },
+      difficulty: "easy"
+    });
+    const level2Words = ["Train", "Pizza", "Monkey", "Purple", "Dance", "Movie", "Smile", "Beach", "Cookie", "Laugh"];
+    for (let i = 0; i < level2Words.length; i++) {
       await this.createExercise({
         levelId: level2.id,
-        type: "phrase",
-        content: level2Phrases[i],
+        type: "word",
+        content: level2Words[i],
         difficulty: "easy",
+        xpReward: 10,
+        order: i + 1
+      });
+    }
+
+    // Level 3 – Multisyllabic Words
+    const level3 = await this.createGameLevel({
+      levelNumber: 3,
+      name: "Multisyllabic Words",
+      description: "Practice words with more syllables and blends",
+      requiredXP: 200,
+      unlockableRewards: { outfit: "casual_tshirt" },
+      difficulty: "medium"
+    });
+    const level3Words = ["Adventure", "Guitar", "Remote", "Jellybean", "Blanket", "Window", "Robot", "Party", "Chocolate", "Skating"];
+    for (let i = 0; i < level3Words.length; i++) {
+      await this.createExercise({
+        levelId: level3.id,
+        type: "word",
+        content: level3Words[i],
+        difficulty: "medium",
+        xpReward: 10,
+        order: i + 1
+      });
+    }
+
+    // Level 4 – Abstract & Complex Words
+    const level4 = await this.createGameLevel({
+      levelNumber: 4,
+      name: "Abstract & Complex Words",
+      description: "Practice challenging, abstract, or multi‑syllabic words",
+      requiredXP: 300,
+      unlockableRewards: { background: "ocean_waves" },
+      difficulty: "medium"
+    });
+    const level4Words = ["Celebrate", "Document", "Excellent", "Dinosaur", "Festival", "Notebook", "Surprise", "Computer", "Pancakes"];
+    for (let i = 0; i < level4Words.length; i++) {
+      await this.createExercise({
+        levelId: level4.id,
+        type: "word",
+        content: level4Words[i],
+        difficulty: "medium",
+        xpReward: 10,
+        order: i + 1
+      });
+    }
+
+    // Level 5 – Fun Starter Phrases
+    const level5 = await this.createGameLevel({
+      levelNumber: 5,
+      name: "Fun Starter Phrases",
+      description: "Practice short, fun phrases",
+      requiredXP: 400,
+      unlockableRewards: { badge: "phrase_master" },
+      difficulty: "medium"
+    });
+    const level5Phrases = [
+      "I want to play.",
+      "That looks so fun!",
+      "Let's go outside.",
+      "I like this game.",
+      "Come dance with me.",
+      "This is my favorite.",
+      "I can do it!",
+      "Let's watch a movie.",
+      "That was so cool!",
+      "I love chocolate cake."
+    ];
+    for (let i = 0; i < level5Phrases.length; i++) {
+      await this.createExercise({
+        levelId: level5.id,
+        type: "phrase",
+        content: level5Phrases[i],
+        difficulty: "medium",
         xpReward: 15,
         order: i + 1
       });
     }
-    
-    // Add some exercises to level 3 (sentences)
-    const level3Sentences = [
-      "Today is a beautiful day for a walk in the park.",
-      "I enjoy reading books about science and history.",
-      "The quick brown fox jumps over the lazy dog.",
-      "Learning to speak clearly is an important skill.",
-      "Practice makes perfect when you're learning something new."
+
+    // Level 6 – Expressive Phrases
+    const level6 = await this.createGameLevel({
+      levelNumber: 6,
+      name: "Expressive Phrases",
+      description: "Practice expressive and relatable phrases",
+      requiredXP: 500,
+      unlockableRewards: { outfit: "explorer_vest" },
+      difficulty: "medium"
+    });
+    const level6Phrases = [
+      "I'm excited for tomorrow.",
+      "That made me laugh so hard!",
+      "Let's build a giant tower.",
+      "I could eat ten cookies!",
+      "The music sounds amazing.",
+      "This day is the best.",
+      "I forgot my lucky socks!",
+      "Let's make a funny video.",
+      "I wish we had a trampoline.",
+      "That story was really weird."
     ];
-    
-    for (let i = 0; i < level3Sentences.length; i++) {
+    for (let i = 0; i < level6Phrases.length; i++) {
       await this.createExercise({
-        levelId: level3.id,
-        type: "sentence",
-        content: level3Sentences[i],
+        levelId: level6.id,
+        type: "phrase",
+        content: level6Phrases[i],
         difficulty: "medium",
+        xpReward: 15,
+        order: i + 1
+      });
+    }
+
+    // Level 7 – 8th Grade Level Phrases
+    const level7 = await this.createGameLevel({
+      levelNumber: 7,
+      name: "8th Grade Level Phrases",
+      description: "Practice advanced, 8th grade level phrases",
+      requiredXP: 600,
+      unlockableRewards: { hat: "explorer_hat" },
+      difficulty: "hard"
+    });
+    const level7Phrases = [
+      "That challenge was harder than it looked.",
+      "I honestly didn't expect it to work.",
+      "Can we try something completely different today?",
+      "I've always wanted to ride in a hot air balloon.",
+      "It's way more fun when everyone's laughing.",
+      "That magician trick blew my mind.",
+      "If I had a robot, I'd teach it to dance.",
+      "I'm not sure what happened, but it was hilarious.",
+      "This level is totally impossible—let's beat it anyway!",
+      "I came up with the craziest idea ever."
+    ];
+    for (let i = 0; i < level7Phrases.length; i++) {
+      await this.createExercise({
+        levelId: level7.id,
+        type: "phrase",
+        content: level7Phrases[i],
+        difficulty: "hard",
+        xpReward: 15,
+        order: i + 1
+      });
+    }
+
+    // Level 8 – Simple Sentences
+    const level8 = await this.createGameLevel({
+      levelNumber: 8,
+      name: "Simple Sentences",
+      description: "Practice simple complete sentences",
+      requiredXP: 700,
+      unlockableRewards: { accessory: "pirate_compass" },
+      difficulty: "medium"
+    });
+    const level8Sentences = [
+      "We raced down the hill laughing.",
+      "I drew a spaceship on my paper.",
+      "She made a volcano that exploded.",
+      "The cat jumped over the pillows.",
+      "He sings loud in the shower.",
+      "We made a fort from blankets.",
+      "I opened the box and gasped.",
+      "The balloon floated into the sky.",
+      "They ran because the sprinklers turned on.",
+      "I want to ride the rollercoaster again."
+    ];
+    for (let i = 0; i < level8Sentences.length; i++) {
+      await this.createExercise({
+        levelId: level8.id,
+        type: "sentence",
+        content: level8Sentences[i],
+        difficulty: "medium",
+        xpReward: 25,
+        order: i + 1
+      });
+    }
+
+    // Level 9 – Creative Sentences
+    const level9 = await this.createGameLevel({
+      levelNumber: 9,
+      name: "Creative Sentences",
+      description: "Practice complex and creative sentences",
+      requiredXP: 800,
+      unlockableRewards: { badge: "creative_genius" },
+      difficulty: "hard"
+    });
+    const level9Sentences = [
+      "The robot accidentally spilled popcorn on the teacher's shoes.",
+      "I jumped into the pool wearing all my clothes.",
+      "If we build a rocket, we can visit space.",
+      "The dragon wore sunglasses and danced to disco music.",
+      "I bet I can stack ten pancakes without dropping one.",
+      "She drew a llama in a tuxedo for art class.",
+      "He told the funniest joke, and I spit out water.",
+      "We hid behind the couch when the lights went out.",
+      "The treasure map led us to a vending machine.",
+      "My kite got stuck in a cloud shaped like pizza."
+    ];
+    for (let i = 0; i < level9Sentences.length; i++) {
+      await this.createExercise({
+        levelId: level9.id,
+        type: "sentence",
+        content: level9Sentences[i],
+        difficulty: "hard",
+        xpReward: 25,
+        order: i + 1
+      });
+    }
+
+    // Level 10 – Whimsical Sentences
+    const level10 = await this.createGameLevel({
+      levelNumber: 10,
+      name: "Whimsical Sentences",
+      description: "Practice advanced, whimsical sentences at a 10th grade reading level",
+      requiredXP: 900,
+      unlockableRewards: { outfit: "treasure_hunter" },
+      difficulty: "hard"
+    });
+    const level10Sentences = [
+      "If unicorns were real, I'd totally teach mine to skateboard.",
+      "I wrote a poem about french fries and it won a contest.",
+      "While everyone was talking, I imagined living in a treehouse.",
+      "The best adventures happen when nobody's looking at the clock.",
+      "I'd rather have a superpower than a million dollars—maybe.",
+      "My brain feels like a popcorn machine when I'm excited.",
+      "The rollercoaster felt like flying through a thunderstorm of jellybeans.",
+      "I once convinced my cousin that sandwiches talk when no one's around.",
+      "The best kind of chaos involves glitter, music, and pizza.",
+      "Today felt like the plot of a very strange comedy movie."
+    ];
+    for (let i = 0; i < level10Sentences.length; i++) {
+      await this.createExercise({
+        levelId: level10.id,
+        type: "sentence",
+        content: level10Sentences[i],
+        difficulty: "hard",
         xpReward: 25,
         order: i + 1
       });
