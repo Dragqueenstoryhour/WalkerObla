@@ -127,7 +127,9 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
         className="absolute left-4 bottom-4 z-20 bg-blue-500/80 hover:bg-blue-600/80 text-white rounded-full p-3 transition-all"
         onClick={() => {
           if (containerRef.current) {
-            containerRef.current.style.transform = 'translate(0px, 0px)';
+            const currentX = parseInt(containerRef.current.style.transform.replace(/[^\d-]/g, '') || '0');
+            const newX = Math.min(0, currentX + 800); // Move 800px right (3-4 islands worth)
+            containerRef.current.style.transform = `translate(${newX}px, 0px)`;
           }
         }}
       >
@@ -141,7 +143,9 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
         className="absolute right-4 bottom-4 z-20 bg-blue-500/80 hover:bg-blue-600/80 text-white rounded-full p-3 transition-all"
         onClick={() => {
           if (containerRef.current) {
-            containerRef.current.style.transform = 'translate(-2000px, 0px)';
+            const currentX = parseInt(containerRef.current.style.transform.replace(/[^\d-]/g, '') || '0');
+            const newX = Math.max(-2000, currentX - 800); // Move 800px left (3-4 islands worth)
+            containerRef.current.style.transform = `translate(${newX}px, 0px)`;
           }
         }}
       >
