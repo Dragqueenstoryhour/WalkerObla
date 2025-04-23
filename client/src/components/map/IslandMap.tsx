@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import Draggable from 'react-draggable';
 import { useGame } from '@/contexts/GameContext';
@@ -13,229 +13,156 @@ interface IslandMapProps {
 }
 
 export function IslandMap({ onSelectLevel }: IslandMapProps) {
-  const { 
-    currentUser, 
-    currentLevel,
-    levelProgress,
-    userExercises 
-  } = useGame();
-  
+  const { currentLevel, userExercises } = useGame();
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [activeLevelId, setActiveLevelId] = useState<number | null>(null);
-  const [scale, setScale] = useState(1);
   const [selectedIslandPosition, setSelectedIslandPosition] = useState<{ x: number, y: number } | null>(null);
   const [showShip, setShowShip] = useState(false);
   const soundManager = useRef<SoundManager>(new SoundManager());
-  
-  // Setup islands positions along a curved path
-  const getIslandPosition = (index: number, totalLevels: number) => {
-    // Create a curved path for island positioning that matches the SVG path
-    const positions = [
-      { x: 300, y: 100 },  // Island 1
-      { x: 400, y: 150 },  // Island 2
-      { x: 450, y: 250 },  // Island 3
-      { x: 475, y: 350 },  // Island 4
-      { x: 500, y: 450 },  // Island 5
-      { x: 550, y: 550 },  // Island 6
-      { x: 650, y: 500 },  // Island 7
-      { x: 750, y: 400 },  // Island 8
-      { x: 800, y: 250 },  // Island 9
-      { x: 850, y: 150 }   // Island 10
-    ];
-    return positions[index] || { x: 0, y: 0 };
-  };
-  
-  // Determine level status
-  const getLevelStatus = (level: GameLevel): 'active' | 'completed' | 'inProgress' | 'notStarted' | 'locked' => {
-    // Current active level
-    if (currentLevel?.id === level.id) {
-      return 'active';
-    }
-    
-    // Count completed exercises for this level
-    const completedExercises = userExercises.filter(
-      ex => ex.levelId === level.id && ex.isCompleted
-    ).length;
-    
-    // Level specific exercises
-    const levelExercises = userExercises.filter(
-      ex => ex.levelId === level.id
-    );
-    
-    // If all exercises are completed, level is complete
-    if (levelExercises.length > 0 && completedExercises === levelExercises.length) {
-      return 'completed';
-    }
-    
-    // If some exercises are completed, level is in progress
-    if (completedExercises > 0) {
-      return 'inProgress';
-    }
-    
-    // For simplicity, we're not implementing locked levels
+
+  const islandLevels: GameLevel[] = useMemo(() => ([
+    { id: 1, levelNumber: 1, name: "Mixed Easy Words Island", difficulty: "easy", requiredXP: 0, isActive: true, isCompleted: false, exercises: 10 },
+    { id: 2, levelNumber: 2, name: "Trickier Words Isle", difficulty: "easy", requiredXP: 100, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 3, levelNumber: 3, name: "Multisyllabic Atoll", difficulty: "medium", requiredXP: 200, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 4, levelNumber: 4, name: "Complex Words Cay", difficulty: "medium", requiredXP: 300, isActive: false, isCompleted: false, exercises: 9 },
+    { id: 5, levelNumber: 5, name: "Fun Phrases Bay", difficulty: "medium", requiredXP: 400, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 6, levelNumber: 6, name: "Expressive Phrases Peninsula", difficulty: "medium", requiredXP: 500, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 7, levelNumber: 7, name: "Advanced Phrases Archipelago", difficulty: "hard", requiredXP: 600, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 8, levelNumber: 8, name: "Simple Sentences Isle", difficulty: "medium", requiredXP: 700, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 9, levelNumber: 9, name: "Creative Sentences Reef", difficulty: "hard", requiredXP: 800, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 10, levelNumber: 10, name: "Whimsical Sentences Lagoon", difficulty: "hard", requiredXP: 900, isActive: false, isCompleted: false, exercises: 10 },
+  ]), []);
+
+  const islandPositions = useMemo(() => {
+    const total = islandLevels.length;
+    const startX = 100;
+    const endX = 2000 - 100;
+    const amplitude = 150;
+    return islandLevels.map((_, idx) => {
+      const t = idx / (total - 1);
+      const x = startX + t * (endX - startX);
+      const y = 300 + Math.sin(t * Math.PI * 2) * amplitude;
+      return { x, y };
+    });
+  }, [islandLevels.length]);
+
+  const pathData = useMemo(() => {
+    return islandPositions
+      .map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`)
+      .join(' ');
+  }, [islandPositions]);
+
+  const getIslandPosition = (index: number) => islandPositions[index] || { x: 0, y: 0 };
+
+  const getLevelStatus = (level: GameLevel) => {
+    if (currentLevel?.id === level.id) return 'active';
+    const completed = userExercises.filter(ex => ex.levelId === level.id && ex.isCompleted).length;
+    const total = userExercises.filter(ex => ex.levelId === level.id).length;
+    if (total > 0 && completed === total) return 'completed';
+    if (completed > 0) return 'inProgress';
     return 'notStarted';
   };
-  
-  // Handle level selection with sound effect and ship animation
+
   const handleLevelSelect = (levelId: number) => {
     soundManager.current.playSound('select');
     setActiveLevelId(levelId);
-    
-    // Get the position of the selected island
-    const levelIndex = islandLevels.findIndex(level => level.id === levelId);
-    if (levelIndex !== -1) {
-      const position = getIslandPosition(levelIndex, islandLevels.length);
-      setSelectedIslandPosition(position);
+    const idx = islandLevels.findIndex(l => l.id === levelId);
+    if (idx >= 0) {
+      setSelectedIslandPosition(getIslandPosition(idx));
       setShowShip(true);
     }
-    
     onSelectLevel(levelId);
   };
 
-  // Generate levels with island theme
-  const islandLevels: GameLevel[] = [
-    { id: 1, levelNumber: 1, name: "Mixed Easy Words Island", description: "Practice simple, mixed‑category words", difficulty: "easy", requiredXP: 0, isActive: true, isCompleted: false, exercises: 10 },
-    { id: 2, levelNumber: 2, name: "Trickier Words Isle", description: "Practice mixed words with varied sounds", difficulty: "easy", requiredXP: 100, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 3, levelNumber: 3, name: "Multisyllabic Atoll", description: "Practice words with more syllables and blends", difficulty: "medium", requiredXP: 200, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 4, levelNumber: 4, name: "Complex Words Cay", description: "Practice challenging, abstract, or multi‑syllabic words", difficulty: "medium", requiredXP: 300, isActive: false, isCompleted: false, exercises: 9 },
-    { id: 5, levelNumber: 5, name: "Fun Phrases Bay", description: "Practice short, fun phrases", difficulty: "medium", requiredXP: 400, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 6, levelNumber: 6, name: "Expressive Phrases Peninsula", description: "Practice expressive and relatable phrases", difficulty: "medium", requiredXP: 500, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 7, levelNumber: 7, name: "Advanced Phrases Archipelago", description: "Practice advanced, 8th grade level phrases", difficulty: "hard", requiredXP: 600, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 8, levelNumber: 8, name: "Simple Sentences Isle", description: "Practice simple complete sentences", difficulty: "medium", requiredXP: 700, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 9, levelNumber: 9, name: "Creative Sentences Reef", description: "Practice complex and creative sentences", difficulty: "hard", requiredXP: 800, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 10, levelNumber: 10, name: "Whimsical Sentences Lagoon", description: "Practice advanced, whimsical sentences at a 10th grade reading level", difficulty: "hard", requiredXP: 900, isActive: false, isCompleted: false, exercises: 10 }
-  ];
-
-  // Initialize sounds and effects
   useEffect(() => {
     if (!isInitialized) {
-      // Initialize sound effects
       soundManager.current.initialize();
-      
-      // Setup keyboard events for map navigation
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'ArrowRight') {
-          const currentIndex = islandLevels.findIndex(level => level.id === (activeLevelId || 1));
-          if (currentIndex < islandLevels.length - 1) {
-            const nextLevel = islandLevels[currentIndex + 1];
-            handleLevelSelect(nextLevel.id);
-          }
-        } else if (e.key === 'ArrowLeft') {
-          const currentIndex = islandLevels.findIndex(level => level.id === (activeLevelId || 1));
-          if (currentIndex > 0) {
-            const prevLevel = islandLevels[currentIndex - 1];
-            handleLevelSelect(prevLevel.id);
-          }
+      const onKey = (e: KeyboardEvent) => {
+        const curIdx = islandLevels.findIndex(l => l.id === (activeLevelId ?? currentLevel?.id ?? 1));
+        if (e.key === 'ArrowRight' && curIdx < islandLevels.length - 1) {
+          handleLevelSelect(islandLevels[curIdx + 1].id);
+        }
+        if (e.key === 'ArrowLeft' && curIdx > 0) {
+          handleLevelSelect(islandLevels[curIdx - 1].id);
         }
       };
-      
-      window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('keydown', onKey);
       setIsInitialized(true);
-      
-      return () => {
-        window.removeEventListener('keydown', handleKeyDown);
-      };
+      return () => window.removeEventListener('keydown', onKey);
     }
-  }, [isInitialized, islandLevels, activeLevelId]);
+  }, [isInitialized, activeLevelId, currentLevel, islandLevels]);
 
-  // Play hover sound
   const handleIslandHover = () => {
     soundManager.current.playSound('hover');
   };
 
   return (
     <div className="relative w-full h-[600px] overflow-hidden bg-blue-50">
-      {/* Ocean Background */}
       <OceanBackground />
-      
-      {/* Main draggable map container */}
+
       <Draggable
         nodeRef={containerRef}
-        bounds={{ left: -1000, top: -500, right: 500, bottom: 200 }}
-        onStart={() => {
-          setIsDragging(true);
-          soundManager.current.playSound('drag');
-        }}
+        bounds={{ left: -1800, top: -400, right: 200, bottom: 200 }}
+        onStart={() => { setIsDragging(true); soundManager.current.playSound('drag'); }}
         onStop={() => setIsDragging(false)}
       >
-        <div 
+        <div
           ref={containerRef}
-          className="absolute left-1/4 top-20 w-[1200px] h-[800px]"
-          style={{ 
-            transform: `scale(${scale})`,
-            touchAction: 'none'
-          }}
+          className="absolute top-20"
+          style={{ width: 2000, height: 800, touchAction: 'none' }}
         >
-          {/* Islands */}
-          {islandLevels.map((level, index) => {
-            const position = getIslandPosition(index, islandLevels.length);
-            const status = getLevelStatus(level);
-            
+          {islandLevels.map((level, idx) => {
+            const pos = getIslandPosition(idx);
             return (
               <Island
                 key={level.id}
                 level={level}
-                status={status}
-                position={position}
+                status={getLevelStatus(level)}
+                position={pos}
                 onSelect={() => handleLevelSelect(level.id)}
                 onHover={handleIslandHover}
-                isActive={level.id === (activeLevelId || currentLevel?.id)}
+                isActive={level.id === (activeLevelId ?? currentLevel?.id)}
               />
             );
           })}
-          
-          {/* Curved path connecting all islands */}
-          <svg className="absolute inset-0 z-0 pointer-events-none" width="1200" height="800">
+
+          <svg className="absolute inset-0 z-0 pointer-events-none" width={2000} height={800}>
             <path
-              d="M300,100 C350,125 375,125 400,150 C425,175 440,200 450,250 C460,300 470,325 475,350 C480,375 490,400 500,450 C510,500 530,525 550,550 C575,575 600,550 650,500 C700,450 725,425 750,400 C775,350 790,300 800,250 C810,200 830,175 850,150"
+              d={pathData}
               fill="none"
               stroke="#2C5282"
-              strokeWidth="8"
-              strokeDasharray="15,15"
+              strokeWidth="6"
+              strokeDasharray="12,12"
               strokeLinecap="round"
               className="animate-dash"
             />
-            {/* Decorative elements */}
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            {islandPositions.map((p, i) => (
               <motion.circle
                 key={i}
-                cx={300 + (i * 100) % 600}
-                cy={100 + (i * 90) % 500}
-                r="4"
+                cx={p.x}
+                cy={p.y}
+                r="5"
                 fill="#90CDF4"
-                initial={{ opacity: 0.6 }}
-                animate={{ 
-                  opacity: [0.4, 0.8, 0.4],
-                  y: [0, -10, 0]
-                }}
-                transition={{ 
-                  duration: 3, 
-                  delay: i * 0.2,
-                  repeat: Infinity 
-                }}
+                initial={{ opacity: 0.5 }}
+                animate={{ opacity: [0.3, 0.9, 0.3], y: [0, -8, 0] }}
+                transition={{ duration: 3, delay: i * 0.2, repeat: Infinity }}
               />
             ))}
           </svg>
         </div>
       </Draggable>
-      
-      {/* These zoom controls and compass have been hidden as they don't appear to function properly */}
-      
-      {/* Animated pirate ship */}
-      {showShip && (
+
+      {showShip && selectedIslandPosition && (
         <PirateShip
           targetIslandPosition={selectedIslandPosition}
-          isActive={true}
-          onArrival={() => {
-            // The ship has arrived at the island
-            soundManager.current.playSound('transition');
-          }}
+          isActive
+          onArrival={() => soundManager.current.playSound('transition')}
         />
       )}
-      
-      {/* Mobile instruction */}
+
       <motion.div
         className="absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-white/70 rounded-lg px-4 py-2 text-sm text-blue-900 pointer-events-none"
         initial={{ opacity: 0, y: 20 }}
