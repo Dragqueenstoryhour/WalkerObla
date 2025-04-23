@@ -33,16 +33,16 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
   const getIslandPosition = (index: number, totalLevels: number) => {
     // Create a curved path for island positioning that matches the SVG path
     const positions = [
-      { x: 400, y: 50 },   // Island 1
-      { x: 450, y: 200 },  // Island 2
-      { x: 500, y: 350 },  // Island 3
-      { x: 550, y: 500 },  // Island 4
-      { x: 600, y: 650 },  // Island 5
-      { x: 650, y: 800 },  // Island 6
-      { x: 700, y: 650 },  // Island 7
-      { x: 750, y: 500 },  // Island 8
-      { x: 800, y: 350 },  // Island 9
-      { x: 850, y: 200 }   // Island 10
+      { x: 300, y: 100 },  // Island 1
+      { x: 400, y: 150 },  // Island 2
+      { x: 450, y: 250 },  // Island 3
+      { x: 475, y: 350 },  // Island 4
+      { x: 500, y: 450 },  // Island 5
+      { x: 550, y: 550 },  // Island 6
+      { x: 650, y: 500 },  // Island 7
+      { x: 750, y: 400 },  // Island 8
+      { x: 800, y: 250 },  // Island 9
+      { x: 850, y: 150 }   // Island 10
     ];
     return positions[index] || { x: 0, y: 0 };
   };
@@ -189,7 +189,7 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
           {/* Curved path connecting all islands */}
           <svg className="absolute inset-0 z-0 pointer-events-none" width="1200" height="800">
             <path
-              d="M400,50 C450,100 400,150 450,200 C500,250 450,300 500,350 C550,400 500,450 550,500 C600,550 550,600 600,650 C650,700 600,750 650,800 C700,750 650,700 700,650 C750,600 700,550 750,500 C800,450 750,400 800,350 C850,300 800,250 850,200"
+              d="M300,100 C350,125 375,125 400,150 C425,175 440,200 450,250 C460,300 470,325 475,350 C480,375 490,400 500,450 C510,500 530,525 550,550 C575,575 600,550 650,500 C700,450 725,425 750,400 C775,350 790,300 800,250 C810,200 830,175 850,150"
               fill="none"
               stroke="#2C5282"
               strokeWidth="8"
