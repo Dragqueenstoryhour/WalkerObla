@@ -138,8 +138,37 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
     }
   };
   
+  // Make layout responsive based on screen size
+  const [screenSize, setScreenSize] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1200,
+    height: typeof window !== 'undefined' ? window.innerHeight : 800
+  });
+  
+  // Update screen dimensions on resize
+  useEffect(() => {
+    const handleResize = () => {
+      setScreenSize({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  // Determine map height based on screen size
+  const mapHeight = useMemo(() => {
+    // Use screen height for calculating the map size to maintain proportion
+    const baseHeight = 700;
+    if (screenSize.height < 800) {
+      return Math.max(500, screenSize.height * 0.7); // Minimum 500px, maximum 70% of screen height
+    }
+    return baseHeight;
+  }, [screenSize]);
+  
   return (
-    <div className="relative w-full h-[700px] overflow-hidden bg-blue-50">
+    <div className="relative w-full overflow-hidden bg-blue-50" style={{ height: `${mapHeight}px` }}>
       <OceanBackground />
 
       {/* Horizontal Scroll Bar */}
@@ -170,7 +199,11 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
         <div
           ref={containerRef}
           className="absolute top-20"
-          style={{ width: 2600, height: 800, touchAction: 'none' }}
+          style={{ 
+            width: 2600, 
+            height: Math.max(600, mapHeight + 100), 
+            touchAction: 'none'
+          }}
         >
           {islandLevels.map((level, idx) => {
             const pos = getIslandPosition(idx);

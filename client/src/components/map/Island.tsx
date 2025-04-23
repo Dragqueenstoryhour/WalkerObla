@@ -16,12 +16,28 @@ interface IslandProps {
 export function Island({ level, status, position, onSelect, onHover, isActive }: IslandProps) {
   const [isHovered, setIsHovered] = useState(false);
 
-  // Determine island size based on level difficulty
+  // Determine island size based on level difficulty and screen size
   const getIslandSize = () => {
+    // Check if we're on small screen
+    const isSmallScreen = typeof window !== 'undefined' && window.innerWidth < 768;
+    const isMediumScreen = typeof window !== 'undefined' && window.innerWidth < 1024 && window.innerWidth >= 768;
+    
+    // Scale down island sizes on smaller screens
+    let sizeFactor = isSmallScreen ? 0.7 : (isMediumScreen ? 0.85 : 1);
+    
     switch (level.difficulty) {
-      case 'hard': return { width: 180, height: 120 };
-      case 'medium': return { width: 160, height: 100 };
-      default: return { width: 140, height: 80 };
+      case 'hard': return { 
+        width: 180 * sizeFactor, 
+        height: 120 * sizeFactor 
+      };
+      case 'medium': return { 
+        width: 160 * sizeFactor, 
+        height: 100 * sizeFactor 
+      };
+      default: return { 
+        width: 140 * sizeFactor, 
+        height: 80 * sizeFactor 
+      };
     }
   };
 

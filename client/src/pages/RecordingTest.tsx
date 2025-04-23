@@ -19,6 +19,13 @@ export default function RecordingTest() {
   const [activeTab, setActiveTab] = useState('levels');
   const [awardedMedals, setAwardedMedals] = useState<Record<number, MedalType>>({});
   const [savedProgress, setSavedProgress] = useState<boolean>(false);
+  const [avatarOptions, setAvatarOptions] = useState<{
+    character: string;
+    accessories: SelectedRewards;
+  }>({
+    character: 'coolChicken',
+    accessories: {}
+  });
   
   // Handle level selection
   const handleStartLevel = (levelNumber: number) => {
