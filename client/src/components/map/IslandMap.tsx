@@ -24,30 +24,30 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
   const soundManager = useRef<SoundManager>(new SoundManager());
 
   const islandLevels: GameLevel[] = useMemo(() => ([
-    { id: 1, levelNumber: 1, name: "Mixed Easy Words Island", difficulty: "easy", requiredXP: 0, isActive: true, isCompleted: false, exercises: 10 },
-    { id: 2, levelNumber: 2, name: "Trickier Words Isle", difficulty: "easy", requiredXP: 100, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 3, levelNumber: 3, name: "Multisyllabic Atoll", difficulty: "medium", requiredXP: 200, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 4, levelNumber: 4, name: "Complex Words Cay", difficulty: "medium", requiredXP: 300, isActive: false, isCompleted: false, exercises: 9 },
-    { id: 5, levelNumber: 5, name: "Fun Phrases Bay", difficulty: "medium", requiredXP: 400, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 6, levelNumber: 6, name: "Expressive Phrases Peninsula", difficulty: "medium", requiredXP: 500, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 7, levelNumber: 7, name: "Advanced Phrases Archipelago", difficulty: "hard", requiredXP: 600, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 8, levelNumber: 8, name: "Simple Sentences Isle", difficulty: "medium", requiredXP: 700, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 9, levelNumber: 9, name: "Creative Sentences Reef", difficulty: "hard", requiredXP: 800, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 10, levelNumber: 10, name: "Whimsical Sentences Lagoon", difficulty: "hard", requiredXP: 900, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 1, levelNumber: 1, name: "Mixed Easy Words Island", description: "Practice basic pronunciation", difficulty: "easy", requiredXP: 0, isActive: true, isCompleted: false, exercises: 10 },
+    { id: 2, levelNumber: 2, name: "Trickier Words Isle", description: "Challenge yourself with harder words", difficulty: "easy", requiredXP: 100, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 3, levelNumber: 3, name: "Multisyllabic Atoll", description: "Master words with multiple syllables", difficulty: "medium", requiredXP: 200, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 4, levelNumber: 4, name: "Complex Words Cay", description: "Navigate complex pronunciation challenges", difficulty: "medium", requiredXP: 300, isActive: false, isCompleted: false, exercises: 9 },
+    { id: 5, levelNumber: 5, name: "Fun Phrases Bay", description: "Begin forming simple phrases", difficulty: "medium", requiredXP: 400, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 6, levelNumber: 6, name: "Expressive Phrases Peninsula", description: "Add emotion to your speech", difficulty: "medium", requiredXP: 500, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 7, levelNumber: 7, name: "Advanced Phrases Archipelago", description: "Master complex expressions", difficulty: "hard", requiredXP: 600, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 8, levelNumber: 8, name: "Simple Sentences Isle", description: "Form complete thoughts fluently", difficulty: "medium", requiredXP: 700, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 9, levelNumber: 9, name: "Creative Sentences Reef", description: "Express yourself with flair", difficulty: "hard", requiredXP: 800, isActive: false, isCompleted: false, exercises: 10 },
+    { id: 10, levelNumber: 10, name: "Whimsical Sentences Lagoon", description: "Have fun with creative language", difficulty: "hard", requiredXP: 900, isActive: false, isCompleted: false, exercises: 10 },
   ]), []);
 
   const islandPositions = useMemo(() => {
     return [
-      { x: 150, y: 250 },   // Island 1 - Starting point
-      { x: 400, y: 300 },   // Island 2
-      { x: 650, y: 350 },   // Island 3
-      { x: 900, y: 300 },   // Island 4
-      { x: 1150, y: 250 },  // Island 5
-      { x: 1400, y: 300 },  // Island 6
-      { x: 1650, y: 350 },  // Island 7
-      { x: 1900, y: 300 },  // Island 8 - Moved right
-      { x: 2150, y: 250 },  // Island 9 - Moved right
-      { x: 2400, y: 200 }   // Island 10 - Moved right
+      { x: 150, y: 240 },   // Island 1 - Starting point - aligned to white dot
+      { x: 400, y: 290 },   // Island 2 - aligned to white dot
+      { x: 650, y: 340 },   // Island 3 - aligned to white dot
+      { x: 900, y: 290 },   // Island 4 - aligned to white dot
+      { x: 1150, y: 240 },  // Island 5 - aligned to white dot
+      { x: 1400, y: 290 },  // Island 6 - aligned to white dot
+      { x: 1650, y: 340 },  // Island 7 - aligned to white dot
+      { x: 1900, y: 290 },  // Island 8 - aligned to white dot
+      { x: 2150, y: 240 },  // Island 9 - aligned to white dot
+      { x: 2400, y: 190 }   // Island 10 - aligned to white dot
     ];
   }, []);
 
@@ -118,41 +118,48 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
     soundManager.current.playSound('hover');
   };
 
+  const [scrollPosition, setScrollPosition] = useState(0);
+  
+  // Update container position when scroll changes
+  useEffect(() => {
+    if (containerRef.current) {
+      // We're mapping 0-100 to our actual scroll range (0 to -2400)
+      const newX = Math.max(-2400, -scrollPosition * 24);
+      containerRef.current.style.transform = `translate(${newX}px, 0px)`;
+    }
+  }, [scrollPosition]);
+  
+  // Map island position to scroll value for selection
+  const scrollToIsland = (levelId: number) => {
+    const idx = islandLevels.findIndex(l => l.id === levelId);
+    if (idx >= 0) {
+      const scrollValue = Math.min(100, Math.max(0, (idx * 12) + 5));
+      setScrollPosition(scrollValue);
+    }
+  };
+  
   return (
     <div className="relative w-full h-[700px] overflow-hidden bg-blue-50">
       <OceanBackground />
 
-      {/* Left scroll arrow */}
-      <button
-        className="absolute left-4 bottom-4 z-20 bg-blue-500/80 hover:bg-blue-600/80 text-white rounded-full p-3 transition-all"
-        onClick={() => {
-          if (containerRef.current) {
-            const currentX = parseInt(containerRef.current.style.transform.replace(/[^\d-]/g, '') || '0');
-            const newX = Math.min(-150, currentX + 700); // Move right by 700px, but keep island 1 visible
-            containerRef.current.style.transform = `translate(${newX}px, 0px)`;
-          }
-        }}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M15 18l-6-6 6-6"/>
-        </svg>
-      </button>
-
-      {/* Right scroll arrow */}
-      <button
-        className="absolute right-4 bottom-4 z-20 bg-blue-500/80 hover:bg-blue-600/80 text-white rounded-full p-3 transition-all"
-        onClick={() => {
-          if (containerRef.current) {
-            const currentX = parseInt(containerRef.current.style.transform.replace(/[^\d-]/g, '') || '0');
-            const newX = Math.max(-2000, currentX - 700); // Move left by 700px
-            containerRef.current.style.transform = `translate(${newX}px, 0px)`;
-          }
-        }}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M9 18l6-6-6-6"/>
-        </svg>
-      </button>
+      {/* Horizontal Scroll Bar */}
+      <div className="absolute left-4 right-4 bottom-6 z-20">
+        <input 
+          type="range" 
+          min="0" 
+          max="100" 
+          value={scrollPosition} 
+          onChange={(e) => {
+            setScrollPosition(parseInt(e.target.value));
+            soundManager.current.playSound('drag');
+          }}
+          className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-blue-300 accent-blue-600"
+        />
+        <div className="flex justify-between text-xs text-blue-700 mt-1 px-2">
+          <span>Island 1</span>
+          <span>Island 10</span>
+        </div>
+      </div>
 
       <Draggable
         nodeRef={containerRef}
