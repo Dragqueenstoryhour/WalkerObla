@@ -8,10 +8,11 @@ import { LevelComplete } from '@/components/game/LevelComplete';
 import { GameExerciseRecorder } from '@/components/game/GameExerciseRecorder';
 import { ExerciseList } from '@/components/game/ExerciseList';
 import { Avatar } from '@/components/game/Avatar';
+import { AvatarCustomizationStore } from '@/components/game/AvatarCustomizationStore';
 import { LevelPath } from '@/components/game/LevelPath';
 import { MedalSystem, MedalType } from '@/components/game/MedalSystem';
 import { useGame } from '@/contexts/GameContext';
-import { PronunciationAssessmentResult } from '@/lib/types';
+import { PronunciationAssessmentResult, SelectedRewards } from '@/lib/types';
 import { BookOpen, Award, Zap, ChevronRight, ArrowLeft, Medal, Trophy, Coins } from 'lucide-react';
 
 export default function RecordingTest() {
@@ -208,116 +209,54 @@ export default function RecordingTest() {
           
           <TabsContent value="rewards">
             <Card>
-              <CardContent className="p-6 text-center">
-                <div className="flex justify-center mb-6">
-                  <Avatar size="xl" />
+              <CardContent className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-bold">Avatar Customization</h3>
+                  <div className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 px-3 py-1 rounded-full text-sm font-medium flex items-center">
+                    <Coins className="w-4 h-4 mr-1" />
+                    <span>{game.currentUser?.tokens || 0} Tokens</span>
+                  </div>
                 </div>
                 
-                <h3 className="text-xl font-bold mb-4">Avatar Customization</h3>
                 <p className="text-muted-foreground mb-6">
                   Complete levels to unlock new customization options for your avatar.
                 </p>
                 
-                <div className="mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-medium">Your Tokens</h4>
-                    <div className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 px-3 py-1 rounded-full text-sm font-medium flex items-center">
-                      <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M12 17V17.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M12 13.5C14.5 12 14.5 9.5 12 8C9.5 6.5 9.5 9 12 10.5C14.5 12 14.5 15 12 16.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      {game.currentUser?.tokens || 0} Tokens
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="flex flex-col items-center">
+                    <div className="mb-4">
+                      <Avatar 
+                        character={avatarOptions.character as any}
+                        selectedRewards={avatarOptions.accessories}
+                        size="xl" 
+                        animate={true}
+                      />
                     </div>
-                  </div>
-                </div>
-
-                <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg p-4 mb-6 border border-primary/20">
-                  <h4 className="font-medium mb-4">Avatar Customization</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div className="bg-background rounded-lg p-4 text-center relative opacity-100">
-                      <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center">
-                        ✓
-                      </div>
-                      <div className="h-12 w-12 mx-auto mb-2 flex items-center justify-center">
-                        👤
-                      </div>
-                      <p className="text-sm">Base Avatar</p>
-                      <p className="text-xs text-muted-foreground">Unlocked</p>
-                    </div>
-                    
-                    <div className={`bg-background rounded-lg p-4 text-center relative ${(game.currentUser?.level || 0) >= 1 ? "opacity-100" : "opacity-50"}`}>
-                      {(game.currentUser?.level || 0) >= 1 ? (
-                        <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center">
-                          ✓
-                        </div>
-                      ) : (
-                        <div className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs rounded-full px-2 py-1 text-center text-[10px]">
-                          Lvl 1
-                        </div>
-                      )}
-                      <div className="h-12 w-12 mx-auto mb-2 flex items-center justify-center">
-                        🧢
-                      </div>
-                      <p className="text-sm">Baseball Cap</p>
-                      <p className="text-xs text-muted-foreground">
-                        {(game.currentUser?.level || 0) >= 1 ? "Unlocked" : "Locked"}
-                      </p>
-                    </div>
-                    
-                    <div className={`bg-background rounded-lg p-4 text-center relative cursor-pointer hover:bg-primary/5 transition-colors`}>
-                      <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full px-2 py-1">
-                        25 🪙
-                      </div>
-                      <div className="h-12 w-12 mx-auto mb-2 flex items-center justify-center">
-                        🕶️
-                      </div>
-                      <p className="text-sm">Sunglasses</p>
-                      <p className="text-xs text-muted-foreground">Available</p>
-                    </div>
-                    
-                    <div className={`bg-background rounded-lg p-4 text-center relative cursor-pointer hover:bg-primary/5 transition-colors`}>
-                      <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full px-2 py-1">
-                        40 🪙
-                      </div>
-                      <div className="h-12 w-12 mx-auto mb-2 flex items-center justify-center">
-                        👑
-                      </div>
-                      <p className="text-sm">Crown</p>
-                      <p className="text-xs text-muted-foreground">Available</p>
-                    </div>
-                    
-                    <div className={`bg-background rounded-lg p-4 text-center relative cursor-pointer hover:bg-primary/5 transition-colors`}>
-                      <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full px-2 py-1">
-                        30 🪙
-                      </div>
-                      <div className="h-12 w-12 mx-auto mb-2 flex items-center justify-center">
-                        🎭
-                      </div>
-                      <p className="text-sm">Mask</p>
-                      <p className="text-xs text-muted-foreground">Available</p>
-                    </div>
-                    
-                    <div className={`bg-background rounded-lg p-4 text-center relative opacity-70`}>
-                      <div className="absolute -top-2 -right-2 bg-gray-500 text-white text-xs rounded-full px-2 py-1 text-center text-[10px]">
-                        Lvl 3
-                      </div>
-                      <div className="h-12 w-12 mx-auto mb-2 flex items-center justify-center">
-                        🎸
-                      </div>
-                      <p className="text-sm">Guitar</p>
-                      <p className="text-xs text-muted-foreground">Locked</p>
-                    </div>
+                    <h4 className="font-medium text-center mb-2">Current Avatar</h4>
                   </div>
                   
-                  <div className="mt-4 text-xs text-center text-muted-foreground">
-                    Complete exercises to earn tokens and unlock new items!
+                  <div className="lg:col-span-2">
+                    <AvatarCustomizationStore 
+                      onSave={(selectedOptions) => {
+                        setAvatarOptions({
+                          character: selectedOptions.character,
+                          accessories: selectedOptions.accessories
+                        });
+                      }}
+                    />
                   </div>
                 </div>
                 
-                <Button variant="outline" className="w-full" onClick={() => setActiveTab('levels')}>
-                  Back to Levels
-                </Button>
+                <div className="mt-6">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setActiveTab('levels')}
+                    className="flex items-center gap-2 mx-auto"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Back to Levels
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
