@@ -122,16 +122,44 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
     <div className="relative w-full h-[600px] overflow-hidden bg-blue-50">
       <OceanBackground />
 
+      {/* Left scroll arrow */}
+      <button
+        className="absolute left-4 bottom-4 z-20 bg-blue-500/80 hover:bg-blue-600/80 text-white rounded-full p-3 transition-all"
+        onClick={() => {
+          if (containerRef.current) {
+            containerRef.current.style.transform = 'translate(0px, 0px)';
+          }
+        }}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+      </button>
+
+      {/* Right scroll arrow */}
+      <button
+        className="absolute right-4 bottom-4 z-20 bg-blue-500/80 hover:bg-blue-600/80 text-white rounded-full p-3 transition-all"
+        onClick={() => {
+          if (containerRef.current) {
+            containerRef.current.style.transform = 'translate(-2000px, 0px)';
+          }
+        }}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+      </button>
+
       <Draggable
         nodeRef={containerRef}
-        bounds={{ left: -2200, top: -400, right: 200, bottom: 200 }}
+        bounds={{ left: -2000, top: -200, right: 0, bottom: 200 }}
         onStart={() => { setIsDragging(true); soundManager.current.playSound('drag'); }}
         onStop={() => setIsDragging(false)}
       >
         <div
           ref={containerRef}
           className="absolute top-20"
-          style={{ width: 2000, height: 800, touchAction: 'none' }}
+          style={{ width: 2600, height: 800, touchAction: 'none' }}
         >
           {islandLevels.map((level, idx) => {
             const pos = getIslandPosition(idx);
@@ -148,7 +176,7 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
             );
           })}
 
-          <svg className="absolute inset-0 z-0 pointer-events-none" width={2000} height={800}>
+          <svg className="absolute inset-0 z-0 pointer-events-none" width={2600} height={800}>
             <path
               d={pathData}
               fill="none"
