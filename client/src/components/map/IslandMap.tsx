@@ -37,22 +37,41 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
   ]), []);
 
   const islandPositions = useMemo(() => {
-    const total = islandLevels.length;
-    const startX = 100;
-    const endX = 2000 - 100;
-    const amplitude = 150;
-    return islandLevels.map((_, idx) => {
-      const t = idx / (total - 1);
-      const x = startX + t * (endX - startX);
-      const y = 300 + Math.sin(t * Math.PI * 2) * amplitude;
-      return { x, y };
-    });
-  }, [islandLevels.length]);
+    return [
+      { x: 150, y: 250 },  // Island 1 - Starting point
+      { x: 400, y: 300 },  // Island 2
+      { x: 650, y: 350 },  // Island 3
+      { x: 900, y: 300 },  // Island 4
+      { x: 1150, y: 250 }, // Island 5
+      { x: 1400, y: 300 }, // Island 6
+      { x: 1650, y: 350 }, // Island 7
+      { x: 1800, y: 300 }, // Island 8
+      { x: 1850, y: 250 }, // Island 9
+      { x: 1900, y: 200 }  // Island 10
+    ];
+  }, []);
 
   const pathData = useMemo(() => {
-    return islandPositions
-      .map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`)
-      .join(' ');
+    return `M${islandPositions[0].x},${islandPositions[0].y} ` +
+      islandPositions.slice(1).map((p, i) => {
+        const prev = islandPositions[i];
+        const midX = (prev.x + p.x) / 2;
+        const midY = (prev.y + p.y) / 2 - 30;
+        return `Q${midX},${midY} ${p.x},${p.y}`;
+      }).join(' ');
+  }, [islandPositions]);
+
+  // Function to log line segments
+  useEffect(() => {
+    const logLineSegments = () => {
+      const segments = islandPositions.map((pos, i) => ({
+        position: i + 1,
+        coordinates: pos,
+        nextIsland: i < islandPositions.length - 1 ? islandPositions[i + 1] : null
+      }));
+      console.log('Island positions:', segments);
+    };
+    logLineSegments();
   }, [islandPositions]);
 
   const getIslandPosition = (index: number) => islandPositions[index] || { x: 0, y: 0 };
