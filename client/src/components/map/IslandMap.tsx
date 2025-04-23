@@ -119,7 +119,7 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
   };
 
   return (
-    <div className="relative w-full h-[600px] overflow-hidden bg-blue-50">
+    <div className="relative w-full h-[700px] overflow-hidden bg-blue-50">
       <OceanBackground />
 
       {/* Left scroll arrow */}
@@ -128,7 +128,7 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
         onClick={() => {
           if (containerRef.current) {
             const currentX = parseInt(containerRef.current.style.transform.replace(/[^\d-]/g, '') || '0');
-            const newX = Math.min(0, currentX + 800); // Move 800px right (3-4 islands worth)
+            const newX = Math.min(-150, currentX + 700); // Move right by 700px, but keep island 1 visible
             containerRef.current.style.transform = `translate(${newX}px, 0px)`;
           }
         }}
@@ -144,7 +144,7 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
         onClick={() => {
           if (containerRef.current) {
             const currentX = parseInt(containerRef.current.style.transform.replace(/[^\d-]/g, '') || '0');
-            const newX = Math.max(-2000, currentX - 800); // Move 800px left (3-4 islands worth)
+            const newX = Math.max(-2000, currentX - 700); // Move left by 700px
             containerRef.current.style.transform = `translate(${newX}px, 0px)`;
           }
         }}
