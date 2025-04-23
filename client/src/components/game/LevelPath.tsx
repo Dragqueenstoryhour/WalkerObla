@@ -4,7 +4,11 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { IslandMapContainer } from '../map/IslandMapContainer';
 
-export function LevelPath() {
+interface LevelPathProps {
+  onSelectLevel: (levelNumber: number) => void;
+}
+
+export function LevelPath({ onSelectLevel }: LevelPathProps) {
   const { 
     currentUser, 
     currentLevel, 
@@ -21,6 +25,10 @@ export function LevelPath() {
   // Handle level selection
   const handleLevelSelect = async (levelId: number) => {
     try {
+      // Call the passed onSelectLevel prop
+      onSelectLevel(levelId);
+      
+      // Also call the context startLevel if needed
       await startLevel(levelId);
       setIsLevelSelectionVisible(false);
     } catch (error) {
