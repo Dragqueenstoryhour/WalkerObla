@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Palmtree, Star, Award, Lock, Flag } from 'lucide-react';
@@ -210,61 +211,60 @@ export function Island({ level, status, position, onSelect, onHover, isActive }:
         </motion.div>
       )}
 
-        {/* Level number or lock in the center of island */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-          <div className={`
-            flex items-center justify-center 
-            w-12 h-12 rounded-full
-            ${isLocked
-              ? 'bg-gray-300 border-gray-400' 
-              : 'bg-white shadow-md border-2 border-blue-100'}
-          `}>
-            {isLocked ? (
-              <Lock size={18} className="text-gray-500" />
-            ) : (
-              <span className={`
-                text-xl font-bold
-                ${status === 'active' ? 'text-blue-600' :
-                status === 'completed' ? 'text-green-600' :
-                status === 'inProgress' ? 'text-amber-600' :
-                'text-blue-500'}
-              `}>
-                {level.levelNumber}
-              </span>
-            )}
-          </div>
+      {/* Level number or lock in the center of island */}
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+        <div className={`
+          flex items-center justify-center 
+          w-12 h-12 rounded-full
+          ${isLocked
+            ? 'bg-gray-300 border-gray-400' 
+            : 'bg-white shadow-md border-2 border-blue-100'}
+        `}>
+          {isLocked ? (
+            <Lock size={18} className="text-gray-500" />
+          ) : (
+            <span className={`
+              text-xl font-bold
+              ${status === 'active' ? 'text-blue-600' :
+              status === 'completed' ? 'text-green-600' :
+              status === 'inProgress' ? 'text-amber-600' :
+              'text-blue-500'}
+            `}>
+              {level.levelNumber}
+            </span>
+          )}
         </div>
-
-        {/* Achievements flag for completed islands */}
-        {status === 'completed' && (
-          <motion.div
-            className="absolute"
-            style={{ top: '-5%', right: '10%' }}
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3, type: 'spring' }}
-          >
-            <div className="bg-green-100 rounded-full p-1.5 shadow-md border border-green-200">
-              <Flag size={14} className="text-green-700" />
-            </div>
-          </motion.div>
-        )}
-
-        {/* Beach area */}
-        <div 
-          className="absolute" 
-          style={{ 
-            bottom: '20%', 
-            left: '20%', 
-            width: '30%', 
-            height: '10%', 
-            background: isLocked ? '#D1D5DB' : '#FBBF24', 
-            borderRadius: '100%',
-            transform: 'scaleY(0.3) rotate(-10deg)',
-            opacity: 0.6
-          }}
-        />
       </div>
+
+      {/* Achievements flag for completed islands */}
+      {status === 'completed' && (
+        <motion.div
+          className="absolute"
+          style={{ top: '-5%', right: '10%' }}
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.3, type: 'spring' }}
+        >
+          <div className="bg-green-100 rounded-full p-1.5 shadow-md border border-green-200">
+            <Flag size={14} className="text-green-700" />
+          </div>
+        </motion.div>
+      )}
+
+      {/* Beach area */}
+      <div 
+        className="absolute" 
+        style={{ 
+          bottom: '20%', 
+          left: '20%', 
+          width: '30%', 
+          height: '10%', 
+          background: isLocked ? '#D1D5DB' : '#FBBF24', 
+          borderRadius: '100%',
+          transform: 'scaleY(0.3) rotate(-10deg)',
+          opacity: 0.6
+        }}
+      />
 
       {/* Level label on hover */}
       <motion.div
