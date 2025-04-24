@@ -292,15 +292,106 @@ export function GameExerciseRecorder({
                 <div className="absolute bottom-0 right-0 w-8 h-8 bg-[#c2f8d7] rounded-tl-xl"></div>
 
                 <motion.div className="w-full max-w-md mx-auto bg-white rounded-lg p-6 shadow-lg">
-                  <h2 className="text-2xl font-bold text-center text-[#264653] mb-4">Your Total Score</h2>
-                  <div className="text-6xl font-bold text-center mb-4" style={{ color: assessmentResults.pronunciationScore >= 80 ? '#2a9d8f' : '#e76f51' }}>
+                  <h2 className="text-2xl font-bold text-center text-[#264653] mb-4">Your Performance</h2>
+                  <div className="text-6xl font-bold text-center mb-2" style={{ color: assessmentResults.pronunciationScore >= 80 ? '#2a9d8f' : '#e76f51' }}>
                     {Math.round(assessmentResults.pronunciationScore)}%
                   </div>
-                  <p className="text-center text-gray-600 mb-6">
+                  <p className="text-center text-gray-600 mb-4">
                     {assessmentResults.pronunciationScore >= 80 
                       ? "Great job! Your pronunciation is very clear."
                       : "Good effort! Try again to improve your score."}
                   </p>
+                  
+                  {/* Detailed scores breakdown */}
+                  <div className="space-y-3 mb-5">
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium">Pronunciation</span>
+                        <span>{Math.round(assessmentResults.pronunciationScore)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div 
+                          className="h-2.5 rounded-full" 
+                          style={{ 
+                            width: `${Math.round(assessmentResults.pronunciationScore)}%`,
+                            backgroundColor: assessmentResults.pronunciationScore >= 80 ? '#2a9d8f' : 
+                                            assessmentResults.pronunciationScore >= 60 ? '#e9c46a' : '#e76f51' 
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium">Fluency</span>
+                        <span>{Math.round(assessmentResults.fluencyScore)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div 
+                          className="h-2.5 rounded-full" 
+                          style={{ 
+                            width: `${Math.round(assessmentResults.fluencyScore)}%`,
+                            backgroundColor: assessmentResults.fluencyScore >= 80 ? '#2a9d8f' : 
+                                            assessmentResults.fluencyScore >= 60 ? '#e9c46a' : '#e76f51' 
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium">Completeness</span>
+                        <span>{Math.round(assessmentResults.completenessScore)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div 
+                          className="h-2.5 rounded-full" 
+                          style={{ 
+                            width: `${Math.round(assessmentResults.completenessScore)}%`,
+                            backgroundColor: assessmentResults.completenessScore >= 80 ? '#2a9d8f' : 
+                                            assessmentResults.completenessScore >= 60 ? '#e9c46a' : '#e76f51' 
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium">Accuracy</span>
+                        <span>{Math.round(assessmentResults.accuracyScore)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div 
+                          className="h-2.5 rounded-full" 
+                          style={{ 
+                            width: `${Math.round(assessmentResults.accuracyScore)}%`,
+                            backgroundColor: assessmentResults.accuracyScore >= 80 ? '#2a9d8f' : 
+                                            assessmentResults.accuracyScore >= 60 ? '#e9c46a' : '#e76f51' 
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    {assessmentResults.prosodyScore && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="font-medium">Prosody</span>
+                          <span>{Math.round(assessmentResults.prosodyScore)}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                          <div 
+                            className="h-2.5 rounded-full" 
+                            style={{ 
+                              width: `${Math.round(assessmentResults.prosodyScore)}%`,
+                              backgroundColor: assessmentResults.prosodyScore >= 80 ? '#2a9d8f' : 
+                                              assessmentResults.prosodyScore >= 60 ? '#e9c46a' : '#e76f51' 
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
                   {assessmentResults.pronunciationScore < 80 && (
                     <motion.button
                       whileHover={{ scale: 1.05 }}

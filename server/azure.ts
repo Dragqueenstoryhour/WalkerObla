@@ -147,8 +147,11 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
       const speechConfig = sdk.SpeechConfig.fromSubscription(speechKey, speechRegion);
       speechConfig.speechRecognitionLanguage = "en-US";
       
-      // Create audio config from the WAV file path
-      const audioConfig = sdk.AudioConfig.fromWavFileInput(wavFilePath);
+      // Read the WAV file into a buffer and create audio config
+      const wavFileData = fs.readFileSync(wavFilePath);
+      
+      // Create audio config from the WAV file buffer
+      const audioConfig = sdk.AudioConfig.fromWavFileInput(wavFileData);
       
       // Clean and normalize the reference text
       const cleanedText = referenceText
@@ -250,9 +253,9 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
                     return;
                   }
                   
-                  // In case of no proper assessment, fall back to mock data
-                  console.warn("Failed to get pronunciation assessment results from Azure, using mock data");
-                  resolve(createMockAssessmentResults(cleanedText));
+                  // In case of no proper assessment, throw an error
+                  console.warn("Failed to get pronunciation assessment results from Azure");
+                  reject(new Error("Could not get pronunciation assessment results from Azure"));
                   
                 } catch (resultError) {
                   console.error("Error extracting pronunciation results:", resultError);
@@ -296,11 +299,8 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
       });
     } catch (conversionError) {
       console.error("Failed to convert audio for Azure:", conversionError);
-      
-      // If ffmpeg conversion fails, try one more approach using the mock data
-      // This would be removed in production once we've verified the conversion works
-      console.warn("Audio conversion failed - using mock data as fallback");
-      return createMockAssessmentResults(referenceText);
+      // Don't use mock data, throw the error to be properly handled
+      throw new Error(`Failed to convert audio for Azure Speech assessment: ${conversionError.message}`);
     }
   } catch (error) {
     console.error("Error assessing pronunciation:", error);

@@ -1,5 +1,6 @@
-import { FiSettings, FiHelpCircle } from 'react-icons/fi';
+import { Settings, HelpCircle, Anchor } from 'lucide-react';
 import { AuthButtons } from './AuthButtons';
+import { Button } from '@/components/ui/button';
 
 interface HeaderProps {
   onSettingsClick: () => void;
@@ -8,32 +9,49 @@ interface HeaderProps {
 
 const Header = ({ onSettingsClick, onHelpClick }: HeaderProps) => {
   return (
-    <header className="border-b border-secondary px-4 py-4 md:px-6">
+    <header className="border-b border-secondary px-4 py-3 md:px-6 bg-gradient-to-r from-blue-50 to-teal-50 dark:from-blue-950/50 dark:to-teal-950/50 shadow-sm">
       <div className="container mx-auto flex justify-between items-center">
         <div className="flex items-center">
-          <svg className="w-8 h-8 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 1v22M4 3.5v17M20 3.5v17M1 12h22M8 20.5c0-4.5 8-4.5 8 0M8 3.5c0 4.5 8 4.5 8 0"></path>
-          </svg>
-          <h1 className="text-xl md:text-2xl font-semibold ml-2">ReadAssist</h1>
+          <div className="bg-primary/10 p-2 rounded-full">
+            <Anchor className="w-7 h-7 text-primary" />
+          </div>
+          <h1 className="text-xl md:text-2xl font-bold ml-2 text-primary dark:text-primary">
+            Pirate <span className="text-gray-600 dark:text-gray-400 font-normal">Speech</span>
+          </h1>
         </div>
-        <div className="flex items-center space-x-4">
-          <AuthButtons variant="ghost" size="sm" />
-          <button
+        
+        <div className="flex items-center gap-2 md:gap-4">
+          {/* Make auth buttons prominent */}
+          <div className="relative">
+            <AuthButtons 
+              variant="default" 
+              size="sm" 
+              className="shadow-md relative z-10"
+              showText={true}
+            />
+            {/* Decorative effect for login button */}
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full hidden md:block animate-ping"></div>
+          </div>
+          
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onSettingsClick}
-            className="text-textColor hover:text-primary transition-colors flex items-center"
+            className="text-gray-600 hover:text-primary hover:bg-primary/10 transition-colors"
             aria-label="Settings"
           >
-            <FiSettings className="w-6 h-6" />
-            <span className="ml-1 hidden md:inline">Settings</span>
-          </button>
-          <button
+            <Settings className="w-5 h-5" />
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onHelpClick}
-            className="text-textColor hover:text-primary transition-colors flex items-center"
+            className="text-gray-600 hover:text-primary hover:bg-primary/10 transition-colors"
             aria-label="Help"
           >
-            <FiHelpCircle className="w-6 h-6" />
-            <span className="ml-1 hidden md:inline">Help</span>
-          </button>
+            <HelpCircle className="w-5 h-5" />
+          </Button>
         </div>
       </div>
     </header>

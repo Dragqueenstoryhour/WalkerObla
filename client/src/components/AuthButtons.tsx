@@ -1,24 +1,30 @@
 import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from "@/components/ui/button";
+import { User, LogOut, LogIn } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface AuthButtonsProps {
   className?: string;
   variant?: "default" | "outline" | "secondary" | "ghost" | "link" | "destructive";
   size?: "default" | "sm" | "lg" | "icon";
+  showText?: boolean;
 }
 
 export const AuthButtons: React.FC<AuthButtonsProps> = ({ 
   className = "",
   variant = "default",
-  size = "default" 
+  size = "default",
+  showText = true
 }) => {
   const { user, isLoading, isAuthenticated } = useAuth();
 
   if (isLoading) {
     return (
       <Button variant="ghost" size={size} disabled className={className}>
-        Loading...
+        <div className="animate-pulse w-5 h-5 mr-2 rounded-full bg-gray-300"></div>
+        {showText && <span>Loading...</span>}
       </Button>
     );
   }
@@ -26,16 +32,30 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
   if (isAuthenticated && user) {
     return (
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium hidden md:inline">
-          Hi, {user && 'username' in user ? user.username : 'Pirate'}!
-        </span>
+        <Avatar className="h-8 w-8 border-2 border-primary">
+          <AvatarImage src={user.profileImageUrl || undefined} alt={user.username || 'User'} />
+          <AvatarFallback className="bg-primary text-primary-foreground">
+            {(user.username || 'P').charAt(0).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+        {showText && (
+          <div className="hidden md:flex flex-col">
+            <span className="text-sm font-medium leading-none">
+              {user && 'username' in user ? user.username : 'Pirate'}
+            </span>
+            <span className="text-xs text-muted-foreground leading-none mt-1">
+              Logged In
+            </span>
+          </div>
+        )}
         <Button
-          variant={variant}
-          size={size}
-          className={className}
+          variant="outline"
+          size="sm"
+          className={`${className} border-primary text-primary hover:bg-primary hover:text-primary-foreground`}
           onClick={() => window.location.href = "/api/logout"}
         >
-          Sign Out
+          <LogOut className="h-4 w-4 mr-1" />
+          {showText && <span>Sign Out</span>}
         </Button>
       </div>
     );
@@ -43,12 +63,14 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
 
   return (
     <Button
-      variant={variant}
+      variant="default"
       size={size}
-      className={className}
+      className={`${className} bg-primary hover:bg-primary/90 text-primary-foreground animate-pulse`}
       onClick={() => window.location.href = "/api/login"}
     >
-      Sign In to Save Progress
+      <LogIn className="h-4 w-4 mr-1 animate-bounce" />
+      {showText && <span>Sign In to Save Progress</span>}
+      {!showText && <span>Sign In</span>}
     </Button>
   );
 };
