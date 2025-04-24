@@ -313,6 +313,24 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
                         Start Level
                       </Button>
                     </motion.div>
+                    
+                    {!isAuthenticated && !isLoading && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.8 }}
+                        className="mt-3"
+                      >
+                        <Button 
+                          variant="outline"
+                          className="w-full flex items-center justify-center gap-2 py-2 border-[#2a9d8f] text-[#2a9d8f] hover:bg-[#2a9d8f]/10" 
+                          onClick={() => window.location.href = "/api/login"}
+                        >
+                          <Save className="h-4 w-4" />
+                          Sign in to save progress
+                        </Button>
+                      </motion.div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
