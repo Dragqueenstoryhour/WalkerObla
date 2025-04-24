@@ -41,9 +41,9 @@ export function AvatarCustomizationStore({ onSave }: AvatarCustomizationStorePro
   const avatarHats = [
     { id: 'none', name: 'None', unlockedByDefault: true },
     { id: 'party', name: 'Party Hat', unlockedByDefault: true },
-    { id: 'cap', name: 'Baseball Cap', requiredLevel: 3 },
-    { id: 'beanie', name: 'Beanie', requiredLevel: 4 },
-    { id: 'tophat', name: 'Top Hat', requiredLevel: 6 },
+    { id: 'cap', name: 'Baseball Cap', unlockedByDefault: true },
+    { id: 'beanie', name: 'Beanie', unlockedByDefault: true },
+    { id: 'tophat', name: 'Top Hat', unlockedByDefault: true },
   ];
   
   // State for selected customization options
@@ -53,8 +53,7 @@ export function AvatarCustomizationStore({ onSave }: AvatarCustomizationStorePro
   
   // Determine if an item is unlocked based on current user level
   const isItemUnlocked = (item: any) => {
-    const userLevel = currentUser?.level || 0;
-    return item.unlockedByDefault || (item.requiredLevel && userLevel >= item.requiredLevel);
+    return true; // All items are unlocked by default now
   };
   
   // Current preview state
@@ -101,175 +100,167 @@ export function AvatarCustomizationStore({ onSave }: AvatarCustomizationStorePro
   
   return (
     <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle className="text-xl">Avatar Customization</CardTitle>
-        <CardDescription>
-          Customize your avatar with different characters and accessories!
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Avatar preview */}
-          <div className="bg-slate-100 rounded-lg p-6 flex flex-col items-center">
-            <h3 className="font-medium text-lg mb-4">Preview</h3>
-            <div className="w-40 h-40 flex items-center justify-center">
-              <Avatar 
-                character={previewOptions.character as any} 
-                selectedRewards={previewOptions.accessories}
-                size="xl"
-                animate={true}
-              />
-            </div>
-          </div>
-          
-          {/* Customization options */}
-          <div className="col-span-1 md:col-span-2">
-            <Tabs defaultValue="character" className="w-full">
-              <TabsList className="grid grid-cols-3 mb-4">
-                <TabsTrigger value="character">Character</TabsTrigger>
-                <TabsTrigger value="accessory">Accessory</TabsTrigger>
-                <TabsTrigger value="hat">Hat</TabsTrigger>
-              </TabsList>
-              
-              {/* Character selection */}
-              <TabsContent value="character" className="space-y-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {avatarCharacters.map((character) => {
-                    const isUnlocked = isItemUnlocked(character);
-                    return (
-                      <div 
-                        key={character.id}
-                        className={`relative rounded-lg p-3 border-2 transition-all ${
-                          selectedCharacter === character.id 
-                            ? 'border-blue-500 bg-blue-50' 
-                            : 'border-gray-200'
-                        } ${
-                          !isUnlocked ? 'opacity-50' : ''
-                        }`}
-                      >
-                        <div className="flex flex-col items-center gap-2">
-                          <div className="w-16 h-16">
-                            <Avatar 
-                              character={character.id as any} 
-                              size="sm"
-                              animate={false}
-                            />
-                          </div>
-                          <span className="text-sm font-medium">{character.name}</span>
-                          
-                          {/* No unlock levels anymore - all characters available */}
-                        </div>
-                        
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="w-full mt-2"
-                          disabled={!isUnlocked}
-                          onClick={() => setSelectedCharacter(character.id)}
-                        >
-                          {selectedCharacter === character.id ? 'Selected' : 'Select'}
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </TabsContent>
-              
-              {/* Accessory selection */}
-              <TabsContent value="accessory" className="space-y-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {avatarAccessories.map((accessory) => {
-                    const isUnlocked = isItemUnlocked(accessory);
-                    return (
-                      <div 
-                        key={accessory.id}
-                        className={`relative rounded-lg p-3 border-2 transition-all ${
-                          selectedAccessory === accessory.id 
-                            ? 'border-blue-500 bg-blue-50' 
-                            : 'border-gray-200'
-                        } ${
-                          !isUnlocked ? 'opacity-50' : ''
-                        }`}
-                      >
-                        <div className="flex flex-col items-center gap-2">
-                          <div className="w-16 h-16 flex items-center justify-center">
-                            {accessory.id === 'sunglasses' && <span className="text-2xl">🕶️</span>}
-                            {accessory.id === 'visor' && <span className="text-2xl">🧢</span>}
-                            {accessory.id === 'chain' && <span className="text-2xl">⛓️</span>}
-                            {accessory.id === 'none' && <span className="text-2xl">❌</span>}
-                          </div>
-                          <span className="text-sm font-medium">{accessory.name}</span>
-                          
-                          {/* No unlock levels anymore - all accessories available */}
-                        </div>
-                        
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="w-full mt-2"
-                          disabled={!isUnlocked}
-                          onClick={() => setSelectedAccessory(accessory.id)}
-                        >
-                          {selectedAccessory === accessory.id ? 'Selected' : 'Select'}
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </TabsContent>
-              
-              {/* Hat selection */}
-              <TabsContent value="hat" className="space-y-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {avatarHats.map((hat) => {
-                    const isUnlocked = isItemUnlocked(hat);
-                    return (
-                      <div 
-                        key={hat.id}
-                        className={`relative rounded-lg p-3 border-2 transition-all ${
-                          selectedHat === hat.id 
-                            ? 'border-blue-500 bg-blue-50' 
-                            : 'border-gray-200'
-                        } ${
-                          !isUnlocked ? 'opacity-50' : ''
-                        }`}
-                      >
-                        <div className="flex flex-col items-center gap-2">
-                          <div className="w-16 h-16 flex items-center justify-center">
-                            {hat.id === 'party' && <span className="text-2xl">🎉</span>}
-                            {hat.id === 'cap' && <span className="text-2xl">🧢</span>}
-                            {hat.id === 'beanie' && <span className="text-2xl">🪖</span>}
-                            {hat.id === 'tophat' && <span className="text-2xl">🎩</span>}
-                            {hat.id === 'none' && <span className="text-2xl">❌</span>}
-                          </div>
-                          <span className="text-sm font-medium">{hat.name}</span>
-                          
-                          {/* No unlock levels anymore - all hats available */}
-                        </div>
-                        
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="w-full mt-2"
-                          disabled={!isUnlocked}
-                          onClick={() => setSelectedHat(hat.id)}
-                        >
-                          {selectedHat === hat.id ? 'Selected' : 'Select'}
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="text-xl">Avatar Customization</CardTitle>
+          <CardDescription>
+            Customize your avatar with different characters and accessories!
+          </CardDescription>
         </div>
-      </CardContent>
-      <CardFooter className="flex justify-end">
         <Button onClick={handleSave}>
           Save Changes
         </Button>
-      </CardFooter>
+      </CardHeader>
+      <CardContent>
+        {/* Avatar preview - moved to top */}
+        <div className="bg-slate-100 rounded-lg p-6 flex flex-col items-center mb-8">
+          <h3 className="font-medium text-lg mb-4">Preview</h3>
+          <div className="w-40 h-40 flex items-center justify-center">
+            <Avatar 
+              character={previewOptions.character as any} 
+              selectedRewards={previewOptions.accessories}
+              size="xl"
+              animate={true}
+            />
+          </div>
+        </div>
+        
+        {/* Customization options */}
+        <div>
+          <Tabs defaultValue="character" className="w-full">
+            <TabsList className="grid grid-cols-3 mb-4">
+              <TabsTrigger value="character">Character</TabsTrigger>
+              <TabsTrigger value="accessory">Accessory</TabsTrigger>
+              <TabsTrigger value="hat">Hat</TabsTrigger>
+            </TabsList>
+            
+            {/* Character selection */}
+            <TabsContent value="character" className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {avatarCharacters.map((character) => {
+                  const isUnlocked = isItemUnlocked(character);
+                  return (
+                    <div 
+                      key={character.id}
+                      className={`relative rounded-lg p-3 border-2 transition-all ${
+                        selectedCharacter === character.id 
+                          ? 'border-blue-500 bg-blue-50' 
+                          : 'border-gray-200'
+                      } ${
+                        !isUnlocked ? 'opacity-50' : ''
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-16 h-16">
+                          <Avatar 
+                            character={character.id as any} 
+                            size="sm"
+                            animate={false}
+                          />
+                        </div>
+                        <span className="text-sm font-medium">{character.name}</span>
+                      </div>
+                      
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="w-full mt-2"
+                        disabled={!isUnlocked}
+                        onClick={() => setSelectedCharacter(character.id)}
+                      >
+                        {selectedCharacter === character.id ? 'Selected' : 'Select'}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </TabsContent>
+            
+            {/* Accessory selection */}
+            <TabsContent value="accessory" className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {avatarAccessories.map((accessory) => {
+                  const isUnlocked = isItemUnlocked(accessory);
+                  return (
+                    <div 
+                      key={accessory.id}
+                      className={`relative rounded-lg p-3 border-2 transition-all ${
+                        selectedAccessory === accessory.id 
+                          ? 'border-blue-500 bg-blue-50' 
+                          : 'border-gray-200'
+                      } ${
+                        !isUnlocked ? 'opacity-50' : ''
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-16 h-16 flex items-center justify-center">
+                          {accessory.id === 'sunglasses' && <span className="text-2xl">🕶️</span>}
+                          {accessory.id === 'visor' && <span className="text-2xl">🧢</span>}
+                          {accessory.id === 'chain' && <span className="text-2xl">⛓️</span>}
+                          {accessory.id === 'none' && <span className="text-2xl">❌</span>}
+                        </div>
+                        <span className="text-sm font-medium">{accessory.name}</span>
+                      </div>
+                      
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="w-full mt-2"
+                        disabled={!isUnlocked}
+                        onClick={() => setSelectedAccessory(accessory.id)}
+                      >
+                        {selectedAccessory === accessory.id ? 'Selected' : 'Select'}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </TabsContent>
+            
+            {/* Hat selection */}
+            <TabsContent value="hat" className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {avatarHats.map((hat) => {
+                  const isUnlocked = isItemUnlocked(hat);
+                  return (
+                    <div 
+                      key={hat.id}
+                      className={`relative rounded-lg p-3 border-2 transition-all ${
+                        selectedHat === hat.id 
+                          ? 'border-blue-500 bg-blue-50' 
+                          : 'border-gray-200'
+                      } ${
+                        !isUnlocked ? 'opacity-50' : ''
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-16 h-16 flex items-center justify-center">
+                          {hat.id === 'party' && <span className="text-2xl">🎉</span>}
+                          {hat.id === 'cap' && <span className="text-2xl">🧢</span>}
+                          {hat.id === 'beanie' && <span className="text-2xl">🪖</span>}
+                          {hat.id === 'tophat' && <span className="text-2xl">🎩</span>}
+                          {hat.id === 'none' && <span className="text-2xl">❌</span>}
+                        </div>
+                        <span className="text-sm font-medium">{hat.name}</span>
+                      </div>
+                      
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="w-full mt-2"
+                        disabled={!isUnlocked}
+                        onClick={() => setSelectedHat(hat.id)}
+                      >
+                        {selectedHat === hat.id ? 'Selected' : 'Select'}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </CardContent>
     </Card>
   );
 }

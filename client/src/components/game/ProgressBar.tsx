@@ -39,7 +39,7 @@ export function ProgressBar({ progress }: ProgressBarProps) {
   }, []);
   
   return (
-    <div className="w-full bg-[#f5f7fa] border-2 border-[#57cc99] rounded-lg p-3 mb-6 shadow-md relative overflow-hidden">
+    <div className="w-full max-w-2xl mx-auto bg-[#f5f7fa] border-2 border-[#57cc99] rounded-lg p-3 mb-6 shadow-md relative overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-1 bg-[#57cc99]"></div>
       <div className="absolute bottom-0 right-0 w-8 h-8 bg-[#c2f8d7] rounded-tl-xl"></div>
       
