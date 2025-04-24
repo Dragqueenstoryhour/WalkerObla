@@ -132,10 +132,10 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
     console.log(`Processing audio buffer length: ${audioBuffer.length} bytes`);
     console.log(`Reference text: "${referenceText}"`);
 
-    // For demo purposes or when no Azure key is available
+    // Check if Azure key is properly configured
     if (speechKey === "dummy-key-for-development") {
-      console.log("Using dummy key - returning mock pronunciation results");
-      return createMockAssessmentResults(referenceText);
+      console.error("No Azure Speech key provided. Cannot assess pronunciation.");
+      throw new Error("Azure Speech key is required for pronunciation assessment");
     }
 
     try {
