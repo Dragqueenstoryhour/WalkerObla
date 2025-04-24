@@ -2,8 +2,28 @@ import { useState, useEffect } from 'react';
 import { AvatarStyle, SelectedRewards } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-// Import the image with the correct path format
-import coolChickenImage from '../../assets/cool-chicken.jpg';
+
+// Import the new avatar images
+import chappyChickenImage from '../../assets/avatars/chappy-chicken.jpg';
+import peckyPenguinImage from '../../assets/avatars/pecky-penguin.jpg';
+import chickenSunglassesImage from '../../assets/avatars/chicken-sunglasses.jpg';
+import chickenVisorImage from '../../assets/avatars/chicken-visor.jpg';
+import chickenSunglassesVisorImage from '../../assets/avatars/chicken-sunglasses-visor.jpg';
+import penguinSunglassesImage from '../../assets/avatars/penguin-sunglasses.jpg';
+import penguinChainImage from '../../assets/avatars/penguin-chain.jpg';
+import penguinSunglassesChainImage from '../../assets/avatars/penguin-sunglasses-chain.jpg';
+
+// Default avatar style for the human character
+const defaultAvatarStyle: AvatarStyle = {
+  skinTone: 'light',
+  hairColor: 'brown',
+  hairStyle: 'short',
+  faceShape: 'oval',
+  eyeColor: 'brown',
+  eyebrowStyle: 'natural',
+  noseStyle: 'straight',
+  mouthStyle: 'smile'
+};
 
 interface AvatarProps {
   avatarStyle?: AvatarStyle;
@@ -44,7 +64,7 @@ export function Avatar({
     xl: 'w-40 h-40'
   };
   
-  // Generate 3D-looking avatar based on character type
+  // Generate avatar based on character type
   return (
     <div className={cn(
       "relative flex items-center justify-center",
@@ -129,6 +149,61 @@ interface CharacterProps {
   avatarStyle?: AvatarStyle;
 }
 
+// Chappy Chicken Avatar (coolChicken)
+function CoolChickenAvatar({ size, blinking, animate, accessories }: CharacterProps) {
+  // Determine which chicken image to use based on accessories
+  let avatarImage = chappyChickenImage;
+  
+  const hasSunglasses = accessories?.accessory === 'sunglasses';
+  const hasVisor = accessories?.accessory === 'visor';
+  
+  if (hasSunglasses && hasVisor) {
+    avatarImage = chickenSunglassesVisorImage;
+  } else if (hasSunglasses) {
+    avatarImage = chickenSunglassesImage;
+  } else if (hasVisor) {
+    avatarImage = chickenVisorImage;
+  }
+  
+  return (
+    <div className="relative w-full h-full">
+      {/* Use the image as background with animation */}
+      <motion.div
+        className="absolute inset-0 bg-cover bg-center rounded-full shadow-lg overflow-hidden"
+        animate={animate ? { 
+          scale: [1, 1.03, 1],
+          rotate: [0, 2, -2, 0]
+        } : {}}
+        transition={{ 
+          repeat: Infinity, 
+          duration: 4, 
+          ease: "easeInOut"
+        }}
+        style={{ backgroundImage: `url(${avatarImage})` }}
+      />
+      
+      {/* Add a subtle pulsing effect */}
+      <motion.div
+        className="absolute inset-0 bg-orange-500 rounded-full opacity-0"
+        animate={{ opacity: [0, 0.1, 0] }}
+        transition={{ 
+          repeat: Infinity, 
+          duration: 2,
+          ease: "easeInOut"
+        }}
+      />
+      
+      {/* Add tooltip on hover */}
+      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300">
+        <div className="bg-white/80 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-center text-orange-800 transform -translate-y-8">
+          Chappy Chicken
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Basic Chicken Avatar 
 function ChickenAvatar({ size, blinking, animate, accessories }: CharacterProps) {
   return (
     <div className="relative w-full h-full">
@@ -166,73 +241,65 @@ function ChickenAvatar({ size, blinking, animate, accessories }: CharacterProps)
       {/* Wings */}
       <div className="absolute left-[15%] top-[45%] w-[20%] h-[30%] bg-gradient-to-t from-yellow-300 to-yellow-400 rounded-full transform -rotate-12"></div>
       <div className="absolute left-[70%] top-[45%] w-[20%] h-[30%] bg-gradient-to-t from-yellow-300 to-yellow-400 rounded-full transform rotate-12"></div>
-      
-      {/* Sunglasses if accessory is present */}
-      {accessories?.accessory === 'sunglasses' && (
-        <>
-          <div className="absolute left-[36%] top-[38%] w-[16%] h-[16%] bg-black rounded-lg border border-gray-700 shadow-md"></div>
-          <div className="absolute left-[53%] top-[38%] w-[16%] h-[16%] bg-black rounded-lg border border-gray-700 shadow-md"></div>
-          <div className="absolute left-[50.5%] top-[40%] w-[4%] h-[4%] bg-gradient-to-r from-gray-700 to-gray-800 rounded-full"></div>
-          <div className="absolute left-[32%] top-[42%] w-[20%] h-[2%] bg-gradient-to-r from-gray-800 to-gray-700"></div>
-          <div className="absolute left-[53%] top-[42%] w-[20%] h-[2%] bg-gradient-to-r from-gray-700 to-gray-800"></div>
-        </>
-      )}
-      
-      {/* Hat if present */}
-      {accessories?.hat === 'party' && (
-        <div className="absolute left-[35%] top-[0%] w-[30%] h-[25%]">
-          <div className="relative w-full h-full">
-            <div className="absolute bottom-0 w-full h-[80%] bg-gradient-to-b from-blue-500 to-blue-600 rounded-t-full"></div>
-            <div className="absolute top-[-10%] left-[40%] w-[20%] h-[40%] bg-gradient-to-t from-red-500 to-yellow-400 rounded-full transform -rotate-12"></div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
+// Pecky Penguin Avatar
 function PenguinAvatar({ size, blinking, animate, accessories }: CharacterProps) {
+  // Determine which penguin image to use based on accessories
+  let avatarImage = peckyPenguinImage;
+  
+  const hasSunglasses = accessories?.accessory === 'sunglasses';
+  const hasChain = accessories?.accessory === 'chain';
+  
+  if (hasSunglasses && hasChain) {
+    avatarImage = penguinSunglassesChainImage;
+  } else if (hasSunglasses) {
+    avatarImage = penguinSunglassesImage;
+  } else if (hasChain) {
+    avatarImage = penguinChainImage;
+  }
+  
   return (
     <div className="relative w-full h-full">
-      {/* Body - 3D effect with gradients */}
+      {/* Use the image as background with animation */}
       <motion.div
-        className="absolute inset-0 rounded-full bg-gradient-to-br from-gray-800 to-black shadow-lg"
-        animate={animate ? { scale: [1, 1.03, 1] } : {}}
-        transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+        className="absolute inset-0 bg-cover bg-center rounded-full shadow-lg overflow-hidden"
+        animate={animate ? { 
+          scale: [1, 1.03, 1],
+          rotate: [0, 2, -2, 0]
+        } : {}}
+        transition={{ 
+          repeat: Infinity, 
+          duration: 4, 
+          ease: "easeInOut"
+        }}
+        style={{ backgroundImage: `url(${avatarImage})` }}
       />
       
-      {/* White belly */}
-      <div className="absolute left-[30%] top-[40%] w-[40%] h-[50%] bg-gradient-to-b from-gray-100 to-white rounded-full"></div>
+      {/* Add a subtle pulsing effect */}
+      <motion.div
+        className="absolute inset-0 bg-blue-500 rounded-full opacity-0"
+        animate={{ opacity: [0, 0.1, 0] }}
+        transition={{ 
+          repeat: Infinity, 
+          duration: 2,
+          ease: "easeInOut"
+        }}
+      />
       
-      {/* Eyes */}
-      <div className="absolute left-[38%] top-[35%] w-[10%] h-[10%] rounded-full bg-white flex items-center justify-center">
-        <motion.div 
-          className="w-2/3 h-2/3 rounded-full bg-black"
-          animate={blinking ? { scaleY: [1, 0.1, 1] } : {}}
-          transition={{ duration: 0.1 }}
-        />
-      </div>
-      <div className="absolute left-[52%] top-[35%] w-[10%] h-[10%] rounded-full bg-white flex items-center justify-center">
-        <motion.div 
-          className="w-2/3 h-2/3 rounded-full bg-black"
-          animate={blinking ? { scaleY: [1, 0.1, 1] } : {}}
-          transition={{ duration: 0.1 }}
-        />
-      </div>
-      
-      {/* Beak */}
-      <div className="absolute left-[43%] top-[45%] w-[14%] h-[10%] bg-gradient-to-r from-orange-400 to-orange-500 rounded-lg"></div>
-      
-      {/* Accessories */}
-      {accessories?.accessory === 'tie' && (
-        <div className="absolute left-[45%] top-[55%] w-[10%] h-[25%] bg-gradient-to-b from-red-600 to-red-700">
-          <div className="absolute bottom-0 left-0 right-0 h-[40%] bg-gradient-to-tr from-red-600 to-red-700 clip-path-triangle"></div>
+      {/* Add tooltip on hover */}
+      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300">
+        <div className="bg-white/80 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-center text-blue-800 transform -translate-y-8">
+          Pecky Penguin
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
+// The rest of the avatars stay the same
 function FrogAvatar({ size, blinking, animate, accessories }: CharacterProps) {
   return (
     <div className="relative w-full h-full">
@@ -261,20 +328,6 @@ function FrogAvatar({ size, blinking, animate, accessories }: CharacterProps) {
       
       {/* Mouth */}
       <div className="absolute left-[40%] top-[58%] w-[20%] h-[5%] bg-gradient-to-r from-green-700 to-green-800 rounded-full"></div>
-      
-      {/* Accessories */}
-      {accessories?.accessory === 'crown' && (
-        <div className="absolute left-[30%] top-[5%] w-[40%] h-[20%]">
-          <div className="relative w-full h-full">
-            <div className="absolute bottom-0 w-full h-[60%] bg-gradient-to-t from-yellow-400 to-yellow-300 rounded-t-lg"></div>
-            <div className="absolute top-0 left-[20%] w-[10%] h-[70%] bg-gradient-to-t from-yellow-500 to-yellow-300 rounded-t-lg"></div>
-            <div className="absolute top-0 left-[40%] w-[10%] h-[100%] bg-gradient-to-t from-yellow-500 to-yellow-300 rounded-t-lg"></div>
-            <div className="absolute top-0 left-[60%] w-[10%] h-[70%] bg-gradient-to-t from-yellow-500 to-yellow-300 rounded-t-lg"></div>
-            <div className="absolute top-[30%] left-[25%] w-[10%] h-[10%] rounded-full bg-gradient-to-br from-red-400 to-red-600"></div>
-            <div className="absolute top-[30%] left-[65%] w-[10%] h-[10%] rounded-full bg-gradient-to-br from-blue-400 to-blue-600"></div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -324,18 +377,6 @@ function TigerAvatar({ size, blinking, animate, accessories }: CharacterProps) {
       {/* Ears */}
       <div className="absolute left-[25%] top-[15%] w-[15%] h-[15%] bg-gradient-to-br from-orange-300 to-orange-500 rounded-full transform -rotate-12"></div>
       <div className="absolute left-[60%] top-[15%] w-[15%] h-[15%] bg-gradient-to-br from-orange-300 to-orange-500 rounded-full transform rotate-12"></div>
-      
-      {/* Accessories */}
-      {accessories?.accessory === 'medal' && (
-        <div className="absolute left-[40%] top-[70%] w-[20%] h-[20%]">
-          <div className="relative w-full h-full">
-            <div className="absolute w-full h-full rounded-full bg-gradient-to-br from-yellow-300 to-yellow-500 border-4 border-yellow-600"></div>
-            <div className="absolute inset-0 flex items-center justify-center font-bold text-yellow-800">
-              1
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -376,87 +417,34 @@ function MonkeyAvatar({ size, blinking, animate, accessories }: CharacterProps) 
       <div className="absolute left-[40%] top-[60%] w-[20%] h-[3%] bg-gradient-to-r from-amber-900 to-red-900 rounded-full"></div>
       
       {/* Ears */}
-      <div className="absolute left-[20%] top-[25%] w-[18%] h-[18%] bg-gradient-to-br from-amber-700 to-amber-900 rounded-full"></div>
-      <div className="absolute left-[62%] top-[25%] w-[18%] h-[18%] bg-gradient-to-br from-amber-700 to-amber-900 rounded-full"></div>
-      
-      {/* Accessories */}
-      {accessories?.accessory === 'banana' && (
-        <div className="absolute left-[35%] top-[10%] w-[30%] h-[20%]">
-          <div className="relative w-full h-full">
-            <div className="absolute bottom-0 w-full h-[60%] bg-gradient-to-t from-yellow-300 to-yellow-400 rounded-lg transform rotate-12"></div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CoolChickenAvatar({ size, blinking, animate, accessories }: CharacterProps) {
-  return (
-    <div className="relative w-full h-full">
-      {/* Use the image as background but add interactive elements */}
-      <motion.div
-        className="absolute inset-0 bg-cover bg-center rounded-full shadow-lg overflow-hidden"
-        animate={animate ? { 
-          scale: [1, 1.03, 1],
-          rotate: [0, 2, -2, 0]
-        } : {}}
-        transition={{ 
-          repeat: Infinity, 
-          duration: 4, 
-          ease: "easeInOut"
-        }}
-        style={{ backgroundImage: `url(${coolChickenImage})` }}
-      />
-      
-      {/* Add a subtle pulsing effect */}
-      <motion.div
-        className="absolute inset-0 bg-orange-500 rounded-full opacity-0"
-        animate={{ opacity: [0, 0.1, 0] }}
-        transition={{ 
-          repeat: Infinity, 
-          duration: 2,
-          ease: "easeInOut"
-        }}
-      />
-      
-      {/* Add tooltip on hover */}
-      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300">
-        <div className="bg-white/80 backdrop-blur-sm px-2 py-1 rounded text-xs font-medium text-center text-orange-800 transform -translate-y-8">
-          Cool Chicken
-        </div>
-      </div>
-      
-      {/* Additional accessories if needed */}
-      {accessories?.hat === 'crown' && (
-        <div className="absolute left-[30%] top-[0%] w-[40%] h-[20%]">
-          <div className="relative w-full h-full">
-            <motion.div 
-              className="absolute bottom-0 w-full h-[60%] bg-gradient-to-t from-yellow-400 to-yellow-300 rounded-t-lg"
-              animate={{ y: [0, -2, 0], rotate: [0, 2, 0, -2, 0] }}
-              transition={{ repeat: Infinity, duration: 5 }}
-            />
-            <div className="absolute top-[10%] left-[25%] w-[10%] h-[40%] bg-gradient-to-t from-yellow-500 to-yellow-300 rounded-t-lg"></div>
-            <div className="absolute top-[0%] left-[45%] w-[10%] h-[50%] bg-gradient-to-t from-yellow-500 to-yellow-300 rounded-t-lg"></div>
-            <div className="absolute top-[10%] left-[65%] w-[10%] h-[40%] bg-gradient-to-t from-yellow-500 to-yellow-300 rounded-t-lg"></div>
-            <motion.div 
-              className="absolute top-[25%] left-[35%] w-[8%] h-[8%] rounded-full bg-gradient-to-br from-red-400 to-red-600"
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-            />
-            <motion.div 
-              className="absolute top-[25%] left-[55%] w-[8%] h-[8%] rounded-full bg-gradient-to-br from-blue-400 to-blue-600"
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ repeat: Infinity, duration: 2, delay: 0.5 }}
-            />
-          </div>
-        </div>
-      )}
+      <div className="absolute left-[20%] top-[25%] w-[18%] h-[18%] bg-gradient-to-br from-amber-600 to-amber-800 rounded-full transform -rotate-12"></div>
+      <div className="absolute left-[62%] top-[25%] w-[18%] h-[18%] bg-gradient-to-br from-amber-600 to-amber-800 rounded-full transform rotate-12"></div>
     </div>
   );
 }
 
 function DefaultAvatar({ size, blinking, animate, avatarStyle, accessories }: CharacterProps) {
+  // Determine background color based on avatar style
+  const getBgColorClass = (skinTone?: string) => {
+    switch (skinTone) {
+      case 'dark': return 'bg-gradient-to-br from-amber-900 to-amber-800';
+      case 'medium': return 'bg-gradient-to-br from-amber-700 to-amber-600';
+      case 'light': 
+      default: return 'bg-gradient-to-br from-amber-200 to-amber-300';
+    }
+  };
+  
+  // Determine hair color based on avatar style
+  const getHairColorClass = (hairColor?: string) => {
+    switch (hairColor) {
+      case 'black': return 'bg-gradient-to-t from-gray-900 to-gray-800';
+      case 'blonde': return 'bg-gradient-to-t from-yellow-600 to-yellow-400';
+      case 'red': return 'bg-gradient-to-t from-red-700 to-red-500';
+      case 'brown':
+      default: return 'bg-gradient-to-t from-amber-800 to-amber-700';
+    }
+  };
+  
   // Determine background color based on avatar style
   const bgColorClass = getBgColorClass(avatarStyle?.skinTone);
   
@@ -503,56 +491,6 @@ function DefaultAvatar({ size, blinking, animate, avatarStyle, accessories }: Ch
         "absolute top-0 left-0 right-0 h-1/3 rounded-t-full",
         hairColorClass
       )} />
-      
-      {/* Accessories */}
-      {accessories?.hat && (
-        <div className="absolute top-[-5%] left-0 right-0 h-1/4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-t-full shadow-lg" />
-      )}
-      
-      {accessories?.accessory === 'glasses' && (
-        <>
-          <div className="absolute left-[33%] top-[40%] w-[12%] h-[12%] rounded-full border-2 border-gray-700"></div>
-          <div className="absolute left-[55%] top-[40%] w-[12%] h-[12%] rounded-full border-2 border-gray-700"></div>
-          <div className="absolute left-[45%] top-[42%] w-[10%] h-[2%] bg-gray-700"></div>
-        </>
-      )}
     </div>
   );
 }
-
-// Helper functions for avatar styling
-function getBgColorClass(skinTone: string = 'medium'): string {
-  const skinToneClasses: Record<string, string> = {
-    light: 'bg-gradient-to-br from-amber-100 to-amber-200',
-    medium: 'bg-gradient-to-br from-amber-200 to-amber-300',
-    dark: 'bg-gradient-to-br from-amber-500 to-amber-600',
-    tan: 'bg-gradient-to-br from-amber-300 to-amber-400'
-  };
-  
-  return skinToneClasses[skinTone] || skinToneClasses.medium;
-}
-
-function getHairColorClass(hairColor: string = 'brown'): string {
-  const hairColorClasses: Record<string, string> = {
-    black: 'bg-gradient-to-b from-gray-800 to-gray-900',
-    brown: 'bg-gradient-to-b from-amber-700 to-amber-800',
-    blonde: 'bg-gradient-to-b from-yellow-300 to-yellow-400',
-    red: 'bg-gradient-to-b from-red-500 to-red-600',
-    gray: 'bg-gradient-to-b from-gray-300 to-gray-400',
-    white: 'bg-gradient-to-b from-gray-100 to-gray-200'
-  };
-  
-  return hairColorClasses[hairColor] || hairColorClasses.brown;
-}
-
-// Default avatar style if none provided
-const defaultAvatarStyle: AvatarStyle = {
-  skinTone: 'medium',
-  hairStyle: 'short',
-  hairColor: 'brown',
-  faceShape: 'oval',
-  eyeColor: 'brown',
-  eyebrowStyle: 'natural',
-  noseStyle: 'medium',
-  mouthStyle: 'neutral'
-};
