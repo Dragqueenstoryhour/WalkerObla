@@ -3,10 +3,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GameLevel } from '@/lib/types';
-import { Trophy, Star, Zap, Palmtree, Umbrella, Sun, ChevronLeft, ChevronRight, Lock, X as XIcon } from 'lucide-react';
+import { Trophy, Star, Zap, Palmtree, Umbrella, Sun, ChevronLeft, ChevronRight, Lock, X as XIcon, Save } from 'lucide-react';
 import { Avatar } from './Avatar';
 import { useToast } from '@/hooks/use-toast';
 import confetti from 'canvas-confetti';
+import { useAuth } from '../../hooks/useAuth';
 
 interface LevelIntroProps {
   level: GameLevel;
@@ -45,6 +46,7 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [showAvatarSelection, setShowAvatarSelection] = useState(false);
   const { toast } = useToast();
+  const { isAuthenticated, isLoading } = useAuth();
   
   // Try to get the saved character from localStorage, default to coolChicken
   const savedCharacter = localStorage.getItem('selectedCharacter') as 'chicken' | 'coolChicken' | 'penguin' | 'frog' | 'tiger' | 'monkey' | null;

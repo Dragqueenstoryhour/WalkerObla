@@ -1,4 +1,5 @@
 import { FiSettings, FiHelpCircle } from 'react-icons/fi';
+import { AuthButtons } from './AuthButtons';
 
 interface HeaderProps {
   onSettingsClick: () => void;
@@ -16,6 +17,7 @@ const Header = ({ onSettingsClick, onHelpClick }: HeaderProps) => {
           <h1 className="text-xl md:text-2xl font-semibold ml-2">ReadAssist</h1>
         </div>
         <div className="flex items-center space-x-4">
+          <AuthButtons variant="ghost" size="sm" />
           <button
             onClick={onSettingsClick}
             className="text-textColor hover:text-primary transition-colors flex items-center"
