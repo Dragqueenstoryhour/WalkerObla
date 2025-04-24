@@ -116,8 +116,8 @@ export function ExerciseItem({
                 className="flex items-center"
                 onClick={handleStart}
               >
-                <BarChart className="h-4 w-4 mr-1" />
-                Details
+                <Mic className="h-4 w-4 mr-1" />
+                Try Again
               </Button>
             </div>
           ) : (
