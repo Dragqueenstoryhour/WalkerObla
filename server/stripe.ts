@@ -9,9 +9,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 // Initialize Stripe client
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2023-10-16',
-});
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Monthly subscription price in cents ($14.99)
 const SUBSCRIPTION_PRICE_CENTS = 1499;

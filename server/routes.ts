@@ -362,9 +362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ error: "Stripe not configured" });
     }
     
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2023-10-16',
-    });
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     
     try {
       // Get raw body from request
