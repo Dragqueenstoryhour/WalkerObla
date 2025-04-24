@@ -1,11 +1,26 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, varchar, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Session storage table for Replit Auth
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
+  id: varchar("id").primaryKey().notNull(), // Changed to varchar for Replit Auth user IDs
   username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  email: text("email").unique(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  bio: text("bio"),
+  profileImageUrl: text("profile_image_url"),
   level: integer("level").notNull().default(1),
   xp: integer("xp").notNull().default(0),
   totalExercisesCompleted: integer("total_exercises_completed").notNull().default(0),
@@ -16,17 +31,32 @@ export const users = pgTable("users", {
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
+  id: true,
   username: true,
-  password: true,
+  email: true,
+  firstName: true,
+  lastName: true,
+  bio: true,
+  profileImageUrl: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
+export type UpsertUser = {
+  id: string;
+  username: string;
+  email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  bio?: string | null;
+  profileImageUrl?: string | null;
+};
+
 // User profiles with avatar customization
 export const userProfiles = pgTable("user_profiles", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().unique(),
+  userId: varchar("user_id").notNull().unique(), // Updated to match user ID type
   displayName: text("display_name"),
   avatarStyle: jsonb("avatar_style"), // Stores avatar customization settings
   selectedRewards: jsonb("selected_rewards"), // Currently selected cosmetic items
@@ -66,7 +96,7 @@ export type ReadingContent = typeof readingContent.$inferSelect;
 // Reading session
 export const readingSession = pgTable("reading_session", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id"),
+  userId: varchar("user_id"), // Updated to match user ID type
   contentId: integer("content_id").notNull(),
   pronunciationScore: integer("pronunciation_score"),
   fluencyScore: integer("fluency_score"),
@@ -129,7 +159,7 @@ export type Exercise = typeof exercises.$inferSelect;
 // User exercise progress
 export const userExercises = pgTable("user_exercises", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
+  userId: varchar("user_id").notNull(), // Updated to match user ID type
   exerciseId: integer("exercise_id").notNull(),
   completed: boolean("completed").notNull().default(false),
   pronunciationScore: integer("pronunciation_score"),

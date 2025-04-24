@@ -19,10 +19,11 @@ import {
 
 export interface IStorage {
   // User methods
-  getUser(id: number): Promise<User | undefined>;
+  getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  updateUser(id: number, updates: Partial<User>): Promise<User | undefined>;
+  updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
   
   // User profile methods
   getUserProfile(userId: number): Promise<UserProfile | undefined>;
@@ -53,14 +54,13 @@ export interface IStorage {
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<number, User>;
+  private users: Map<string, User>;
   private userProfiles: Map<number, UserProfile>;
   private readingSessions: Map<number, ReadingSession>;
   private gameLevels: Map<number, GameLevel>;
   private exercises: Map<number, Exercise>;
   private userExercises: Map<number, UserExercise>;
   
-  currentId: number;
   currentSessionId: number;
   currentProfileId: number;
   currentLevelId: number;
@@ -75,7 +75,6 @@ export class MemStorage implements IStorage {
     this.exercises = new Map();
     this.userExercises = new Map();
     
-    this.currentId = 1;
     this.currentSessionId = 1;
     this.currentProfileId = 1;
     this.currentLevelId = 1;
@@ -365,7 +364,7 @@ export class MemStorage implements IStorage {
   }
 
   // User methods
-  async getUser(id: number): Promise<User | undefined> {
+  async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
   }
 
@@ -376,22 +375,21 @@ export class MemStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId++;
     const user: User = {
       ...insertUser,
-      id,
       level: 1,
       xp: 0,
       totalExercisesCompleted: 0,
       streakDays: 0,
+      lastActivityDate: null,
       unlockedRewards: {},
       createdAt: new Date()
     };
-    this.users.set(id, user);
+    this.users.set(user.id, user);
     
     // Create default profile for user
     await this.createUserProfile({
-      userId: id,
+      userId: user.id,
       displayName: insertUser.username,
       avatarStyle: {
         skinTone: "medium",
@@ -409,13 +407,32 @@ export class MemStorage implements IStorage {
     return user;
   }
   
-  async updateUser(id: number, updates: Partial<User>): Promise<User | undefined> {
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
     const user = await this.getUser(id);
     if (!user) return undefined;
     
     const updatedUser = { ...user, ...updates };
     this.users.set(id, updatedUser);
     return updatedUser;
+  }
+  
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    let user = await this.getUser(userData.id);
+    
+    if (user) {
+      // Update user if they exist
+      user = await this.updateUser(userData.id, {
+        ...userData,
+        updatedAt: new Date()
+      }) as User;
+    } else {
+      // Create new user if they don't exist
+      user = await this.createUser({
+        ...userData
+      });
+    }
+    
+    return user;
   }
   
   // User profile methods
