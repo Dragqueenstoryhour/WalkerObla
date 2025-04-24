@@ -2,7 +2,6 @@ import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 import fs from "fs";
 import { execSync } from "child_process";
 import { join } from "path";
-import * as wav from "wav";
 import ffmpegPath from "ffmpeg-static";
 
 // Define the PronunciationAssessmentResult interface
@@ -177,7 +176,17 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
       );
       
       // Enable prosody assessment as mentioned in the documentation
-      pronunciationAssessmentConfig.enableProsodyAssessment();
+      try {
+        // Add prosody assessment if available in the SDK
+        // @ts-ignore - The method might not be in the TypeScript definition but exists in the SDK
+        if (pronunciationAssessmentConfig.enableProsodyAssessment) {
+          // @ts-ignore - Skip TypeScript checking for the function call
+          pronunciationAssessmentConfig.enableProsodyAssessment();
+        }
+      } catch (error) {
+        console.log("Could not enable prosody assessment:", error);
+        // Continue even if prosody assessment can't be enabled
+      }
       
       // Apply the pronunciation config to the recognizer
       pronunciationAssessmentConfig.applyTo(recognizer);
@@ -239,9 +248,9 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
                     prosodyScore: pronunciationAssessmentResult.prosodyScore,
                     wordLevelResults
                   });
-                } catch (resultError) {
+                } catch (resultError: any) {
                   console.error("Error extracting pronunciation results:", resultError);
-                  reject(new Error(`Failed to extract pronunciation results: ${resultError.message}`));
+                  reject(new Error(`Failed to extract pronunciation results: ${resultError?.message || "Unknown error"}`));
                 }
               } else {
                 console.warn(`Recognition didn't complete successfully: ${result.reason}`);
@@ -279,9 +288,9 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
           }
         );
       });
-    } catch (conversionError) {
+    } catch (conversionError: any) {
       console.error("Failed to convert audio for Azure:", conversionError);
-      throw new Error(`Failed to convert audio for Azure Speech assessment: ${conversionError.message}`);
+      throw new Error(`Failed to convert audio for Azure Speech assessment: ${conversionError?.message || "Unknown error"}`);
     }
   } catch (error) {
     console.error("Error assessing pronunciation:", error);
