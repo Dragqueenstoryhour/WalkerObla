@@ -27,6 +27,13 @@ export const users = pgTable("users", {
   streakDays: integer("streak_days").notNull().default(0),
   lastActivityDate: timestamp("last_activity_date"),
   unlockedRewards: jsonb("unlocked_rewards"),
+  // Stripe subscription related fields for premium levels
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  subscriptionStatus: text("subscription_status"),
+  subscriptionStartDate: timestamp("subscription_start_date"),
+  subscriptionEndDate: timestamp("subscription_end_date"),
+  trialEndDate: timestamp("trial_end_date"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
