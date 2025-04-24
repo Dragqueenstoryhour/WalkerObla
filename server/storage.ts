@@ -1,7 +1,13 @@
 import { 
   users, 
+  userProfiles,
+  readingSession,
+  gameLevels,
+  exercises,
+  userExercises,
   type User, 
   type InsertUser, 
+  type UpsertUser,
   type ReadingSession, 
   type InsertReadingSession,
   type UserProfile,
@@ -13,6 +19,8 @@ import {
   type UserExercise,
   type InsertUserExercise
 } from "@shared/schema";
+import { eq } from "drizzle-orm";
+import { db } from "./db";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -582,4 +590,135 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  // User methods
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(userData: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .returning();
+    return user;
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const [updatedUser] = await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values({
+        ...userData,
+        level: 1,
+        xp: 0,
+        totalExercisesCompleted: 0,
+        streakDays: 0,
+        lastActivityDate: null,
+        unlockedRewards: {}
+      })
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          lastActivityDate: new Date()
+        }
+      })
+      .returning();
+    return user;
+  }
+  
+  // User profile methods - temporarily using memory storage methods
+  // We'll implement these with database operations later
+  async getUserProfile(userId: number): Promise<UserProfile | undefined> {
+    return memStorage.getUserProfile(userId);
+  }
+
+  async createUserProfile(profile: InsertUserProfile): Promise<UserProfile> {
+    return memStorage.createUserProfile(profile);
+  }
+
+  async updateUserProfile(userId: number, updates: Partial<UserProfile>): Promise<UserProfile | undefined> {
+    return memStorage.updateUserProfile(userId, updates);
+  }
+  
+  // Reading session methods
+  async createReadingSession(session: InsertReadingSession): Promise<ReadingSession> {
+    return memStorage.createReadingSession(session);
+  }
+
+  async getReadingSession(id: number): Promise<ReadingSession | undefined> {
+    return memStorage.getReadingSession(id);
+  }
+
+  async getUserReadingSessions(userId: number): Promise<ReadingSession[]> {
+    return memStorage.getUserReadingSessions(userId);
+  }
+  
+  // Game level methods
+  async getGameLevel(id: number): Promise<GameLevel | undefined> {
+    return memStorage.getGameLevel(id);
+  }
+
+  async getGameLevelByNumber(levelNumber: number): Promise<GameLevel | undefined> {
+    return memStorage.getGameLevelByNumber(levelNumber);
+  }
+
+  async getAllGameLevels(): Promise<GameLevel[]> {
+    return memStorage.getAllGameLevels();
+  }
+
+  async createGameLevel(level: InsertGameLevel): Promise<GameLevel> {
+    return memStorage.createGameLevel(level);
+  }
+  
+  // Exercise methods
+  async getExercise(id: number): Promise<Exercise | undefined> {
+    return memStorage.getExercise(id);
+  }
+
+  async getExercisesByLevel(levelId: number): Promise<Exercise[]> {
+    return memStorage.getExercisesByLevel(levelId);
+  }
+
+  async createExercise(exercise: InsertExercise): Promise<Exercise> {
+    return memStorage.createExercise(exercise);
+  }
+  
+  // User exercise methods
+  async getUserExercise(userId: number, exerciseId: number): Promise<UserExercise | undefined> {
+    return memStorage.getUserExercise(userId, exerciseId);
+  }
+
+  async getUserExercisesByLevel(userId: number, levelId: number): Promise<UserExercise[]> {
+    return memStorage.getUserExercisesByLevel(userId, levelId);
+  }
+
+  async createUserExercise(userExercise: InsertUserExercise): Promise<UserExercise> {
+    return memStorage.createUserExercise(userExercise);
+  }
+
+  async updateUserExercise(id: number, updates: Partial<UserExercise>): Promise<UserExercise | undefined> {
+    return memStorage.updateUserExercise(id, updates);
+  }
+}
+
+// Keep the memory storage for non-authentication related features
+const memStorage = new MemStorage();
+
+// Use the database storage for the app
+export const storage = new DatabaseStorage();
