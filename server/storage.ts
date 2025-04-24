@@ -96,7 +96,7 @@ export class MemStorage implements IStorage {
       unlockableRewards: { hat: "baseball_cap" },
       difficulty: "easy"
     });
-    const level1Words = ["Dad", "Phone", "Eat", "Sun", "Ball", "Run", "Book", "Ice", "Hat", "Dog"];
+    const level1Words = ["There", "Phone", "Eat", "Sun", "Ball", "Run", "Book", "Ice", "Hat", "Dog"];
     for (let i = 0; i < level1Words.length; i++) {
       await this.createExercise({
         levelId: level1.id,
