@@ -154,8 +154,8 @@ function CoolChickenAvatar({ size, blinking, animate, accessories }: CharacterPr
   // Determine which chicken image to use based on accessories
   let avatarImage = chappyChickenImage;
   
-  const hasSunglasses = accessories?.accessory === 'sunglasses';
-  const hasVisor = accessories?.accessory === 'visor';
+  const hasSunglasses = accessories?.sunglasses || accessories?.accessory === 'sunglasses';
+  const hasVisor = accessories?.visor || accessories?.accessory === 'visor';
   
   if (hasSunglasses && hasVisor) {
     avatarImage = chickenSunglassesVisorImage;
@@ -250,8 +250,8 @@ function PenguinAvatar({ size, blinking, animate, accessories }: CharacterProps)
   // Determine which penguin image to use based on accessories
   let avatarImage = peckyPenguinImage;
   
-  const hasSunglasses = accessories?.accessory === 'sunglasses';
-  const hasChain = accessories?.accessory === 'chain';
+  const hasSunglasses = accessories?.sunglasses || accessories?.accessory === 'sunglasses';
+  const hasChain = accessories?.chain || accessories?.accessory === 'chain';
   
   if (hasSunglasses && hasChain) {
     avatarImage = penguinSunglassesChainImage;

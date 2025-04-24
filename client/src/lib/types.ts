@@ -108,9 +108,13 @@ export interface AvatarStyle {
 export interface SelectedRewards {
   hat?: string;
   outfit?: string;
-  accessory?: string;
+  accessory?: string | string[];
   background?: string;
   badge?: string;
+  // Special accessory types for characters
+  sunglasses?: boolean;
+  visor?: boolean;
+  chain?: boolean;
 }
 
 export interface GameLevel {

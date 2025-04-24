@@ -23,24 +23,18 @@ export function AvatarCustomizationStore({ onSave }: AvatarCustomizationStorePro
   const { toast } = useToast();
   const { currentUser } = useGame();
   
-  // Available avatar characters - first 4 are unlocked by default, others require level progress
+  // Available avatar characters - only Chappy Chicken and Pecky Penguin
   const avatarCharacters = [
-    { id: 'coolChicken', name: 'Cool Chicken', unlockedByDefault: true },
-    { id: 'chicken', name: 'Friendly Chicken', unlockedByDefault: true },
-    { id: 'penguin', name: 'Penguin', unlockedByDefault: true },
-    { id: 'frog', name: 'Frog', unlockedByDefault: true },
-    { id: 'tiger', name: 'Tiger', requiredLevel: 2 },
-    { id: 'monkey', name: 'Monkey', requiredLevel: 3 },
-    { id: 'default', name: 'Human', requiredLevel: 4 },
+    { id: 'coolChicken', name: 'Chappy Chicken', unlockedByDefault: true },
+    { id: 'penguin', name: 'Pecky Penguin', unlockedByDefault: true },
   ];
   
   // Available accessories
   const avatarAccessories = [
     { id: 'none', name: 'None', unlockedByDefault: true },
     { id: 'sunglasses', name: 'Sunglasses', unlockedByDefault: true },
-    { id: 'tie', name: 'Tie', requiredLevel: 2 },
-    { id: 'medal', name: 'Medal', requiredLevel: 3 },
-    { id: 'crown', name: 'Crown', requiredLevel: 5 },
+    { id: 'visor', name: 'Visor', unlockedByDefault: true },
+    { id: 'chain', name: 'Gold Chain', unlockedByDefault: true },
   ];
   
   // Available hats
@@ -163,13 +157,7 @@ export function AvatarCustomizationStore({ onSave }: AvatarCustomizationStorePro
                           </div>
                           <span className="text-sm font-medium">{character.name}</span>
                           
-                          {!isUnlocked && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/10 rounded-lg">
-                              <div className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
-                                Unlocks at Level {character.requiredLevel}
-                              </div>
-                            </div>
-                          )}
+                          {/* No unlock levels anymore - all characters available */}
                         </div>
                         
                         <Button 
@@ -206,20 +194,13 @@ export function AvatarCustomizationStore({ onSave }: AvatarCustomizationStorePro
                         <div className="flex flex-col items-center gap-2">
                           <div className="w-16 h-16 flex items-center justify-center">
                             {accessory.id === 'sunglasses' && <span className="text-2xl">🕶️</span>}
-                            {accessory.id === 'tie' && <span className="text-2xl">👔</span>}
-                            {accessory.id === 'medal' && <span className="text-2xl">🏅</span>}
-                            {accessory.id === 'crown' && <span className="text-2xl">👑</span>}
+                            {accessory.id === 'visor' && <span className="text-2xl">🧢</span>}
+                            {accessory.id === 'chain' && <span className="text-2xl">⛓️</span>}
                             {accessory.id === 'none' && <span className="text-2xl">❌</span>}
                           </div>
                           <span className="text-sm font-medium">{accessory.name}</span>
                           
-                          {!isUnlocked && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/10 rounded-lg">
-                              <div className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
-                                Unlocks at Level {accessory.requiredLevel}
-                              </div>
-                            </div>
-                          )}
+                          {/* No unlock levels anymore - all accessories available */}
                         </div>
                         
                         <Button 
@@ -263,13 +244,7 @@ export function AvatarCustomizationStore({ onSave }: AvatarCustomizationStorePro
                           </div>
                           <span className="text-sm font-medium">{hat.name}</span>
                           
-                          {!isUnlocked && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/10 rounded-lg">
-                              <div className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
-                                Unlocks at Level {hat.requiredLevel}
-                              </div>
-                            </div>
-                          )}
+                          {/* No unlock levels anymore - all hats available */}
                         </div>
                         
                         <Button 
