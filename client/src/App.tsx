@@ -6,6 +6,9 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import RecordingTest from "@/pages/RecordingTest";
 import Read from "@/pages/Read";
+import Subscription from "@/pages/Subscription";
+import Checkout from "@/pages/Checkout";
+import SubscriptionSuccess from "@/pages/SubscriptionSuccess";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ReadingProvider } from "./contexts/ReadingContext";
 import { GameProvider } from "./contexts/GameContext";
@@ -20,6 +23,9 @@ function Navigation() {
         <Link href="/read" className="text-primary hover:underline">
           ReadAssist
         </Link>
+        <Link href="/subscription" className="text-primary hover:underline ml-auto">
+          Premium
+        </Link>
       </div>
     </div>
   );
@@ -32,6 +38,9 @@ function Router() {
       <Switch>
         <Route path="/" component={() => <GameProvider initialUsername="player1"><RecordingTest /></GameProvider>} />
         <Route path="/read" component={Read} />
+        <Route path="/subscription" component={Subscription} />
+        <Route path="/checkout" component={Checkout} />
+        <Route path="/subscription/success" component={SubscriptionSuccess} />
         <Route component={NotFound} />
       </Switch>
     </>
