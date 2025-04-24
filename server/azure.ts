@@ -368,11 +368,11 @@ export async function synthesizeSpeech(text: string, voice = "default"): Promise
     // Create temporary output file
     const tempFilePath = `/tmp/synthesized-${Date.now()}.mp3`;
 
-    // For demo purposes when using dummy key
-    if (speechKey === "dummy-key-for-development") {
-      console.log("Using dummy key for speech synthesis, returning demo audio buffer");
+    // For testing or development purposes
+    if (speechKey === "dummy-key-for-development" || process.env.NODE_ENV === "development") {
+      console.log("Using fallback audio for speech synthesis");
       // Return a small valid MP3 buffer to avoid playback errors
-      // This is a minimal MP3 header
+      // This is a minimal MP3 header that will play as a short silence
       return Buffer.from([
         0xFF, 0xFB, 0x90, 0x44, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
