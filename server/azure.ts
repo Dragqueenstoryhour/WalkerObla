@@ -46,6 +46,7 @@ async function convertAudioToWav(audioBuffer: Buffer, tempDir: string = "/tmp"):
     console.log(`Created temporary input file at ${inputPath} (${audioBuffer.length} bytes)`);
     
     // Convert audio format using ffmpeg
+    // Make sure to set mono audio and 16kHz sample rate (required by Azure speech SDK)
     const ffmpegCommand = `"${ffmpegPath}" -i "${inputPath}" -ac 1 -ar 16000 "${outputPath}"`;
     console.log(`Running ffmpeg command: ${ffmpegCommand}`);
     
@@ -145,9 +146,11 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
       
       // Set up the speech config with our credentials
       const speechConfig = sdk.SpeechConfig.fromSubscription(speechKey, speechRegion);
+      
+      // Important: Set the recognition language to English US
       speechConfig.speechRecognitionLanguage = "en-US";
       
-      // Read the WAV file into a buffer and create audio config
+      // Read the WAV file into a buffer
       const wavFileData = fs.readFileSync(wavFilePath);
       
       // Create audio config from the WAV file buffer
@@ -162,20 +165,30 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
       
       console.log(`Cleaned reference text: "${cleanedText}"`);
       
-      // Create pronunciation assessment config just like in Python example
-      const pronunciationConfig = new sdk.PronunciationAssessmentConfig(
+      // Create speech recognizer first
+      const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
+      
+      // Create pronunciation assessment configuration according to Microsoft docs
+      const pronunciationAssessmentConfig = new sdk.PronunciationAssessmentConfig(
         cleanedText,
         sdk.PronunciationAssessmentGradingSystem.HundredMark,
-        sdk.PronunciationAssessmentGranularity.Phoneme, // Match Python code's Phoneme granularity
-        true // Enable miscue detection
+        sdk.PronunciationAssessmentGranularity.Phoneme,
+        true // Enable miscue calculation
       );
       
-      // Create speech recognizer
-      const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
-      pronunciationConfig.applyTo(recognizer);
+      // Enable prosody assessment as mentioned in the documentation
+      pronunciationAssessmentConfig.enableProsodyAssessment();
       
-      // Process the audio and get assessment results - similar to Python example
+      // Apply the pronunciation config to the recognizer
+      pronunciationAssessmentConfig.applyTo(recognizer);
+      
+      // Process the audio and get assessment results
       return new Promise((resolve, reject) => {
+        // Add sessionStarted event listener to get the session ID
+        recognizer.sessionStarted = (s, e) => {
+          console.log(`SESSION ID: ${e.sessionId}`);
+        };
+        
         recognizer.recognizeOnceAsync(
           async (result) => {
             try {
@@ -187,76 +200,45 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
               
               if (result.reason === sdk.ResultReason.RecognizedSpeech) {
                 try {
-                  // Get the JSON response just like the Python code
-                  const jsonResponse = result.properties.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult);
-                  console.log("Azure Raw JSON Response:", jsonResponse);
+                  // Get the pronunciation assessment result from the speech recognition result
+                  const pronunciationAssessmentResult = sdk.PronunciationAssessmentResult.fromResult(result);
                   
+                  // Log the result details to understand the data format
+                  console.log("Pronunciation Assessment Result:", JSON.stringify({
+                    accuracy: pronunciationAssessmentResult.accuracyScore,
+                    pronunciation: pronunciationAssessmentResult.pronunciationScore,
+                    completeness: pronunciationAssessmentResult.completenessScore,
+                    fluency: pronunciationAssessmentResult.fluencyScore,
+                    prosody: pronunciationAssessmentResult.prosodyScore
+                  }));
+                  
+                  // Get the detailed JSON response
+                  const jsonResponse = result.properties.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult);
+                  console.log("Raw JSON Response:", jsonResponse);
+                  
+                  // Parse the JSON response
                   const jsonResult = JSON.parse(jsonResponse);
                   
-                  if (jsonResult && jsonResult.NBest && jsonResult.NBest.length > 0) {
-                    const best = jsonResult.NBest[0];
-                    
-                    if (best.PronunciationAssessment) {
-                      // Extract scores exactly as in the Python example
-                      const pronScores = best.PronunciationAssessment;
-                      
-                      // Create word-level results from the Words array if available
-                      let wordLevelResults: any[] = [];
-                      
-                      if (best.Words && best.Words.length > 0) {
-                        wordLevelResults = best.Words.map((word: any) => ({
-                          word: word.Word,
-                          accuracyScore: word.PronunciationAssessment?.AccuracyScore || 0,
-                          errorType: word.PronunciationAssessment?.ErrorType
-                        }));
-                      }
-                      
-                      // Return the assessment result in the same format as our interface
-                      resolve({
-                        pronunciationScore: parseFloat(pronScores.PronScore) || 0,
-                        fluencyScore: parseFloat(pronScores.FluencyScore) || 0,
-                        completenessScore: parseFloat(pronScores.CompletenessScore) || 0,
-                        accuracyScore: parseFloat(pronScores.AccuracyScore) || 0,
-                        prosodyScore: pronScores.ProsodyScore ? parseFloat(pronScores.ProsodyScore) : undefined,
-                        wordLevelResults
-                      });
-                      return;
-                    }
+                  // Extract word-level results
+                  let wordLevelResults: any[] = [];
+                  
+                  if (jsonResult?.NBest?.[0]?.Words) {
+                    wordLevelResults = jsonResult.NBest[0].Words.map((word: any) => ({
+                      word: word.Word,
+                      accuracyScore: word.PronunciationAssessment?.AccuracyScore || 0,
+                      errorType: word.PronunciationAssessment?.ErrorType || "None"
+                    }));
                   }
                   
-                  // Fall back to using SDK method if the direct JSON approach fails
-                  const pronunciationResult = sdk.PronunciationAssessmentResult.fromResult(result);
-                  
-                  if (pronunciationResult) {
-                    console.log(`SDK pronunciation scores - Overall: ${pronunciationResult.pronunciationScore}`);
-                    
-                    // Extract word-level results
-                    const detailResult = pronunciationResult.detailResult;
-                    let wordLevelResults: any[] = [];
-                    
-                    if (detailResult && detailResult.Words && detailResult.Words.length > 0) {
-                      wordLevelResults = detailResult.Words.map(word => ({
-                        word: word.Word,
-                        accuracyScore: word.PronunciationAssessment?.AccuracyScore || 0,
-                        errorType: word.PronunciationAssessment?.ErrorType
-                      }));
-                    }
-                    
-                    resolve({
-                      pronunciationScore: pronunciationResult.pronunciationScore || 0,
-                      fluencyScore: pronunciationResult.fluencyScore || 0,
-                      completenessScore: pronunciationResult.completenessScore || 0,
-                      accuracyScore: pronunciationResult.accuracyScore || 0,
-                      prosodyScore: pronunciationResult.prosodyScore,
-                      wordLevelResults
-                    });
-                    return;
-                  }
-                  
-                  // In case of no proper assessment, throw an error
-                  console.warn("Failed to get pronunciation assessment results from Azure");
-                  reject(new Error("Could not get pronunciation assessment results from Azure"));
-                  
+                  // Build the final assessment result
+                  resolve({
+                    pronunciationScore: pronunciationAssessmentResult.pronunciationScore,
+                    fluencyScore: pronunciationAssessmentResult.fluencyScore,
+                    completenessScore: pronunciationAssessmentResult.completenessScore,
+                    accuracyScore: pronunciationAssessmentResult.accuracyScore,
+                    prosodyScore: pronunciationAssessmentResult.prosodyScore,
+                    wordLevelResults
+                  });
                 } catch (resultError) {
                   console.error("Error extracting pronunciation results:", resultError);
                   reject(new Error(`Failed to extract pronunciation results: ${resultError.message}`));
@@ -299,7 +281,6 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
       });
     } catch (conversionError) {
       console.error("Failed to convert audio for Azure:", conversionError);
-      // Don't use mock data, throw the error to be properly handled
       throw new Error(`Failed to convert audio for Azure Speech assessment: ${conversionError.message}`);
     }
   } catch (error) {
