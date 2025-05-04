@@ -14,6 +14,7 @@ const ReadingControls = () => {
     isPaused, 
     currentContent, 
     currentSession,
+    currentHighlightedText,
     startReading, 
     pauseReading, 
     resumeReading, 
@@ -128,8 +129,8 @@ const ReadingControls = () => {
     }
   });
   
-  // Current text being read
-  const [currentHighlightedText, setCurrentHighlightedText] = useState('');
+  // Use the highlighted text from the reading context for consistency
+  const highlightedTextRef = useRef('');
   
   // Set up reading segments from the current content
   useEffect(() => {
@@ -161,7 +162,8 @@ const ReadingControls = () => {
       console.log(`Reading segment ${currentIndex + 1} of ${readableSegments.length}`);
       
       if (nextText) {
-        setCurrentHighlightedText(nextText);
+        // Store the text locally and update in the context
+        highlightedTextRef.current = nextText;
         setHighlightedText(nextText);
         
         // Start recording for this segment
