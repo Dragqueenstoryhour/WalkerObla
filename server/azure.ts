@@ -15,7 +15,15 @@ interface PronunciationAssessmentResult {
     word: string;
     accuracyScore: number;
     errorType?: string;         // None, Omission, Insertion, Mispronunciation, UnexpectedBreak, MissingBreak, Monotone
+    offset?: number;            // Start time offset in milliseconds
+    duration?: number;          // Duration in milliseconds
+    phonemes?: Array<{          // Phoneme-level details
+      phoneme: string;          // IPA phoneme
+      score: number;            // Phoneme accuracy score
+    }>;
   }[];
+  rawJson?: any;                // Raw JSON response for debugging
+  sdkVersion?: string;          // Azure Speech SDK version
 }
 
 // Azure Speech Service configuration
@@ -39,32 +47,76 @@ async function convertAudioToWav(audioBuffer: Buffer, tempDir: string = "/tmp"):
   const inputPath = join(tempDir, `input-${timestamp}.webm`);
   const outputPath = join(tempDir, `output-${timestamp}.wav`);
   
+  // Validate input audio buffer
+  if (!audioBuffer || audioBuffer.length === 0) {
+    throw new Error("Empty or invalid audio buffer provided for conversion");
+  }
+  
+  console.log(`⏳ Converting audio buffer (${audioBuffer.length} bytes) to WAV format...`);
+  
   try {
     // Write input buffer to temporary file
     fs.writeFileSync(inputPath, audioBuffer);
-    console.log(`Created temporary input file at ${inputPath} (${audioBuffer.length} bytes)`);
+    console.log(`✅ Created temporary input file at ${inputPath} (${audioBuffer.length} bytes)`);
     
-    // Convert audio format using ffmpeg
-    // Make sure to set mono audio and 16kHz sample rate (required by Azure speech SDK)
-    const ffmpegCommand = `"${ffmpegPath}" -i "${inputPath}" -ac 1 -ar 16000 "${outputPath}"`;
-    console.log(`Running ffmpeg command: ${ffmpegCommand}`);
+    // Convert audio format using ffmpeg with detailed settings for Azure's requirements
+    // Configure for 16kHz, mono, 16-bit PCM format as required by Azure Speech SDK
+    const ffmpegCommand = `"${ffmpegPath}" -i "${inputPath}" \
+      -ac 1 \
+      -ar 16000 \
+      -acodec pcm_s16le \
+      -f wav \
+      -y \
+      "${outputPath}"`;
+    
+    console.log(`🔄 Running ffmpeg command to create 16kHz mono PCM WAV:`);
+    console.log(ffmpegCommand);
     
     // Execute ffmpeg command
-    execSync(ffmpegCommand);
+    const conversionOutput = execSync(ffmpegCommand, { encoding: 'utf8' });
     
+    // Validate the output file
     if (fs.existsSync(outputPath)) {
       const stats = fs.statSync(outputPath);
-      console.log(`Successfully created WAV file at ${outputPath} (${stats.size} bytes)`);
+      
+      // Verify that the file is not empty
+      if (stats.size <= 44) { // 44 bytes is the WAV header size
+        throw new Error("WAV file created but contains only header (no audio data)");
+      }
+      
+      console.log(`✅ Successfully created WAV file at ${outputPath} (${stats.size} bytes)`);
+      
+      // Log file details for debugging purposes
+      try {
+        const fileInfo = execSync(`"${ffmpegPath}" -i "${outputPath}" 2>&1`, { encoding: 'utf8' });
+        console.log(`🔍 WAV file details:\n${fileInfo}`);
+      } catch (infoError) {
+        // ffmpeg outputs to stderr when getting file info, which causes execSync to throw
+        // We can extract the file info from the error message
+        const infoOutput = String(infoError).split('\n').filter(line => 
+          line.includes('Stream') || line.includes('Audio')
+        ).join('\n');
+        console.log(`🔍 WAV file details:\n${infoOutput}`);
+      }
+      
       return outputPath;
     } else {
-      throw new Error("WAV file was not created");
+      throw new Error(`WAV file was not created at ${outputPath}`);
     }
   } catch (error) {
-    // Clean up and propagate error
+    console.error(`❌ Error during audio conversion: ${error instanceof Error ? error.message : String(error)}`);
+    
+    // Clean up input file
     if (fs.existsSync(inputPath)) {
-      fs.unlinkSync(inputPath);
+      try {
+        fs.unlinkSync(inputPath);
+        console.log(`🧹 Cleaned up temporary input file ${inputPath}`);
+      } catch (cleanupError) {
+        console.error(`❌ Failed to clean up temporary input file: ${cleanupError}`);
+      }
     }
-    throw error;
+    
+    throw new Error(`Failed to convert audio: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -76,8 +128,11 @@ function createMockAssessmentResults(referenceText: string): PronunciationAssess
   // Extract all words from the reference text to use in the mock results
   const words = referenceText.split(/\s+/).filter(w => w.trim().length > 0);
   
-  // Create word level results for each word in the reference text
-  const wordLevelResults = words.map(word => {
+  // Track current timestamp for word durations and offsets
+  let currentOffset = 0;
+  
+  // Create word level results for each word in the reference text to match Azure structure
+  const wordLevelResults = words.map((word, index) => {
     // Generate realistic scores with more variation
     const accuracyScore = Math.floor(Math.random() * 30) + 70; // Score between 70-99
     
@@ -85,16 +140,64 @@ function createMockAssessmentResults(referenceText: string): PronunciationAssess
     let errorType: string | undefined;
     if (accuracyScore < 75) {
       errorType = "Mispronunciation";
-    } else if (accuracyScore < 85 && Math.random() > 0.7) {
+    } else if (accuracyScore < 80 && Math.random() > 0.7) {
       errorType = "UnexpectedBreak";
+    } else if (accuracyScore < 85 && Math.random() > 0.9) {
+      errorType = "Omission";
+    } else if (accuracyScore < 90 && Math.random() > 0.9) {
+      errorType = "Insertion";
     } else {
-      errorType = undefined; // No error
+      errorType = "None"; // No error
     }
     
+    // Calculate a realistic duration for the word (shorter words typically take less time)
+    const wordLength = word.length;
+    const baseDuration = 150 + (wordLength * 60) + (Math.random() * 100 - 50); // duration in ms
+    const duration = Math.max(100, Math.round(baseDuration));
+    
+    // Generate phonemes for each word to match Azure's format
+    const phonemes = [];
+    const cleanWord = word.replace(/[.,?!]/g, ''); // Remove punctuation from words
+    
+    // Simple IPA phoneme generation - this is a simplification, real IPA would be more complex
+    for (let i = 0; i < cleanWord.length; i++) {
+      // Generate a phoneme for each letter or combination
+      let phoneme;
+      let letter = cleanWord[i].toLowerCase();
+      
+      // Very simplified phoneme mapping
+      switch(letter) {
+        case 'a': phoneme = 'æ'; break;
+        case 'e': phoneme = 'ɛ'; break;
+        case 'i': phoneme = 'ɪ'; break;
+        case 'o': phoneme = 'ɒ'; break;
+        case 'u': phoneme = 'ʌ'; break;
+        case 't': phoneme = 't'; break;
+        case 's': phoneme = 's'; break;
+        default: phoneme = letter; // For simplicity, use the letter itself
+      }
+      
+      // Generate a score for this phoneme
+      const phonemeScore = Math.max(60, Math.min(100, accuracyScore + (Math.random() * 20 - 10)));
+      
+      phonemes.push({
+        phoneme: phoneme,
+        score: phonemeScore
+      });
+    }
+    
+    // Calculate word offset based on previous words
+    const offset = currentOffset;
+    currentOffset += duration + Math.round(Math.random() * 100); // Add some silence between words
+    
+    // Return a complete word result matching Azure's structure
     return {
-      word: word.replace(/[.,?!]/g, ''), // Remove punctuation from words
+      word: cleanWord,
       accuracyScore,
-      errorType
+      errorType,
+      duration,
+      offset,
+      phonemes
     };
   });
 
@@ -107,6 +210,45 @@ function createMockAssessmentResults(referenceText: string): PronunciationAssess
   const completenessScore = Math.max(70, Math.min(100, avgAccuracy + 10 - Math.floor(Math.random() * 10)));
   const prosodyScore = Math.max(60, Math.min(100, fluencyScore + (Math.random() * 20 - 10)));
   
+  // Create mock raw JSON response similar to what Azure would return
+  const mockRawJson = {
+    RecognitionStatus: "Success",
+    Offset: 0,
+    Duration: currentOffset,
+    DisplayText: referenceText.trim(),
+    SNR: 35.46,
+    NBest: [
+      {
+        Confidence: 0.9,
+        Lexical: referenceText.trim().toLowerCase(),
+        ITN: referenceText.trim(),
+        Display: referenceText.trim(),
+        PronunciationAssessment: {
+          PronScore: pronunciationScore,
+          AccuracyScore: avgAccuracy,
+          FluencyScore: fluencyScore,
+          CompletenessScore: completenessScore,
+          ProsodyScore: prosodyScore
+        },
+        Words: wordLevelResults.map(w => ({
+          Word: w.word,
+          Offset: w.offset,
+          Duration: w.duration,
+          PronunciationAssessment: {
+            AccuracyScore: w.accuracyScore,
+            ErrorType: w.errorType,
+          },
+          Phonemes: w.phonemes?.map(p => ({
+            Phoneme: p.phoneme,
+            PronunciationAssessment: {
+              AccuracyScore: p.score
+            }
+          }))
+        }))
+      }
+    ]
+  };
+  
   // Return mock results with words from the actual text and realistic score relationships
   return {
     pronunciationScore,
@@ -115,8 +257,17 @@ function createMockAssessmentResults(referenceText: string): PronunciationAssess
     accuracyScore: avgAccuracy,
     prosodyScore,
     wordLevelResults: wordLevelResults.length ? wordLevelResults : [
-      { word: "sample", accuracyScore: 75, errorType: "Mispronunciation" },
+      { 
+        word: "sample", 
+        accuracyScore: 75, 
+        errorType: "Mispronunciation",
+        offset: 0,
+        duration: 500,
+        phonemes: [{phoneme: "s", score: 70}, {phoneme: "æ", score: 75}, {phoneme: "m", score: 80}, {phoneme: "p", score: 70}, {phoneme: "l", score: 75}]
+      },
     ],
+    rawJson: mockRawJson,
+    sdkVersion: "1.32.0 (TypeScript)"
   };
 }
 
@@ -155,6 +306,15 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
       // Create audio config from the WAV file buffer
       const audioConfig = sdk.AudioConfig.fromWavFileInput(wavFileData);
       
+      // Validate reference text length and format
+      if (!referenceText || referenceText.trim().length === 0) {
+        throw new Error("Reference text cannot be empty for pronunciation assessment");
+      }
+      
+      if (referenceText.length > 1000) {
+        console.warn(`⚠️ Reference text exceeds Azure's recommended limit (${referenceText.length} > 1000 chars). Truncating.`);
+      }
+      
       // Clean and normalize the reference text
       const cleanedText = referenceText
         .trim()
@@ -162,10 +322,18 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
         .replace(/[^\w\s.,?!]/g, '') // Remove special characters that might cause issues
         .slice(0, 1000);  // Limit length to avoid Azure limits
       
-      console.log(`Cleaned reference text: "${cleanedText}"`);
+      console.log(`🔤 Cleaned reference text: "${cleanedText}" (${cleanedText.length} chars)`);
+      
+      // Log word count for tracking completion
+      const wordCount = cleanedText.split(/\s+/).length;
+      console.log(`📊 Reference text contains ${wordCount} words`);
       
       // Create speech recognizer first
       const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
+      
+      // Get SDK version
+      const sdkVersion = sdk.Recognizer.sdkVersionInfo || "unknown";
+      console.log(`🔖 Azure Speech SDK version: ${sdkVersion}`);
       
       // Create pronunciation assessment configuration according to Microsoft docs
       const pronunciationAssessmentConfig = new sdk.PronunciationAssessmentConfig(
@@ -175,16 +343,50 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
         true // Enable miscue calculation
       );
       
-      // Enable prosody assessment as mentioned in the documentation
+      // Enable miscue detection explicitly for omission/insertion tracking
+      if (typeof pronunciationAssessmentConfig.enableMiscue === 'function') {
+        try {
+          pronunciationAssessmentConfig.enableMiscue(true);
+          console.log(`✅ Miscue detection explicitly enabled`);
+        } catch (miscueError) {
+          console.warn(`⚠️ Could not explicitly enable miscue detection: ${miscueError}`);
+        }
+      }
+      
+      // Set the phoneme alphabet to IPA
       try {
-        // Add prosody assessment if available in the SDK
-        // @ts-ignore - The method might not be in the TypeScript definition but exists in the SDK
-        if (pronunciationAssessmentConfig.enableProsodyAssessment) {
+        // @ts-ignore - phonemeAlphabet might not be in TypeScript definition yet
+        if (typeof pronunciationAssessmentConfig.phonemeAlphabet === 'function') {
+          // @ts-ignore
+          pronunciationAssessmentConfig.phonemeAlphabet("IPA");
+          console.log(`✅ Set phoneme alphabet to IPA`);
+        } else if (pronunciationAssessmentConfig.setPhonemesAlphabet) {
+          // Alternative API in some versions
+          pronunciationAssessmentConfig.setPhonemesAlphabet("IPA");
+          console.log(`✅ Set phoneme alphabet to IPA (using setPhonemesAlphabet method)`);
+        }
+      } catch (alphabetError) {
+        console.warn(`⚠️ Could not set phoneme alphabet: ${alphabetError}`);
+      }
+      
+      // Enable prosody assessment with version check
+      const hasProsodySupport = (
+        // @ts-ignore
+        typeof pronunciationAssessmentConfig.enableProsodyAssessment === 'function' ||
+        // @ts-ignore
+        typeof sdk.PronunciationAssessmentConfig.prototype.enableProsodyAssessment === 'function'
+      );
+      
+      try {
+        if (hasProsodySupport) {
           // @ts-ignore - Skip TypeScript checking for the function call
           pronunciationAssessmentConfig.enableProsodyAssessment();
+          console.log(`✅ Prosody assessment enabled`);
+        } else {
+          console.log(`ℹ️ Prosody assessment not available in this SDK version (${sdkVersion})`);
         }
       } catch (error) {
-        console.log("Could not enable prosody assessment:", error);
+        console.warn(`⚠️ Could not enable prosody assessment: ${error}`);
         // Continue even if prosody assessment can't be enabled
       }
       
