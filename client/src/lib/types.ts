@@ -65,7 +65,15 @@ export interface PronunciationAssessmentResult {
     word: string;
     accuracyScore: number;
     errorType?: string;  // None, Omission, Insertion, Mispronunciation, UnexpectedBreak, MissingBreak, Monotone
+    offset?: number;     // Start time offset in milliseconds
+    duration?: number;   // Duration in milliseconds
+    phonemes?: Array<{  // Phoneme-level details
+      phoneme: string;  // IPA phoneme
+      score: number;    // Phoneme accuracy score
+    }>;
   }[];
+  rawJson?: any;        // Raw JSON response for debugging
+  sdkVersion?: string;  // Azure Speech SDK version used
 }
 
 // User and Progress Types for Gamified System

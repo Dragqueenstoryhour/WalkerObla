@@ -14,6 +14,7 @@ export function useAudioRecording({
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -58,6 +59,7 @@ export function useAudioRecording({
         // Create URL for local playback
         const url = URL.createObjectURL(audioBlob);
         setAudioUrl(url);
+        setAudioBlob(audioBlob); // Store the blob in state
         setIsRecording(false);
         
         // Notify parent component with the audio blob for processing
