@@ -41,7 +41,8 @@ const ReadingControls = () => {
       if (currentContent) {
         try {
           // Get the current highlighted text for assessment
-          const recordedText = currentHighlightedText || 'Test recording';
+          // Use both the context value and our local ref to ensure we have text to assess
+          const recordedText = currentHighlightedText || highlightedTextRef.current || 'Test recording';
           
           console.log(`Processing recording with text: "${recordedText}"`);
           console.log(`Recording blob size: ${blob.size} bytes, type: ${blob.type}`);
@@ -56,7 +57,19 @@ const ReadingControls = () => {
           console.log(`Original recording format: ${blob.type}`);
           
           // Log detailed information about the audio blob
-          console.log(`Processing audio blob: type=${blob.type}, size=${blob.size} bytes`);
+          console.log(`[Debug] Processing audio blob: type=${blob.type}, size=${blob.size} bytes`);
+          
+          // Add more detailed diagnostic info for troubleshooting
+          console.log(`[Debug] Browser audio capabilities:`);
+          try {
+            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            console.log(`[Debug] Sample rate: ${audioContext.sampleRate}Hz`);
+            console.log(`[Debug] Audio state: ${audioContext.state}`);
+            console.log(`[Debug] Audio destination channels: ${audioContext.destination.channelCount}`);
+            audioContext.close();
+          } catch (err) {
+            console.error(`[Debug] Error checking audio capabilities:`, err);
+          }
           
           // Get the audio buffer data
           const audioBuffer = await blob.arrayBuffer();
@@ -129,8 +142,8 @@ const ReadingControls = () => {
     }
   });
   
-  // Use the highlighted text from the reading context for consistency
-  const highlightedTextRef = useRef('');
+  // Keep a local reference to the currently highlighted text to use when recording
+  const highlightedTextRef = useRef<string>('');
   
   // Set up reading segments from the current content
   useEffect(() => {
@@ -255,7 +268,7 @@ const ReadingControls = () => {
               <div className="bg-primary bg-opacity-10 rounded-lg p-4 mb-4 border-l-4 border-primary">
                 <p className="font-medium mb-2">Read this text aloud:</p>
                 <p className="text-lg">
-                  {currentHighlightedText.split(' ').map((word, index) => (
+                  {currentHighlightedText.split(' ').map((word: string, index: number) => (
                     <span 
                       key={index}
                       className={`inline-block mr-1 transition-colors duration-200 ${
@@ -360,8 +373,39 @@ const ReadingControls = () => {
                       variant="outline"
                       className="text-xs h-8 px-2"
                       onClick={() => {
-                        const audio = new Audio(audioUrl);
-                        audio.play().catch(e => console.error("Error playing audio:", e));
+                        try {
+                          console.log(`[Debug] Playing recording from URL: ${audioUrl.substring(0, 30)}...`);
+                          const audio = new Audio(audioUrl);
+                          
+                          audio.oncanplay = () => {
+                            console.log(`[Debug] Audio ready to play, duration: ${audio.duration}s`);
+                          };
+                          
+                          audio.onerror = (e) => {
+                            console.error(`[Debug] Audio error: ${audio.error?.code}`, audio.error);
+                            toast({
+                              title: "Playback Error",
+                              description: "Could not play your recording. Try recording again.",
+                              variant: "destructive"
+                            });
+                          };
+                          
+                          audio.play().catch(e => {
+                            console.error("[Debug] Error playing audio:", e);
+                            toast({
+                              title: "Playback Error",
+                              description: "Could not play your recording. Your browser may be blocking autoplay.",
+                              variant: "destructive"
+                            });
+                          });
+                        } catch (err) {
+                          console.error("[Debug] Error setting up audio playback:", err);
+                          toast({
+                            title: "Playback Error",
+                            description: "Could not set up audio playback.",
+                            variant: "destructive"
+                          });
+                        }
                       }}
                     >
                       <Volume2 className="h-4 w-4 mr-1" />
