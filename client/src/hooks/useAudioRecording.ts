@@ -132,6 +132,7 @@ export function useAudioRecording({
     isRecording,
     recordingDuration,
     audioUrl,
+    audioBlob,
     startRecording,
     stopRecording,
     cancelRecording,
