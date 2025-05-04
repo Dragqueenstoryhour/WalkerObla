@@ -197,6 +197,69 @@ export default function NewPhrases() {
     }
   };
   
+  // Handle a file directly (used by camera capture)
+  const handleFileSelection = (file: File) => {
+    // Check file type
+    const isImage = file.type.startsWith('image/');
+    const isPdf = file.type === 'application/pdf';
+    
+    if (!isImage && !isPdf) {
+      toast({
+        title: 'Invalid File Type',
+        description: 'Please upload an image or PDF file.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setIsProcessing(true);
+
+    // Send the file for OCR processing
+    fetch('/api/content/ocr', {
+      method: 'POST',
+      body: formData,
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Failed to process file');
+      }
+      return response.json();
+    })
+    .then(result => {
+      // Check if the response contains an error (like an AI refusal) rather than actual text
+      const lowerCaseText = result.text?.toLowerCase() || '';
+      const containsError = lowerCaseText.includes("i'm sorry") || 
+                         lowerCaseText.includes("i can't") || 
+                         lowerCaseText.includes("unable to");
+      
+      if (result.text && !containsError) {
+        setImageUploadText(result.text);
+        toast({
+          title: 'Text Extracted',
+          description: 'Text successfully extracted from file. You can now process it.',
+        });
+      } else if (containsError) {
+        throw new Error('The system could not process this image properly. Please try a different image.');
+      } else {
+        throw new Error('No text found in the file');
+      }
+    })
+    .catch(error => {
+      console.error('Error processing file:', error);
+      toast({
+        title: 'Processing Error',
+        description: error instanceof Error ? error.message : 'Failed to extract text from file. Please try again.',
+        variant: 'destructive'
+      });
+    })
+    .finally(() => {
+      setIsProcessing(false);
+    });
+  };
+
   // Process text from OCR results
   const handleProcessImageText = async () => {
     if (!imageUploadText.trim()) {
@@ -546,7 +609,7 @@ export default function NewPhrases() {
                     transform="rotate(-90 50 50)"
                   />
                 </svg>
-                <span className="absolute text-3xl font-bold" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>{score}</span>
+                <span className="absolute text-3xl font-bold flex items-center justify-center" style={{ inset: 0, margin: 'auto' }}>{score}</span>
               </div>
             </div>
             
@@ -1089,6 +1152,28 @@ I'd like to schedule an appointment."
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold">Practice Phrases</h2>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                className="flex items-center gap-1"
+                onClick={() => {
+                  if (!shareableLink) {
+                    handleGenerateShareableLink();
+                  }
+                }}
+                disabled={processedPhrases.length === 0}
+              >
+                {shareableLink ? (
+                  <>
+                    <CheckCircle className="h-4 w-4" />
+                    <span>Link Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="h-4 w-4" />
+                    <span>Share Phrases</span>
+                  </>
+                )}
+              </Button>
               <Progress value={calculateProgress()} className="w-32" />
               <span className="text-sm">{calculateProgress()}% complete</span>
             </div>
