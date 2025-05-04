@@ -360,129 +360,150 @@ export default function NewPhrases() {
     return Math.round((completedCount / processedPhrases.length) * 100);
   };
 
-  // Render difficulty badge - but hide 'intermediate' tags
+  // Render difficulty badge - but hide all tags as requested
   const renderDifficultyBadge = (difficulty: string | undefined) => {
-    if (!difficulty || difficulty === 'intermediate') return null;
-    
-    const colorMap: Record<string, string> = {
-      'beginner': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-      'intermediate': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-      'advanced': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
-    };
-    
-    return (
-      <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${colorMap[difficulty] || ''}`}>
-        {difficulty}
-      </span>
-    );
+    // We're removing all difficulty tags per user request
+    return null;
   };
 
-  // Render assessment visualization (Radial gauge for score, etc.)
+  // Render assessment visualization
   const renderAssessmentVisualization = (phrase: ProcessedPhrase) => {
     if (!phrase.assessmentResult) return null;
     
     const result = phrase.assessmentResult;
+    const score = Math.round(result.pronunciationScore);
+    
+    // Import confetti if we need to celebrate high scores
+    const celebrateHighScore = async () => {
+      if (score >= 95) {
+        // Dynamically import canvas-confetti only when needed
+        try {
+          const confetti = (await import('canvas-confetti')).default;
+          confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 }
+          });
+        } catch (error) {
+          console.error('Error loading confetti:', error);
+        }
+      }
+    };
+    
+    // Trigger confetti on render if high score
+    useEffect(() => {
+      if (phrase.assessmentResult && Math.round(phrase.assessmentResult.pronunciationScore) >= 95) {
+        celebrateHighScore();
+      }
+    }, [phrase.assessmentResult?.pronunciationScore]);
     
     return (
       <div className="mt-4 space-y-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {/* Pronunciation Score (Radial Gauge) */}
-          <Card>
-            <CardContent className="pt-4 text-center">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Pronunciation Assessment</CardTitle>
+            <CardDescription>Your speech analysis results</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Main score - Pronunciation */}
+            <div className="flex justify-center py-2">
               <div className="relative inline-flex items-center justify-center">
-                <svg className="w-24 h-24">
+                <svg className="w-32 h-32">
                   <circle 
                     className="text-muted-foreground" 
-                    strokeWidth="8" 
+                    strokeWidth="10" 
                     stroke="currentColor" 
                     fill="transparent" 
-                    r="32" 
-                    cx="44" 
-                    cy="44"
+                    r="40" 
+                    cx="50" 
+                    cy="50"
                     opacity="0.2"
                   />
                   <circle 
                     className="text-primary" 
-                    strokeWidth="8" 
-                    strokeDasharray={`${2 * Math.PI * 32}`}
-                    strokeDashoffset={`${2 * Math.PI * 32 * (1 - result.pronunciationScore / 100)}`}
+                    strokeWidth="10" 
+                    strokeDasharray={`${2 * Math.PI * 40}`}
+                    strokeDashoffset={`${2 * Math.PI * 40 * (1 - result.pronunciationScore / 100)}`}
                     strokeLinecap="round" 
                     stroke="currentColor" 
                     fill="transparent" 
-                    r="32" 
-                    cx="44" 
-                    cy="44"
-                    transform="rotate(-90 44 44)"
+                    r="40" 
+                    cx="50" 
+                    cy="50"
+                    transform="rotate(-90 50 50)"
                   />
                 </svg>
-                <span className="absolute text-xl font-bold">{Math.round(result.pronunciationScore)}</span>
+                <span className="absolute text-3xl font-bold">{score}</span>
               </div>
-              <p className="text-sm font-medium mt-2">Pronunciation</p>
-            </CardContent>
-          </Card>
-          
-          {/* Fluency Score */}
-          <Card>
-            <CardContent className="pt-4">
-              <h4 className="text-sm font-medium mb-2">Fluency</h4>
-              <Progress value={result.fluencyScore} className="h-2 mb-1" />
-              <p className="text-right text-sm">{Math.round(result.fluencyScore)}%</p>
-            </CardContent>
-          </Card>
-          
-          {/* Accuracy Score */}
-          <Card>
-            <CardContent className="pt-4">
-              <h4 className="text-sm font-medium mb-2">Accuracy</h4>
-              <Progress value={result.accuracyScore} className="h-2 mb-1" />
-              <p className="text-right text-sm">{Math.round(result.accuracyScore)}%</p>
-            </CardContent>
-          </Card>
-          
-          {/* Completeness Score */}
-          <Card>
-            <CardContent className="pt-4">
-              <h4 className="text-sm font-medium mb-2">Completeness</h4>
-              <Progress value={result.completenessScore} className="h-2 mb-1" />
-              <p className="text-right text-sm">{Math.round(result.completenessScore)}%</p>
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* Word-level results (heatmap) */}
-        {result.wordLevelResults && result.wordLevelResults.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Word Accuracy</CardTitle>
-              <CardDescription>See how well you pronounced each word</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {result.wordLevelResults.map((word, idx) => {
-                  // Calculate color based on score
-                  const score = word.accuracyScore;
-                  const bgColor = score > 80 ? 'bg-green-100 dark:bg-green-900' :
-                                 score > 60 ? 'bg-yellow-100 dark:bg-yellow-900' :
-                                 'bg-red-100 dark:bg-red-900';
-                  const textColor = score > 80 ? 'text-green-800 dark:text-green-300' :
-                                   score > 60 ? 'text-yellow-800 dark:text-yellow-300' :
-                                   'text-red-800 dark:text-red-300';
-                  
-                  return (
-                    <div 
-                      key={`word-${idx}`} 
-                      className={`p-2 rounded ${bgColor} ${textColor}`}
-                      title={`${word.word}: ${Math.round(word.accuracyScore)}% accuracy`}
-                    >
-                      <p className="text-sm font-medium">{word.word}</p>
-                      <p className="text-xs">{Math.round(word.accuracyScore)}%</p>
-                    </div>
-                  );
-                })}
+            </div>
+            
+            {/* Other scores */}
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-sm font-medium">Fluency</span>
+                  <span className="text-sm font-medium">{Math.round(result.fluencyScore)}%</span>
+                </div>
+                <Progress 
+                  value={result.fluencyScore} 
+                  className="h-2" 
+                />
               </div>
-            </CardContent>
-          </Card>
-        )}
+              
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-sm font-medium">Accuracy</span>
+                  <span className="text-sm font-medium">{Math.round(result.accuracyScore)}%</span>
+                </div>
+                <Progress 
+                  value={result.accuracyScore} 
+                  className="h-2" 
+                />
+              </div>
+              
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-sm font-medium">Completeness</span>
+                  <span className="text-sm font-medium">{Math.round(result.completenessScore)}%</span>
+                </div>
+                <Progress 
+                  value={result.completenessScore} 
+                  className="h-2" 
+                />
+              </div>
+            </div>
+            
+            {/* Word-level results (heatmap) */}
+            {result.wordLevelResults && result.wordLevelResults.length > 0 && (
+              <div className="pt-4 border-t">
+                <h3 className="font-medium mb-3">Word Accuracy</h3>
+                <div className="flex flex-wrap gap-2">
+                  {result.wordLevelResults.map((word, idx) => {
+                    // Calculate color based on score
+                    const score = word.accuracyScore;
+                    const bgColor = score > 85 ? 'bg-green-100 dark:bg-green-900' :
+                                   score > 70 ? 'bg-yellow-100 dark:bg-yellow-900' :
+                                   'bg-red-100 dark:bg-red-900';
+                    const textColor = score > 85 ? 'text-green-800 dark:text-green-300' :
+                                     score > 70 ? 'text-yellow-800 dark:text-yellow-300' :
+                                     'text-red-800 dark:text-red-300';
+                    
+                    return (
+                      <div 
+                        key={`word-${idx}`} 
+                        className={`p-2 rounded ${bgColor} ${textColor}`}
+                        title={`${word.word}: ${Math.round(word.accuracyScore)}% accuracy`}
+                      >
+                        <p className="text-sm font-medium">{word.word}</p>
+                        <p className="text-xs">{Math.round(word.accuracyScore)}%</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     );
   };
@@ -501,24 +522,25 @@ export default function NewPhrases() {
           <CardDescription>Your last 10 pronunciation scores</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-40 flex items-end gap-2">
+          <div className="h-48 flex items-end gap-2">
             {lastTenScores.map((item, idx) => {
-              // Scale height based on the score directly (0-100%)
-              const heightPercent = Math.max(20, item.score);
+              // Scale height based on the score (50-100% range to make bars more visible)
+              const heightPercent = Math.max(10, (item.score / 100) * 85 + 15);
               
-              // Color based on score
-              const barColor = item.score > 80 ? 'bg-green-500' :
-                             item.score > 60 ? 'bg-primary' :
+              // Color based on score as requested:
+              // 85+ in green, 70-84 in orange, 69 and below in red
+              const barColor = item.score >= 85 ? 'bg-green-500' :
+                             item.score >= 70 ? 'bg-orange-500' :
                              'bg-red-500';
               
               return (
                 <div key={idx} className="flex flex-col items-center flex-1">
                   <div 
-                    className={`w-full ${barColor} rounded-t`} 
+                    className={`w-full ${barColor} rounded-t-md shadow-sm`} 
                     style={{ height: `${heightPercent}%` }}
                     title={`Score: ${item.score}%`}
                   />
-                  <p className="text-xs mt-1">{item.score}%</p>
+                  <p className="text-xs mt-1 font-medium">{item.score}</p>
                 </div>
               );
             })}
@@ -733,6 +755,7 @@ I'd like to schedule an appointment."
                         <CheckCircle className="h-5 w-5 text-green-500" />
                         <p className="text-sm font-medium">Transcription complete</p>
                       </div>
+                      <p className="text-sm text-muted-foreground mb-2">Here is the extracted text:</p>
                       <Textarea
                         value={bulkText}
                         onChange={(e) => setBulkText(e.target.value)}
@@ -859,11 +882,7 @@ I'd like to schedule an appointment."
                             autoFocus
                           />
                         )}
-                        {phrase.phonetic && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {phrase.phonetic}
-                          </p>
-                        )}
+                        {/* Phonetic pronunciation removed as requested */}
                       </div>
                       <div className="flex items-center gap-2">
                         {renderDifficultyBadge(phrase.difficulty)}
@@ -939,16 +958,7 @@ I'd like to schedule an appointment."
                     </div>
                     
                     <div className="flex justify-center items-center gap-4">
-                      {!isRecording ? (
-                        <Button
-                          onClick={handleStartRecording}
-                          disabled={processedPhrases[currentPhraseIndex].status === 'assessing'}
-                          className="w-40"
-                        >
-                          <MicIcon className="mr-2 h-4 w-4" />
-                          Start Recording
-                        </Button>
-                      ) : (
+                      {isRecording ? (
                         <Button
                           onClick={handleStopRecording}
                           variant="destructive"
@@ -956,6 +966,34 @@ I'd like to schedule an appointment."
                         >
                           <StopCircleIcon className="mr-2 h-4 w-4" />
                           Stop ({recordingDuration}s)
+                        </Button>
+                      ) : processedPhrases[currentPhraseIndex].status === 'complete' ? (
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleStartRecording}
+                            variant="secondary"
+                            className="flex-1"
+                          >
+                            <RotateCw className="mr-2 h-4 w-4" />
+                            Try Again
+                          </Button>
+                          <Button
+                            onClick={() => handlePlayRecording(currentPhraseIndex)}
+                            variant="outline"
+                            className="flex-1"
+                          >
+                            <VolumeIcon className="mr-2 h-4 w-4" />
+                            Play
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          onClick={handleStartRecording}
+                          disabled={processedPhrases[currentPhraseIndex].status === 'assessing'}
+                          className="w-40"
+                        >
+                          <MicIcon className="mr-2 h-4 w-4" />
+                          Start Recording
                         </Button>
                       )}
                     </div>
@@ -1018,7 +1056,7 @@ I'd like to schedule an appointment."
               {/* Progress history */}
               {renderHistoryChart()}
               
-              {/* Social features hidden as requested */}
+              {/* Badges section hidden as requested */}
             </div>
           </div>
         </div>
