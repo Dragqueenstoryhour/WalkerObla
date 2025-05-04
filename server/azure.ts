@@ -331,9 +331,31 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
       // Create speech recognizer first
       const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
       
-      // Get SDK version
-      const sdkVersion = sdk.Recognizer.sdkVersionInfo || "unknown";
+      // Try to detect the SDK version
+      let sdkVersion = "unknown";
+      try {
+        // Different ways to extract version info based on undocumented SDK properties
+        // This is just for logging purposes, so we'll handle any errors gracefully
+        
+        // Try to get version from various possible sources
+        // Using Function.toString() to check internal implementation details
+        const sdkString = Function.toString.call(sdk.SpeechConfig.fromSubscription);
+        const versionMatch = sdkString.match(/VERSION\s*=\s*['"]([^'"]+)['"]/) || 
+                           sdkString.match(/version\s*:\s*['"]([^'"]+)['"]/) ||
+                           sdkString.match(/v([0-9]+\.[0-9]+\.[0-9]+)/);
+        
+        if (versionMatch && versionMatch[1]) {
+          sdkVersion = versionMatch[1];
+        }
+      } catch (e) {
+        // Ignore version detection errors, it's not critical
+      }
+      
       console.log(`🔖 Azure Speech SDK version: ${sdkVersion}`);
+      
+      // Add the version to the request for diagnostic purposes
+      speechConfig.setProperty("Speech.LogFilename", `/tmp/azure-speech-${Date.now()}.log`);
+      speechConfig.setProperty("Speech.LogLevel", "3"); // Detailed logging
       
       // Create pronunciation assessment configuration according to Microsoft docs
       const pronunciationAssessmentConfig = new sdk.PronunciationAssessmentConfig(
@@ -344,29 +366,57 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
       );
       
       // Enable miscue detection explicitly for omission/insertion tracking
-      if (typeof pronunciationAssessmentConfig.enableMiscue === 'function') {
-        try {
+      try {
+        // @ts-ignore - enableMiscue might not be in TypeScript definition yet but exists in newer SDKs
+        if (typeof pronunciationAssessmentConfig.enableMiscue === 'function') {
+          // @ts-ignore
           pronunciationAssessmentConfig.enableMiscue(true);
           console.log(`✅ Miscue detection explicitly enabled`);
-        } catch (miscueError) {
-          console.warn(`⚠️ Could not explicitly enable miscue detection: ${miscueError}`);
+        } else {
+          // Miscue detection is already enabled by the constructor's 4th parameter
+          console.log(`ℹ️ Using default miscue detection (set in constructor)`);
         }
+      } catch (miscueError) {
+        console.warn(`⚠️ Could not explicitly enable miscue detection: ${miscueError}`);
       }
       
       // Set the phoneme alphabet to IPA
       try {
-        // @ts-ignore - phonemeAlphabet might not be in TypeScript definition yet
+        // Different SDK versions might have different method names for setting phoneme alphabet
+        // Attempt various potential method names with type safety protections
+        let phonemeAlphabetSet = false;
+        
+        // @ts-ignore - Try the phonemeAlphabet method first
         if (typeof pronunciationAssessmentConfig.phonemeAlphabet === 'function') {
-          // @ts-ignore
-          pronunciationAssessmentConfig.phonemeAlphabet("IPA");
-          console.log(`✅ Set phoneme alphabet to IPA`);
-        } else if (pronunciationAssessmentConfig.setPhonemesAlphabet) {
-          // Alternative API in some versions
-          pronunciationAssessmentConfig.setPhonemesAlphabet("IPA");
-          console.log(`✅ Set phoneme alphabet to IPA (using setPhonemesAlphabet method)`);
+          try {
+            // @ts-ignore
+            pronunciationAssessmentConfig.phonemeAlphabet("IPA");
+            console.log(`✅ Set phoneme alphabet to IPA using phonemeAlphabet() method`);
+            phonemeAlphabetSet = true;
+          } catch (e) {
+            console.warn(`⚠️ phonemeAlphabet() method failed:`, e);
+          }
+        }
+        
+        // If the first method failed, try an alternative method name
+        // @ts-ignore
+        if (!phonemeAlphabetSet && typeof pronunciationAssessmentConfig.setPhonemesAlphabet === 'function') {
+          try {
+            // @ts-ignore
+            pronunciationAssessmentConfig.setPhonemesAlphabet("IPA");
+            console.log(`✅ Set phoneme alphabet to IPA using setPhonemesAlphabet() method`);
+            phonemeAlphabetSet = true;
+          } catch (e) {
+            console.warn(`⚠️ setPhonemesAlphabet() method failed:`, e);
+          }
+        }
+        
+        // If we couldn't set it, log that information
+        if (!phonemeAlphabetSet) {
+          console.log(`ℹ️ Could not set phoneme alphabet to IPA - this SDK version might not support it`);
         }
       } catch (alphabetError) {
-        console.warn(`⚠️ Could not set phoneme alphabet: ${alphabetError}`);
+        console.warn(`⚠️ Error while attempting to set phoneme alphabet: ${alphabetError}`);
       }
       
       // Enable prosody assessment with version check
@@ -395,9 +445,33 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
       
       // Process the audio and get assessment results
       return new Promise((resolve, reject) => {
-        // Add sessionStarted event listener to get the session ID
+        // Add detailed event listeners for debugging
+        // Track session ID for Azure support reference
+        let azureSessionId = "unknown";
         recognizer.sessionStarted = (s, e) => {
-          console.log(`SESSION ID: ${e.sessionId}`);
+          azureSessionId = e.sessionId;
+          console.log(`📝 SESSION STARTED - ID: ${azureSessionId}`);
+        };
+        
+        // Log various recognizer events
+        recognizer.recognizing = (s, e) => {
+          console.log(`🔊 RECOGNIZING: ${e.result.text}`);
+        };
+        
+        recognizer.recognized = (s, e) => {
+          if (e.result.reason === sdk.ResultReason.RecognizedSpeech) {
+            console.log(`✅ RECOGNIZED: ${e.result.text}`);
+          } else {
+            console.log(`⚠️ RECOGNITION FAILED: ${e.result.reason}`);
+          }
+        };
+        
+        recognizer.canceled = (s, e) => {
+          console.log(`❌ CANCELED: Reason=${e.reason}, Details=${e.errorDetails || 'none'}`);
+        };
+        
+        recognizer.sessionStopped = (s, e) => {
+          console.log(`🛑 SESSION STOPPED for ID: ${azureSessionId}`);
         };
         
         recognizer.recognizeOnceAsync(
@@ -430,25 +504,59 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
                   // Parse the JSON response
                   const jsonResult = JSON.parse(jsonResponse);
                   
-                  // Extract word-level results
+                  // Extract word-level results with alignments, durations, offsets, and phonemes
                   let wordLevelResults: any[] = [];
                   
                   if (jsonResult?.NBest?.[0]?.Words) {
-                    wordLevelResults = jsonResult.NBest[0].Words.map((word: any) => ({
-                      word: word.Word,
-                      accuracyScore: word.PronunciationAssessment?.AccuracyScore || 0,
-                      errorType: word.PronunciationAssessment?.ErrorType || "None"
-                    }));
+                    console.log(`🔍 Processing ${jsonResult.NBest[0].Words.length} words from Azure response`);
+                    
+                    wordLevelResults = jsonResult.NBest[0].Words.map((word: any) => {
+                      // Extract word details
+                      const wordResult = {
+                        word: word.Word,
+                        accuracyScore: word.PronunciationAssessment?.AccuracyScore || 0,
+                        errorType: word.PronunciationAssessment?.ErrorType || "None",
+                        offset: word.Offset !== undefined ? Number(word.Offset) : undefined,
+                        duration: word.Duration !== undefined ? Number(word.Duration) : undefined,
+                        phonemes: [] as any[]
+                      };
+                      
+                      // Extract phoneme-level assessments if available
+                      if (word.Phonemes && Array.isArray(word.Phonemes)) {
+                        wordResult.phonemes = word.Phonemes.map((phoneme: any) => ({
+                          phoneme: phoneme.Phoneme || "",
+                          score: phoneme.PronunciationAssessment?.AccuracyScore || 0
+                        }));
+                        
+                        // Log phoneme details for debugging
+                        if (wordResult.phonemes.length > 0) {
+                          console.log(`📝 Word "${word.Word}" has ${wordResult.phonemes.length} phonemes: ${wordResult.phonemes.map((p: any) => p.phoneme).join(', ')}`);
+                        }
+                      }
+                      
+                      return wordResult;
+                    });
                   }
                   
-                  // Build the final assessment result
+                  // Show some diagnostic information about the results
+                  console.log(`📊 Assessment results summary:`);
+                  console.log(`  - Pronunciation Score: ${pronunciationAssessmentResult.pronunciationScore}`);
+                  console.log(`  - Fluency Score: ${pronunciationAssessmentResult.fluencyScore}`);
+                  console.log(`  - Completeness Score: ${pronunciationAssessmentResult.completenessScore}`);
+                  console.log(`  - Accuracy Score: ${pronunciationAssessmentResult.accuracyScore}`);
+                  console.log(`  - Prosody Score: ${pronunciationAssessmentResult.prosodyScore || 'N/A'}`);
+                  console.log(`  - Words with timing data: ${wordLevelResults.filter(w => w.offset !== undefined && w.duration !== undefined).length}/${wordLevelResults.length}`);
+                  
+                  // Build the final assessment result with SDK version and raw JSON for debugging
                   resolve({
                     pronunciationScore: pronunciationAssessmentResult.pronunciationScore,
                     fluencyScore: pronunciationAssessmentResult.fluencyScore,
                     completenessScore: pronunciationAssessmentResult.completenessScore,
                     accuracyScore: pronunciationAssessmentResult.accuracyScore,
                     prosodyScore: pronunciationAssessmentResult.prosodyScore,
-                    wordLevelResults
+                    wordLevelResults,
+                    sdkVersion,
+                    rawJson: jsonResult
                   });
                 } catch (resultError: any) {
                   console.error("Error extracting pronunciation results:", resultError);
