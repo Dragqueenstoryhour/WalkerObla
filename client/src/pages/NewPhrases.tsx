@@ -360,9 +360,9 @@ export default function NewPhrases() {
     return Math.round((completedCount / processedPhrases.length) * 100);
   };
 
-  // Render difficulty badge
+  // Render difficulty badge - but hide 'intermediate' tags
   const renderDifficultyBadge = (difficulty: string | undefined) => {
-    if (!difficulty) return null;
+    if (!difficulty || difficulty === 'intermediate') return null;
     
     const colorMap: Record<string, string> = {
       'beginner': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
@@ -487,32 +487,38 @@ export default function NewPhrases() {
     );
   };
 
-  // Render a timeline chart for historical progress
+  // Render a bar chart for the last 10 scores
   const renderHistoryChart = () => {
     if (historyData.length === 0) return null;
     
-    const maxScore = Math.max(...historyData.map(d => d.score));
-    const minScore = Math.min(...historyData.map(d => d.score));
-    const range = maxScore - minScore;
+    // Only show the last 10 scores
+    const lastTenScores = historyData.slice(-10);
     
     return (
       <Card className="mt-4">
         <CardHeader>
           <CardTitle className="text-lg">Progress Over Time</CardTitle>
-          <CardDescription>Your pronunciation scores over the last week</CardDescription>
+          <CardDescription>Your last 10 pronunciation scores</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-40 flex items-end gap-2">
-            {historyData.map((item, idx) => {
-              const heightPercent = range === 0 ? 100 : ((item.score - minScore) / range) * 80 + 20;
+            {lastTenScores.map((item, idx) => {
+              // Scale height based on the score directly (0-100%)
+              const heightPercent = Math.max(20, item.score);
+              
+              // Color based on score
+              const barColor = item.score > 80 ? 'bg-green-500' :
+                             item.score > 60 ? 'bg-primary' :
+                             'bg-red-500';
+              
               return (
                 <div key={idx} className="flex flex-col items-center flex-1">
                   <div 
-                    className="w-full bg-primary rounded-t" 
+                    className={`w-full ${barColor} rounded-t`} 
                     style={{ height: `${heightPercent}%` }}
                     title={`Score: ${item.score}%`}
                   />
-                  <p className="text-xs mt-1">{item.date.split('-')[2]}</p>
+                  <p className="text-xs mt-1">{item.score}%</p>
                 </div>
               );
             })}
@@ -553,17 +559,97 @@ export default function NewPhrases() {
     );
   };
 
+  // Add a new phrase to the list
+  const handleAddNewPhrase = () => {
+    setProcessedPhrases(phrases => [
+      ...phrases,
+      {
+        id: `phrase-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        text: '',
+        status: 'idle'
+      }
+    ]);
+  };
+
+  // Handle text change for an editable phrase
+  const handlePhraseTextChange = (index: number, text: string) => {
+    setProcessedPhrases(phrases => 
+      phrases.map((phrase, idx) => 
+        idx === index 
+          ? { ...phrase, text } 
+          : phrase
+      )
+    );
+  };
+
+  // Generate phrases on a specific topic
+  const handleGenerateTopicPhrases = async (topic: string) => {
+    if (!topic.trim()) {
+      toast({
+        title: 'No Topic Provided',
+        description: 'Please enter a topic to generate phrases.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    
+    try {
+      const response = await fetch('/api/content/generate-topic-phrases', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ topic }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate phrases');
+      }
+      
+      const result = await response.json();
+      
+      // Add the new phrases to our collection
+      const newPhrases: ProcessedPhrase[] = result.phrases.map((text: string, index: number) => ({
+        id: `phrase-${Date.now()}-topic-${index}`,
+        text,
+        status: 'idle'
+      }));
+      
+      setProcessedPhrases(newPhrases);
+      setCurrentPhraseIndex(0); // Select first phrase
+      
+      toast({
+        title: 'Phrases Generated',
+        description: `${newPhrases.length} phrases related to "${topic}" have been generated.`,
+      });
+    } catch (error) {
+      console.error('Error generating topic phrases:', error);
+      toast({
+        title: 'Generation Error',
+        description: 'Failed to generate phrases. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-6">
       <h1 className="text-3xl font-bold mb-6">New Phrases</h1>
       
       <Tabs defaultValue="manual-entry" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="manual-entry">
             <FileText className="h-4 w-4 mr-2" /> Text Entry
           </TabsTrigger>
           <TabsTrigger value="image-upload">
             <Image className="h-4 w-4 mr-2" /> Image Upload
+          </TabsTrigger>
+          <TabsTrigger value="ai-generate">
+            <RotateCw className="h-4 w-4 mr-2" /> AI Generate
           </TabsTrigger>
         </TabsList>
         
@@ -615,23 +701,125 @@ I'd like to schedule an appointment."
                 Extract text from images or PDFs using OCR technology.
               </CardDescription>
             </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col md:flex-row gap-4 items-start">
+                {/* Upload area - smaller */}
+                <div 
+                  className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/50 transition-colors md:w-1/3"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-base font-medium">Click to upload</p>
+                  <p className="text-xs text-muted-foreground">PNG, JPG, GIF, or PDF up to 10MB</p>
+                  <input 
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="hidden"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                  />
+                </div>
+                
+                {/* Preview area */}
+                <div className="flex-1 min-h-[200px]">
+                  {isProcessing ? (
+                    <div className="flex flex-col items-center justify-center h-full">
+                      <Progress value={45} className="w-full mb-4" />
+                      <p className="text-sm text-muted-foreground">Transcribing image content...</p>
+                    </div>
+                  ) : bulkText ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <p className="text-sm font-medium">Transcription complete</p>
+                      </div>
+                      <Textarea
+                        value={bulkText}
+                        onChange={(e) => setBulkText(e.target.value)}
+                        rows={8}
+                        className="w-full"
+                        placeholder="Edit transcription as needed..."
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full border rounded-lg p-4">
+                      <AlertTriangle className="h-8 w-8 text-muted-foreground mb-2" />
+                      <p className="text-muted-foreground">No image uploaded yet</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {bulkText && (
+                <Button 
+                  onClick={handleProcessText} 
+                  disabled={isProcessing || !bulkText.trim()}
+                  className="w-full"
+                >
+                  {isProcessing ? (
+                    <>
+                      <RotateCw className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Generate Exercise'
+                  )}
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="ai-generate" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Generate Phrases on Topic</CardTitle>
+              <CardDescription>
+                Let AI generate topic-specific phrases and words for practice
+              </CardDescription>
+            </CardHeader>
             <CardContent>
-              <div className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-lg font-medium">Click to upload</p>
-                <p className="text-sm text-muted-foreground">Or drag and drop</p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  PNG, JPG, GIF, or PDF up to 10MB
-                </p>
-                <input 
-                  type="file"
-                  accept="image/*,application/pdf"
-                  className="hidden"
-                  ref={fileInputRef}
-                  onChange={handleFileUpload}
-                />
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="topic">Topic or Category</Label>
+                  <div className="flex gap-2 mt-1">
+                    <Input 
+                      id="topic" 
+                      placeholder="Enter a topic (e.g., Golf, Cooking, Shopping)" 
+                      value={bulkText}
+                      onChange={(e) => setBulkText(e.target.value)}
+                    />
+                    <Button 
+                      onClick={() => handleGenerateTopicPhrases(bulkText)}
+                      disabled={isProcessing || !bulkText.trim()}
+                    >
+                      {isProcessing ? (
+                        <RotateCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        'Generate'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                
+                <div>
+                  <p className="text-sm font-medium mb-2">Example topics:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {['Golf', 'Kitchen', 'Hospital', 'Travel', 'Banking', 'Restaurant'].map(topic => (
+                      <Badge 
+                        key={topic} 
+                        className="cursor-pointer" 
+                        variant="outline"
+                        onClick={() => {
+                          setBulkText(topic);
+                          handleGenerateTopicPhrases(topic);
+                        }}
+                      >
+                        {topic}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -175,7 +175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const schema = z.object({
-        contentId: z.string().transform(Number),
+        contentId: z.string().transform(Number).optional(),
         text: z.string(),
       });
 
