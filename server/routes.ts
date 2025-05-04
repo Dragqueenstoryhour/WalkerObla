@@ -529,6 +529,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug endpoints for testing Azure Speech integration
+  app.get('/debug', (req, res) => {
+    res.sendFile(join(process.cwd(), 'debug-recorder.html'));
+  });
+
+  // Special test endpoint just for saving a test recording
+  app.post('/api/debug/save-test-recording', upload.single('audio'), (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No audio file uploaded' });
+    }
+    
+    try {
+      // Save the uploaded audio file to a local file for testing
+      fs.writeFileSync('./test-recording.webm', req.file.buffer);
+      console.log(`✅ Saved test recording (${req.file.buffer.length} bytes) to test-recording.webm`);
+      
+      return res.json({
+        success: true,
+        message: 'Test recording saved successfully',
+        size: req.file.buffer.length,
+        mimeType: req.file.mimetype
+      });
+    } catch (error) {
+      console.error('Error saving test recording:', error);
+      return res.status(500).json({ error: 'Failed to save test recording' });
+    }
+  });
+
   // Create a simple HTTP server
   const httpServer = createServer(app);
   return httpServer;

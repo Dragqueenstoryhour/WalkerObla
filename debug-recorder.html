@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debug Recorder for Azure Speech Tests</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+    .container { display: flex; flex-direction: column; gap: 20px; }
+    button { padding: 10px 15px; font-size: 16px; cursor: pointer; background-color: #4CAF50; color: white; border: none; border-radius: 4px; }
+    button:hover { background-color: #45a049; }
+    button:disabled { background-color: #cccccc; cursor: not-allowed; }
+    textarea { width: 100%; height: 100px; padding: 10px; font-family: monospace; }
+    .status { margin-top: 10px; padding: 10px; border-radius: 4px; }
+    .success { background-color: #d4edda; color: #155724; }
+    .error { background-color: #f8d7da; color: #721c24; }
+    .recorder { display: flex; flex-direction: column; gap: 10px; border: 1px solid #ddd; padding: 20px; border-radius: 8px; }
+    .controls { display: flex; gap: 10px; }
+    .sound-wave { height: 60px; background-color: #f0f0f0; margin-bottom: 10px; position: relative; overflow: hidden; }
+    .wave { position: absolute; width: 100%; height: 100%; }
+    .recording .wave { animation: wave 1.5s ease-in-out infinite; background: linear-gradient(to bottom, #ff8080, #ff8080, transparent 60%); }
+    @keyframes wave { 0%, 100% { transform: scaleY(0.2); } 50% { transform: scaleY(1); } }
+  </style>
+</head>
+<body>
+  <h1>Debug Recorder for Azure Speech Tests</h1>
+  <div class="container">
+    <div class="recorder">
+      <h2>Step 1: Record a sample audio</h2>
+      <div class="sound-wave" id="soundWave">
+        <div class="wave" id="wave"></div>
+      </div>
+      <div class="controls">
+        <button id="recordButton">Start Recording</button>
+        <button id="stopButton" disabled>Stop Recording</button>
+        <button id="playButton" disabled>Play Recording</button>
+      </div>
+      <div id="recordingStatus" class="status">Ready to record. Click "Start Recording" and say "Hello".</div>
+    </div>
+
+    <div class="recorder">
+      <h2>Step 2: Save recording for testing</h2>
+      <button id="saveButton" disabled>Save Recording for Testing</button>
+      <div id="saveStatus" class="status">Record something first.</div>
+    </div>
+
+    <div class="recorder">
+      <h2>Step 3: Test with pronunciation assessment</h2>
+      <div>
+        <label for="textInput">Reference text:</label>
+        <input type="text" id="textInput" value="Hello" style="padding: 8px; width: 300px;">
+      </div>
+      <button id="testButton" disabled>Test with Azure Speech</button>
+      <div id="testStatus" class="status">Save a recording first.</div>
+      <h3>Response:</h3>
+      <textarea id="responseTextarea" readonly></textarea>
+    </div>
+  </div>
+
+  <script>
+    // Audio recording variables
+    let mediaRecorder;
+    let audioChunks = [];
+    let audioBlob = null;
+    let audioUrl = null;
+    let audio = new Audio();
+    
+    // DOM elements
+    const recordButton = document.getElementById('recordButton');
+    const stopButton = document.getElementById('stopButton');
+    const playButton = document.getElementById('playButton');
+    const saveButton = document.getElementById('saveButton');
+    const testButton = document.getElementById('testButton');
+    const recordingStatus = document.getElementById('recordingStatus');
+    const saveStatus = document.getElementById('saveStatus');
+    const testStatus = document.getElementById('testStatus');
+    const responseTextarea = document.getElementById('responseTextarea');
+    const textInput = document.getElementById('textInput');
+    const soundWave = document.getElementById('soundWave');
+    const wave = document.getElementById('wave');
+    
+    // Initialize recorder
+    recordButton.addEventListener('click', startRecording);
+    stopButton.addEventListener('click', stopRecording);
+    playButton.addEventListener('click', playRecording);
+    saveButton.addEventListener('click', saveRecording);
+    testButton.addEventListener('click', testRecording);
+    
+    async function startRecording() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        
+        mediaRecorder.addEventListener('dataavailable', event => {
+          audioChunks.push(event.data);
+        });
+        
+        mediaRecorder.addEventListener('stop', () => {
+          audioBlob = new Blob(audioChunks, { type: 'audio/webm;codecs=opus' });
+          audioUrl = URL.createObjectURL(audioBlob);
+          audio.src = audioUrl;
+          
+          recordingStatus.textContent = `Recording complete: ${Math.round(audioBlob.size / 1024)} KB`;
+          recordingStatus.className = 'status success';
+          playButton.disabled = false;
+          saveButton.disabled = false;
+          soundWave.classList.remove('recording');
+        });
+        
+        mediaRecorder.start();
+        recordButton.disabled = true;
+        stopButton.disabled = false;
+        recordingStatus.textContent = 'Recording... Speak now.';
+        recordingStatus.className = 'status';
+        soundWave.classList.add('recording');
+      } catch (err) {
+        console.error('Error accessing microphone:', err);
+        recordingStatus.textContent = `Error: ${err.message}`;
+        recordingStatus.className = 'status error';
+      }
+    }
+    
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        recordButton.disabled = false;
+        stopButton.disabled = true;
+      }
+    }
+    
+    function playRecording() {
+      if (audioUrl) {
+        audio.play();
+      }
+    }
+    
+    async function saveRecording() {
+      if (!audioBlob) {
+        saveStatus.textContent = 'No recording available';
+        saveStatus.className = 'status error';
+        return;
+      }
+      
+      try {
+        saveStatus.textContent = 'Saving recording...';
+        saveStatus.className = 'status';
+        
+        const formData = new FormData();
+        formData.append('audio', audioBlob);
+        
+        const response = await fetch('/api/debug/save-test-recording', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          saveStatus.textContent = `Recording saved successfully: ${result.size} bytes`;
+          saveStatus.className = 'status success';
+          testButton.disabled = false;
+          testStatus.textContent = 'Ready to test with Azure';
+          testStatus.className = 'status';
+        } else {
+          throw new Error(result.error || 'Failed to save recording');
+        }
+      } catch (err) {
+        console.error('Error saving recording:', err);
+        saveStatus.textContent = `Error: ${err.message}`;
+        saveStatus.className = 'status error';
+      }
+    }
+    
+    async function testRecording() {
+      try {
+        testStatus.textContent = 'Testing with Azure Speech...';
+        testStatus.className = 'status';
+        responseTextarea.value = '';
+        
+        const formData = new FormData();
+        formData.append('audio', audioBlob);
+        formData.append('text', textInput.value);
+        
+        const response = await fetch('/api/debug/pronunciation', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        responseTextarea.value = JSON.stringify(result, null, 2);
+        
+        if (response.ok) {
+          testStatus.textContent = 'Azure Speech assessment completed successfully';
+          testStatus.className = 'status success';
+        } else {
+          testStatus.textContent = `Error: ${result.error || 'Unknown error'}`;
+          testStatus.className = 'status error';
+        }
+      } catch (err) {
+        console.error('Error testing with Azure:', err);
+        testStatus.textContent = `Error: ${err.message}`;
+        testStatus.className = 'status error';
+        responseTextarea.value = `Error: ${err.message}`;
+      }
+    }
+  </script>
+</body>
+</html>
