@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import useAudioRecording from '@/hooks/useAudioRecording';
 import { PronunciationAssessmentResult } from '@/lib/types';
-import { MicIcon, StopCircleIcon, VolumeIcon, RotateCw, Upload, CheckCircle, FileText, Image, AlertTriangle, BarChart2, Share2, Award, Users } from 'lucide-react';
+import { MicIcon, StopCircleIcon, VolumeIcon, RotateCw, Upload, CheckCircle, FileText, Image, AlertTriangle, BarChart2, Share2, Award, Users, Camera } from 'lucide-react';
 
 interface ProcessedPhrase {
   id: string;
@@ -839,20 +839,141 @@ I'd like to schedule an appointment."
             <CardContent className="space-y-4">
               <div className="flex flex-col md:flex-row gap-4 items-start">
                 {/* Upload area - smaller */}
-                <div 
-                  className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/50 transition-colors md:w-1/3"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-base font-medium">Click to upload</p>
-                  <p className="text-xs text-muted-foreground">PNG, JPG, GIF, or PDF up to 10MB</p>
-                  <input 
-                    type="file"
-                    accept="image/*,application/pdf"
-                    className="hidden"
-                    ref={fileInputRef}
-                    onChange={handleFileUpload}
-                  />
+                <div className="md:w-1/3 space-y-2">
+                  <div 
+                    className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-base font-medium">Click to upload</p>
+                    <p className="text-xs text-muted-foreground">PNG, JPG, GIF, or PDF up to 10MB</p>
+                    <input 
+                      type="file"
+                      accept="image/*,application/pdf"
+                      className="hidden"
+                      ref={fileInputRef}
+                      onChange={handleFileUpload}
+                    />
+                  </div>
+                  
+                  <Button 
+                    variant="outline" 
+                    className="w-full flex items-center justify-center" 
+                    onClick={() => {
+                      // Access device camera
+                      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                        // Create a video element to show the camera feed
+                        const videoElement = document.createElement('video');
+                        const canvasElement = document.createElement('canvas');
+                        
+                        // Create and show a modal with the camera feed
+                        const modal = document.createElement('div');
+                        modal.style.position = 'fixed';
+                        modal.style.top = '0';
+                        modal.style.left = '0';
+                        modal.style.width = '100%';
+                        modal.style.height = '100%';
+                        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+                        modal.style.display = 'flex';
+                        modal.style.flexDirection = 'column';
+                        modal.style.alignItems = 'center';
+                        modal.style.justifyContent = 'center';
+                        modal.style.zIndex = '9999';
+                        
+                        // Add the video element to the modal
+                        videoElement.style.maxWidth = '90%';
+                        videoElement.style.maxHeight = '70vh';
+                        videoElement.style.borderRadius = '8px';
+                        videoElement.autoplay = true;
+                        modal.appendChild(videoElement);
+                        
+                        // Add capture button
+                        const captureButton = document.createElement('button');
+                        captureButton.textContent = 'Take Photo';
+                        captureButton.style.margin = '20px 0';
+                        captureButton.style.padding = '10px 20px';
+                        captureButton.style.borderRadius = '4px';
+                        captureButton.style.backgroundColor = 'hsl(var(--primary))';
+                        captureButton.style.color = 'white';
+                        captureButton.style.border = 'none';
+                        captureButton.style.cursor = 'pointer';
+                        modal.appendChild(captureButton);
+                        
+                        // Add close button
+                        const closeButton = document.createElement('button');
+                        closeButton.textContent = 'Cancel';
+                        closeButton.style.padding = '10px 20px';
+                        closeButton.style.borderRadius = '4px';
+                        closeButton.style.backgroundColor = 'transparent';
+                        closeButton.style.border = '1px solid white';
+                        closeButton.style.color = 'white';
+                        closeButton.style.cursor = 'pointer';
+                        modal.appendChild(closeButton);
+                        
+                        document.body.appendChild(modal);
+                        
+                        let stream: MediaStream | null = null;
+                        
+                        // Start the camera
+                        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                          .then((mediaStream) => {
+                            stream = mediaStream;
+                            videoElement.srcObject = mediaStream;
+                          })
+                          .catch((error) => {
+                            console.error('Camera access error:', error);
+                            document.body.removeChild(modal);
+                            toast({
+                              title: 'Camera Error',
+                              description: 'Could not access your camera. Please check permissions.',
+                              variant: 'destructive'
+                            });
+                          });
+                        
+                        // Capture button event
+                        captureButton.onclick = () => {
+                          // Draw the current video frame to canvas
+                          canvasElement.width = videoElement.videoWidth;
+                          canvasElement.height = videoElement.videoHeight;
+                          canvasElement.getContext('2d')?.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+                          
+                          // Convert to blob
+                          canvasElement.toBlob((blob) => {
+                            if (blob) {
+                              // Clean up
+                              if (stream) {
+                                stream.getTracks().forEach(track => track.stop());
+                              }
+                              document.body.removeChild(modal);
+                              
+                              // Create a File object from the blob
+                              const file = new File([blob], `camera-capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                              
+                              // Process the file like a normal upload
+                              handleFileSelection(file);
+                            }
+                          }, 'image/jpeg', 0.95);
+                        };
+                        
+                        // Close button event
+                        closeButton.onclick = () => {
+                          if (stream) {
+                            stream.getTracks().forEach(track => track.stop());
+                          }
+                          document.body.removeChild(modal);
+                        };
+                      } else {
+                        toast({
+                          title: 'Camera Not Available',
+                          description: 'Your device or browser does not support camera access.',
+                          variant: 'destructive'
+                        });
+                      }
+                    }}
+                  >
+                    <Camera className="h-4 w-4 mr-2" />
+                    Take Picture
+                  </Button>
                 </div>
                 
                 {/* Preview area */}
