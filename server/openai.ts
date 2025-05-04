@@ -176,7 +176,7 @@ export async function generateReadingContent(topic: string, difficulty: string):
     }
     
     // Using a more concise prompt to reduce token usage
-    const systemPrompt = `You are creating short, ${languageLevel} level reading content about "${topic}" for stroke patients.
+    const systemPrompt = `You are creating short, ${languageLevel} level reading content about "${topic}".
 Keep it under ${maxWords} words total. Use short sentences (${sentenceLength}).
 Return ONLY a JSON object with: {"title": "short title", "content": "simple content with paragraphs", "source": "ReadAssist"}`;
 
@@ -187,10 +187,10 @@ Return ONLY a JSON object with: {"title": "short title", "content": "simple cont
       model: "gpt-3.5-turbo", // Using a cheaper model to conserve tokens
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Write a short, ${maxWords}-word max article about ${topic}. 
+        { role: "user", content: `Write an interesting, current, ${maxWords}-word max article about ${topic}. 
 Use ${languageLevel} vocabulary and ${sentenceLength} sentences. 
 Include 2-3 very short paragraphs with breaks between them.
-IMPORTANT: Keep it under ${maxWords} words total. Do not exceed this limit.` }
+IMPORTANT: Keep it engaging, informative, and under ${maxWords} words total. Focus on recent events or useful information.` }
       ],
       temperature: 0.7,
       max_tokens: 300, // Strict token limit to prevent large responses
@@ -243,7 +243,25 @@ IMPORTANT: Keep it under ${maxWords} words total. Do not exceed this limit.` }
  * Generate a sample content piece for initial display with latest news
  */
 export async function generateSampleContent(): Promise<ReadingContent> {
-  return generateReadingContent("latest news summary from the past 24 hours", "easy");
+  // Array of interesting topics for more variety
+  const topics = [
+    "latest tech innovations",
+    "space exploration news",
+    "health and wellness trends",
+    "environmental conservation efforts",
+    "popular culture highlights",
+    "new scientific discoveries",
+    "travel destinations",
+    "sports achievements",
+    "interesting facts about animals",
+    "latest cooking trends"
+  ];
+  
+  // Select a random topic from the array
+  const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+  
+  // Generate content on the random topic
+  return generateReadingContent(randomTopic, "easy");
 }
 
 /**

@@ -282,6 +282,7 @@ export default function NewPhrases() {
     // Wait for audioBlob to be available
     setTimeout(async () => {
       if (!audioBlob) {
+        console.error('No audio blob available after stopping recording');
         toast({
           title: 'Recording Error',
           description: 'Failed to capture audio. Please try again.',
@@ -289,6 +290,8 @@ export default function NewPhrases() {
         });
         return;
       }
+      
+      console.log('Processing recording with text:', processedPhrases[currentPhraseIndex].text);
 
       // Update status to assessing
       setProcessedPhrases(phrases => 
@@ -315,6 +318,12 @@ export default function NewPhrases() {
         }
 
         const result = await response.json();
+        console.log('Received assessment results:', result);
+        
+        // Validate the result has expected properties
+        if (typeof result.pronunciationScore !== 'number') {
+          throw new Error('Invalid assessment result format');
+        }
 
         // Update the phrase with assessment results
         setProcessedPhrases(phrases => 
@@ -328,13 +337,21 @@ export default function NewPhrases() {
         // Add to history data
         setHistoryData(prev => [
           ...prev, 
-          { date: new Date().toISOString().split('T')[0], score: result.pronunciationScore }
+          { date: new Date().toISOString().split('T')[0], score: Math.round(result.pronunciationScore) }
         ]);
+        
+        // If score is really good, show a toast as well
+        if (result.pronunciationScore >= 90) {
+          toast({
+            title: 'Excellent Pronunciation!',
+            description: `You scored ${Math.round(result.pronunciationScore)}%!`,
+          });
+        }
       } catch (error) {
         console.error('Error assessing pronunciation:', error);
         toast({
           title: 'Assessment Error',
-          description: 'Failed to assess pronunciation. Please try again.',
+          description: error instanceof Error ? error.message : 'Failed to assess pronunciation. Please try again.',
           variant: 'destructive'
         });
         
@@ -417,8 +434,34 @@ export default function NewPhrases() {
   const handlePlayRecording = (phraseIndex: number) => {
     const phrase = processedPhrases[phraseIndex];
     if (phrase?.recordingUrl && audioRef.current) {
+      console.log('Playing recording with URL:', phrase.recordingUrl);
       audioRef.current.src = phrase.recordingUrl;
-      audioRef.current.play();
+      audioRef.current.oncanplaythrough = () => {
+        audioRef.current?.play()
+          .catch(error => {
+            console.error('Error playing audio:', error);
+            toast({
+              title: 'Playback Error',
+              description: 'Could not play the recording. Please try again.',
+              variant: 'destructive'
+            });
+          });
+      };
+      audioRef.current.onerror = (e) => {
+        console.error('Audio error:', e);
+        toast({
+          title: 'Playback Error',
+          description: 'Could not play the recording. Please try again.',
+          variant: 'destructive'
+        });
+      };
+    } else {
+      console.warn('No recording URL available for phrase', phraseIndex);
+      toast({
+        title: 'No Recording',
+        description: 'No recording available for this phrase.',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -503,7 +546,7 @@ export default function NewPhrases() {
                     transform="rotate(-90 50 50)"
                   />
                 </svg>
-                <span className="absolute text-3xl font-bold">{score}</span>
+                <span className="absolute text-3xl font-bold" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>{score}</span>
               </div>
             </div>
             
