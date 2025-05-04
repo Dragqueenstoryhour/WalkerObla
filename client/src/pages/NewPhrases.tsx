@@ -848,8 +848,17 @@ I'd like to schedule an appointment."
                 >
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">{phrase.text}</p>
+                      <div className="flex-1">
+                        {phrase.text ? (
+                          <p className="font-medium">{phrase.text}</p>
+                        ) : (
+                          <Input 
+                            placeholder="Enter phrase here..." 
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => handlePhraseTextChange(idx, e.target.value)}
+                            autoFocus
+                          />
+                        )}
                         {phrase.phonetic && (
                           <p className="text-sm text-muted-foreground mt-1">
                             {phrase.phonetic}
@@ -1009,8 +1018,7 @@ I'd like to schedule an appointment."
               {/* Progress history */}
               {renderHistoryChart()}
               
-              {/* Social features */}
-              {renderSocialBadges()}
+              {/* Social features hidden as requested */}
             </div>
           </div>
         </div>
