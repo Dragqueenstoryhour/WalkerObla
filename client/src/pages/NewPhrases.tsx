@@ -27,7 +27,9 @@ interface ProcessedPhrase {
 
 export default function NewPhrases() {
   const { toast } = useToast();
-  const [bulkText, setBulkText] = useState('');
+  const [manualEntryText, setManualEntryText] = useState('');
+  const [imageUploadText, setImageUploadText] = useState('');
+  const [aiGenerateTopic, setAiGenerateTopic] = useState('');
   const [processedPhrases, setProcessedPhrases] = useState<ProcessedPhrase[]>([]);
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(-1);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -71,8 +73,8 @@ export default function NewPhrases() {
   }, []);
 
   // Process the bulk text into individual phrases
-  const handleProcessText = async () => {
-    if (!bulkText.trim()) {
+  const handleProcessManualText = async () => {
+    if (!manualEntryText.trim()) {
       toast({
         title: 'No Text Provided',
         description: 'Please enter phrases to process.',
@@ -85,7 +87,7 @@ export default function NewPhrases() {
     
     try {
       // Split text by newlines and filter out empty lines
-      const lines = bulkText.split('\n').filter(line => line.trim().length > 0);
+      const lines = manualEntryText.split('\n').filter(line => line.trim().length > 0);
       
       // Prepare for OpenAI processing
       const response = await fetch('/api/content/process-phrases', {
@@ -166,13 +168,20 @@ export default function NewPhrases() {
 
       const result = await response.json();
       
-      // If successful, populate the bulk text area
-      if (result.text) {
-        setBulkText(result.text);
+      // Check if the response contains an error (like an AI refusal) rather than actual text
+      const lowerCaseText = result.text?.toLowerCase() || '';
+      const containsError = lowerCaseText.includes("i'm sorry") || 
+                         lowerCaseText.includes("i can't") || 
+                         lowerCaseText.includes("unable to");
+      
+      if (result.text && !containsError) {
+        setImageUploadText(result.text);
         toast({
           title: 'Text Extracted',
           description: 'Text successfully extracted from file. You can now process it.',
         });
+      } else if (containsError) {
+        throw new Error('The system could not process this image properly. Please try a different image.');
       } else {
         throw new Error('No text found in the file');
       }
@@ -180,7 +189,67 @@ export default function NewPhrases() {
       console.error('Error processing file:', error);
       toast({
         title: 'Processing Error',
-        description: 'Failed to extract text from file. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to extract text from file. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  // Process text from OCR results
+  const handleProcessImageText = async () => {
+    if (!imageUploadText.trim()) {
+      toast({
+        title: 'No Text Available',
+        description: 'Please upload an image or PDF first.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    setIsProcessing(true);
+    
+    try {
+      // Split text by newlines and filter out empty lines
+      const lines = imageUploadText.split('\n').filter(line => line.trim().length > 0);
+      
+      // Prepare for OpenAI processing
+      const response = await fetch('/api/content/process-phrases', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phrases: lines }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to process phrases');
+      }
+      
+      const processedData = await response.json();
+      
+      // Format the processed phrases
+      const newPhrases: ProcessedPhrase[] = processedData.phrases.map((phrase: any, index: number) => ({
+        id: `phrase-${Date.now()}-${index}`,
+        text: phrase.text,
+        phonetic: phrase.phonetic,
+        difficulty: phrase.difficulty,
+        status: 'idle'
+      }));
+      
+      setProcessedPhrases(newPhrases);
+      setCurrentPhraseIndex(0); // Select first phrase
+      
+      toast({
+        title: 'Processing Complete',
+        description: `${newPhrases.length} phrases are ready for practice.`,
+      });
+    } catch (error) {
+      console.error('Error processing phrases:', error);
+      toast({
+        title: 'Processing Error',
+        description: 'Failed to process phrases. Please try again.',
         variant: 'destructive'
       });
     } finally {
@@ -366,17 +435,15 @@ export default function NewPhrases() {
     return null;
   };
 
-  // Render assessment visualization
-  const renderAssessmentVisualization = (phrase: ProcessedPhrase) => {
-    if (!phrase.assessmentResult) return null;
-    
-    const result = phrase.assessmentResult;
-    const score = Math.round(result.pronunciationScore);
-    
-    // Import confetti if we need to celebrate high scores
-    const celebrateHighScore = async () => {
-      if (score >= 95) {
-        // Dynamically import canvas-confetti only when needed
+  // Confetti effect for high scores
+  useEffect(() => {
+    // Check if there's a selected phrase with a high score
+    if (currentPhraseIndex >= 0 && 
+        processedPhrases[currentPhraseIndex]?.assessmentResult && 
+        Math.round(processedPhrases[currentPhraseIndex].assessmentResult!.pronunciationScore) >= 95) {
+      
+      // Dynamically import canvas-confetti only when needed
+      const celebrateHighScore = async () => {
         try {
           const confetti = (await import('canvas-confetti')).default;
           confetti({
@@ -387,15 +454,18 @@ export default function NewPhrases() {
         } catch (error) {
           console.error('Error loading confetti:', error);
         }
-      }
-    };
+      };
+      
+      celebrateHighScore();
+    }
+  }, [currentPhraseIndex, processedPhrases]);
+  
+  // Render assessment visualization
+  const renderAssessmentVisualization = (phrase: ProcessedPhrase) => {
+    if (!phrase.assessmentResult) return null;
     
-    // Trigger confetti on render if high score
-    useEffect(() => {
-      if (phrase.assessmentResult && Math.round(phrase.assessmentResult.pronunciationScore) >= 95) {
-        celebrateHighScore();
-      }
-    }, [phrase.assessmentResult?.pronunciationScore]);
+    const result = phrase.assessmentResult;
+    const score = Math.round(result.pronunciationScore);
     
     return (
       <div className="mt-4 space-y-4">
@@ -662,16 +732,16 @@ export default function NewPhrases() {
     <div className="container mx-auto px-4 py-6">
       <h1 className="text-3xl font-bold mb-6">New Phrases</h1>
       
-      <Tabs defaultValue="manual-entry" className="w-full">
+      <Tabs defaultValue="ai-generate" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="manual-entry">
-            <FileText className="h-4 w-4 mr-2" /> Text Entry
+          <TabsTrigger value="ai-generate">
+            <RotateCw className="h-4 w-4 mr-2" /> AI Generate
           </TabsTrigger>
           <TabsTrigger value="image-upload">
             <Image className="h-4 w-4 mr-2" /> Image Upload
           </TabsTrigger>
-          <TabsTrigger value="ai-generate">
-            <RotateCw className="h-4 w-4 mr-2" /> AI Generate
+          <TabsTrigger value="manual-entry">
+            <FileText className="h-4 w-4 mr-2" /> Text Entry
           </TabsTrigger>
         </TabsList>
         
@@ -690,16 +760,16 @@ export default function NewPhrases() {
 The quick brown fox jumps over the lazy dog.
 How are you feeling today?
 I'd like to schedule an appointment."
-                value={bulkText}
-                onChange={(e) => setBulkText(e.target.value)}
+                value={manualEntryText}
+                onChange={(e) => setManualEntryText(e.target.value)}
                 rows={6}
                 className="w-full"
               />
             </CardContent>
             <CardFooter>
               <Button 
-                onClick={handleProcessText} 
-                disabled={isProcessing || !bulkText.trim()}
+                onClick={handleProcessManualText} 
+                disabled={isProcessing || !manualEntryText.trim()}
                 className="w-full"
               >
                 {isProcessing ? (
@@ -749,7 +819,7 @@ I'd like to schedule an appointment."
                       <Progress value={45} className="w-full mb-4" />
                       <p className="text-sm text-muted-foreground">Transcribing image content...</p>
                     </div>
-                  ) : bulkText ? (
+                  ) : imageUploadText ? (
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
                         <CheckCircle className="h-5 w-5 text-green-500" />
@@ -757,8 +827,8 @@ I'd like to schedule an appointment."
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">Here is the extracted text:</p>
                       <Textarea
-                        value={bulkText}
-                        onChange={(e) => setBulkText(e.target.value)}
+                        value={imageUploadText}
+                        onChange={(e) => setImageUploadText(e.target.value)}
                         rows={8}
                         className="w-full"
                         placeholder="Edit transcription as needed..."
@@ -773,10 +843,10 @@ I'd like to schedule an appointment."
                 </div>
               </div>
               
-              {bulkText && (
+              {imageUploadText && (
                 <Button 
-                  onClick={handleProcessText} 
-                  disabled={isProcessing || !bulkText.trim()}
+                  onClick={handleProcessImageText} 
+                  disabled={isProcessing || !imageUploadText.trim()}
                   className="w-full"
                 >
                   {isProcessing ? (
@@ -809,12 +879,12 @@ I'd like to schedule an appointment."
                     <Input 
                       id="topic" 
                       placeholder="Enter a topic (e.g., Golf, Cooking, Shopping)" 
-                      value={bulkText}
-                      onChange={(e) => setBulkText(e.target.value)}
+                      value={aiGenerateTopic}
+                      onChange={(e) => setAiGenerateTopic(e.target.value)}
                     />
                     <Button 
-                      onClick={() => handleGenerateTopicPhrases(bulkText)}
-                      disabled={isProcessing || !bulkText.trim()}
+                      onClick={() => handleGenerateTopicPhrases(aiGenerateTopic)}
+                      disabled={isProcessing || !aiGenerateTopic.trim()}
                     >
                       {isProcessing ? (
                         <RotateCw className="h-4 w-4 animate-spin" />
@@ -834,7 +904,7 @@ I'd like to schedule an appointment."
                         className="cursor-pointer" 
                         variant="outline"
                         onClick={() => {
-                          setBulkText(topic);
+                          setAiGenerateTopic(topic);
                           handleGenerateTopicPhrases(topic);
                         }}
                       >
