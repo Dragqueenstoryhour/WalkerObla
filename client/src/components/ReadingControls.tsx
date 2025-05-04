@@ -254,7 +254,7 @@ const ReadingControls = () => {
           </div>
         </div>
         
-        <div className="flex flex-col md:flex-row gap-4 items-center md:items-start mb-6">
+        <div className="flex flex-col mb-6">
           <div className="flex-1 w-full">
             <div className="bg-secondary bg-opacity-30 rounded-lg p-4 mb-4">
               <p className="font-medium mb-2">Instructions:</p>
