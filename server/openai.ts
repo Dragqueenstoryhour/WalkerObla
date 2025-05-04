@@ -432,3 +432,45 @@ export async function extractTextFromImage(fileBuffer: Buffer, fileType: string)
     throw new Error("Failed to extract text from image");
   }
 }
+
+/**
+ * Generate phrases related to a specific topic for pronunciation practice
+ */
+export async function generateTopicPhrases(topic: string): Promise<string[]> {
+  try {
+    console.log(`Generating phrases related to topic: "${topic}"`);
+    
+    const systemPrompt = `You are a speech therapy assistant. Generate a mix of words and phrases related to the specified topic.
+    These should be helpful for pronunciation practice and range from simple to more complex. Include 8-10 items total.`;
+
+    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+    const response = await openai.chat.completions.create({
+      model: ADVANCED_MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Generate a list of words and phrases related to: ${topic}. Return them as a JSON array of strings named 'phrases'.` }
+      ],
+      temperature: 0.7,
+      response_format: { type: "json_object" }
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error("Empty response from OpenAI");
+    }
+    
+    // Parse the response
+    const parsed = JSON.parse(content);
+    
+    // Extract the phrases array
+    if (Array.isArray(parsed.phrases)) {
+      return parsed.phrases;
+    } else {
+      console.warn("OpenAI response did not contain a 'phrases' array:", parsed);
+      return [];
+    }
+  } catch (error) {
+    console.error("Error generating topic phrases:", error);
+    return [];
+  }
+}
