@@ -15,6 +15,23 @@ interface IslandProps {
 
 export function Island({ level, status, position, onSelect, onHover, isActive }: IslandProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+  
+  // Detect if we're on a mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      const isMobile = typeof window !== 'undefined' && 
+        (window.innerWidth < 768 || ('ontouchstart' in window));
+      setIsMobileDevice(isMobile);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
 
   // Determine island size based on level difficulty and screen size
   const getIslandSize = () => {
@@ -84,6 +101,29 @@ export function Island({ level, status, position, onSelect, onHover, isActive }:
 
   const isLocked = status === 'locked';
 
+  // Handle touch events for mobile devices
+  const handleTouchStart = () => {
+    if (isMobileDevice && !isLocked) {
+      setIsHovered(true);
+      onHover();
+    }
+  };
+  
+  const handleTouchEnd = () => {
+    if (isMobileDevice && !isLocked) {
+      setIsHovered(false);
+      onSelect(); // This is key - call onSelect when touch ends on mobile
+    }
+  };
+  
+  // Prevent default behavior of touch events to avoid conflicts with drag
+  const preventDragHandler = (e: React.TouchEvent) => {
+    // Only prevent if this is a direct tap on the island (not a drag attempt)
+    if (!isLocked && e.touches.length === 1) {
+      e.stopPropagation();
+    }
+  };
+  
   return (
     <motion.div
       className="absolute"
@@ -92,7 +132,8 @@ export function Island({ level, status, position, onSelect, onHover, isActive }:
         top: position.y, 
         width: size.width, 
         height: size.height,
-        zIndex: isActive || isHovered ? 10 : 1
+        zIndex: isActive || isHovered ? 10 : 1,
+        touchAction: isLocked ? 'auto' : 'none' // Important for mobile touch handling
       }}
       animate={isActive ? "active" : "idle"}
       variants={islandVariants}
@@ -104,6 +145,9 @@ export function Island({ level, status, position, onSelect, onHover, isActive }:
       }}
       onHoverEnd={() => setIsHovered(false)}
       onClick={() => !isLocked && onSelect()}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={preventDragHandler}
     >
       {/* Island SVG Shape */}
       <svg 

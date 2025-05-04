@@ -748,10 +748,10 @@ export default function NewPhrases() {
               
               return (
                 <div key={idx} className="flex flex-col items-center flex-1 relative">
-                  <div className="relative w-full h-full">
+                  <div className="relative w-full h-full flex items-end">
                     <div 
                       className={`w-full ${barColor} rounded-t-md shadow-lg bg-gradient-to-b ${gradientClass}`} 
-                      style={{ height: `${heightPercent}%` }}
+                      style={{ height: `${heightPercent}%`, minHeight: '4px' }}
                       title={`Score: ${item.score}%`}
                     >
                       {/* Highlight at top of bar */}
@@ -760,7 +760,8 @@ export default function NewPhrases() {
                   </div>
                   <div className="mt-2 text-center">
                     <p className="text-xs font-medium text-slate-700">{item.score}</p>
-                    <p className="text-[10px] text-slate-500">{item.date.slice(-2)}</p>
+                    {/* Only show the day part of the date, not the original indices */}
+                    <p className="text-[10px] text-slate-500">{new Date(item.date).getDate()}</p>
                   </div>
                 </div>
               );
