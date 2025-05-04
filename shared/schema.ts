@@ -89,7 +89,7 @@ export const readingContent = pgTable("reading_content", {
   wordCount: integer("word_count").notNull(),
   readingTime: integer("reading_time").notNull(), // in seconds
   difficulty: text("difficulty").notNull().default("easy"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { mode: 'string' }).notNull().defaultNow(),
 });
 
 export const insertReadingContentSchema = createInsertSchema(readingContent).omit({
