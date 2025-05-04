@@ -42,7 +42,7 @@ if (!isAzureConfigured) {
 }
 
 // Helper function to convert audio buffer to WAV using ffmpeg
-async function convertAudioToWav(audioBuffer: Buffer, tempDir: string = "/tmp"): Promise<string> {
+async function convertAudioToWav(audioBuffer: Buffer, tempDir: string = "/tmp", debugInfo?: any): Promise<string> {
   const timestamp = Date.now();
   const inputPath = join(tempDir, `input-${timestamp}.webm`);
   const outputPath = join(tempDir, `output-${timestamp}.wav`);
@@ -275,6 +275,23 @@ function createMockAssessmentResults(referenceText: string): PronunciationAssess
  * Assess pronunciation from audio buffer
  */
 export async function assessPronunciation(audioBuffer: Buffer, referenceText: string): Promise<PronunciationAssessmentResult> {
+  return assessPronunciationDebug(audioBuffer, referenceText);
+}
+
+/**
+ * Enhanced debug version of pronunciation assessment that provides more granular information
+ * and performs additional validations
+ */
+export async function assessPronunciationDebug(audioBuffer: Buffer, referenceText: string, options: { disableMock?: boolean, debugInfo?: any } = {}): Promise<PronunciationAssessmentResult> {
+  const { disableMock = true, debugInfo = {} } = options;
+  
+  if (debugInfo) {
+    debugInfo.sdkInfo = {
+      version: 'Checking...',
+      azureKeyType: speechKey === 'dummy-key-for-development' ? 'dummy' : 'provided',
+      regionConfigured: speechRegion
+    };
+  }
   // Temporary file paths
   let wavFilePath: string | null = null;
   

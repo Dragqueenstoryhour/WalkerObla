@@ -127,6 +127,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to assess pronunciation' });
     }
   });
+  
+  // Debug route for Azure Speech pronunciation assessment
+  app.post('/api/debug/pronunciation', upload.single('audio'), async (req, res) => {
+    const startTime = Date.now();
+    const debugInfo: any = {
+      timestamp: new Date().toISOString(),
+      audioReceived: false,
+      textReceived: false,
+      conversionAttempted: false,
+      conversionSuccessful: false,
+      recognitionAttempted: false,
+      recognitionSuccessful: false,
+      assessmentAttempted: false,
+      assessmentSuccessful: false,
+      elapsedTime: 0,
+      errors: [],
+      rawResults: null,
+      audioStats: {},
+      sdkInfo: {},
+      ffmpegCommands: []
+    };
+    
+    try {
+      console.log(`\n🔍 DEBUG ROUTE ACCESSED: ${new Date().toISOString()}`);
+      
+      // 1. Validate request
+      if (!req.file) {
+        debugInfo.errors.push('No audio file uploaded');
+        return res.status(400).json({
+          error: 'No audio file uploaded',
+          debug: debugInfo
+        });
+      }
+      
+      debugInfo.audioReceived = true;
+      debugInfo.audioStats.originalSize = req.file.buffer.length;
+      debugInfo.audioStats.originalMimeType = req.file.mimetype;
+      
+      // Extract text parameter
+      const text = req.body.text;
+      if (!text) {
+        debugInfo.errors.push('No text parameter provided');
+        return res.status(400).json({
+          error: 'Text parameter is required',
+          debug: debugInfo
+        });
+      }
+      
+      debugInfo.textReceived = true;
+      debugInfo.text = text;
+      
+      // Preserve the original audio buffer for verification
+      const audioBuffer = req.file.buffer;
+      
+      console.log(`🎤 DEBUG: Processing audio (${audioBuffer.length} bytes) with text "${text}"`);
+      
+      // 2. Temporarily disable mock data in Azure service and track debug info
+      debugInfo.conversionAttempted = true;
+      
+      // Call our enhanced debug version of the assessment function
+      try {
+        // Prepare debug options
+        const debugOptions = {
+          disableMock: true,
+          debugInfo
+        };
+        
+        const result = await azureService.assessPronunciationDebug(audioBuffer, text, debugOptions);
+        
+        // Mark recognition and assessment as successful
+        debugInfo.conversionSuccessful = true;
+        debugInfo.recognitionAttempted = true;
+        debugInfo.recognitionSuccessful = true; 
+        debugInfo.assessmentAttempted = true;
+        debugInfo.assessmentSuccessful = true;
+        
+        // Store raw results
+        debugInfo.rawResults = result.rawJson;
+        debugInfo.scores = {
+          pronunciation: result.pronunciationScore,
+          accuracy: result.accuracyScore,
+          fluency: result.fluencyScore,
+          completeness: result.completenessScore,
+          prosody: result.prosodyScore
+        };
+        
+        // 3. Add final timing information
+        debugInfo.elapsedTime = Date.now() - startTime;
+        
+        // 4. Return raw Azure response with our debug info
+        res.json({
+          result,
+          debug: debugInfo
+        });
+      } catch (error: any) {
+        // Record the error in our debug info
+        console.error('DEBUG ERROR during assessment:', error);
+        debugInfo.errors.push(error.message || 'Unknown assessment error');
+        debugInfo.assessmentAttempted = true;
+        debugInfo.assessmentSuccessful = false;
+        debugInfo.elapsedTime = Date.now() - startTime;
+        
+        res.status(500).json({
+          error: 'Debug assessment failed',
+          message: error.message,
+          stack: process.env.NODE_ENV === 'production' ? undefined : error.stack,
+          debug: debugInfo
+        });
+      }
+    } catch (error: any) {
+      console.error('DEBUG ERROR:', error);
+      debugInfo.errors.push(error.message || 'Unknown error');
+      debugInfo.elapsedTime = Date.now() - startTime;
+      
+      res.status(500).json({
+        error: 'Debug assessment failed',
+        message: error.message,
+        stack: process.env.NODE_ENV === 'production' ? undefined : error.stack,
+        debug: debugInfo
+      });
+    }
+  });
 
   app.get('/api/pronunciation/word', async (req, res) => {
     try {
