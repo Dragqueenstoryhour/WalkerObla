@@ -73,6 +73,21 @@ const ReadingControls = () => {
           
           console.log("Pronunciation assessment results:", results);
           
+          // Add detailed Azure assessment logging
+          console.log(`Azure assessment breakdown:`);
+          console.log(`  - Pronunciation Score: ${results.pronunciationScore.toFixed(1)}%`);
+          console.log(`  - Fluency Score: ${results.fluencyScore.toFixed(1)}%`);
+          console.log(`  - Accuracy Score: ${results.accuracyScore.toFixed(1)}%`);
+          console.log(`  - Completeness Score: ${results.completenessScore.toFixed(1)}%`);
+          
+          // Log individual word scores for better diagnostics
+          if (results.wordLevelResults && results.wordLevelResults.length > 0) {
+            console.log('Word-by-word assessment:');
+            results.wordLevelResults.forEach(word => {
+              console.log(`  - "${word.word}": ${word.accuracyScore.toFixed(1)}% ${word.errorType ? `(${word.errorType})` : ''}`);
+            });
+          }
+          
           if (!results || typeof results.pronunciationScore !== 'number') {
             throw new Error("Invalid assessment results received");
           }

@@ -16,6 +16,9 @@ export async function submitReadingRecording(
     formData.append('contentId', String(contentId));
     formData.append('text', text);
 
+    console.log(`[Azure Client] Sending audio blob of size ${audioBlob.size} bytes, type: ${audioBlob.type}`);
+    console.log(`[Azure Client] Content ID: ${contentId}, Text length: ${text.length} chars`);
+
     const response = await fetch('/api/pronunciation/assess', {
       method: 'POST',
       body: formData,
@@ -23,10 +26,22 @@ export async function submitReadingRecording(
     });
 
     if (!response.ok) {
-      throw new Error(`Error assessing pronunciation: ${response.statusText}`);
+      // Try to parse the error response for more details
+      let errorDetails = '';
+      try {
+        const errorResponse = await response.json();
+        errorDetails = errorResponse.error || errorResponse.message || response.statusText;
+        console.error('Azure API error details:', errorResponse);
+      } catch (e) {
+        errorDetails = response.statusText;
+      }
+      
+      throw new Error(`Error assessing pronunciation: ${errorDetails}`);
     }
 
-    return await response.json();
+    const results = await response.json();
+    console.log('[Azure Client] Received valid assessment results');
+    return results;
   } catch (error) {
     console.error('Error submitting audio for assessment:', error);
     throw error;
