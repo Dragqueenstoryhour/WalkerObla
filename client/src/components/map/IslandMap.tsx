@@ -38,16 +38,16 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
 
   const islandPositions = useMemo(() => {
     return [
-      { x: 150, y: 240 },   // Island 1 - Starting point - aligned to white dot
-      { x: 400, y: 290 },   // Island 2 - aligned to white dot
-      { x: 650, y: 340 },   // Island 3 - aligned to white dot
-      { x: 900, y: 290 },   // Island 4 - aligned to white dot
-      { x: 1150, y: 240 },  // Island 5 - aligned to white dot
-      { x: 1400, y: 290 },  // Island 6 - aligned to white dot
-      { x: 1650, y: 340 },  // Island 7 - aligned to white dot
-      { x: 1900, y: 290 },  // Island 8 - aligned to white dot
-      { x: 2150, y: 240 },  // Island 9 - aligned to white dot
-      { x: 2400, y: 190 }   // Island 10 - aligned to white dot
+      { x: 150, y: 150 },   // Island 1 - Starting point - centered higher
+      { x: 400, y: 180 },   // Island 2 - centered higher
+      { x: 650, y: 210 },   // Island 3 - centered higher
+      { x: 900, y: 180 },   // Island 4 - centered higher
+      { x: 1150, y: 150 },  // Island 5 - centered higher
+      { x: 1400, y: 180 },  // Island 6 - centered higher
+      { x: 1650, y: 210 },  // Island 7 - centered higher
+      { x: 1900, y: 180 },  // Island 8 - centered higher
+      { x: 2150, y: 150 },  // Island 9 - centered higher
+      { x: 2400, y: 120 }   // Island 10 - centered higher
     ];
   }, []);
 
@@ -198,7 +198,7 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
       >
         <div
           ref={containerRef}
-          className="absolute top-20"
+          className="absolute top-1/2 -translate-y-1/2"
           style={{ 
             width: 2600, 
             height: Math.max(600, mapHeight + 100), 

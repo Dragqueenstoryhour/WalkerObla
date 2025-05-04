@@ -48,6 +48,7 @@ function Router() {
         <Route path="/subscription/success" component={SubscriptionSuccess} />
         <Route path="/azure-test" component={AzureTest} />
         <Route path="/new-phrases" component={NewPhrases} />
+        <Route path="/shared-phrases/:shareId" component={NewPhrases} />
         <Route component={NotFound} />
       </Switch>
     </>

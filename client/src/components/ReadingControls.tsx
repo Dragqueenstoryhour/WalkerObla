@@ -189,7 +189,7 @@ const ReadingControls = () => {
       
       // When reading starts, set word count for progress tracking
       if (wordsRead === 0) {
-        updateSessionProgress(0);
+        updateSessionProgress(0); // Only pass the current word count
       }
     }
   }, [isReading, isPaused, currentContent, setHighlightedText, wordsRead, updateSessionProgress]);
