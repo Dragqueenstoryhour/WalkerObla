@@ -286,11 +286,27 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
   const { disableMock = true, debugInfo = {} } = options;
   
   if (debugInfo) {
+    // Add detailed diagnostics about our Azure configuration
+    const keyInfo = speechKey === 'dummy-key-for-development' ? 'dummy' : 
+      speechKey ? `real key (${speechKey.substring(0, 3)}...${speechKey.substring(speechKey.length - 3)})` : 'missing';
+    
     debugInfo.sdkInfo = {
       version: 'Checking...',
-      azureKeyType: speechKey === 'dummy-key-for-development' ? 'dummy' : 'provided',
-      regionConfigured: speechRegion
+      azureKeyStatus: keyInfo,
+      azureRegion: speechRegion || 'not configured',
+      environment: {
+        nodeEnv: process.env.NODE_ENV || 'not set',
+        speechKeyEnv: process.env.SPEECH_KEY ? 'present' : 'missing',
+        speechRegionEnv: process.env.SPEECH_REGION || 'missing' 
+      }
     };
+    
+    console.log(`🔑 Azure Speech Services configuration check:\n` +
+      `- Key status: ${keyInfo}\n` +
+      `- Region: ${speechRegion || 'not configured'}\n` +
+      `- Env variables: SPEECH_KEY=${process.env.SPEECH_KEY ? 'present' : 'missing'}, ` +
+      `SPEECH_REGION=${process.env.SPEECH_REGION || 'missing'}`
+    );
   }
   // Temporary file paths
   let wavFilePath: string | null = null;

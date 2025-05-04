@@ -1,4 +1,4 @@
-import type { Express, Request } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import OpenAI from "openai";
@@ -12,6 +12,8 @@ import { insertReadingContentSchema, insertReadingSessionSchema } from "@shared/
 import WebSocket from "ws";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import Stripe from "stripe";
+import fs from 'fs';
+import { join } from 'path';
 
 // Configure multer for file uploads (in-memory storage)
 const upload = multer({ 
@@ -311,6 +313,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error creating subscription:', error);
       res.status(500).json({ error: 'Failed to create subscription' });
+    }
+  });
+
+  // Debug recorder UI (only in development mode)
+  app.get('/debug-recorder', (req, res) => {
+    // Serve the debug-recorder HTML file
+    const debugRecorderPath = join(process.cwd(), 'debug-recorder.html');
+    if (fs.existsSync(debugRecorderPath)) {
+      res.sendFile(debugRecorderPath);
+    } else {
+      res.status(404).send('Debug recorder page not found');
     }
   });
 
