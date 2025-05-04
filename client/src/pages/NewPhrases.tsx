@@ -137,14 +137,20 @@ export default function NewPhrases() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Check file type
-    const isImage = file.type.startsWith('image/');
+    // Check file type - be more permissive with image formats
+    // Accept any image type (including HEIC from iPhone and other formats)
+    const isImage = file.type.startsWith('image/') || 
+                  file.name.toLowerCase().endsWith('.heic') || 
+                  file.name.toLowerCase().endsWith('.heif');
     const isPdf = file.type === 'application/pdf';
+    
+    // More detailed logging for debugging file types
+    console.log(`Processing file: ${file.name}, type: ${file.type}`);
     
     if (!isImage && !isPdf) {
       toast({
         title: 'Invalid File Type',
-        description: 'Please upload an image or PDF file.',
+        description: 'Please upload an image (JPG, PNG, HEIC, etc.) or PDF file.',
         variant: 'destructive'
       });
       return;
@@ -199,14 +205,20 @@ export default function NewPhrases() {
   
   // Handle a file directly (used by camera capture)
   const handleFileSelection = (file: File) => {
-    // Check file type
-    const isImage = file.type.startsWith('image/');
+    // Check file type - be more permissive with image formats
+    // Accept any image type (including HEIC from iPhone and other formats)
+    const isImage = file.type.startsWith('image/') || 
+                  file.name.toLowerCase().endsWith('.heic') || 
+                  file.name.toLowerCase().endsWith('.heif');
     const isPdf = file.type === 'application/pdf';
+    
+    // More detailed logging for debugging file types
+    console.log(`Processing selected file: ${file.name}, type: ${file.type}`);
     
     if (!isImage && !isPdf) {
       toast({
         title: 'Invalid File Type',
-        description: 'Please upload an image or PDF file.',
+        description: 'Please upload an image (JPG, PNG, HEIC, etc.) or PDF file.',
         variant: 'destructive'
       });
       return;
@@ -692,34 +704,83 @@ export default function NewPhrases() {
     const lastTenScores = historyData.slice(-10);
     
     return (
-      <Card className="mt-4">
-        <CardHeader>
-          <CardTitle className="text-lg">Progress Over Time</CardTitle>
-          <CardDescription>Your last 10 pronunciation scores</CardDescription>
+      <Card className="mt-4 border-0 shadow-md bg-gradient-to-br from-white to-slate-50">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg text-slate-800">Progress Over Time</CardTitle>
+              <CardDescription>Your pronunciation improvement journey</CardDescription>
+            </div>
+            {lastTenScores.length > 0 && (
+              <div className="bg-primary/10 px-3 py-1 rounded-full">
+                <span className="text-sm font-medium text-primary">
+                  Latest: {lastTenScores[lastTenScores.length - 1].score}%
+                </span>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="h-48 flex items-end gap-2">
+          <div className="h-56 flex items-end gap-1 mt-4 relative">
+            {/* Grid lines */}
+            <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+              {[0, 25, 50, 75, 100].map((mark) => (
+                <div key={mark} className="w-full border-t border-slate-200 flex items-center h-0">
+                  <span className="text-xs text-slate-400 absolute -left-6">{mark}%</span>
+                </div>
+              ))}
+            </div>
+            
             {lastTenScores.map((item, idx) => {
-              // Scale height based on the score (50-100% range to make bars more visible)
-              const heightPercent = Math.max(10, (item.score / 100) * 85 + 15);
+              // Scale height based on the score (0-100% range)
+              const heightPercent = item.score;
               
               // Color based on score as requested:
               // 85+ in green, 70-84 in orange, 69 and below in red
               const barColor = item.score >= 85 ? 'bg-green-500' :
-                             item.score >= 70 ? 'bg-orange-500' :
+                             item.score >= 70 ? 'bg-amber-500' :
                              'bg-red-500';
+                             
+              // Generate gradient overlay for 3D effect
+              const gradientClass = item.score >= 85 ? 'from-green-400 to-green-600' :
+                                  item.score >= 70 ? 'from-amber-400 to-amber-600' :
+                                  'from-red-400 to-red-600';
               
               return (
-                <div key={idx} className="flex flex-col items-center flex-1">
-                  <div 
-                    className={`w-full ${barColor} rounded-t-md shadow-sm`} 
-                    style={{ height: `${heightPercent}%` }}
-                    title={`Score: ${item.score}%`}
-                  />
-                  <p className="text-xs mt-1 font-medium">{item.score}</p>
+                <div key={idx} className="flex flex-col items-center flex-1 relative">
+                  <div className="relative w-full h-full">
+                    <div 
+                      className={`w-full ${barColor} rounded-t-md shadow-lg bg-gradient-to-b ${gradientClass}`} 
+                      style={{ height: `${heightPercent}%` }}
+                      title={`Score: ${item.score}%`}
+                    >
+                      {/* Highlight at top of bar */}
+                      <div className="absolute top-0 left-0 right-0 h-1 bg-white/30 rounded-t-md"></div>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-center">
+                    <p className="text-xs font-medium text-slate-700">{item.score}</p>
+                    <p className="text-[10px] text-slate-500">{item.date.slice(-2)}</p>
+                  </div>
                 </div>
               );
             })}
+          </div>
+          
+          {/* Legend */}
+          <div className="flex items-center justify-center mt-4 gap-4 text-xs">
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-red-500 rounded-sm mr-1"></div>
+              <span className="text-slate-600">Needs work</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-amber-500 rounded-sm mr-1"></div>
+              <span className="text-slate-600">Good</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-green-500 rounded-sm mr-1"></div>
+              <span className="text-slate-600">Excellent</span>
+            </div>
           </div>
         </CardContent>
       </Card>

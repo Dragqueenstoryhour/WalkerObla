@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Play, Pause, CheckCircle, Clock, Volume2 } from 'lucide-react';
+import { Play, Pause, CheckCircle, Clock, Volume2, Mic } from 'lucide-react';
 import { useReading } from '@/contexts/ReadingContext';
 import useAudioRecording from '@/hooks/useAudioRecording';
 import { submitReadingRecording } from '@/lib/azure';
@@ -35,105 +35,16 @@ const ReadingControls = () => {
     startRecording, 
     stopRecording,
     audioUrl,
-    recordingDuration
+    recordingDuration,
+    audioBlob
   } = useAudioRecording({
-    onRecordingComplete: async (blob) => {
-      if (currentContent) {
-        try {
-          // Get the current highlighted text for assessment
-          // Use both the context value and our local ref to ensure we have text to assess
-          const recordedText = currentHighlightedText || highlightedTextRef.current || 'Test recording';
-          
-          console.log(`Processing recording with text: "${recordedText}"`);
-          console.log(`Recording blob size: ${blob.size} bytes, type: ${blob.type}`);
-          
-          // Show loading toast
-          toast({
-            title: "Processing Recording",
-            description: "Analyzing your pronunciation...",
-          });
-          
-          // Log the original audio format
-          console.log(`Original recording format: ${blob.type}`);
-          
-          // Log detailed information about the audio blob
-          console.log(`[Debug] Processing audio blob: type=${blob.type}, size=${blob.size} bytes`);
-          
-          // Add more detailed diagnostic info for troubleshooting
-          console.log(`[Debug] Browser audio capabilities:`);
-          try {
-            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-            console.log(`[Debug] Sample rate: ${audioContext.sampleRate}Hz`);
-            console.log(`[Debug] Audio state: ${audioContext.state}`);
-            console.log(`[Debug] Audio destination channels: ${audioContext.destination.channelCount}`);
-            audioContext.close();
-          } catch (err) {
-            console.error(`[Debug] Error checking audio capabilities:`, err);
-          }
-          
-          // Get the audio buffer data
-          const audioBuffer = await blob.arrayBuffer();
-          console.log(`Audio buffer size: ${audioBuffer.byteLength} bytes`);
-          
-          // Send recording for assessment using the original blob format
-          // The server will handle any necessary format conversion
-          console.log(`Sending recording for assessment: contentId=${currentContent.id}, text="${recordedText}"`);
-          
-          const results = await submitReadingRecording(
-            blob, 
-            currentContent.id, 
-            recordedText
-          );
-          
-          console.log("Pronunciation assessment results:", results);
-          
-          // Add detailed Azure assessment logging
-          console.log(`Azure assessment breakdown:`);
-          console.log(`  - Pronunciation Score: ${results.pronunciationScore.toFixed(1)}%`);
-          console.log(`  - Fluency Score: ${results.fluencyScore.toFixed(1)}%`);
-          console.log(`  - Accuracy Score: ${results.accuracyScore.toFixed(1)}%`);
-          console.log(`  - Completeness Score: ${results.completenessScore.toFixed(1)}%`);
-          
-          // Log individual word scores for better diagnostics
-          if (results.wordLevelResults && results.wordLevelResults.length > 0) {
-            console.log('Word-by-word assessment:');
-            results.wordLevelResults.forEach(word => {
-              console.log(`  - "${word.word}": ${word.accuracyScore.toFixed(1)}% ${word.errorType ? `(${word.errorType})` : ''}`);
-            });
-          }
-          
-          if (!results || typeof results.pronunciationScore !== 'number') {
-            throw new Error("Invalid assessment results received");
-          }
-          
-          // Update scores
-          setPronunciationScore(results.pronunciationScore);
-          setFluencyScore(results.fluencyScore);
-          
-          // Update words read
-          const newWordsRead = Math.min(
-            (currentContent?.wordCount || 0),
-            wordsRead + (recordedText.split(/\s+/).length || 0)
-          );
-          setWordsRead(newWordsRead);
-          updateSessionProgress(newWordsRead);
-          
-          // Store pronunciation results
-          setPronunciationResults(results);
-          
-          toast({
-            title: "Reading Processed",
-            description: `Pronunciation: ${results.pronunciationScore}%, Fluency: ${results.fluencyScore}%`,
-          });
-        } catch (error) {
-          console.error("Error processing reading:", error);
-          toast({
-            title: "Processing Error",
-            description: "Could not process your reading. This could be due to a microphone issue or the Azure service needing API credentials.",
-            variant: "destructive",
-          });
-        }
-      }
+    onError: (error) => {
+      console.error('Recording error:', error);
+      toast({
+        title: 'Recording Error',
+        description: 'Could not access microphone. Please check your browser permissions.',
+        variant: 'destructive'
+      });
     },
     audioConstraints: {
       echoCancellation: true,
@@ -145,76 +56,153 @@ const ReadingControls = () => {
   // Keep a local reference to the currently highlighted text to use when recording
   const highlightedTextRef = useRef<string>('');
   
-  // Set up reading segments from the current content
-  useEffect(() => {
-    let timeoutId: number;
+  // Process recording function - separated from hook to allow manual control
+  const processRecording = async (blob: Blob) => {
+    if (!currentContent) return;
     
+    try {
+      // Get the current highlighted text for assessment
+      // Use both the context value and our local ref to ensure we have text to assess
+      const recordedText = currentHighlightedText || highlightedTextRef.current || 'Test recording';
+      
+      console.log(`Processing recording with text: "${recordedText}"`);
+      console.log(`Recording blob size: ${blob.size} bytes, type: ${blob.type}`);
+      
+      // Show loading toast
+      toast({
+        title: "Processing Recording",
+        description: "Analyzing your pronunciation...",
+      });
+      
+      // Log the original audio format
+      console.log(`Original recording format: ${blob.type}`);
+      
+      // Log detailed information about the audio blob
+      console.log(`[Debug] Processing audio blob: type=${blob.type}, size=${blob.size} bytes`);
+      
+      // Add more detailed diagnostic info for troubleshooting
+      console.log(`[Debug] Browser audio capabilities:`);
+      try {
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        console.log(`[Debug] Sample rate: ${audioContext.sampleRate}Hz`);
+        console.log(`[Debug] Audio state: ${audioContext.state}`);
+        console.log(`[Debug] Audio destination channels: ${audioContext.destination.channelCount}`);
+        audioContext.close();
+      } catch (err) {
+        console.error(`[Debug] Error checking audio capabilities:`, err);
+      }
+      
+      // Get the audio buffer data
+      const audioBuffer = await blob.arrayBuffer();
+      console.log(`Audio buffer size: ${audioBuffer.byteLength} bytes`);
+      
+      // Send recording for assessment using the original blob format
+      // The server will handle any necessary format conversion
+      console.log(`Sending recording for assessment: contentId=${currentContent.id}, text="${recordedText}"`);
+      
+      const results = await submitReadingRecording(
+        blob, 
+        currentContent.id, 
+        recordedText
+      );
+      
+      console.log("Pronunciation assessment results:", results);
+      
+      // Add detailed Azure assessment logging
+      console.log(`Azure assessment breakdown:`);
+      console.log(`  - Pronunciation Score: ${results.pronunciationScore.toFixed(1)}%`);
+      console.log(`  - Fluency Score: ${results.fluencyScore.toFixed(1)}%`);
+      console.log(`  - Accuracy Score: ${results.accuracyScore.toFixed(1)}%`);
+      console.log(`  - Completeness Score: ${results.completenessScore.toFixed(1)}%`);
+      
+      // Log individual word scores for better diagnostics
+      if (results.wordLevelResults && results.wordLevelResults.length > 0) {
+        console.log('Word-by-word assessment:');
+        results.wordLevelResults.forEach(word => {
+          console.log(`  - "${word.word}": ${word.accuracyScore.toFixed(1)}% ${word.errorType ? `(${word.errorType})` : ''}`);
+        });
+      }
+      
+      if (!results || typeof results.pronunciationScore !== 'number') {
+        throw new Error("Invalid assessment results received");
+      }
+      
+      // Update scores
+      setPronunciationScore(results.pronunciationScore);
+      setFluencyScore(results.fluencyScore);
+      
+      // Update words read
+      const newWordsRead = Math.min(
+        (currentContent?.wordCount || 0),
+        wordsRead + (recordedText.split(/\s+/).length || 0)
+      );
+      setWordsRead(newWordsRead);
+      updateSessionProgress(newWordsRead);
+      
+      // Store pronunciation results
+      setPronunciationResults(results);
+      
+      toast({
+        title: "Reading Processed",
+        description: `Pronunciation: ${results.pronunciationScore}%, Fluency: ${results.fluencyScore}%`,
+      });
+    } catch (error) {
+      console.error("Error processing reading:", error);
+      toast({
+        title: "Processing Error",
+        description: "Could not process your reading. This could be due to a microphone issue or the Azure service needing API credentials.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Process recording when stopped
+  useEffect(() => {
+    let processingTimeout: number;
+
+    // When recording stops, process the recording after a small delay 
+    if (!isRecording && audioBlob && isReading) {
+      processingTimeout = window.setTimeout(() => {
+        processRecording(audioBlob);
+      }, 300);
+    }
+
+    return () => {
+      if (processingTimeout) {
+        clearTimeout(processingTimeout);
+      }
+    };
+  }, [isRecording, audioBlob, isReading, currentContent]);
+  
+  // Set up current text for reading
+  useEffect(() => {
     if (isReading && !isPaused && currentContent) {
       // Get text segments from the current content
       const contentText = currentContent.content;
-      // Split into sentences (roughly)
-      const sentences = contentText.split(/(?<=[.!?])\s+/);
-      // Group into reasonable chunks (1-2 sentences at a time)
-      const textSegments = [];
       
-      for (let i = 0; i < sentences.length; i += 2) {
-        if (i + 1 < sentences.length) {
-          textSegments.push(sentences[i] + ' ' + sentences[i + 1]);
-        } else {
-          textSegments.push(sentences[i]);
-        }
-      }
+      // Set the entire content as the highlighted text without word-by-word animation
+      highlightedTextRef.current = contentText;
+      setHighlightedText(contentText);
       
-      // Use at least the first few segments
-      const readableSegments = textSegments.slice(0, Math.min(5, textSegments.length));
+      // Count total words for progress tracking
+      const totalWords = contentText.split(/\s+/).length;
       
-      // Cycle through text segments
-      const currentIndex = Math.min(Math.floor(wordsRead / 20), readableSegments.length - 1);
-      const nextText = readableSegments[currentIndex];
-      
-      console.log(`Reading segment ${currentIndex + 1} of ${readableSegments.length}`);
-      
-      if (nextText) {
-        // Store the text locally and update in the context
-        highlightedTextRef.current = nextText;
-        setHighlightedText(nextText);
-        
-        // Start recording for this segment
-        if (!isRecording) {
-          startRecording();
-          console.log('Started recording for segment');
-        }
-        
-        // After a reasonable time, stop recording and move to next segment
-        timeoutId = window.setTimeout(() => {
-          if (isRecording) {
-            console.log('Stopping recording for segment');
-            stopRecording();
-          }
-          
-          // Update words read to progress to next segment
-          const words = nextText.split(/\s+/).length;
-          const newWordsRead = Math.min(
-            (currentContent?.wordCount || 0),
-            wordsRead + words
-          );
-          setWordsRead(newWordsRead);
-          updateSessionProgress(newWordsRead);
-        }, 8000); // 8 seconds per segment for adequate recording time
+      // When reading starts, set word count for progress tracking
+      if (wordsRead === 0) {
+        updateSessionProgress(0);
       }
     }
-    
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, [isReading, isPaused, wordsRead, currentContent, isRecording, startRecording, stopRecording, setHighlightedText, updateSessionProgress]);
+  }, [isReading, isPaused, currentContent, setHighlightedText, wordsRead, updateSessionProgress]);
   
   const handleStartReading = () => {
     if (isReading) {
+      // If we're already reading, stop the session
+      if (isRecording) {
+        stopRecording();
+      }
       stopReading();
     } else {
+      // Start a new reading session
       setWordsRead(0);
       setPronunciationScore(0);
       setFluencyScore(0);
@@ -223,10 +211,26 @@ const ReadingControls = () => {
   };
   
   const handlePauseResume = () => {
+    // If recording, stop it when pausing
+    if (!isPaused && isRecording) {
+      stopRecording();
+    }
+    
     if (isPaused) {
       resumeReading();
     } else {
       pauseReading();
+    }
+  };
+  
+  // Handle manual recording start
+  const handleStartRecording = () => {
+    if (!isReading) return;
+    
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
     }
   };
   
@@ -308,6 +312,19 @@ const ReadingControls = () => {
                   </>
                 )}
               </Button>
+              
+              {isReading && (
+                <Button
+                  onClick={handleStartRecording}
+                  variant="outline"
+                  className={`flex-1 font-medium ${isRecording ? 'bg-red-100' : ''}`}
+                  size="lg"
+                >
+                  <Mic className="w-5 h-5 mr-2" />
+                  {isRecording ? 'Stop Recording' : 'Start Recording'}
+                </Button>
+              )}
+              
               <Button
                 onClick={handlePauseResume}
                 variant="outline"
@@ -320,8 +337,6 @@ const ReadingControls = () => {
               </Button>
             </div>
           </div>
-          
-          {/* Progress card removed as requested */}
         </div>
       </CardContent>
     </Card>
