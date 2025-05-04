@@ -88,6 +88,17 @@ export function GameExerciseRecorder({
       const results = await submitReadingRecording(audioBlob, exercise.id, exercise.content);
 
       console.log('Received assessment results:', results);
+      
+      // Add additional debug logging for Azure assessment results
+      console.log(`Azure assessment scores - Pronunciation: ${results.pronunciationScore.toFixed(1)}, ` +
+                  `Fluency: ${results.fluencyScore.toFixed(1)}, ` +
+                  `Accuracy: ${results.accuracyScore.toFixed(1)}, ` +
+                  `Completeness: ${results.completenessScore.toFixed(1)}`);
+      
+      // Log word-level results from Azure
+      console.log('Word-level results:', results.wordLevelResults.map(w => 
+        `${w.word}: ${w.accuracyScore.toFixed(1)} (${w.errorType || 'None'})`
+      ).join(', '));
 
       if (!results) {
         throw new Error('No results received from speech assessment');

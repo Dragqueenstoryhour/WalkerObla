@@ -327,6 +327,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // New phrases practice page
+  app.get('/NewPhrases', (req, res) => {
+    // Serve the same debug-recorder HTML file at the new path
+    const debugRecorderPath = join(process.cwd(), 'debug-recorder.html');
+    if (fs.existsSync(debugRecorderPath)) {
+      res.sendFile(debugRecorderPath);
+    } else {
+      res.status(404).send('New phrases practice page not found');
+    }
+  });
+
   app.post('/api/subscription/cancel', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
