@@ -27,8 +27,8 @@ interface PronunciationAssessmentResult {
 }
 
 // Azure Speech Service configuration
-const speechKey = process.env.AZURE_SPEECH_KEY || "dummy-key-for-development";
-const speechRegion = process.env.AZURE_SPEECH_REGION || "eastus";
+const speechKey = process.env.SPEECH_KEY || "dummy-key-for-development";
+const speechRegion = process.env.SPEECH_REGION || "eastus";
 
 // Check if Azure key is properly configured
 const isAzureConfigured = speechKey !== "dummy-key-for-development";
@@ -36,9 +36,9 @@ const isAzureConfigured = speechKey !== "dummy-key-for-development";
 // Log Azure setup status on startup
 if (!isAzureConfigured) {
   console.warn("⚠️ WARNING: Using dummy Azure key. Speech services will use demo data.");
-  console.warn("To use actual Azure Speech services, set AZURE_SPEECH_KEY and AZURE_SPEECH_REGION in environment variables.");
+  console.warn("To use actual Azure Speech services, set SPEECH_KEY and SPEECH_REGION in environment variables.");
 } else {
-  console.log("✅ Azure Speech Services configured successfully.");
+  console.log("✅ Azure Speech Services configured successfully with region: " + speechRegion);
 }
 
 // Helper function to convert audio buffer to WAV using ffmpeg

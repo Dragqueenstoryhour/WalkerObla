@@ -501,7 +501,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       // Get raw body from request
-      const rawBody = req.rawBody || await new Promise((resolve) => {
+      // TypeScript doesn't know about the rawBody property, so we use a type assertion
+      const rawBody = (req as any).rawBody || await new Promise((resolve) => {
         const chunks: Buffer[] = [];
         req.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
         req.on('end', () => resolve(Buffer.concat(chunks)));
