@@ -909,7 +909,7 @@ I'd like to schedule an appointment."
                   >
                     <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                     <p className="text-base font-medium">Click to upload</p>
-                    <p className="text-xs text-muted-foreground">PNG, JPG, GIF, or PDF up to 10MB</p>
+                    <p className="text-xs text-muted-foreground">PNG, JPG, HEIC, GIF, or PDF up to 10MB</p>
                     <input 
                       type="file"
                       accept="image/*,application/pdf"
