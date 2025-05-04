@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Palmtree, Star, Award, Lock, Flag } from 'lucide-react';
 import { GameLevel } from '@/lib/types';
