@@ -225,7 +225,7 @@ export default function NewPhrases() {
       setProcessedPhrases(phrases => 
         phrases.map((phrase, idx) => 
           idx === currentPhraseIndex 
-            ? { ...phrase, status: 'assessing', recordingBlob: audioBlob, recordingUrl: audioUrl } 
+            ? { ...phrase, status: 'assessing', recordingBlob: audioBlob, recordingUrl: audioUrl || undefined } 
             : phrase
         )
       );

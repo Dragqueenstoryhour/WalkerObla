@@ -228,14 +228,11 @@ IMPORTANT: Keep it under ${maxWords} words total. Do not exceed this limit.` }
       wordCount: Math.min(calculatedWordCount, maxWords), // Ensure word count doesn't exceed our limit
       readingTime: calculatedWordCount * 3,
       difficulty: difficulty as "easy" | "medium" | "hard", 
-      createdAt: new Date(), // Use Date object for database
+      createdAt: new Date().toISOString(), // Store directly as ISO string for compatibility
     };
     
-    // For client use, convert to match the client-side type which uses strings
-    return {
-      ...readingContent,
-      createdAt: readingContent.createdAt.toISOString()
-    };
+    // Return the content
+    return readingContent;
   } catch (error) {
     console.error("Error generating reading content:", error);
     throw new Error("Failed to generate reading content");
@@ -273,5 +270,165 @@ export async function generateSpeechResponse(text: string, voice: string = "allo
   } catch (error) {
     console.error("Error generating speech response:", error);
     throw new Error("Failed to generate speech response");
+  }
+}
+
+/**
+ * Process a list of phrases with AI to add phonetic guides and difficulty tags
+ */
+export async function processPhrases(phrases: string[]): Promise<any[]> {
+  try {
+    console.log(`Processing ${phrases.length} phrases with OpenAI`);
+    
+    const systemPrompt = `You help language learners practice speech by analyzing phrases, adding phonetic guides, and determining difficulty.
+    For each phrase, provide:
+    1. The original text
+    2. A phonetic transcription using IPA symbols
+    3. Difficulty level (beginner/intermediate/advanced)
+    Return an array of JSON objects with { text, phonetic, difficulty }`;
+
+    // Using GPT-4o for better phonetic accuracy and language analysis
+    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+    const response = await openai.chat.completions.create({
+      model: ADVANCED_MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Process these phrases for pronunciation practice:\n${phrases.join('\n')}` }
+      ],
+      temperature: 0.3,
+      response_format: { type: "json_object" }
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error("Empty response from OpenAI");
+    }
+    
+    // Parse the response
+    const parsed = JSON.parse(content);
+    
+    // Ensure we have an array of phrases
+    if (!Array.isArray(parsed.phrases)) {
+      // If the response format is unexpected, create a default structure
+      return phrases.map(text => ({
+        text,
+        phonetic: "",
+        difficulty: "intermediate"
+      }));
+    }
+    
+    return parsed.phrases;
+  } catch (error) {
+    console.error("Error processing phrases:", error);
+    // Return the original phrases with empty phonetic guides as fallback
+    return phrases.map(text => ({
+      text,
+      phonetic: "",
+      difficulty: "intermediate"
+    }));
+  }
+}
+
+/**
+ * Generate similar phrases to an existing phrase for practice variations
+ */
+export async function generateSimilarPhrases(phrase: string): Promise<string[]> {
+  try {
+    console.log(`Generating similar phrases to: "${phrase}"`);
+    
+    const systemPrompt = `You help language learners by generating variations of phrases for speaking practice.
+    Given a phrase, create 5 similar phrases that:
+    1. Maintain the same general meaning
+    2. Use a similar level of complexity
+    3. Are natural expressions a native speaker would use
+    4. Vary in structure to provide diverse practice
+    Return only a JSON array of strings with the new phrases.`;
+
+    // Using the advanced model for better results with language generation
+    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+    const response = await openai.chat.completions.create({
+      model: ADVANCED_MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Generate 5 similar but varied phrases based on: "${phrase}"` }
+      ],
+      temperature: 0.7,
+      response_format: { type: "json_object" }
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error("Empty response from OpenAI");
+    }
+    
+    // Parse the response
+    const parsed = JSON.parse(content);
+    
+    // Ensure we have an array of phrases
+    if (!Array.isArray(parsed.phrases)) {
+      // If the main property isn't "phrases", look for any array in the response
+      const firstArrayProperty = Object.values(parsed).find(Array.isArray);
+      if (Array.isArray(firstArrayProperty)) {
+        return firstArrayProperty;
+      }
+      // Return a single-item array with the original phrase
+      return [phrase];
+    }
+    
+    return parsed.phrases;
+  } catch (error) {
+    console.error("Error generating similar phrases:", error);
+    // Return a single-item array with the original phrase as fallback
+    return [phrase];
+  }
+}
+
+/**
+ * Extract text from an image or PDF using OpenAI's Vision model
+ */
+export async function extractTextFromImage(fileBuffer: Buffer, fileType: string): Promise<string> {
+  try {
+    console.log(`Extracting text from file of type: ${fileType}`);
+    
+    // Convert the buffer to base64
+    const base64Image = fileBuffer.toString('base64');
+    const dataURI = `data:${fileType};base64,${base64Image}`;
+    
+    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You extract text from images and documents accurately. For documents with multiple phrases or sentences, return each one on a new line. Remove any visual artifacts, page numbers, or irrelevant text. Format the output as clean, readable text."
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "Extract all the readable text from this image. Format each phrase or sentence on its own line."
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: dataURI
+              }
+            }
+          ]
+        }
+      ],
+      max_tokens: 1000
+    });
+
+    const extractedText = response.choices[0].message.content;
+    if (!extractedText) {
+      throw new Error("Failed to extract text from image");
+    }
+    
+    return extractedText;
+  } catch (error) {
+    console.error("Error extracting text from image:", error);
+    throw new Error("Failed to extract text from image");
   }
 }

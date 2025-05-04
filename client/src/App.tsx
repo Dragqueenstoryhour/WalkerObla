@@ -10,6 +10,7 @@ import Subscription from "@/pages/Subscription";
 import Checkout from "@/pages/Checkout";
 import SubscriptionSuccess from "@/pages/SubscriptionSuccess";
 import AzureTest from "@/pages/AzureTest";
+import NewPhrases from "@/pages/NewPhrases";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ReadingProvider } from "./contexts/ReadingContext";
 import { GameProvider } from "./contexts/GameContext";
@@ -24,8 +25,8 @@ function Navigation() {
         <Link href="/read" className="text-primary hover:underline">
           ReadAssist
         </Link>
-        <Link href="/azure-test" className="text-primary hover:underline">
-          Azure Test
+        <Link href="/new-phrases" className="text-primary hover:underline">
+          New Phrases
         </Link>
         <Link href="/subscription" className="text-primary hover:underline ml-auto">
           Premium

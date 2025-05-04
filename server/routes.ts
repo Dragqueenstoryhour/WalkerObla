@@ -75,6 +75,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to generate content' });
     }
   });
+  
+  // Process phrases for pronunciation practice
+  app.post('/api/content/process-phrases', async (req, res) => {
+    try {
+      const schema = z.object({
+        phrases: z.array(z.string())
+      });
+
+      const { phrases } = schema.parse(req.body);
+      
+      if (phrases.length === 0) {
+        return res.status(400).json({ error: 'No phrases provided' });
+      }
+      
+      // Process the phrases with OpenAI
+      const processedPhrases = await openaiService.processPhrases(phrases);
+      res.json({ phrases: processedPhrases });
+    } catch (error) {
+      console.error('Error processing phrases:', error);
+      res.status(500).json({ error: 'Failed to process phrases' });
+    }
+  });
+  
+  // Generate similar phrases based on an existing phrase
+  app.post('/api/content/generate-similar', async (req, res) => {
+    try {
+      const schema = z.object({
+        phrase: z.string()
+      });
+
+      const { phrase } = schema.parse(req.body);
+      
+      // Generate similar phrases with OpenAI
+      const similarPhrases = await openaiService.generateSimilarPhrases(phrase);
+      res.json({ phrases: similarPhrases });
+    } catch (error) {
+      console.error('Error generating similar phrases:', error);
+      res.status(500).json({ error: 'Failed to generate similar phrases' });
+    }
+  });
+  
+  // Extract text from images or PDFs using OCR
+  app.post('/api/content/ocr', upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+      
+      // Check file type
+      const fileBuffer = req.file.buffer;
+      const fileType = req.file.mimetype;
+      
+      // Process the file with OCR
+      const extractedText = await openaiService.extractTextFromImage(fileBuffer, fileType);
+      res.json({ text: extractedText });
+    } catch (error) {
+      console.error('Error processing file with OCR:', error);
+      res.status(500).json({ error: 'Failed to extract text from file' });
+    }
+  });
 
   // Voice command endpoints
   app.post('/api/voice/command', upload.single('audio'), async (req, res) => {
