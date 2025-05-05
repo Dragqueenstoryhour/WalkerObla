@@ -79,6 +79,59 @@ export default function NewPhrases() {
       { date: '2025-05-04', score: 84 },
     ]);
   }, []);
+  
+  // Load shared phrases if the shareId is present in the URL
+  useEffect(() => {
+    const loadSharedPhrases = async () => {
+      if (!shareId) return;
+      
+      setIsProcessing(true);
+      
+      try {
+        const response = await fetch(`/api/phrases/shared/${shareId}`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to load shared phrases');
+        }
+        
+        const data = await response.json();
+        if (!data.collection || !data.collection.phrases) {
+          throw new Error('Invalid shared phrases data');
+        }
+        
+        // Parse the phrases from the JSON data
+        const parsedPhrases = JSON.parse(data.collection.phrases);
+        if (!Array.isArray(parsedPhrases)) {
+          throw new Error('Invalid phrases format');
+        }
+        
+        // Format the phrases for use in the component
+        const newPhrases: ProcessedPhrase[] = parsedPhrases.map((phrase: any, index: number) => ({
+          id: `shared-${Date.now()}-${index}`,
+          text: phrase.text,
+          phonetic: phrase.phonetic,
+          difficulty: phrase.difficulty,
+          status: 'idle'
+        }));
+        
+        setProcessedPhrases(newPhrases);
+        setCurrentPhraseIndex(0); // Select first phrase
+        setShowSharedDialog(true); // Show the shared phrases notification
+        
+      } catch (error) {
+        console.error('Error loading shared phrases:', error);
+        toast({
+          title: 'Error Loading Shared Phrases',
+          description: error instanceof Error ? error.message : 'Failed to load shared phrases',
+          variant: 'destructive'
+        });
+      } finally {
+        setIsProcessing(false);
+      }
+    };
+    
+    loadSharedPhrases();
+  }, [shareId, toast]);
 
   // Process the bulk text into individual phrases
   const handleProcessManualText = async () => {
@@ -498,21 +551,133 @@ export default function NewPhrases() {
   };
 
   // Generate a shareable link for the current set
-  const handleGenerateShareableLink = () => {
-    // In a real implementation, this would hit an API endpoint to create a sharable exercise
-    const shareId = `share-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const shareableLink = `${window.location.origin}/shared-phrases/${shareId}`;
-    setShareableLink(shareableLink);
+  const handleGenerateShareableLink = async () => {
+    if (processedPhrases.length === 0) {
+      toast({
+        title: 'No Phrases to Share',
+        description: 'Please process some phrases first before generating a shareable link.',
+        variant: 'destructive'
+      });
+      return;
+    }
     
-    toast({
-      title: 'Shareable Link Created',
-      description: 'Link copied to clipboard. Share with others to practice the same phrases.',
-    });
+    setIsProcessing(true);
     
-    // Copy to clipboard
-    navigator.clipboard.writeText(shareableLink);
+    // Format the phrases for sharing
+    const phrasesToShare = processedPhrases.map(phrase => ({
+      text: phrase.text,
+      phonetic: phrase.phonetic || '',
+      difficulty: phrase.difficulty || 'intermediate'
+    }));
+    
+    try {
+      // Create the shareable link
+      const response = await fetch('/api/phrases/shared', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          phrases: JSON.stringify(phrasesToShare),
+          userId: user?.id || null,
+          name: 'Shared Phrases Collection'
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate shareable link');
+      }
+      
+      const data = await response.json();
+      const fullShareableLink = `${window.location.origin}/new-phrases/${data.collection.shareId}`;
+      setShareableLink(fullShareableLink);
+      
+      // Copy to clipboard
+      navigator.clipboard.writeText(fullShareableLink)
+        .then(() => {
+          toast({
+            title: 'Link Copied!',
+            description: 'Shareable link has been copied to your clipboard.',
+          });
+        })
+        .catch(err => {
+          console.error('Failed to copy:', err);
+          toast({
+            title: 'Link Generated',
+            description: 'Shareable link created successfully, but could not copy to clipboard automatically.',
+          });
+        });
+      
+    } catch (error) {
+      console.error('Error generating shareable link:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate shareable link. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
+  // Save the current phrase to user's saved phrases
+  const handleSavePhrase = async () => {
+    if (!user) {
+      toast({
+        title: 'Sign In Required',
+        description: 'Please sign in to save phrases to your collection.',
+        variant: 'default'
+      });
+      return;
+    }
+    
+    if (currentPhraseIndex < 0 || currentPhraseIndex >= processedPhrases.length) {
+      toast({
+        title: 'No Phrase Selected',
+        description: 'Please select a phrase to save.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    const phraseToSave = processedPhrases[currentPhraseIndex];
+    
+    try {
+      const response = await fetch('/api/phrases/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          phrase: phraseToSave.text,
+          phonetic: phraseToSave.phonetic || null,
+          difficulty: phraseToSave.difficulty || null,
+          assessmentResults: phraseToSave.assessmentResult ? JSON.stringify(phraseToSave.assessmentResult) : null,
+          source: 'new_phrases',
+          sourceId: shareId || null
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save phrase');
+      }
+      
+      toast({
+        title: 'Phrase Saved',
+        description: 'This phrase has been saved to your collection.',
+      });
+      
+    } catch (error) {
+      console.error('Error saving phrase:', error);
+      toast({
+        title: 'Error Saving Phrase',
+        description: error instanceof Error ? error.message : 'Failed to save phrase',
+        variant: 'destructive'
+      });
+    }
+  };
+  
   // Play the recording for a phrase
   const handlePlayRecording = (phraseIndex: number) => {
     const phrase = processedPhrases[phraseIndex];
@@ -906,6 +1071,21 @@ export default function NewPhrases() {
 
   return (
     <div className="container mx-auto px-4 py-6">
+      {/* Shared phrases notification dialog */}
+      <Dialog open={showSharedDialog} onOpenChange={setShowSharedDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>You've been sent these phrases for practice</DialogTitle>
+            <DialogDescription>
+              Someone has shared a set of phrases with you to practice your pronunciation. 
+              These phrases have been loaded and are ready for you to start practicing.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowSharedDialog(false)}>Get Started</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <h1 className="text-3xl font-bold mb-6">New Phrases</h1>
       
       <Tabs defaultValue="ai-generate" className="w-full">
