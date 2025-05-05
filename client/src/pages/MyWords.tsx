@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
@@ -44,11 +45,50 @@ export default function MyWords() {
     userId: string;
   }
 
+  // State for new phrase input
+  const [newPhrase, setNewPhrase] = useState('');
+
   // Fetch user saved phrases
   const { data: savedPhrases = [], isLoading, error, refetch } = useQuery<SavedPhrase[]>({
     queryKey: ['/api/phrases/saved'],
     enabled: isAuthenticated,
   });
+
+  // Ensure savedPhrases is always an array
+  const phrasesArray = Array.isArray(savedPhrases) ? savedPhrases : [];
+  
+  // Add phrase mutation
+  const addPhraseMutation = useMutation({
+    mutationFn: async (phrase: string) => {
+      return apiRequest('POST', '/api/phrases/saved', {
+        phrase,
+        difficulty: 'medium',
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/phrases/saved'] });
+      toast({
+        title: 'Phrase added',
+        description: 'The phrase has been added to your saved phrases.',
+      });
+      setNewPhrase('');
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to add the phrase. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Handle add phrase
+  const handleAddPhrase = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPhrase.trim()) {
+      addPhraseMutation.mutate(newPhrase.trim());
+    }
+  };
 
   // Delete phrase mutation
   const deleteMutation = useMutation({
@@ -182,11 +222,32 @@ export default function MyWords() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left panel - Saved phrases list */}
         <div className="md:col-span-2">
+          {/* Add new phrase */}
+          <Card className="mb-4">
+            <CardContent className="p-4">
+              <form onSubmit={handleAddPhrase} className="space-y-2">
+                <h2 className="text-xl font-semibold mb-2">Add New Phrase</h2>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newPhrase}
+                    onChange={(e) => setNewPhrase(e.target.value)}
+                    placeholder="Enter a new word or phrase"
+                    className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  />
+                  <Button type="submit" disabled={!newPhrase.trim()}>
+                    Add
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+          
           <Card>
             <CardContent className="p-4">
               {isLoading ? (
                 <div className="p-4 text-center">Loading your saved phrases...</div>
-              ) : savedPhrases.length === 0 ? (
+              ) : phrasesArray.length === 0 ? (
                 <div className="p-4 text-center flex flex-col items-center space-y-2">
                   <AlertCircle className="h-12 w-12 text-muted-foreground" />
                   <p>You don't have any saved phrases yet.</p>
@@ -197,7 +258,7 @@ export default function MyWords() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {savedPhrases.map((phrase: SavedPhrase) => (
+                  {phrasesArray.map((phrase: SavedPhrase) => (
                     <div 
                       key={phrase.id} 
                       className={`p-3 border rounded-md cursor-pointer transition-colors ${selectedPhrase?.id === phrase.id ? 'bg-primary/10 border-primary' : 'hover:bg-accent'}`}
