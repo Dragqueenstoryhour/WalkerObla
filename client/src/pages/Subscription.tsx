@@ -166,7 +166,7 @@ export default function Subscription() {
           </CardContent>
           <CardFooter className="flex-col space-y-3">
             <Button 
-              onClick={() => setLocation('/game')} 
+              onClick={() => setLocation('/')} 
               className="w-full"
             >
               Continue to Game
@@ -215,7 +215,7 @@ export default function Subscription() {
             }
             return true;
           }}
-          onSuccess={() => setLocation('/game')}
+          onSuccess={() => setLocation('/')}
         />
       </div>
     </div>

@@ -1201,28 +1201,47 @@ I'd like to schedule an appointment."
                         videoElement.autoplay = true;
                         modal.appendChild(videoElement);
                         
+                        // Create control container
+                        const controlContainer = document.createElement('div');
+                        controlContainer.style.display = 'flex';
+                        controlContainer.style.flexDirection = 'row';
+                        controlContainer.style.justifyContent = 'space-between';
+                        controlContainer.style.width = '90%';
+                        controlContainer.style.marginBottom = '40px';
+                        controlContainer.style.position = 'fixed';
+                        controlContainer.style.bottom = '20px';
+                        controlContainer.style.zIndex = '10000';
+                        
                         // Add capture button
                         const captureButton = document.createElement('button');
                         captureButton.textContent = 'Take Photo';
-                        captureButton.style.margin = '20px 0';
-                        captureButton.style.padding = '10px 20px';
-                        captureButton.style.borderRadius = '4px';
+                        captureButton.style.margin = '0 5px';
+                        captureButton.style.padding = '15px 20px';
+                        captureButton.style.borderRadius = '8px';
                         captureButton.style.backgroundColor = 'hsl(var(--primary))';
                         captureButton.style.color = 'white';
                         captureButton.style.border = 'none';
                         captureButton.style.cursor = 'pointer';
-                        modal.appendChild(captureButton);
+                        captureButton.style.fontSize = '16px';
+                        captureButton.style.fontWeight = 'bold';
+                        captureButton.style.flex = '1';
+                        controlContainer.appendChild(captureButton);
                         
                         // Add close button
                         const closeButton = document.createElement('button');
                         closeButton.textContent = 'Cancel';
-                        closeButton.style.padding = '10px 20px';
-                        closeButton.style.borderRadius = '4px';
-                        closeButton.style.backgroundColor = 'transparent';
+                        closeButton.style.margin = '0 5px';
+                        closeButton.style.padding = '15px 20px';
+                        closeButton.style.borderRadius = '8px';
+                        closeButton.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
                         closeButton.style.border = '1px solid white';
                         closeButton.style.color = 'white';
                         closeButton.style.cursor = 'pointer';
-                        modal.appendChild(closeButton);
+                        closeButton.style.fontSize = '16px';
+                        closeButton.style.flex = '1';
+                        controlContainer.appendChild(closeButton);
+                        
+                        modal.appendChild(controlContainer);
                         
                         document.body.appendChild(modal);
                         
