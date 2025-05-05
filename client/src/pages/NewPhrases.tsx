@@ -1571,8 +1571,8 @@ I'd like to schedule an appointment."
                             variant="outline"
                             className="flex-1"
                           >
-                            <VolumeIcon className="mr-2 h-4 w-4" />
-                            Play
+                            <Mic className="mr-2 h-4 w-4" />
+                            Playback
                           </Button>
                         </div>
                       ) : (
