@@ -8,7 +8,7 @@ import * as realtimeService from "./realtime";
 import * as stripeService from "./stripe";
 import multer from 'multer';
 import { z } from "zod";
-import { insertReadingContentSchema, insertReadingSessionSchema } from "@shared/schema";
+import { insertReadingContentSchema, insertReadingSessionSchema, insertSharedPhraseCollectionSchema, insertUserSavedPhraseSchema } from "@shared/schema";
 import WebSocket from "ws";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import Stripe from "stripe";
@@ -453,6 +453,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Shared phrases endpoints
+  app.post('/api/phrases/shared', async (req, res) => {
+    try {
+      const data = insertSharedPhraseCollectionSchema.parse(req.body);
+      
+      // Generate a unique share ID if not provided
+      if (!data.shareId) {
+        data.shareId = `share-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      }
+      
+      const collection = await storage.createSharedPhraseCollection(data);
+      res.json({ collection });
+    } catch (error) {
+      console.error('Error creating shared phrase collection:', error);
+      res.status(500).json({ error: 'Failed to create shared phrase collection' });
+    }
+  });
+  
+  app.get('/api/phrases/shared/:shareId', async (req, res) => {
+    try {
+      const shareId = req.params.shareId;
+      const collection = await storage.getSharedPhraseCollection(shareId);
+      
+      if (!collection) {
+        return res.status(404).json({ error: 'Shared phrase collection not found' });
+      }
+      
+      res.json({ collection });
+    } catch (error) {
+      console.error('Error fetching shared phrase collection:', error);
+      res.status(500).json({ error: 'Failed to fetch shared phrase collection' });
+    }
+  });
+  
+  // User saved phrases endpoints
+  app.post('/api/phrases/save', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const data = insertUserSavedPhraseSchema.parse({
+        ...req.body,
+        userId // Ensure the userId from auth is used
+      });
+      
+      const savedPhrase = await storage.createUserSavedPhrase(data);
+      res.json({ savedPhrase });
+    } catch (error) {
+      console.error('Error saving phrase:', error);
+      res.status(500).json({ error: 'Failed to save phrase' });
+    }
+  });
+  
+  app.get('/api/phrases/saved', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const savedPhrases = await storage.getUserSavedPhrases(userId);
+      res.json({ savedPhrases });
+    } catch (error) {
+      console.error('Error fetching saved phrases:', error);
+      res.status(500).json({ error: 'Failed to fetch saved phrases' });
+    }
+  });
+  
+  app.delete('/api/phrases/saved/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const phraseId = parseInt(req.params.id, 10);
+      
+      // First check if the phrase belongs to the user
+      const phrase = await storage.getUserSavedPhraseById(phraseId);
+      
+      if (!phrase) {
+        return res.status(404).json({ error: 'Saved phrase not found' });
+      }
+      
+      if (phrase.userId !== userId) {
+        return res.status(403).json({ error: 'Not authorized to delete this phrase' });
+      }
+      
+      await storage.deleteUserSavedPhrase(phraseId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting saved phrase:', error);
+      res.status(500).json({ error: 'Failed to delete saved phrase' });
+    }
+  });
+  
   // Check if level is premium and if user has access
   app.get('/api/game/levels/:levelNumber/access', async (req: any, res) => {
     try {

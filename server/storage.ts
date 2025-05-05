@@ -72,6 +72,7 @@ export interface IStorage {
   
   // User saved phrases methods
   getUserSavedPhrases(userId: string): Promise<UserSavedPhrase[]>;
+  getUserSavedPhraseById(id: number): Promise<UserSavedPhrase | undefined>;
   createUserSavedPhrase(phrase: InsertUserSavedPhrase): Promise<UserSavedPhrase>;
   updateUserSavedPhrase(id: number, updates: Partial<UserSavedPhrase>): Promise<UserSavedPhrase | undefined>;
   deleteUserSavedPhrase(id: number): Promise<void>;
