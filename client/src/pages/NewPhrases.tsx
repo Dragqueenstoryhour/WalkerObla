@@ -1186,16 +1186,17 @@ I'd like to schedule an appointment."
                         modal.style.left = '0';
                         modal.style.width = '100%';
                         modal.style.height = '100%';
-                        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+                        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
                         modal.style.display = 'flex';
                         modal.style.flexDirection = 'column';
                         modal.style.alignItems = 'center';
-                        modal.style.justifyContent = 'center';
+                        modal.style.justifyContent = 'flex-end'; // Position buttons at bottom
+                        modal.style.padding = '20px';
                         modal.style.zIndex = '9999';
                         
-                        // Add the video element to the modal
+                        // Add the video element to the modal - make smaller on mobile
                         videoElement.style.maxWidth = '90%';
-                        videoElement.style.maxHeight = '70vh';
+                        videoElement.style.maxHeight = '50vh'; // Reduced height to leave room for buttons
                         videoElement.style.borderRadius = '8px';
                         videoElement.autoplay = true;
                         modal.appendChild(videoElement);

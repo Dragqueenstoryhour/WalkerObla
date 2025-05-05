@@ -11,6 +11,7 @@ import Checkout from "@/pages/Checkout";
 import SubscriptionSuccess from "@/pages/SubscriptionSuccess";
 import AzureTest from "@/pages/AzureTest";
 import NewPhrases from "@/pages/NewPhrases";
+import MyWords from "@/pages/MyWords";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ReadingProvider } from "./contexts/ReadingContext";
 import { GameProvider } from "./contexts/GameContext";
@@ -27,6 +28,9 @@ function Navigation() {
         </Link>
         <Link href="/new-phrases" className="text-primary hover:underline">
           New Phrases
+        </Link>
+        <Link href="/my-words" className="text-primary hover:underline">
+          My Words
         </Link>
         <Link href="/subscription" className="text-primary hover:underline ml-auto">
           Premium
@@ -49,6 +53,7 @@ function Router() {
         <Route path="/azure-test" component={AzureTest} />
         <Route path="/new-phrases" component={NewPhrases} />
         <Route path="/shared-phrases/:shareId" component={NewPhrases} />
+        <Route path="/my-words" component={MyWords} />
         <Route component={NotFound} />
       </Switch>
     </>
