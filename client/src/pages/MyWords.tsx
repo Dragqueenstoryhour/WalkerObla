@@ -28,12 +28,24 @@ export default function MyWords() {
   const [recording, setRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [recorder, setRecorder] = useState<MediaRecorder | null>(null);
-  const [selectedPhrase, setSelectedPhrase] = useState<any>(null);
+  const [selectedPhrase, setSelectedPhrase] = useState<SavedPhrase | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
+  // Define the SavedPhrase type
+  interface SavedPhrase {
+    id: number;
+    phrase: string;
+    phonetic?: string | null;
+    difficulty?: string | null;
+    source?: string | null;
+    assessmentResults?: any;
+    createdAt: string;
+    userId: string;
+  }
+
   // Fetch user saved phrases
-  const { data: savedPhrases = [], isLoading, error, refetch } = useQuery({
+  const { data: savedPhrases = [], isLoading, error, refetch } = useQuery<SavedPhrase[]>({
     queryKey: ['/api/phrases/saved'],
     enabled: isAuthenticated,
   });
@@ -62,7 +74,7 @@ export default function MyWords() {
   });
 
   // Handle phrase selection for practice
-  const handleSelectPhrase = (phrase: any) => {
+  const handleSelectPhrase = (phrase: SavedPhrase) => {
     setSelectedPhrase(phrase);
   };
 
@@ -185,7 +197,7 @@ export default function MyWords() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {savedPhrases.map((phrase: any) => (
+                  {savedPhrases.map((phrase: SavedPhrase) => (
                     <div 
                       key={phrase.id} 
                       className={`p-3 border rounded-md cursor-pointer transition-colors ${selectedPhrase?.id === phrase.id ? 'bg-primary/10 border-primary' : 'hover:bg-accent'}`}
