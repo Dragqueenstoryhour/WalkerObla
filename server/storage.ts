@@ -5,6 +5,8 @@ import {
   gameLevels,
   exercises,
   userExercises,
+  sharedPhraseCollections,
+  userSavedPhrases,
   type User, 
   type InsertUser, 
   type UpsertUser,
@@ -17,9 +19,13 @@ import {
   type Exercise,
   type InsertExercise,
   type UserExercise,
-  type InsertUserExercise
+  type InsertUserExercise,
+  type SharedPhraseCollection,
+  type InsertSharedPhraseCollection,
+  type UserSavedPhrase,
+  type InsertUserSavedPhrase
 } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { db } from "./db";
 
 // modify the interface with any CRUD methods
@@ -59,6 +65,16 @@ export interface IStorage {
   getUserExercisesByLevel(userId: number, levelId: number): Promise<UserExercise[]>;
   createUserExercise(userExercise: InsertUserExercise): Promise<UserExercise>;
   updateUserExercise(id: number, updates: Partial<UserExercise>): Promise<UserExercise | undefined>;
+  
+  // Shared phrase collections methods
+  createSharedPhraseCollection(collection: InsertSharedPhraseCollection): Promise<SharedPhraseCollection>;
+  getSharedPhraseCollection(shareId: string): Promise<SharedPhraseCollection | undefined>;
+  
+  // User saved phrases methods
+  getUserSavedPhrases(userId: string): Promise<UserSavedPhrase[]>;
+  createUserSavedPhrase(phrase: InsertUserSavedPhrase): Promise<UserSavedPhrase>;
+  updateUserSavedPhrase(id: number, updates: Partial<UserSavedPhrase>): Promise<UserSavedPhrase | undefined>;
+  deleteUserSavedPhrase(id: number): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -714,6 +730,55 @@ export class DatabaseStorage implements IStorage {
 
   async updateUserExercise(id: number, updates: Partial<UserExercise>): Promise<UserExercise | undefined> {
     return memStorage.updateUserExercise(id, updates);
+  }
+  
+  // Shared phrase collections methods
+  async createSharedPhraseCollection(collection: InsertSharedPhraseCollection): Promise<SharedPhraseCollection> {
+    const [newCollection] = await db
+      .insert(sharedPhraseCollections)
+      .values(collection)
+      .returning();
+    return newCollection;
+  }
+  
+  async getSharedPhraseCollection(shareId: string): Promise<SharedPhraseCollection | undefined> {
+    const [collection] = await db
+      .select()
+      .from(sharedPhraseCollections)
+      .where(eq(sharedPhraseCollections.shareId, shareId));
+    return collection || undefined;
+  }
+  
+  // User saved phrases methods
+  async getUserSavedPhrases(userId: string): Promise<UserSavedPhrase[]> {
+    return db
+      .select()
+      .from(userSavedPhrases)
+      .where(eq(userSavedPhrases.userId, userId))
+      .orderBy(userSavedPhrases.createdAt);
+  }
+  
+  async createUserSavedPhrase(phrase: InsertUserSavedPhrase): Promise<UserSavedPhrase> {
+    const [newPhrase] = await db
+      .insert(userSavedPhrases)
+      .values(phrase)
+      .returning();
+    return newPhrase;
+  }
+  
+  async updateUserSavedPhrase(id: number, updates: Partial<UserSavedPhrase>): Promise<UserSavedPhrase | undefined> {
+    const [phrase] = await db
+      .update(userSavedPhrases)
+      .set(updates)
+      .where(eq(userSavedPhrases.id, id))
+      .returning();
+    return phrase;
+  }
+  
+  async deleteUserSavedPhrase(id: number): Promise<void> {
+    await db
+      .delete(userSavedPhrases)
+      .where(eq(userSavedPhrases.id, id));
   }
 }
 

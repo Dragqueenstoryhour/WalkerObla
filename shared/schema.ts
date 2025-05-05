@@ -182,3 +182,42 @@ export const insertUserExerciseSchema = createInsertSchema(userExercises).omit({
 
 export type InsertUserExercise = z.infer<typeof insertUserExerciseSchema>;
 export type UserExercise = typeof userExercises.$inferSelect;
+
+// Shared phrase collections for sharing exercises with others
+export const sharedPhraseCollections = pgTable("shared_phrase_collections", {
+  id: serial("id").primaryKey(),
+  shareId: text("share_id").notNull().unique(), // Unique identifier for sharing
+  userId: varchar("user_id"), // The user who created this collection (optional)
+  name: text("name"),
+  phrases: jsonb("phrases").notNull(), // Array of phrases with their properties
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertSharedPhraseCollectionSchema = createInsertSchema(sharedPhraseCollections).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSharedPhraseCollection = z.infer<typeof insertSharedPhraseCollectionSchema>;
+export type SharedPhraseCollection = typeof sharedPhraseCollections.$inferSelect;
+
+// User's saved phrases for "My Words" feature
+export const userSavedPhrases = pgTable("user_saved_phrases", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  phrase: text("phrase").notNull(),
+  phonetic: text("phonetic"),
+  difficulty: text("difficulty"),
+  assessmentResults: jsonb("assessment_results"), // Last assessment result
+  source: text("source"), // Where this phrase came from (e.g., "shared", "manual", "generated")
+  sourceId: text("source_id"), // Optional ID reference to source (e.g., shareId if from shared)
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertUserSavedPhraseSchema = createInsertSchema(userSavedPhrases).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertUserSavedPhrase = z.infer<typeof insertUserSavedPhraseSchema>;
+export type UserSavedPhrase = typeof userSavedPhrases.$inferSelect;
