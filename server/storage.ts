@@ -635,6 +635,10 @@ export class MemStorage implements IStorage {
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   }
   
+  async getUserSavedPhraseById(id: number): Promise<UserSavedPhrase | undefined> {
+    return this.userSavedPhrases.get(id);
+  }
+  
   async createUserSavedPhrase(phrase: InsertUserSavedPhrase): Promise<UserSavedPhrase> {
     const id = this.currentUserSavedPhraseId++;
     const savedPhrase: UserSavedPhrase = {
@@ -815,6 +819,14 @@ export class DatabaseStorage implements IStorage {
       .from(userSavedPhrases)
       .where(eq(userSavedPhrases.userId, userId))
       .orderBy(userSavedPhrases.createdAt);
+  }
+  
+  async getUserSavedPhraseById(id: number): Promise<UserSavedPhrase | undefined> {
+    const [phrase] = await db
+      .select()
+      .from(userSavedPhrases)
+      .where(eq(userSavedPhrases.id, id));
+    return phrase || undefined;
   }
   
   async createUserSavedPhrase(phrase: InsertUserSavedPhrase): Promise<UserSavedPhrase> {
