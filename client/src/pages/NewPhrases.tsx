@@ -15,7 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import useAudioRecording from '@/hooks/useAudioRecording';
 import { PronunciationAssessmentResult } from '@/lib/types';
-import { MicIcon, StopCircleIcon, VolumeIcon, RotateCw, Upload, CheckCircle, FileText, Image, AlertTriangle, BarChart2, Share2, Award, Users, Camera } from 'lucide-react';
+import { MicIcon, StopCircleIcon, VolumeIcon, RotateCw, Upload, CheckCircle, FileText, Image, AlertTriangle, BarChart2, Share2, Award, Users, Camera, Mic } from 'lucide-react';
 
 interface ProcessedPhrase {
   id: string;
@@ -1477,14 +1477,15 @@ I'd like to schedule an appointment."
                         {renderDifficultyBadge(phrase.difficulty)}
                         {phrase.status === 'complete' && (
                           <Button 
-                            variant="ghost" 
-                            size="icon" 
+                            variant="outline" 
+                            className="border-green-500 text-green-600 hover:bg-green-50 hover:text-green-700 flex items-center gap-1" 
                             onClick={(e) => {
                               e.stopPropagation();
                               handlePlayRecording(idx);
                             }}
                           >
                             <VolumeIcon className="h-4 w-4" />
+                            <span className="text-xs">Listen</span>
                           </Button>
                         )}
                       </div>

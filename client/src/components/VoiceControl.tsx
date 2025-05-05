@@ -11,7 +11,7 @@ const VoiceControl = () => {
   const { setCurrentContent } = useReading();
   const [status, setStatus] = useState<'listening' | 'processing' | 'idle'>('idle');
   const [voicePrompt, setVoicePrompt] = useState(
-    "\"Find me an article about gardening\" or \"I want to read about space exploration\""
+    "'I want to read about space exploration' or 'Generate an article on baseball'"
   );
   const [transcribedText, setTranscribedText] = useState<string>('');
   const [isPlaying, setIsPlaying] = useState(false);
@@ -137,7 +137,7 @@ const VoiceControl = () => {
   };
 
   return (
-    <Card className="mb-6">
+    <Card className="mb-6 border-green-500 bg-green-50">
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Voice Control</h2>
@@ -198,15 +198,7 @@ const VoiceControl = () => {
                   <p className="text-sm text-textColor opacity-70 mb-1">Try saying:</p>
                   <p className="font-medium">{voicePrompt}</p>
                 </div>
-                <div className="text-sm text-textColor opacity-70">
-                  <p className="font-medium mb-1">Voice commands:</p>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>Find me an article about [topic]</li>
-                    <li>I want to read about [topic]</li>
-                    <li>Show me an easy article on [topic]</li>
-                    <li>Help me practice reading</li>
-                  </ul>
-                </div>
+
               </div>
             )}
           </div>

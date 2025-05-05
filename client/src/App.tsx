@@ -20,10 +20,10 @@ function Navigation() {
   return (
     <div className="bg-primary/5 border-b py-2 px-4 mb-4">
       <div className="container flex gap-4">
-        <Link href="/" className="text-primary hover:underline">
+        <Link href="/game" className="text-primary hover:underline">
           SpeakUp
         </Link>
-        <Link href="/read" className="text-primary hover:underline">
+        <Link href="/" className="text-primary hover:underline">
           ReadAssist
         </Link>
         <Link href="/new-phrases" className="text-primary hover:underline">
@@ -45,8 +45,8 @@ function Router() {
     <>
       <Navigation />
       <Switch>
-        <Route path="/" component={() => <GameProvider initialUsername="player1"><RecordingTest /></GameProvider>} />
-        <Route path="/read" component={Read} />
+        <Route path="/" component={Read} />
+        <Route path="/game" component={() => <GameProvider initialUsername="player1"><RecordingTest /></GameProvider>} />
         <Route path="/subscription" component={Subscription} />
         <Route path="/checkout" component={Checkout} />
         <Route path="/subscription/success" component={SubscriptionSuccess} />
