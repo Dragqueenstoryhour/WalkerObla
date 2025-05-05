@@ -84,12 +84,15 @@ export class MemStorage implements IStorage {
   private gameLevels: Map<number, GameLevel>;
   private exercises: Map<number, Exercise>;
   private userExercises: Map<number, UserExercise>;
+  private sharedPhraseCollections: Map<string, SharedPhraseCollection>;
+  private userSavedPhrases: Map<number, UserSavedPhrase>;
   
   currentSessionId: number;
   currentProfileId: number;
   currentLevelId: number;
   currentExerciseId: number;
   currentUserExerciseId: number;
+  currentUserSavedPhraseId: number;
 
   constructor() {
     this.users = new Map();
@@ -98,12 +101,15 @@ export class MemStorage implements IStorage {
     this.gameLevels = new Map();
     this.exercises = new Map();
     this.userExercises = new Map();
+    this.sharedPhraseCollections = new Map();
+    this.userSavedPhrases = new Map();
     
     this.currentSessionId = 1;
     this.currentProfileId = 1;
     this.currentLevelId = 1;
     this.currentExerciseId = 1;
     this.currentUserExerciseId = 1;
+    this.currentUserSavedPhraseId = 1;
     
     // Set up initial levels and exercises
     this.initializeGameLevels();
@@ -603,6 +609,58 @@ export class MemStorage implements IStorage {
     };
     this.userExercises.set(id, updatedUserExercise);
     return updatedUserExercise;
+  }
+  
+  // Shared phrase collections methods
+  async createSharedPhraseCollection(collection: InsertSharedPhraseCollection): Promise<SharedPhraseCollection> {
+    const sharedCollection: SharedPhraseCollection = {
+      id: 1, // IDs are auto-generated in the database
+      ...collection,
+      createdAt: new Date()
+    };
+    
+    this.sharedPhraseCollections.set(collection.shareId, sharedCollection);
+    return sharedCollection;
+  }
+  
+  async getSharedPhraseCollection(shareId: string): Promise<SharedPhraseCollection | undefined> {
+    return this.sharedPhraseCollections.get(shareId);
+  }
+  
+  // User saved phrases methods
+  async getUserSavedPhrases(userId: string): Promise<UserSavedPhrase[]> {
+    return Array.from(this.userSavedPhrases.values())
+      .filter(phrase => phrase.userId === userId)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  }
+  
+  async createUserSavedPhrase(phrase: InsertUserSavedPhrase): Promise<UserSavedPhrase> {
+    const id = this.currentUserSavedPhraseId++;
+    const savedPhrase: UserSavedPhrase = {
+      id,
+      ...phrase,
+      createdAt: new Date()
+    };
+    
+    this.userSavedPhrases.set(id, savedPhrase);
+    return savedPhrase;
+  }
+  
+  async updateUserSavedPhrase(id: number, updates: Partial<UserSavedPhrase>): Promise<UserSavedPhrase | undefined> {
+    const phrase = this.userSavedPhrases.get(id);
+    if (!phrase) return undefined;
+    
+    const updatedPhrase = {
+      ...phrase,
+      ...updates
+    };
+    
+    this.userSavedPhrases.set(id, updatedPhrase);
+    return updatedPhrase;
+  }
+  
+  async deleteUserSavedPhrase(id: number): Promise<void> {
+    this.userSavedPhrases.delete(id);
   }
 }
 

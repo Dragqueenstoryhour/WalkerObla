@@ -1,4 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useParams } from 'wouter';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -27,6 +30,10 @@ interface ProcessedPhrase {
 
 export default function NewPhrases() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const params = useParams();
+  const shareId = params.shareId; // Get the shared link ID from URL
+  
   const [manualEntryText, setManualEntryText] = useState('');
   const [imageUploadText, setImageUploadText] = useState('');
   const [aiGenerateTopic, setAiGenerateTopic] = useState('');
@@ -36,6 +43,7 @@ export default function NewPhrases() {
   const [currentProgress, setCurrentProgress] = useState(0);
   const [historyData, setHistoryData] = useState<{date: string, score: number}[]>([]);
   const [shareableLink, setShareableLink] = useState('');
+  const [showSharedDialog, setShowSharedDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
