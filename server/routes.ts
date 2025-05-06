@@ -356,8 +356,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { text, voice } = schema.parse(req.body);
       const audioBuffer = await azureService.synthesizeSpeech(text, voice);
       
-      res.setHeader('Content-Type', 'audio/mp3');
-      res.send(audioBuffer);
+      // Set proper headers for audio streaming
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Content-Length', audioBuffer.length);
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'no-cache');
+      
+      // Stream the audio buffer
+      res.status(200).send(audioBuffer);
     } catch (error) {
       console.error('Error synthesizing speech:', error);
       res.status(500).json({ error: 'Failed to synthesize speech' });
