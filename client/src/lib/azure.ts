@@ -100,17 +100,19 @@ export async function synthesizeSpeech(text: string, voice = 'default'): Promise
     const contentLength = response.headers.get('Content-Length');
     console.log(`Received audio data: ${contentLength} bytes`);
 
-    // Create blob URL for audio playback
-    const blob = await response.blob();
+    // Get the audio data as an ArrayBuffer
+    const arrayBuffer = await response.arrayBuffer();
     
-    if (blob.size === 0) {
+    if (arrayBuffer.byteLength === 0) {
       throw new Error('Received empty audio data from server');
     }
     
+    // Create a blob with explicit MP3 type for better browser compatibility
+    const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
     console.log(`Created blob with size: ${blob.size} bytes and type: ${blob.type}`);
     
-    // Create a valid audio URL
-    const url = URL.createObjectURL(new Blob([blob], { type: 'audio/mp3' }));
+    // Create and return blob URL
+    const url = URL.createObjectURL(blob);
     return url;
   } catch (error) {
     console.error('Error synthesizing speech:', error);

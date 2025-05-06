@@ -22,12 +22,12 @@ export function SimpleRecorder({
   const [transcript, setTranscript] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [assessmentResults, setAssessmentResults] = useState<any>(null);
-  
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
-  
+
   const { toast } = useToast();
 
   // Handle timer for recording duration
@@ -42,7 +42,7 @@ export function SimpleRecorder({
         timerRef.current = null;
       }
     }
-    
+
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -59,25 +59,25 @@ export function SimpleRecorder({
       setRecordingTime(0);
       setAssessmentResults(null);
       chunksRef.current = [];
-      
+
       // Get microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-      
+
       // Create media recorder
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
-      
+
       // Set up event handlers
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           chunksRef.current.push(e.data);
         }
       };
-      
+
       mediaRecorder.onstop = async () => {
         console.log('Media recorder stopped');
-        
+
         // Clean up the stream properly
         if (streamRef.current) {
           const tracks = streamRef.current.getTracks();
@@ -87,16 +87,16 @@ export function SimpleRecorder({
           });
           streamRef.current = null;
         }
-        
+
         try {
           // Create the original audio blob for playback
           const originalBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
           console.log(`Created audio blob: ${originalBlob.size} bytes, type: ${originalBlob.type}`);
-          
+
           // Create URL for audio playback
           const url = URL.createObjectURL(originalBlob);
           setAudioUrl(url);
-          
+
           // Check if we need to convert the audio format for Azure compatibility
           // Azure works best with WAV format for pronunciation assessment
           try {
@@ -104,11 +104,11 @@ export function SimpleRecorder({
             const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
             const arrayBuffer = await originalBlob.arrayBuffer();
             const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-            
+
             // Convert to WAV format
             const wavBlob = await convertToWav(audioBuffer, audioContext);
             console.log(`Converted to WAV format: ${wavBlob.size} bytes`);
-            
+
             // Process the recording with the WAV format for better Azure compatibility
             await processRecording(wavBlob);
           } catch (conversionError) {
@@ -124,15 +124,15 @@ export function SimpleRecorder({
             variant: 'destructive'
           });
         }
-        
+
         setIsRecording(false);
       };
-      
+
       // Start recording
       console.log('Starting media recorder');
       mediaRecorder.start(100); // Collect data every 100ms
       setIsRecording(true);
-      
+
     } catch (error) {
       console.error('Error starting recording:', error);
       toast({
@@ -152,7 +152,7 @@ export function SimpleRecorder({
     } else {
       console.log('Media recorder was not active');
     }
-    
+
     // Make sure we clean up streams even if recorder fails
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
@@ -163,37 +163,37 @@ export function SimpleRecorder({
   // Process recording with Azure Speech
   const processRecording = async (audioBlob: Blob) => {
     setIsProcessing(true);
-    
+
     try {
       toast({
         title: 'Processing Recording',
         description: 'Analyzing your pronunciation...'
       });
-      
+
       console.log(`Processing recording with text: "${referenceText}"`);
-      
+
       // Send to Azure Speech for assessment
       const results = await submitReadingRecording(audioBlob, Date.now(), referenceText);
-      
+
       console.log('Received assessment results:', results);
-      
+
       if (!results) {
         throw new Error('No results received from speech assessment');
       }
-      
+
       // Update assessment results
       setAssessmentResults(results);
-      
+
       // Notify parent components
       if (onAssessmentReceived) {
         onAssessmentReceived(results);
       }
-      
+
       toast({
         title: 'Analysis Complete',
         description: `Pronunciation: ${results.pronunciationScore.toFixed(1)}%, Fluency: ${results.fluencyScore.toFixed(1)}%`
       });
-      
+
     } catch (error) {
       console.error('Error assessing pronunciation:', error);
       toast({
@@ -212,11 +212,11 @@ export function SimpleRecorder({
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
       }
-      
+
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
-      
+
       if (audioUrl) {
         URL.revokeObjectURL(audioUrl);
       }
@@ -230,26 +230,26 @@ export function SimpleRecorder({
     const sampleRate = audioBuffer.sampleRate;
     const bytesPerSample = 2; // 16-bit PCM
     const bitsPerSample = bytesPerSample * 8;
-    
+
     // Get PCM data from AudioBuffer
     const pcmData = audioBuffer.getChannelData(0); // Get mono channel for simplicity
-    
+
     // Calculate file size
     const blockAlign = numOfChannels * bytesPerSample;
     const byteRate = sampleRate * blockAlign;
     const dataSize = pcmData.length * bytesPerSample;
     const bufferSize = 44 + dataSize; // 44 bytes for WAV header
-    
+
     // Create buffer for WAV file
     const buffer = new ArrayBuffer(bufferSize);
     const view = new DataView(buffer);
-    
+
     // Write WAV header
     // "RIFF" chunk descriptor
     writeString(view, 0, 'RIFF');
     view.setUint32(4, 36 + dataSize, true); // File size - 8
     writeString(view, 8, 'WAVE');
-    
+
     // "fmt " sub-chunk
     writeString(view, 12, 'fmt ');
     view.setUint32(16, 16, true); // Sub-chunk size
@@ -259,11 +259,11 @@ export function SimpleRecorder({
     view.setUint32(28, byteRate, true);
     view.setUint16(32, blockAlign, true);
     view.setUint16(34, bitsPerSample, true);
-    
+
     // "data" sub-chunk
     writeString(view, 36, 'data');
     view.setUint32(40, dataSize, true);
-    
+
     // Write PCM data
     let offset = 44;
     for (let i = 0; i < pcmData.length; i++, offset += 2) {
@@ -271,18 +271,18 @@ export function SimpleRecorder({
       // Convert to 16-bit signed integer
       view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
     }
-    
+
     // Create Blob with proper MIME type
     return new Blob([buffer], { type: 'audio/wav' });
   };
-  
+
   // Helper function to write strings to DataView
   const writeString = (view: DataView, offset: number, string: string) => {
     for (let i = 0; i < string.length; i++) {
       view.setUint8(offset + i, string.charCodeAt(i));
     }
   };
-  
+
   // Format seconds to MM:SS
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -302,12 +302,12 @@ export function SimpleRecorder({
             </div>
           )}
         </div>
-        
+
         <div className="bg-muted/40 rounded-lg p-4 mb-4">
           <p className="font-medium mb-2">Text to read:</p>
           <p className="text-lg">{referenceText}</p>
         </div>
-        
+
         <div className="flex space-x-3 mb-4">
           {!isRecording ? (
             <Button 
@@ -328,13 +328,30 @@ export function SimpleRecorder({
               Stop Recording
             </Button>
           )}
-          
+
           {audioUrl && (
             <Button 
               variant="outline" 
-              onClick={() => {
-                const audio = new Audio(audioUrl);
-                audio.play();
+              onClick={async () => {
+                try {
+                  const audioPlayer = new Audio(audioUrl);
+                  audioPlayer.onerror = (e) => {
+                    console.error('Audio playback error:', e);
+                    toast({
+                      title: 'Playback Error',
+                      description: 'Could not play the recording.  Please try again.',
+                      variant: 'destructive'
+                    });
+                  };
+                  await audioPlayer.play();
+                } catch (error) {
+                  console.error('Error playing audio:', error);
+                  toast({
+                    title: 'Playback Error',
+                    description: 'Could not play the recording. Please try again.',
+                    variant: 'destructive'
+                  });
+                }
               }}
               disabled={isRecording || isProcessing}
             >
@@ -343,7 +360,7 @@ export function SimpleRecorder({
             </Button>
           )}
         </div>
-        
+
         {assessmentResults && (
           <div className="bg-primary/10 rounded-lg p-4">
             <h4 className="font-semibold mb-2">Speech Assessment Results:</h4>
@@ -365,7 +382,7 @@ export function SimpleRecorder({
                 <p className="text-lg font-medium">{assessmentResults.accuracyScore.toFixed(1)}%</p>
               </div>
             </div>
-            
+
             {assessmentResults.wordLevelResults && assessmentResults.wordLevelResults.length > 0 && (
               <div className="mt-3">
                 <p className="text-sm font-medium mb-2">Word-by-word analysis:</p>
@@ -389,7 +406,7 @@ export function SimpleRecorder({
             )}
           </div>
         )}
-        
+
         {isProcessing && (
           <div className="mt-4 flex justify-center items-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
