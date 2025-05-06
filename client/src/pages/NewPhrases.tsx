@@ -727,6 +727,11 @@ export default function NewPhrases() {
     }
 
     try {
+      toast({
+        title: 'Loading Audio',
+        description: 'Preparing text-to-speech...',
+      });
+
       // Call the TTS API
       const response = await fetch('/api/speech/synthesize', {
         method: 'POST',
@@ -742,23 +747,50 @@ export default function NewPhrases() {
       
       // Get audio blob from response
       const audioBlob = await response.blob();
+      
+      // Check if we received valid audio data
+      if (audioBlob.size === 0) {
+        throw new Error('Received empty audio data');
+      }
+      
+      console.log(`Received audio blob: ${audioBlob.size} bytes, type: ${audioBlob.type}`);
+      
       const audioUrl = URL.createObjectURL(audioBlob);
       
-      // Play the audio
-      if (audioRef.current) {
-        audioRef.current.src = audioUrl;
-        audioRef.current.oncanplaythrough = () => {
-          audioRef.current?.play()
-            .catch(error => {
-              console.error('Error playing TTS audio:', error);
-              toast({
-                title: 'Playback Error',
-                description: 'Could not play the audio. Please try again.',
-                variant: 'destructive'
-              });
-            });
-        };
+      // Create a new Audio element if the ref is not set
+      if (!audioRef.current) {
+        audioRef.current = new Audio();
       }
+      
+      // Play the audio
+      audioRef.current.src = audioUrl;
+      audioRef.current.onerror = (e) => {
+        console.error('Audio playback error:', e);
+        toast({
+          title: 'Playback Error',
+          description: 'Could not play the audio. Please try again.',
+          variant: 'destructive'
+        });
+      };
+      
+      // Play when ready
+      audioRef.current.oncanplaythrough = () => {
+        audioRef.current?.play()
+          .then(() => {
+            toast({
+              title: 'Playing',
+              description: `Playing: "${phrase.text.substring(0, 20)}${phrase.text.length > 20 ? '...' : ''}"`,
+            });
+          })
+          .catch(error => {
+            console.error('Error playing TTS audio:', error);
+            toast({
+              title: 'Playback Error',
+              description: 'Could not play the audio. Please try again.',
+              variant: 'destructive'
+            });
+          });
+      };
     } catch (error) {
       console.error('TTS Error:', error);
       toast({
@@ -1451,7 +1483,7 @@ I'd like to schedule an appointment."
                 <div>
                   <p className="text-sm font-medium mb-2">Example topics:</p>
                   <div className="flex flex-wrap gap-2">
-                    {['Golf', 'Kitchen', 'Hospital', 'Travel', 'Banking', 'Restaurant'].map(topic => (
+                    {['Golf', 'Kitchen', 'Therapy', 'Travel', 'Places in Florida', 'Restaurant'].map(topic => (
                       <Badge 
                         key={topic} 
                         className="cursor-pointer" 

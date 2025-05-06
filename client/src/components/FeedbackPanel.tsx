@@ -106,8 +106,22 @@ const FeedbackPanel = () => {
         description: "Preparing audio playback...",
       });
       
-      // Get the audio URL from the server
-      const audioUrl = await synthesizeSpeech(word);
+      // Fetch TTS audio directly from the API
+      const response = await fetch('/api/speech/synthesize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: word }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to synthesize speech');
+      }
+      
+      // Get audio blob from response
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
       
       // Create and play the audio element
       const audio = new Audio(audioUrl);
@@ -133,7 +147,7 @@ const FeedbackPanel = () => {
       console.error("Error playing pronunciation:", error);
       toast({
         title: "Error",
-        description: "Could not play pronunciation. The audio feature may not be supported in your browser.",
+        description: "Could not play pronunciation. Please try again later.",
         variant: "destructive",
       });
     }

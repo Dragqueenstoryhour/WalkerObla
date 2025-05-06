@@ -22,7 +22,7 @@ const Header = ({ onSettingsClick, onHelpClick }: HeaderProps) => {
             />
           </div>
           <h1 className="text-xl md:text-2xl font-bold ml-2 text-primary dark:text-primary">
-            Speak<span className="text-gray-600 dark:text-gray-400 font-normal">Gud</span>
+            Reading<span className="text-gray-600 dark:text-gray-400 font-normal"> Practice</span>
           </h1>
         </div>
         
