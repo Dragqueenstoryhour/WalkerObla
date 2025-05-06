@@ -584,15 +584,35 @@ export default function NewPhrases() {
     
     setIsProcessing(true);
     
-    // Format the phrases for sharing
-    const phrasesToShare = processedPhrases.map(phrase => ({
-      text: phrase.text,
-      phonetic: phrase.phonetic || null,
-      difficulty: phrase.difficulty || 'medium'
-    }));
+    // Show a toast to indicate we're generating a link
+    toast({
+      title: 'Generating Link',
+      description: 'Creating a shareable link for your phrases...',
+    });
+    
+    // Format the phrases for sharing (ensure they have text content)
+    const phrasesToShare = processedPhrases
+      .filter(phrase => phrase.text && phrase.text.trim()) // Filter out empty phrases
+      .map(phrase => ({
+        text: phrase.text,
+        phonetic: phrase.phonetic || null,
+        difficulty: phrase.difficulty || 'medium'
+      }));
+    
+    if (phrasesToShare.length === 0) {
+      setIsProcessing(false);
+      toast({
+        title: 'No Valid Phrases',
+        description: 'There are no valid phrases to share. Please ensure your phrases have text content.',
+        variant: 'destructive'
+      });
+      return;
+    }
     
     try {
-      // Create the shareable link using the new API endpoint
+      console.log('Sending phrases to share:', phrasesToShare);
+      
+      // Create the shareable link using the API endpoint
       const response = await fetch('/api/share', {
         method: 'POST',
         headers: {
@@ -601,36 +621,68 @@ export default function NewPhrases() {
         body: JSON.stringify({ phrases: phrasesToShare })
       });
       
+      const responseText = await response.text();
+      console.log('Share API response:', response.status, responseText);
+      
       if (!response.ok) {
-        throw new Error('Failed to generate shareable link');
+        throw new Error(`Failed to generate shareable link: ${response.status} ${response.statusText}`);
       }
       
-      const data = await response.json();
-      // Use the new shareableUrl returned by the API
+      // Parse the JSON response (we've already read it as text above)
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Error parsing JSON response:', parseError);
+        throw new Error('Invalid response from server');
+      }
+      
+      if (!data.shareableUrl) {
+        throw new Error('Server response did not include a shareableUrl');
+      }
+      
+      // Create the full shareable link with origin
       const fullShareableLink = `${window.location.origin}${data.shareableUrl}`;
       setShareableLink(fullShareableLink);
       
+      // Verify that the link works by testing the API endpoint
+      try {
+        // Extract shareId from the shareableUrl or use it directly from the response
+        const shareId = data.shareId || data.shareableUrl.split('shareId=')[1];
+        if (shareId) {
+          const verifyResponse = await fetch(`/api/share/${shareId}`);
+          console.log('Verification response:', verifyResponse.status);
+          
+          if (!verifyResponse.ok) {
+            console.warn('Shared link may not be accessible:', verifyResponse.status);
+          }
+        } else {
+          console.warn('Could not extract shareId for verification');
+        }
+      } catch (verifyError) {
+        console.warn('Could not verify link accessibility:', verifyError);
+      }
+      
       // Copy to clipboard
-      navigator.clipboard.writeText(fullShareableLink)
-        .then(() => {
-          toast({
-            title: 'Link Copied!',
-            description: 'Shareable link has been copied to your clipboard.',
-          });
-        })
-        .catch(err => {
-          console.error('Failed to copy:', err);
-          toast({
-            title: 'Link Generated',
-            description: 'Shareable link created successfully, but could not copy to clipboard automatically.',
-          });
+      try {
+        await navigator.clipboard.writeText(fullShareableLink);
+        toast({
+          title: 'Link Copied!',
+          description: 'Shareable link has been copied to your clipboard.',
         });
+      } catch (clipboardError) {
+        console.error('Failed to copy:', clipboardError);
+        toast({
+          title: 'Link Generated',
+          description: 'Shareable link created successfully, but could not copy to clipboard automatically.',
+        });
+      }
       
     } catch (error) {
       console.error('Error generating shareable link:', error);
       toast({
         title: 'Error',
-        description: 'Failed to generate shareable link. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to generate shareable link. Please try again.',
         variant: 'destructive'
       });
     } finally {
@@ -640,34 +692,42 @@ export default function NewPhrases() {
 
   // Save the current phrase to user's saved phrases
   const handleSavePhrase = async () => {
-    if (!user) {
-      toast({
-        title: 'Sign In Required',
-        description: 'Please sign in to save phrases to your collection.',
-        variant: 'default'
-      });
-      return;
-    }
-    
-    if (currentPhraseIndex < 0 || currentPhraseIndex >= processedPhrases.length) {
-      toast({
-        title: 'No Phrase Selected',
-        description: 'Please select a phrase to save.',
-        variant: 'destructive'
-      });
-      return;
-    }
-    
-    const phraseToSave = processedPhrases[currentPhraseIndex];
-    
+    // Check if the user is authenticated via the API
     try {
+      const userResponse = await fetch('/api/auth/user');
+      if (!userResponse.ok) {
+        toast({
+          title: 'Sign In Required',
+          description: 'Please sign in to save phrases to your collection.',
+          variant: 'default'
+        });
+        return;
+      }
+      
+      if (currentPhraseIndex < 0 || currentPhraseIndex >= processedPhrases.length) {
+        toast({
+          title: 'No Phrase Selected',
+          description: 'Please select a phrase to save.',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
+      const phraseToSave = processedPhrases[currentPhraseIndex];
+      
+      // Show a loading toast
+      const loadingToast = toast({
+        title: 'Saving Phrase',
+        description: 'Adding this phrase to your collection...',
+      });
+      
+      // Use the API to save the phrase (the server will use the user's session for userId)
       const response = await fetch('/api/phrases/save', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          userId: user.id,
           phrase: phraseToSave.text,
           phonetic: phraseToSave.phonetic || null,
           difficulty: phraseToSave.difficulty || null,
