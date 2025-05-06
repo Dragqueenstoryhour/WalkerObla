@@ -743,12 +743,15 @@ export default function NewPhrases() {
       return;
     }
 
-    try {
-      toast({
-        title: 'Loading Audio',
-        description: 'Preparing text-to-speech...',
-      });
+    // Show loading toast
+    const loadingToast = toast({
+      title: 'Loading Audio',
+      description: 'Preparing text-to-speech...',
+    });
 
+    try {
+      console.log(`Requesting speech synthesis for: "${phrase.text}"`);
+      
       // Call the TTS API
       const response = await fetch('/api/speech/synthesize', {
         method: 'POST',
@@ -759,7 +762,9 @@ export default function NewPhrases() {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to synthesize speech');
+        const errorText = await response.text();
+        console.error('Speech synthesis error response:', errorText);
+        throw new Error(`Failed to synthesize speech: ${response.status} ${response.statusText}`);
       }
       
       // Get audio blob from response
@@ -772,6 +777,7 @@ export default function NewPhrases() {
       
       console.log(`Received audio blob: ${audioBlob.size} bytes, type: ${audioBlob.type}`);
       
+      // Create an Object URL from the audio blob
       const audioUrl = URL.createObjectURL(audioBlob);
       
       // Create a new Audio element if the ref is not set
@@ -779,8 +785,7 @@ export default function NewPhrases() {
         audioRef.current = new Audio();
       }
       
-      // Play the audio
-      audioRef.current.src = audioUrl;
+      // Set up error handling first
       audioRef.current.onerror = (e) => {
         console.error('Audio playback error:', e);
         toast({
@@ -788,10 +793,16 @@ export default function NewPhrases() {
           description: 'Could not play the audio. Please try again.',
           variant: 'destructive'
         });
+        
+        // Clean up
+        URL.revokeObjectURL(audioUrl);
       };
       
       // Play when ready
       audioRef.current.oncanplaythrough = () => {
+        // Dismiss the loading toast
+        loadingToast.dismiss?.();
+        
         audioRef.current?.play()
           .then(() => {
             toast({
@@ -806,13 +817,29 @@ export default function NewPhrases() {
               description: 'Could not play the audio. Please try again.',
               variant: 'destructive'
             });
+            
+            // Clean up
+            URL.revokeObjectURL(audioUrl);
           });
+      };
+      
+      // Set source after adding event listeners
+      audioRef.current.src = audioUrl;
+      
+      // Add event listener for when playback ends to clean up resources
+      audioRef.current.onended = () => {
+        // Clean up the Object URL to avoid memory leaks
+        URL.revokeObjectURL(audioUrl);
       };
     } catch (error) {
       console.error('TTS Error:', error);
+      
+      // Dismiss the loading toast
+      loadingToast.dismiss?.();
+      
       toast({
         title: 'TTS Error',
-        description: 'Could not generate audio for this phrase.',
+        description: error instanceof Error ? error.message : 'Could not generate audio for this phrase.',
         variant: 'destructive'
       });
     }
