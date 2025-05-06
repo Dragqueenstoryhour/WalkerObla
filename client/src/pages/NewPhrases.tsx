@@ -42,6 +42,7 @@ export default function NewPhrases() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentProgress, setCurrentProgress] = useState(0);
   const [historyData, setHistoryData] = useState<{date: string, score: number}[]>([]);
+  const [savedPhraseId, setSavedPhraseId] = useState<string | null>(null);
   const [shareableLink, setShareableLink] = useState('');
   const [showSharedDialog, setShowSharedDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1667,17 +1668,32 @@ I'd like to schedule an appointment."
                       </div>
                       <div className="flex items-center gap-2">
                         {renderDifficultyBadge(phrase.difficulty)}
-                        <Button 
-                          variant="outline" 
-                          className="border-green-500 text-green-600 hover:bg-green-50 hover:text-green-700 flex items-center gap-1" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleTextToSpeech(idx);
-                          }}
-                        >
-                          <VolumeIcon className="h-4 w-4" />
-                          <span className="text-xs">Listen</span>
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="outline" 
+                            className="border-green-500 text-green-600 hover:bg-green-50 hover:text-green-700 flex items-center gap-1" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTextToSpeech(idx);
+                            }}
+                          >
+                            <VolumeIcon className="h-4 w-4" />
+                            <span className="text-xs">Listen</span>
+                          </Button>
+                          
+                          <Button 
+                            variant="outline" 
+                            className="border-amber-500 text-amber-600 hover:bg-amber-50 hover:text-amber-700 flex items-center gap-1" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCurrentPhraseIndex(idx);
+                              handleSavePhrase();
+                            }}
+                            title="Save to My Words"
+                          >
+                            <Star className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                     {phrase.status === 'complete' && phrase.assessmentResult && (
