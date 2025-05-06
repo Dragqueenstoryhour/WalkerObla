@@ -15,7 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import useAudioRecording from '@/hooks/useAudioRecording';
 import { PronunciationAssessmentResult } from '@/lib/types';
-import { MicIcon, StopCircleIcon, VolumeIcon, RotateCw, Upload, CheckCircle, FileText, Image, AlertTriangle, BarChart2, Share2, Award, Users, Camera, Mic } from 'lucide-react';
+import { MicIcon, StopCircleIcon, VolumeIcon, RotateCw, Upload, CheckCircle, FileText, Image, AlertTriangle, BarChart2, Share2, Award, Users, Camera, Mic, Star } from 'lucide-react';
 
 interface ProcessedPhrase {
   id: string;
@@ -742,10 +742,37 @@ export default function NewPhrases() {
         throw new Error('Failed to save phrase');
       }
       
+      // Get the response data to show the saved phrase ID
+      const data = await response.json();
+      
+      // Set the saved phrase ID to trigger the animation
+      setSavedPhraseId(phraseToSave.id);
+      
+      // Create a "Saved!" animation with setTimeout to clear the state after 2 seconds
+      setTimeout(() => {
+        setSavedPhraseId(null);
+      }, 2000);
+      
+      // Dismiss the loading toast
+      loadingToast.dismiss?.();
+      
       toast({
         title: 'Phrase Saved',
         description: 'This phrase has been saved to your collection.',
       });
+      
+      // Show confetti effect for successful save
+      try {
+        const confetti = (await import('canvas-confetti')).default;
+        confetti({
+          particleCount: 50,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#FFD700', '#FFA500'], // Gold and orange colors for the star theme
+        });
+      } catch (confettiError) {
+        console.error('Error loading confetti:', confettiError);
+      }
       
     } catch (error) {
       console.error('Error saving phrase:', error);
@@ -1683,15 +1710,26 @@ I'd like to schedule an appointment."
                           
                           <Button 
                             variant="outline" 
-                            className="border-amber-500 text-amber-600 hover:bg-amber-50 hover:text-amber-700 flex items-center gap-1" 
+                            className={`${savedPhraseId === phrase.id 
+                              ? 'border-green-500 bg-green-50 text-green-600' 
+                              : 'border-amber-500 text-amber-600 hover:bg-amber-50 hover:text-amber-700'
+                            } flex items-center gap-1 transition-all duration-300`}
                             onClick={(e) => {
                               e.stopPropagation();
                               setCurrentPhraseIndex(idx);
                               handleSavePhrase();
                             }}
                             title="Save to My Words"
+                            disabled={savedPhraseId === phrase.id}
                           >
-                            <Star className="h-4 w-4" />
+                            {savedPhraseId === phrase.id ? (
+                              <>
+                                <CheckCircle className="h-4 w-4 animate-pulse" />
+                                <span className="text-xs animate-pulse">Saved!</span>
+                              </>
+                            ) : (
+                              <Star className="h-4 w-4" />
+                            )}
                           </Button>
                         </div>
                       </div>
