@@ -22,7 +22,7 @@ interface ProcessedPhrase {
   text: string;
   phonetic?: string;
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
-  recordingUrl?: string;
+  recordingUrl?: string | null; // Allow null here to handle audio URLs
   recordingBlob?: Blob;
   assessmentResult?: PronunciationAssessmentResult;
   status: 'idle' | 'recording' | 'assessing' | 'complete';

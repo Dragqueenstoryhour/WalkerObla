@@ -1,7 +1,8 @@
 import { Settings, HelpCircle } from 'lucide-react';
 import { AuthButtons } from './AuthButtons';
 import { Button } from '@/components/ui/button';
-import speakgudLogo from '@/assets/speakgud-logo.jpg';
+// @ts-ignore 
+import speakgudLogo from '../assets/speakgud-logo.jpg';
 
 interface HeaderProps {
   onSettingsClick: () => void;
