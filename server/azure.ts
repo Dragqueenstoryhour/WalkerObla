@@ -688,10 +688,10 @@ export async function getWordPronunciation(word: string): Promise<string> {
  */
 export async function synthesizeSpeech(text: string, voice = "default"): Promise<Buffer> {
   try {
-    const ELEVEN_LABS_API_KEY = process.env.ELEVEN_LABS_API_KEY;
+    const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
     const VOICE_ID = "tnSpp4vdxKPjI9w0GnoV";
 
-    if (!ELEVEN_LABS_API_KEY) {
+    if (!ELEVENLABS_API_KEY) {
       console.warn("No Eleven Labs API key provided. Using fallback audio.");
       return Buffer.from([
         0xFF, 0xFB, 0x90, 0x44, 0x00, 0x00, 0x00, 0x00,
@@ -708,7 +708,7 @@ export async function synthesizeSpeech(text: string, voice = "default"): Promise
         headers: {
           'Accept': 'audio/mpeg',
           'Content-Type': 'application/json',
-          'xi-api-key': ELEVEN_LABS_API_KEY
+          'xi-api-key': ELEVENLABS_API_KEY
         },
         body: JSON.stringify({
           text,
