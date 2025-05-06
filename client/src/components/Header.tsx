@@ -1,6 +1,7 @@
-import { Settings, HelpCircle, Anchor } from 'lucide-react';
+import { Settings, HelpCircle } from 'lucide-react';
 import { AuthButtons } from './AuthButtons';
 import { Button } from '@/components/ui/button';
+import speakgudLogo from '@/assets/speakgud-logo.jpg';
 
 interface HeaderProps {
   onSettingsClick: () => void;
@@ -12,11 +13,15 @@ const Header = ({ onSettingsClick, onHelpClick }: HeaderProps) => {
     <header className="border-b border-secondary px-4 py-3 md:px-6 bg-gradient-to-r from-blue-50 to-teal-50 dark:from-blue-950/50 dark:to-teal-950/50 shadow-sm">
       <div className="container mx-auto flex justify-between items-center">
         <div className="flex items-center">
-          <div className="bg-primary/10 p-2 rounded-full">
-            <Anchor className="w-7 h-7 text-primary" />
+          <div className="h-10 w-10 md:h-12 md:w-12">
+            <img 
+              src={speakgudLogo} 
+              alt="SpeakGud Logo" 
+              className="h-full w-full object-contain" 
+            />
           </div>
           <h1 className="text-xl md:text-2xl font-bold ml-2 text-primary dark:text-primary">
-            Pirate <span className="text-gray-600 dark:text-gray-400 font-normal">Speech</span>
+            Speak<span className="text-gray-600 dark:text-gray-400 font-normal">Gud</span>
           </h1>
         </div>
         
