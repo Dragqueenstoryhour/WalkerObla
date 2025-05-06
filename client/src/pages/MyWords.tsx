@@ -49,18 +49,19 @@ export default function MyWords() {
   const [newPhrase, setNewPhrase] = useState('');
 
   // Fetch user saved phrases
-  const { data: savedPhrases = [], isLoading, error, refetch } = useQuery<SavedPhrase[]>({
+  const { data, isLoading, error, refetch } = useQuery<{savedPhrases: SavedPhrase[]}>({
     queryKey: ['/api/phrases/saved'],
     enabled: isAuthenticated,
   });
 
   // Ensure savedPhrases is always an array
+  const savedPhrases = data?.savedPhrases || [];
   const phrasesArray = Array.isArray(savedPhrases) ? savedPhrases : [];
   
   // Add phrase mutation
   const addPhraseMutation = useMutation({
     mutationFn: async (phrase: string) => {
-      return apiRequest('POST', '/api/phrases/saved', {
+      return apiRequest('POST', '/api/phrases/save', {
         phrase,
         difficulty: 'medium',
       });
