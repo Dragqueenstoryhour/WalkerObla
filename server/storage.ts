@@ -26,6 +26,7 @@ import {
   type InsertUserSavedPhrase
 } from "@shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
+import { type Json } from "drizzle-orm/pg-core";
 import { db } from "./db";
 
 // modify the interface with any CRUD methods
@@ -94,6 +95,7 @@ export class MemStorage implements IStorage {
   currentExerciseId: number;
   currentUserExerciseId: number;
   currentUserSavedPhraseId: number;
+  currentSharedCollectionId: number;
 
   constructor() {
     this.users = new Map();
@@ -111,6 +113,7 @@ export class MemStorage implements IStorage {
     this.currentExerciseId = 1;
     this.currentUserExerciseId = 1;
     this.currentUserSavedPhraseId = 1;
+    this.currentSharedCollectionId = 1;
     
     // Set up initial levels and exercises
     this.initializeGameLevels();
@@ -614,18 +617,47 @@ export class MemStorage implements IStorage {
   
   // Shared phrase collections methods
   async createSharedPhraseCollection(collection: InsertSharedPhraseCollection): Promise<SharedPhraseCollection> {
-    const sharedCollection: SharedPhraseCollection = {
-      id: 1, // IDs are auto-generated in the database
-      ...collection,
-      createdAt: new Date()
-    };
-    
-    this.sharedPhraseCollections.set(collection.shareId, sharedCollection);
-    return sharedCollection;
+    try {
+      // Insert into the database
+      const [sharedCollection] = await db
+        .insert(sharedPhraseCollections)
+        .values({
+          shareId: collection.shareId,
+          userId: collection.userId,
+          name: collection.name || null,
+          phrases: collection.phrases
+        })
+        .returning();
+      
+      return sharedCollection;
+    } catch (error) {
+      console.error('Error creating shared phrase collection:', error);
+      // Fallback to memory storage if database fails
+      const sharedCollection: SharedPhraseCollection = {
+        id: this.currentSharedCollectionId++, 
+        ...collection,
+        createdAt: new Date()
+      };
+      
+      this.sharedPhraseCollections.set(collection.shareId, sharedCollection);
+      return sharedCollection;
+    }
   }
   
   async getSharedPhraseCollection(shareId: string): Promise<SharedPhraseCollection | undefined> {
-    return this.sharedPhraseCollections.get(shareId);
+    try {
+      // Query from the database
+      const [collection] = await db
+        .select()
+        .from(sharedPhraseCollections)
+        .where(eq(sharedPhraseCollections.shareId, shareId));
+      
+      return collection;
+    } catch (error) {
+      console.error('Error fetching shared phrase collection:', error);
+      // Fallback to memory storage
+      return this.sharedPhraseCollections.get(shareId);
+    }
   }
   
   // User saved phrases methods

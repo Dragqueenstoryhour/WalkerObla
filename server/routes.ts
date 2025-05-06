@@ -454,7 +454,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Shared phrases endpoints
-  app.post('/api/share', async (req, res) => {
+  app.post('/api/share', async (req: any, res) => {
     try {
       // Validate the request body
       const schema = z.object({
@@ -470,11 +470,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate a UUID for sharing
       const shareId = `share-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       
+      // Get user ID if logged in
+      let userId = null;
+      if (req.isAuthenticated && req.isAuthenticated() && req.user && req.user.claims) {
+        userId = req.user.claims.sub;
+      }
+      
       // Create the shared collection
       const sharedCollection = await storage.createSharedPhraseCollection({
         shareId,
         phrases,
-        userId: req.user?.claims?.sub || null,
+        userId,
         name: `Shared phrases (${new Date().toLocaleDateString()})`
       });
       
