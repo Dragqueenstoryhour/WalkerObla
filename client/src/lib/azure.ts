@@ -92,7 +92,7 @@ export async function synthesizeSpeech(text: string, voice = 'default'): Promise
 
     // Check if we received audio data
     const contentType = response.headers.get('Content-Type');
-    if (!contentType || !contentType.includes('audio/')) {
+    if (!contentType || !(contentType.includes('audio/') || contentType.includes('audio/mpeg'))) {
       console.warn(`Expected audio content type but got: ${contentType}`);
     }
     

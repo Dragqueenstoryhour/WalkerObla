@@ -688,96 +688,47 @@ export async function getWordPronunciation(word: string): Promise<string> {
  */
 export async function synthesizeSpeech(text: string, voice = "default"): Promise<Buffer> {
   try {
-    // Configure speech service
-    const speechConfig = sdk.SpeechConfig.fromSubscription(speechKey, speechRegion);
+    const ELEVEN_LABS_API_KEY = process.env.ELEVEN_LABS_API_KEY;
+    const VOICE_ID = "tnSpp4vdxKPjI9w0GnoV";
 
-    // Set output format for better browser compatibility
-    speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3;
-
-    // Set speech synthesis voice
-    switch (voice) {
-      case "male":
-        speechConfig.speechSynthesisVoiceName = "en-US-GuyNeural";
-        break;
-      case "child":
-        speechConfig.speechSynthesisVoiceName = "en-US-AnaNeural";
-        break;
-      case "default":
-      default:
-        speechConfig.speechSynthesisVoiceName = "en-US-JennyNeural";
-        break;
-    }
-
-    // Create temporary output file
-    const tempFilePath = `/tmp/synthesized-${Date.now()}.mp3`;
-
-    // For testing or development purposes
-    if (speechKey === "dummy-key-for-development" || process.env.NODE_ENV === "development") {
-      console.log("Using fallback audio for speech synthesis");
-      // Return a small valid MP3 buffer to avoid playback errors
-      // This is a minimal MP3 header that will play as a short silence
+    if (!ELEVEN_LABS_API_KEY) {
+      console.warn("No Eleven Labs API key provided. Using fallback audio.");
       return Buffer.from([
         0xFF, 0xFB, 0x90, 0x44, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
       ]);
     }
 
-    // Set up audio config for file output
-    const audioConfig = sdk.AudioConfig.fromAudioFileOutput(tempFilePath);
+    console.log(`Synthesizing speech with Eleven Labs for text: "${text}"`);
 
-    // Create speech synthesizer
-    const synthesizer = new sdk.SpeechSynthesizer(speechConfig, audioConfig);
-
-    return new Promise((resolve, reject) => {
-      // Add logging for debugging
-      console.log(`Synthesizing speech for text: "${text}"`);
-
-      // Start synthesis with SSML to ensure proper pronunciation
-      const ssml = `
-        <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
-          <voice name="${speechConfig.speechSynthesisVoiceName}">
-            <prosody rate="medium" pitch="medium">
-              ${text}
-            </prosody>
-          </voice>
-        </speak>
-      `;
-
-      synthesizer.speakSsmlAsync(
-        ssml,
-        result => {
-          // Close synthesizer
-          synthesizer.close();
-
-          if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
-            console.log("Speech synthesis completed successfully");
-            // Read the audio file
-            try {
-              const audioData = fs.readFileSync(tempFilePath);
-              // Clean up
-              fs.unlinkSync(tempFilePath);
-              console.log(`Audio data size: ${audioData.length} bytes`);
-              resolve(audioData);
-            } catch (readError) {
-              console.error("Error reading speech output file:", readError);
-              reject(new Error("Failed to read speech output file"));
-            }
-          } else {
-            console.error(`Speech synthesis failed with reason: ${result.reason}`);
-            reject(new Error(`Speech synthesis failed: ${result.reason}`));
-          }
+    const response = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
+      {
+        method: 'POST',
+        headers: {
+          'Accept': 'audio/mpeg',
+          'Content-Type': 'application/json',
+          'xi-api-key': ELEVEN_LABS_API_KEY
         },
-        error => {
-          // Clean up on error
-          console.error("Speech synthesis error:", error);
-          synthesizer.close();
-          fs.existsSync(tempFilePath) && fs.unlinkSync(tempFilePath);
-          reject(error);
-        }
-      );
-    });
+        body: JSON.stringify({
+          text,
+          model_id: 'eleven_monolingual_v1',
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.75
+          }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Eleven Labs API error: ${response.status} ${response.statusText}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    return Buffer.from(arrayBuffer);
   } catch (error) {
-    console.error("Error synthesizing speech:", error);
-    throw new Error("Failed to synthesize speech");
+    console.error("Error synthesizing speech with Eleven Labs:", error);
+    throw error;
   }
 }
