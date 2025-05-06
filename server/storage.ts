@@ -618,16 +618,39 @@ export class MemStorage implements IStorage {
   // Shared phrase collections methods
   async createSharedPhraseCollection(collection: InsertSharedPhraseCollection): Promise<SharedPhraseCollection> {
     try {
+      console.log('Creating shared phrase collection with data:', {
+        shareId: collection.shareId,
+        userId: collection.userId ?? null,
+        name: collection.name ?? null,
+        phrasesCount: Array.isArray(collection.phrases) ? collection.phrases.length : 'not array'
+      });
+      
+      // Validate the data before insertion
+      if (!collection.shareId || !collection.phrases) {
+        throw new Error('Invalid shared collection data: missing required fields');
+      }
+      
+      // Ensure we have proper data structure
+      let phrases = collection.phrases;
+      
       // Insert into the database
       const [sharedCollection] = await db
         .insert(sharedPhraseCollections)
         .values({
           shareId: collection.shareId,
-          userId: collection.userId,
-          name: collection.name || null,
-          phrases: collection.phrases
+          userId: collection.userId ?? null,
+          name: collection.name ?? null,
+          phrases: phrases
         })
         .returning();
+      
+      console.log('Successfully created shared collection:', {
+        id: sharedCollection.id,
+        shareId: sharedCollection.shareId,
+        phrasesCount: Array.isArray(sharedCollection.phrases) ? 
+          (sharedCollection.phrases as any[]).length : 
+          'unknown format'
+      });
       
       return sharedCollection;
     } catch (error) {

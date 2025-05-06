@@ -633,17 +633,21 @@ export default function NewPhrases() {
       let data;
       try {
         data = JSON.parse(responseText);
+        console.log('Parsed share data:', data);
       } catch (parseError) {
         console.error('Error parsing JSON response:', parseError);
+        console.error('Raw response text:', responseText);
         throw new Error('Invalid response from server');
       }
       
       if (!data.shareableUrl) {
+        console.error('Missing shareableUrl in response:', data);
         throw new Error('Server response did not include a shareableUrl');
       }
       
       // Create the full shareable link with origin
       const fullShareableLink = `${window.location.origin}${data.shareableUrl}`;
+      console.log('Generated shareable link:', fullShareableLink);
       setShareableLink(fullShareableLink);
       
       // Verify that the link works by testing the API endpoint
@@ -761,18 +765,8 @@ export default function NewPhrases() {
         description: 'This phrase has been saved to your collection.',
       });
       
-      // Show confetti effect for successful save
-      try {
-        const confetti = (await import('canvas-confetti')).default;
-        confetti({
-          particleCount: 50,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#FFD700', '#FFA500'], // Gold and orange colors for the star theme
-        });
-      } catch (confettiError) {
-        console.error('Error loading confetti:', confettiError);
-      }
+      // Removed confetti effect as per user request
+      /* Confetti animation removed */
       
     } catch (error) {
       console.error('Error saving phrase:', error);

@@ -136,38 +136,71 @@ export default function MyWords() {
     if (!selectedPhrase) return;
     
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      // First ensure any previous recordings are properly cleaned up
+      if (recorder && recorder.state === 'recording') {
+        recorder.stop();
+      }
+      setRecording(false);
+      setRecorder(null);
+      
+      console.log('Requesting microphone access...');
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true
+        } 
+      });
+      
+      console.log('Microphone access granted, creating MediaRecorder...');
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus'
+      });
+      
       const chunks: BlobPart[] = [];
       
       mediaRecorder.ondataavailable = (e) => {
-        chunks.push(e.data);
+        console.log(`Data available: ${e.data.size} bytes`);
+        if (e.data.size > 0) {
+          chunks.push(e.data);
+        }
       };
       
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/wav' });
-        setAudioBlob(blob);
+        console.log('MediaRecorder stopped, processing audio...');
+        
         // Stop all tracks to release the microphone
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach(track => {
+          console.log(`Stopping track: ${track.kind}`);
+          track.stop();
+        });
+        
+        // Create the audio blob
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        console.log(`Audio blob created: ${blob.size} bytes`);
+        setAudioBlob(blob);
         
         // Assess pronunciation with the recorded audio
         if (selectedPhrase) {
           const formData = new FormData();
-          formData.append('audio', blob, 'recording.wav');
+          formData.append('audio', blob, 'recording.webm');
+          formData.append('text', selectedPhrase.phrase);
           formData.append('referenceText', selectedPhrase.phrase);
           
+          console.log('Sending recording for assessment with text:', selectedPhrase.phrase);
           fetch('/api/pronunciation/assess', {
             method: 'POST',
             body: formData,
           })
             .then(response => response.json())
             .then(result => {
+              console.log('Assessment results received:', result);
               toast({
                 title: 'Pronunciation Score',
                 description: `Your score: ${result.pronunciationScore.toFixed(1)}/100`,
               });
             })
             .catch(error => {
+              console.error('Assessment error:', error);
               toast({
                 title: 'Error',
                 description: 'Failed to assess pronunciation',
@@ -177,10 +210,28 @@ export default function MyWords() {
         }
       };
       
+      // Setup event handlers for recording state
+      mediaRecorder.onstart = () => {
+        console.log('MediaRecorder started');
+        setRecording(true);
+      };
+      
+      mediaRecorder.onerror = (event) => {
+        console.error('MediaRecorder error:', event);
+        toast({
+          title: 'Recording Error',
+          description: 'An error occurred during recording',
+          variant: 'destructive',
+        });
+      };
+      
       setRecorder(mediaRecorder);
-      mediaRecorder.start();
+      console.log('Starting MediaRecorder...');
+      mediaRecorder.start(100); // Collect data every 100ms
       setRecording(true);
+      
     } catch (error) {
+      console.error('Microphone access error:', error);
       toast({
         title: 'Microphone Error',
         description: 'Please allow microphone access to record',
