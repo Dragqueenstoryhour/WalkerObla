@@ -428,12 +428,13 @@ export default function NewPhrases() {
       }
       
       console.log('Processing recording with text:', processedPhrases[currentPhraseIndex].text);
+      console.log('Audio URL available:', !!audioUrl, 'Audio blob size:', audioBlob.size);
 
       // Update status to assessing
       setProcessedPhrases(phrases => 
         phrases.map((phrase, idx) => 
           idx === currentPhraseIndex 
-            ? { ...phrase, status: 'assessing', recordingBlob: audioBlob, recordingUrl: audioUrl || undefined } 
+            ? { ...phrase, status: 'assessing', recordingBlob: audioBlob, recordingUrl: audioUrl } 
             : phrase
         )
       );
@@ -678,7 +679,7 @@ export default function NewPhrases() {
     }
   };
   
-  // Play the recording for a phrase
+  // Play the recording for a phrase (user's voice recording)
   const handlePlayRecording = (phraseIndex: number) => {
     const phrase = processedPhrases[phraseIndex];
     if (phrase?.recordingUrl && audioRef.current) {
@@ -708,6 +709,61 @@ export default function NewPhrases() {
       toast({
         title: 'No Recording',
         description: 'No recording available for this phrase.',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // Play TTS for a phrase (computer speech)
+  const handleTextToSpeech = async (phraseIndex: number) => {
+    const phrase = processedPhrases[phraseIndex];
+    if (!phrase?.text) {
+      toast({
+        title: 'No Text',
+        description: 'No text available for this phrase.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      // Call the TTS API
+      const response = await fetch('/api/speech/synthesize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: phrase.text }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to synthesize speech');
+      }
+      
+      // Get audio blob from response
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      // Play the audio
+      if (audioRef.current) {
+        audioRef.current.src = audioUrl;
+        audioRef.current.oncanplaythrough = () => {
+          audioRef.current?.play()
+            .catch(error => {
+              console.error('Error playing TTS audio:', error);
+              toast({
+                title: 'Playback Error',
+                description: 'Could not play the audio. Please try again.',
+                variant: 'destructive'
+              });
+            });
+        };
+      }
+    } catch (error) {
+      console.error('TTS Error:', error);
+      toast({
+        title: 'TTS Error',
+        description: 'Could not generate audio for this phrase.',
         variant: 'destructive'
       });
     }
@@ -1475,19 +1531,17 @@ I'd like to schedule an appointment."
                       </div>
                       <div className="flex items-center gap-2">
                         {renderDifficultyBadge(phrase.difficulty)}
-                        {phrase.status === 'complete' && (
-                          <Button 
-                            variant="outline" 
-                            className="border-green-500 text-green-600 hover:bg-green-50 hover:text-green-700 flex items-center gap-1" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handlePlayRecording(idx);
-                            }}
-                          >
-                            <VolumeIcon className="h-4 w-4" />
-                            <span className="text-xs">Listen</span>
-                          </Button>
-                        )}
+                        <Button 
+                          variant="outline" 
+                          className="border-green-500 text-green-600 hover:bg-green-50 hover:text-green-700 flex items-center gap-1" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTextToSpeech(idx);
+                          }}
+                        >
+                          <VolumeIcon className="h-4 w-4" />
+                          <span className="text-xs">Listen</span>
+                        </Button>
                       </div>
                     </div>
                     {phrase.status === 'complete' && phrase.assessmentResult && (
@@ -1568,7 +1622,26 @@ I'd like to schedule an appointment."
                             Try Again
                           </Button>
                           <Button
-                            onClick={() => handlePlayRecording(currentPhraseIndex)}
+                            onClick={() => {
+                              if (audioUrl) {
+                                // Play from the latest recording
+                                if (audioRef.current) {
+                                  audioRef.current.src = audioUrl;
+                                  audioRef.current.play()
+                                    .catch(error => {
+                                      console.error('Error playing audio:', error);
+                                      toast({
+                                        title: 'Playback Error',
+                                        description: 'Could not play the recording.',
+                                        variant: 'destructive'
+                                      });
+                                    });
+                                }
+                              } else {
+                                // Fall back to the stored recording URL
+                                handlePlayRecording(currentPhraseIndex);
+                              }
+                            }}
                             variant="outline"
                             className="flex-1"
                           >
