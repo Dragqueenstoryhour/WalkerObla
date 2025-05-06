@@ -88,7 +88,8 @@ export default function NewPhrases() {
       setIsProcessing(true);
       
       try {
-        const response = await fetch(`/api/phrases/shared/${shareId}`);
+        // Use our new API endpoint
+        const response = await fetch(`/api/share/${shareId}`);
         
         if (!response.ok) {
           throw new Error('Failed to load shared phrases');
@@ -99,25 +100,44 @@ export default function NewPhrases() {
           throw new Error('Invalid shared phrases data');
         }
         
-        // Parse the phrases from the JSON data
-        const parsedPhrases = JSON.parse(data.collection.phrases);
-        if (!Array.isArray(parsedPhrases)) {
-          throw new Error('Invalid phrases format');
+        // Process the phrases from the database
+        let phrasesData;
+        try {
+          // Attempt to parse if it's a string, or use directly if already an object
+          phrasesData = typeof data.collection.phrases === 'string'
+            ? JSON.parse(data.collection.phrases)
+            : data.collection.phrases;
+            
+          if (!Array.isArray(phrasesData)) {
+            phrasesData = [phrasesData]; // Convert to array if it's a single object
+          }
+        } catch (parseError) {
+          console.error('Error parsing phrases data:', parseError);
+          throw new Error('Invalid shared phrases format');
         }
         
         // Format the phrases for use in the component
-        const newPhrases: ProcessedPhrase[] = parsedPhrases.map((phrase: any, index: number) => ({
+        const newPhrases: ProcessedPhrase[] = phrasesData.map((phrase: any, index: number) => ({
           id: `shared-${Date.now()}-${index}`,
-          text: phrase.text,
-          phonetic: phrase.phonetic,
-          difficulty: phrase.difficulty,
+          text: phrase.text || '',
+          phonetic: phrase.phonetic || undefined,
+          difficulty: phrase.difficulty || undefined,
           status: 'idle'
         }));
         
-        setProcessedPhrases(newPhrases);
-        setCurrentPhraseIndex(0); // Select first phrase
-        setShowSharedDialog(true); // Show the shared phrases notification
-        
+        if (newPhrases.length > 0) {
+          console.log('Loaded shared phrases:', newPhrases);
+          setProcessedPhrases(newPhrases);
+          setCurrentPhraseIndex(0); // Select first phrase
+          setShowSharedDialog(true); // Show the shared phrases notification
+          
+          toast({
+            title: 'Shared Phrases Loaded',
+            description: `Loaded ${newPhrases.length} shared phrases for practice.`,
+          });
+        } else {
+          throw new Error('No phrases found in this shared collection');
+        }
       } catch (error) {
         console.error('Error loading shared phrases:', error);
         toast({
@@ -567,22 +587,18 @@ export default function NewPhrases() {
     // Format the phrases for sharing
     const phrasesToShare = processedPhrases.map(phrase => ({
       text: phrase.text,
-      phonetic: phrase.phonetic || '',
-      difficulty: phrase.difficulty || 'intermediate'
+      phonetic: phrase.phonetic || null,
+      difficulty: phrase.difficulty || 'medium'
     }));
     
     try {
-      // Create the shareable link
-      const response = await fetch('/api/phrases/shared', {
+      // Create the shareable link using the new API endpoint
+      const response = await fetch('/api/share', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ 
-          phrases: JSON.stringify(phrasesToShare),
-          userId: user?.id || null,
-          name: 'Shared Phrases Collection'
-        })
+        body: JSON.stringify({ phrases: phrasesToShare })
       });
       
       if (!response.ok) {
@@ -590,7 +606,8 @@ export default function NewPhrases() {
       }
       
       const data = await response.json();
-      const fullShareableLink = `${window.location.origin}/new-phrases/${data.collection.shareId}`;
+      // Use the new shareableUrl returned by the API
+      const fullShareableLink = `${window.location.origin}${data.shareableUrl}`;
       setShareableLink(fullShareableLink);
       
       // Copy to clipboard

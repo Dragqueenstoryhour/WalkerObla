@@ -454,24 +454,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Shared phrases endpoints
-  app.post('/api/phrases/shared', async (req, res) => {
+  app.post('/api/share', async (req, res) => {
     try {
-      const data = insertSharedPhraseCollectionSchema.parse(req.body);
+      // Validate the request body
+      const schema = z.object({
+        phrases: z.array(z.object({
+          text: z.string(),
+          difficulty: z.string().optional(),
+          phonetic: z.string().optional()
+        }))
+      });
       
-      // Generate a unique share ID if not provided
-      if (!data.shareId) {
-        data.shareId = `share-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-      }
+      const { phrases } = schema.parse(req.body);
       
-      const collection = await storage.createSharedPhraseCollection(data);
-      res.json({ collection });
+      // Generate a UUID for sharing
+      const shareId = `share-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      
+      // Create the shared collection
+      const sharedCollection = await storage.createSharedPhraseCollection({
+        shareId,
+        phrases,
+        userId: req.user?.claims?.sub || null,
+        name: `Shared phrases (${new Date().toLocaleDateString()})`
+      });
+      
+      // Return a shareable URL
+      const shareableUrl = `/new-phrases?shareId=${shareId}`;
+      res.json({ shareableUrl, shareId });
     } catch (error) {
-      console.error('Error creating shared phrase collection:', error);
-      res.status(500).json({ error: 'Failed to create shared phrase collection' });
+      console.error('Error sharing phrases:', error);
+      res.status(500).json({ error: 'Failed to generate shareable link' });
     }
   });
   
-  app.get('/api/phrases/shared/:shareId', async (req, res) => {
+  app.get('/api/share/:shareId', async (req, res) => {
     try {
       const shareId = req.params.shareId;
       const collection = await storage.getSharedPhraseCollection(shareId);
