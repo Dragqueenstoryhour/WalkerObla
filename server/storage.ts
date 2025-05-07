@@ -1070,6 +1070,152 @@ export class DatabaseStorage implements IStorage {
       .delete(userSavedPhrases)
       .where(eq(userSavedPhrases.id, id));
   }
+  
+  // Practice groups methods
+  async getPracticeGroups(userId: string): Promise<PracticeGroup[]> {
+    return db
+      .select()
+      .from(practiceGroups)
+      .where(eq(practiceGroups.userId, userId))
+      .orderBy(practiceGroups.createdAt);
+  }
+  
+  async getPracticeGroupById(id: number): Promise<PracticeGroup | undefined> {
+    const [group] = await db
+      .select()
+      .from(practiceGroups)
+      .where(eq(practiceGroups.id, id));
+    return group || undefined;
+  }
+  
+  async createPracticeGroup(group: InsertPracticeGroup): Promise<PracticeGroup> {
+    const [newGroup] = await db
+      .insert(practiceGroups)
+      .values(group)
+      .returning();
+    return newGroup;
+  }
+  
+  async updatePracticeGroup(id: number, updates: Partial<PracticeGroup>): Promise<PracticeGroup | undefined> {
+    const [group] = await db
+      .update(practiceGroups)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(practiceGroups.id, id))
+      .returning();
+    return group;
+  }
+  
+  async deletePracticeGroup(id: number): Promise<void> {
+    // First delete all phrase associations
+    await db
+      .delete(practiceGroupPhrases)
+      .where(eq(practiceGroupPhrases.groupId, id));
+    
+    // Then delete the group
+    await db
+      .delete(practiceGroups)
+      .where(eq(practiceGroups.id, id));
+  }
+  
+  async sharePracticeGroup(id: number): Promise<PracticeGroup | undefined> {
+    const group = await this.getPracticeGroupById(id);
+    if (!group) return undefined;
+    
+    // Generate a unique share ID
+    const shareId = `group-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    
+    const [updatedGroup] = await db
+      .update(practiceGroups)
+      .set({
+        shareId,
+        isShared: true,
+        updatedAt: new Date()
+      })
+      .where(eq(practiceGroups.id, id))
+      .returning();
+    
+    return updatedGroup;
+  }
+  
+  async getPracticeGroupByShareId(shareId: string): Promise<PracticeGroup | undefined> {
+    const [group] = await db
+      .select()
+      .from(practiceGroups)
+      .where(eq(practiceGroups.shareId, shareId));
+    return group || undefined;
+  }
+  
+  // Practice group phrases methods
+  async addPhraseToPracticeGroup(groupId: number, phraseId: number): Promise<PracticeGroupPhrase> {
+    // First check if the phrase is already in the group
+    const existingLinks = await db
+      .select()
+      .from(practiceGroupPhrases)
+      .where(and(
+        eq(practiceGroupPhrases.groupId, groupId),
+        eq(practiceGroupPhrases.phraseId, phraseId)
+      ));
+    
+    if (existingLinks.length > 0) {
+      return existingLinks[0]; // Already exists
+    }
+    
+    // Update the group's updatedAt timestamp
+    await db
+      .update(practiceGroups)
+      .set({
+        updatedAt: new Date()
+      })
+      .where(eq(practiceGroups.id, groupId));
+    
+    // Add the phrase to the group
+    const [newLink] = await db
+      .insert(practiceGroupPhrases)
+      .values({
+        groupId,
+        phraseId
+      })
+      .returning();
+    
+    return newLink;
+  }
+  
+  async getPhrasesByGroupId(groupId: number): Promise<UserSavedPhrase[]> {
+    // Get all phrases that belong to this group through the link table
+    const result = await db
+      .select({
+        phrase: userSavedPhrases
+      })
+      .from(practiceGroupPhrases)
+      .innerJoin(
+        userSavedPhrases,
+        eq(practiceGroupPhrases.phraseId, userSavedPhrases.id)
+      )
+      .where(eq(practiceGroupPhrases.groupId, groupId));
+    
+    return result.map(r => r.phrase);
+  }
+  
+  async removePhraseFromGroup(groupId: number, phraseId: number): Promise<void> {
+    // Delete the link
+    await db
+      .delete(practiceGroupPhrases)
+      .where(and(
+        eq(practiceGroupPhrases.groupId, groupId),
+        eq(practiceGroupPhrases.phraseId, phraseId)
+      ));
+    
+    // Update the group's updatedAt timestamp
+    await db
+      .update(practiceGroups)
+      .set({
+        updatedAt: new Date()
+      })
+      .where(eq(practiceGroups.id, groupId));
+  }
 }
 
 // Keep the memory storage for non-authentication related features
