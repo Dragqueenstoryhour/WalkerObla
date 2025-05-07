@@ -32,9 +32,20 @@ export function useAudioRecording({
       
       // Get media stream with more detailed logging
       console.log('[Recording] Requesting user media with constraints:', audioConstraints);
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { ...audioConstraints },
-      });
+      // Define mobile-friendly audio constraints
+      const mobileConstraints = {
+        audio: {
+          ...audioConstraints,
+          // Add specific constraints for mobile devices to ensure compatibility
+          channelCount: 1, // mono
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 16000, // Match Azure's preferred sample rate
+        }
+      };
+      console.log('[Recording] Using mobile-friendly constraints:', mobileConstraints);
+      const stream = await navigator.mediaDevices.getUserMedia(mobileConstraints);
       
       // Log stream details
       console.log('[Recording] Media stream obtained with tracks:', stream.getTracks().length);
@@ -84,12 +95,22 @@ export function useAudioRecording({
         }
         
         try {
-          // Get the original audio format from chunks
-          const originalMimeType = mediaRecorderRef.current?.mimeType || 'audio/webm';
-          console.log(`[Recording] Original recording mime type: ${originalMimeType}`);
+          // Ensure we're using a format compatible with our server processing
+          // Safari/iOS often uses audio/mp4, which causes issues with our server processing
+          let mimeType = mediaRecorderRef.current?.mimeType || 'audio/webm';
+          console.log(`[Recording] Original recording mime type: ${mimeType}`);
           
-          // Create the audio blob with the original format to preserve quality
-          const audioBlob = new Blob(chunksRef.current, { type: originalMimeType });
+          // If we're on iOS/Safari (or any platform that doesn't support webm)
+          // Force the type to be wav-compatible for server processing
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+          const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+          if (isIOS || isSafari || !mimeType.includes('webm')) {
+            console.log('[Recording] Detected iOS/Safari or non-webm format, using audio/wav for compatibility');
+            mimeType = 'audio/wav';
+          }
+          
+          // Create the audio blob with the appropriate format
+          const audioBlob = new Blob(chunksRef.current, { type: mimeType });
           console.log(`[Recording] Created audio blob of size: ${audioBlob.size} bytes with type: ${audioBlob.type}`);
           
           if (audioBlob.size === 0) {
