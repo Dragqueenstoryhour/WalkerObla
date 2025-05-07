@@ -8,7 +8,7 @@ import * as realtimeService from "./realtime";
 import * as stripeService from "./stripe";
 import multer from 'multer';
 import { z } from "zod";
-import { insertReadingContentSchema, insertReadingSessionSchema, insertSharedPhraseCollectionSchema, insertUserSavedPhraseSchema } from "@shared/schema";
+import { insertReadingContentSchema, insertReadingSessionSchema, insertSharedPhraseCollectionSchema, insertUserSavedPhraseSchema, insertPracticeGroupSchema, insertPracticeGroupPhraseSchema } from "@shared/schema";
 import WebSocket from "ws";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import Stripe from "stripe";
@@ -564,6 +564,228 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting saved phrase:', error);
       res.status(500).json({ error: 'Failed to delete saved phrase' });
+    }
+  });
+  
+  // Practice groups endpoints
+  app.get('/api/practice-groups', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const groups = await storage.getPracticeGroups(userId);
+      res.json({ groups });
+    } catch (error) {
+      console.error('Error fetching practice groups:', error);
+      res.status(500).json({ error: 'Failed to fetch practice groups' });
+    }
+  });
+  
+  app.post('/api/practice-groups', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const data = insertPracticeGroupSchema.parse({
+        ...req.body,
+        userId // Ensure the userId from auth is used
+      });
+      
+      const group = await storage.createPracticeGroup(data);
+      res.json({ group });
+    } catch (error) {
+      console.error('Error creating practice group:', error);
+      res.status(500).json({ error: 'Failed to create practice group' });
+    }
+  });
+  
+  app.get('/api/practice-groups/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const groupId = parseInt(req.params.id, 10);
+      
+      const group = await storage.getPracticeGroupById(groupId);
+      
+      if (!group) {
+        return res.status(404).json({ error: 'Practice group not found' });
+      }
+      
+      // Check if this group belongs to the user (unless it's shared)
+      if (!group.isShared && group.userId !== userId) {
+        return res.status(403).json({ error: 'Not authorized to access this group' });
+      }
+      
+      // Get phrases in this group
+      const phrases = await storage.getPhrasesByGroupId(groupId);
+      
+      res.json({ group, phrases });
+    } catch (error) {
+      console.error('Error fetching practice group:', error);
+      res.status(500).json({ error: 'Failed to fetch practice group' });
+    }
+  });
+  
+  app.patch('/api/practice-groups/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const groupId = parseInt(req.params.id, 10);
+      
+      const group = await storage.getPracticeGroupById(groupId);
+      
+      if (!group) {
+        return res.status(404).json({ error: 'Practice group not found' });
+      }
+      
+      if (group.userId !== userId) {
+        return res.status(403).json({ error: 'Not authorized to update this group' });
+      }
+      
+      const updatedGroup = await storage.updatePracticeGroup(groupId, req.body);
+      res.json({ group: updatedGroup });
+    } catch (error) {
+      console.error('Error updating practice group:', error);
+      res.status(500).json({ error: 'Failed to update practice group' });
+    }
+  });
+  
+  app.delete('/api/practice-groups/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const groupId = parseInt(req.params.id, 10);
+      
+      const group = await storage.getPracticeGroupById(groupId);
+      
+      if (!group) {
+        return res.status(404).json({ error: 'Practice group not found' });
+      }
+      
+      if (group.userId !== userId) {
+        return res.status(403).json({ error: 'Not authorized to delete this group' });
+      }
+      
+      await storage.deletePracticeGroup(groupId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting practice group:', error);
+      res.status(500).json({ error: 'Failed to delete practice group' });
+    }
+  });
+  
+  app.post('/api/practice-groups/:id/share', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const groupId = parseInt(req.params.id, 10);
+      
+      const group = await storage.getPracticeGroupById(groupId);
+      
+      if (!group) {
+        return res.status(404).json({ error: 'Practice group not found' });
+      }
+      
+      if (group.userId !== userId) {
+        return res.status(403).json({ error: 'Not authorized to share this group' });
+      }
+      
+      const updatedGroup = await storage.sharePracticeGroup(groupId);
+      
+      if (!updatedGroup || !updatedGroup.shareId) {
+        return res.status(500).json({ error: 'Failed to generate share ID' });
+      }
+      
+      // Return shareable info
+      const shareableUrl = `/practice-groups/shared/${updatedGroup.shareId}`;
+      res.json({ 
+        group: updatedGroup,
+        shareableUrl,
+        shareId: updatedGroup.shareId
+      });
+    } catch (error) {
+      console.error('Error sharing practice group:', error);
+      res.status(500).json({ error: 'Failed to share practice group' });
+    }
+  });
+  
+  app.get('/api/practice-groups/shared/:shareId', async (req, res) => {
+    try {
+      const { shareId } = req.params;
+      
+      const group = await storage.getPracticeGroupByShareId(shareId);
+      
+      if (!group) {
+        return res.status(404).json({ error: 'Shared practice group not found' });
+      }
+      
+      // Get phrases in this group
+      const phrases = await storage.getPhrasesByGroupId(group.id);
+      
+      res.json({ group, phrases });
+    } catch (error) {
+      console.error('Error fetching shared practice group:', error);
+      res.status(500).json({ error: 'Failed to fetch shared practice group' });
+    }
+  });
+  
+  // Practice group phrases endpoints
+  app.post('/api/practice-groups/:groupId/phrases', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const groupId = parseInt(req.params.groupId, 10);
+      
+      // Validate ownership of the group
+      const group = await storage.getPracticeGroupById(groupId);
+      
+      if (!group) {
+        return res.status(404).json({ error: 'Practice group not found' });
+      }
+      
+      if (group.userId !== userId) {
+        return res.status(403).json({ error: 'Not authorized to modify this group' });
+      }
+      
+      // Extract phrase ID and validate that the phrase exists and belongs to user
+      const schema = z.object({
+        phraseId: z.number()
+      });
+      
+      const { phraseId } = schema.parse(req.body);
+      const phrase = await storage.getUserSavedPhraseById(phraseId);
+      
+      if (!phrase) {
+        return res.status(404).json({ error: 'Phrase not found' });
+      }
+      
+      if (phrase.userId !== userId) {
+        return res.status(403).json({ error: 'Not authorized to use this phrase' });
+      }
+      
+      // Add the phrase to the group
+      const groupPhrase = await storage.addPhraseToPracticeGroup(groupId, phraseId);
+      res.json({ groupPhrase });
+    } catch (error) {
+      console.error('Error adding phrase to practice group:', error);
+      res.status(500).json({ error: 'Failed to add phrase to practice group' });
+    }
+  });
+  
+  app.delete('/api/practice-groups/:groupId/phrases/:phraseId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const groupId = parseInt(req.params.groupId, 10);
+      const phraseId = parseInt(req.params.phraseId, 10);
+      
+      // Validate ownership of the group
+      const group = await storage.getPracticeGroupById(groupId);
+      
+      if (!group) {
+        return res.status(404).json({ error: 'Practice group not found' });
+      }
+      
+      if (group.userId !== userId) {
+        return res.status(403).json({ error: 'Not authorized to modify this group' });
+      }
+      
+      // Remove the phrase from the group
+      await storage.removePhraseFromGroup(groupId, phraseId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error removing phrase from practice group:', error);
+      res.status(500).json({ error: 'Failed to remove phrase from practice group' });
     }
   });
   
