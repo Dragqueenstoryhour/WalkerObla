@@ -712,10 +712,13 @@ export async function synthesizeSpeech(text: string, voice = "default"): Promise
         },
         body: JSON.stringify({
           text,
-          model_id: 'eleven_monolingual_v1',
+          model_id: 'tnSpp4vdxKPjI9w0GnoV',
           voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75
+            stability: 0.7,
+            similarity_boost: 0.85,
+            style: 0.5,
+            use_speaker_boost: true,
+            speaking_rate: 0.9
           }
         })
       }

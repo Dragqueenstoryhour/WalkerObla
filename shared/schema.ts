@@ -221,3 +221,42 @@ export const insertUserSavedPhraseSchema = createInsertSchema(userSavedPhrases).
 
 export type InsertUserSavedPhrase = z.infer<typeof insertUserSavedPhraseSchema>;
 export type UserSavedPhrase = typeof userSavedPhrases.$inferSelect;
+
+// Practice Groups for organizing phrases
+export const practiceGroups = pgTable("practice_groups", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  shareId: text("share_id").unique(), // Optional unique identifier for sharing
+  isShared: boolean("is_shared").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertPracticeGroupSchema = createInsertSchema(practiceGroups).omit({
+  id: true,
+  shareId: true,
+  isShared: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPracticeGroup = z.infer<typeof insertPracticeGroupSchema>;
+export type PracticeGroup = typeof practiceGroups.$inferSelect;
+
+// Practice Group Phrases - linking phrases to groups
+export const practiceGroupPhrases = pgTable("practice_group_phrases", {
+  id: serial("id").primaryKey(),
+  groupId: integer("group_id").notNull(),
+  phraseId: integer("phrase_id").notNull(),
+  addedAt: timestamp("added_at").notNull().defaultNow(),
+});
+
+export const insertPracticeGroupPhraseSchema = createInsertSchema(practiceGroupPhrases).omit({
+  id: true,
+  addedAt: true,
+});
+
+export type InsertPracticeGroupPhrase = z.infer<typeof insertPracticeGroupPhraseSchema>;
+export type PracticeGroupPhrase = typeof practiceGroupPhrases.$inferSelect;
