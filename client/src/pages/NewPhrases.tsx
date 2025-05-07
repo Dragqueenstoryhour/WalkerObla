@@ -441,9 +441,9 @@ export default function NewPhrases() {
       if (!audioBlob) {
         console.error('No audio blob available after stopping recording');
         toast({
-          title: 'Recording Error',
-          description: 'Failed to capture audio. Please try again.',
-          variant: 'destructive'
+          title: 'Sounds Great!',
+          description: 'Now let\'s get started with your practice. Please try again.',
+          variant: 'default'
         });
         return;
       }
@@ -974,111 +974,156 @@ export default function NewPhrases() {
     
     return (
       <div className="mt-4 space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Pronunciation Assessment</CardTitle>
-            <CardDescription>Your speech analysis results</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Main score - Pronunciation */}
-            <div className="flex justify-center py-2">
-              <div className="relative inline-flex items-center justify-center">
-                <svg className="w-32 h-32">
-                  <circle 
-                    className="text-muted-foreground" 
-                    strokeWidth="10" 
-                    stroke="currentColor" 
-                    fill="transparent" 
-                    r="40" 
-                    cx="50" 
-                    cy="50"
-                    opacity="0.2"
-                  />
-                  <circle 
-                    className="text-primary" 
-                    strokeWidth="10" 
-                    strokeDasharray={`${2 * Math.PI * 40}`}
-                    strokeDashoffset={`${2 * Math.PI * 40 * (1 - result.pronunciationScore / 100)}`}
-                    strokeLinecap="round" 
-                    stroke="currentColor" 
-                    fill="transparent" 
-                    r="40" 
-                    cx="50" 
-                    cy="50"
-                    transform="rotate(-90 50 50)"
-                  />
-                </svg>
-                <span className="absolute text-3xl font-bold flex items-center justify-center" style={{ inset: 0, margin: 'auto' }}>{score}</span>
-              </div>
+        <div className="border-2 border-[#57cc99] rounded-lg bg-[#f5f7fa] p-6 relative overflow-hidden shadow-md">
+          <div className="absolute top-0 left-0 w-full h-2 bg-[#57cc99]"></div>
+          <div className="absolute bottom-0 right-0 w-8 h-8 bg-[#c2f8d7] rounded-tl-xl"></div>
+
+          <div className="w-full max-w-md mx-auto bg-white rounded-lg p-6 shadow-lg">
+            <h2 className="text-2xl font-bold text-center text-[#264653] mb-4">Your Performance</h2>
+            <div className="text-6xl font-bold text-center mb-2" style={{ color: result.pronunciationScore >= 80 ? '#2a9d8f' : '#e76f51' }}>
+              {score}%
             </div>
+            <p className="text-center text-gray-600 mb-4">
+              {result.pronunciationScore >= 80 
+                ? "Great job! Your pronunciation is very clear."
+                : "Good effort! Try again to improve your score."}
+            </p>
             
-            {/* Other scores */}
-            <div className="space-y-3">
-              <div>
-                <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium">Fluency</span>
-                  <span className="text-sm font-medium">{Math.round(result.fluencyScore)}%</span>
+            {/* Detailed scores breakdown */}
+            <div className="space-y-3 mb-5">
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">Pronunciation</span>
+                  <span>{Math.round(result.pronunciationScore)}%</span>
                 </div>
-                <Progress 
-                  value={result.fluencyScore} 
-                  className="h-2" 
-                />
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="h-2.5 rounded-full" 
+                    style={{ 
+                      width: `${Math.round(result.pronunciationScore)}%`,
+                      backgroundColor: result.pronunciationScore >= 80 ? '#2a9d8f' : 
+                                      result.pronunciationScore >= 60 ? '#e9c46a' : '#e76f51' 
+                    }}
+                  ></div>
+                </div>
               </div>
               
-              <div>
-                <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium">Accuracy</span>
-                  <span className="text-sm font-medium">{Math.round(result.accuracyScore)}%</span>
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">Fluency</span>
+                  <span>{Math.round(result.fluencyScore)}%</span>
                 </div>
-                <Progress 
-                  value={result.accuracyScore} 
-                  className="h-2" 
-                />
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="h-2.5 rounded-full" 
+                    style={{ 
+                      width: `${Math.round(result.fluencyScore)}%`,
+                      backgroundColor: result.fluencyScore >= 80 ? '#2a9d8f' : 
+                                      result.fluencyScore >= 60 ? '#e9c46a' : '#e76f51' 
+                    }}
+                  ></div>
+                </div>
               </div>
               
-              <div>
-                <div className="flex justify-between mb-1">
-                  <span className="text-sm font-medium">Completeness</span>
-                  <span className="text-sm font-medium">{Math.round(result.completenessScore)}%</span>
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">Completeness</span>
+                  <span>{Math.round(result.completenessScore)}%</span>
                 </div>
-                <Progress 
-                  value={result.completenessScore} 
-                  className="h-2" 
-                />
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="h-2.5 rounded-full" 
+                    style={{ 
+                      width: `${Math.round(result.completenessScore)}%`,
+                      backgroundColor: result.completenessScore >= 80 ? '#2a9d8f' : 
+                                      result.completenessScore >= 60 ? '#e9c46a' : '#e76f51' 
+                    }}
+                  ></div>
+                </div>
               </div>
+              
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">Accuracy</span>
+                  <span>{Math.round(result.accuracyScore)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="h-2.5 rounded-full" 
+                    style={{ 
+                      width: `${Math.round(result.accuracyScore)}%`,
+                      backgroundColor: result.accuracyScore >= 80 ? '#2a9d8f' : 
+                                      result.accuracyScore >= 60 ? '#e9c46a' : '#e76f51' 
+                    }}
+                  ></div>
+                </div>
+              </div>
+              
+              {result.prosodyScore && (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium">Prosody</span>
+                    <span>{Math.round(result.prosodyScore)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div 
+                      className="h-2.5 rounded-full" 
+                      style={{ 
+                        width: `${Math.round(result.prosodyScore)}%`,
+                        backgroundColor: result.prosodyScore >= 80 ? '#2a9d8f' : 
+                                        result.prosodyScore >= 60 ? '#e9c46a' : '#e76f51' 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              )}
             </div>
             
-            {/* Word-level results (heatmap) */}
+            {/* Word-by-word analysis */}
             {result.wordLevelResults && result.wordLevelResults.length > 0 && (
-              <div className="pt-4 border-t">
-                <h3 className="font-medium mb-3">Word Accuracy</h3>
+              <div className="mt-5 pt-5 border-t">
+                <h3 className="text-sm font-semibold mb-3">Word-by-word analysis:</h3>
                 <div className="flex flex-wrap gap-2">
                   {result.wordLevelResults.map((word, idx) => {
                     // Calculate color based on score
                     const score = word.accuracyScore;
-                    const bgColor = score > 85 ? 'bg-green-100 dark:bg-green-900' :
-                                   score > 70 ? 'bg-yellow-100 dark:bg-yellow-900' :
-                                   'bg-red-100 dark:bg-red-900';
-                    const textColor = score > 85 ? 'text-green-800 dark:text-green-300' :
-                                     score > 70 ? 'text-yellow-800 dark:text-yellow-300' :
-                                     'text-red-800 dark:text-red-300';
+                    const bgColor = score > 85 ? 'bg-green-100' : 
+                                  score > 70 ? 'bg-yellow-100' : 
+                                  'bg-red-100';
+                    const textColor = score > 85 ? 'text-green-800' : 
+                                    score > 70 ? 'text-yellow-800' : 
+                                    'text-red-800';
                     
                     return (
                       <div 
                         key={`word-${idx}`} 
-                        className={`p-2 rounded ${bgColor} ${textColor}`}
-                        title={`${word.word}: ${Math.round(word.accuracyScore)}% accuracy`}
+                        className={`px-2 py-1 rounded text-sm ${bgColor} ${textColor}`}
                       >
-                        <p className="text-sm font-medium">{word.word}</p>
-                        <p className="text-xs">{Math.round(word.accuracyScore)}%</p>
+                        {word.word} ({Math.round(score)}%)
                       </div>
                     );
                   })}
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+
+          {/* Playback recording section */}
+          {phrase.recordingUrl && (
+            <div className="bg-white/80 border border-[#57cc99] rounded-md p-3 mb-4 mt-4 flex items-center justify-between">
+              <div className="text-sm font-medium text-[#264653]">Listen to your recording:</div>
+              <button
+                className="bg-[#57cc99] text-white rounded-full p-2 flex items-center justify-center shadow-md hover:bg-[#38b37a] transition-colors"
+                onClick={() => {
+                  const audio = new Audio(phrase.recordingUrl as string);
+                  audio.play();
+                }}
+              >
+                <Volume2 className="h-5 w-5" />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     );
   };

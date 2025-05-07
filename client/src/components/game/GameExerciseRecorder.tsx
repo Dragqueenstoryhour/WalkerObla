@@ -302,7 +302,7 @@ export function GameExerciseRecorder({
                 <div className="absolute top-0 left-0 w-full h-2 bg-[#57cc99]"></div>
                 <div className="absolute bottom-0 right-0 w-8 h-8 bg-[#c2f8d7] rounded-tl-xl"></div>
 
-                <motion.div className="w-full max-w-md mx-auto bg-white rounded-lg p-6 shadow-lg">
+                <div className="w-full max-w-md mx-auto bg-white rounded-lg p-6 shadow-lg">
                   <h2 className="text-2xl font-bold text-center text-[#264653] mb-4">Your Performance</h2>
                   <div className="text-6xl font-bold text-center mb-2" style={{ color: assessmentResults.pronunciationScore >= 80 ? '#2a9d8f' : '#e76f51' }}>
                     {Math.round(assessmentResults.pronunciationScore)}%
@@ -403,26 +403,49 @@ export function GameExerciseRecorder({
                     )}
                   </div>
                   
+                  {/* Word-by-word analysis */}
+                  {assessmentResults.wordLevelResults && assessmentResults.wordLevelResults.length > 0 && (
+                    <div className="mt-5 pt-5 border-t">
+                      <h3 className="text-sm font-semibold mb-3">Word-by-word analysis:</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {assessmentResults.wordLevelResults.map((word, idx) => {
+                          // Calculate color based on score
+                          const score = word.accuracyScore;
+                          const bgColor = score > 85 ? 'bg-green-100' : 
+                                        score > 70 ? 'bg-yellow-100' : 
+                                        'bg-red-100';
+                          const textColor = score > 85 ? 'text-green-800' : 
+                                          score > 70 ? 'text-yellow-800' : 
+                                          'text-red-800';
+                          
+                          return (
+                            <div 
+                              key={`word-${idx}`} 
+                              className={`px-2 py-1 rounded text-sm ${bgColor} ${textColor}`}
+                            >
+                              {word.word} ({Math.round(score)}%)
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  
                   {assessmentResults.pronunciationScore < 80 && (
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="w-full py-2 bg-[#2a9d8f] text-white rounded-lg font-medium"
+                    <button
+                      className="w-full py-2 bg-[#2a9d8f] text-white rounded-lg font-medium mt-4"
                       onClick={handleRetry}
                     >
                       Try Again
-                    </motion.button>
+                    </button>
                   )}
-                </motion.div>
-
+                </div>
 
                 {/* Playback your recording section */}
                 {audioUrl && (
-                  <div className="bg-white/80 border border-[#57cc99] rounded-md p-3 mb-4 flex items-center justify-between">
+                  <div className="bg-white/80 border border-[#57cc99] rounded-md p-3 mb-4 mt-4 flex items-center justify-between">
                     <div className="text-sm font-medium text-[#264653]">Listen to your recording:</div>
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
+                    <button
                       className="bg-[#57cc99] text-white rounded-full p-2 flex items-center justify-center shadow-md hover:bg-[#38b37a] transition-colors"
                       onClick={() => {
                         const audio = new Audio(audioUrl);
@@ -430,11 +453,9 @@ export function GameExerciseRecorder({
                       }}
                     >
                       <Volume2 className="h-5 w-5" />
-                    </motion.button>
+                    </button>
                   </div>
                 )}
-
-
               </div>
             )}
           </CardContent>
