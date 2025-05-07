@@ -7,6 +7,8 @@ import {
   userExercises,
   sharedPhraseCollections,
   userSavedPhrases,
+  practiceGroups,
+  practiceGroupPhrases,
   type User, 
   type InsertUser, 
   type UpsertUser,
@@ -23,7 +25,11 @@ import {
   type SharedPhraseCollection,
   type InsertSharedPhraseCollection,
   type UserSavedPhrase,
-  type InsertUserSavedPhrase
+  type InsertUserSavedPhrase,
+  type PracticeGroup,
+  type InsertPracticeGroup,
+  type PracticeGroupPhrase,
+  type InsertPracticeGroupPhrase
 } from "@shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { type Json } from "drizzle-orm/pg-core";
@@ -77,6 +83,20 @@ export interface IStorage {
   createUserSavedPhrase(phrase: InsertUserSavedPhrase): Promise<UserSavedPhrase>;
   updateUserSavedPhrase(id: number, updates: Partial<UserSavedPhrase>): Promise<UserSavedPhrase | undefined>;
   deleteUserSavedPhrase(id: number): Promise<void>;
+  
+  // Practice groups methods
+  getPracticeGroups(userId: string): Promise<PracticeGroup[]>;
+  getPracticeGroupById(id: number): Promise<PracticeGroup | undefined>;
+  createPracticeGroup(group: InsertPracticeGroup): Promise<PracticeGroup>;
+  updatePracticeGroup(id: number, updates: Partial<PracticeGroup>): Promise<PracticeGroup | undefined>;
+  deletePracticeGroup(id: number): Promise<void>;
+  sharePracticeGroup(id: number): Promise<PracticeGroup | undefined>;
+  getPracticeGroupByShareId(shareId: string): Promise<PracticeGroup | undefined>;
+  
+  // Practice group phrases methods
+  addPhraseToPracticeGroup(groupId: number, phraseId: number): Promise<PracticeGroupPhrase>;
+  getPhrasesByGroupId(groupId: number): Promise<UserSavedPhrase[]>;
+  removePhraseFromGroup(groupId: number, phraseId: number): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -88,6 +108,8 @@ export class MemStorage implements IStorage {
   private userExercises: Map<number, UserExercise>;
   private sharedPhraseCollections: Map<string, SharedPhraseCollection>;
   private userSavedPhrases: Map<number, UserSavedPhrase>;
+  private practiceGroups: Map<number, PracticeGroup>;
+  private practiceGroupPhrases: Map<number, PracticeGroupPhrase>;
   
   currentSessionId: number;
   currentProfileId: number;
@@ -96,6 +118,8 @@ export class MemStorage implements IStorage {
   currentUserExerciseId: number;
   currentUserSavedPhraseId: number;
   currentSharedCollectionId: number;
+  currentPracticeGroupId: number;
+  currentPracticeGroupPhraseId: number;
 
   constructor() {
     this.users = new Map();
@@ -106,6 +130,8 @@ export class MemStorage implements IStorage {
     this.userExercises = new Map();
     this.sharedPhraseCollections = new Map();
     this.userSavedPhrases = new Map();
+    this.practiceGroups = new Map();
+    this.practiceGroupPhrases = new Map();
     
     this.currentSessionId = 1;
     this.currentProfileId = 1;
@@ -114,6 +140,8 @@ export class MemStorage implements IStorage {
     this.currentUserExerciseId = 1;
     this.currentUserSavedPhraseId = 1;
     this.currentSharedCollectionId = 1;
+    this.currentPracticeGroupId = 1;
+    this.currentPracticeGroupPhraseId = 1;
     
     // Set up initial levels and exercises
     this.initializeGameLevels();
@@ -721,6 +749,142 @@ export class MemStorage implements IStorage {
   
   async deleteUserSavedPhrase(id: number): Promise<void> {
     this.userSavedPhrases.delete(id);
+  }
+
+  // Practice groups methods
+  async getPracticeGroups(userId: string): Promise<PracticeGroup[]> {
+    return Array.from(this.practiceGroups.values())
+      .filter(group => group.userId === userId)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  }
+  
+  async getPracticeGroupById(id: number): Promise<PracticeGroup | undefined> {
+    return this.practiceGroups.get(id);
+  }
+  
+  async createPracticeGroup(group: InsertPracticeGroup): Promise<PracticeGroup> {
+    const id = this.currentPracticeGroupId++;
+    const newGroup: PracticeGroup = {
+      id,
+      ...group,
+      shareId: null,
+      isShared: false,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.practiceGroups.set(id, newGroup);
+    return newGroup;
+  }
+  
+  async updatePracticeGroup(id: number, updates: Partial<PracticeGroup>): Promise<PracticeGroup | undefined> {
+    const group = await this.getPracticeGroupById(id);
+    if (!group) return undefined;
+    
+    const updatedGroup: PracticeGroup = {
+      ...group,
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.practiceGroups.set(id, updatedGroup);
+    return updatedGroup;
+  }
+  
+  async deletePracticeGroup(id: number): Promise<void> {
+    // First, remove all phrases associated with this group
+    const groupPhrases = Array.from(this.practiceGroupPhrases.values())
+      .filter(groupPhrase => groupPhrase.groupId === id);
+    
+    for (const groupPhrase of groupPhrases) {
+      this.practiceGroupPhrases.delete(groupPhrase.id);
+    }
+    
+    // Then delete the group itself
+    this.practiceGroups.delete(id);
+  }
+  
+  async sharePracticeGroup(id: number): Promise<PracticeGroup | undefined> {
+    const group = await this.getPracticeGroupById(id);
+    if (!group) return undefined;
+    
+    // Generate a unique share ID
+    const shareId = `group-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    
+    const updatedGroup = await this.updatePracticeGroup(id, {
+      shareId,
+      isShared: true
+    });
+    
+    return updatedGroup;
+  }
+  
+  async getPracticeGroupByShareId(shareId: string): Promise<PracticeGroup | undefined> {
+    return Array.from(this.practiceGroups.values())
+      .find(group => group.shareId === shareId);
+  }
+  
+  // Practice group phrases methods
+  async addPhraseToPracticeGroup(groupId: number, phraseId: number): Promise<PracticeGroupPhrase> {
+    // Verify that both the group and phrase exist
+    const group = await this.getPracticeGroupById(groupId);
+    const phrase = await this.getUserSavedPhraseById(phraseId);
+    
+    if (!group || !phrase) {
+      throw new Error(`Group ID ${groupId} or Phrase ID ${phraseId} not found`);
+    }
+    
+    // Check if the phrase is already in the group
+    const existingLink = Array.from(this.practiceGroupPhrases.values())
+      .find(link => link.groupId === groupId && link.phraseId === phraseId);
+    
+    if (existingLink) {
+      return existingLink; // Already added
+    }
+    
+    // Add the phrase to the group
+    const id = this.currentPracticeGroupPhraseId++;
+    const newLink: PracticeGroupPhrase = {
+      id,
+      groupId,
+      phraseId,
+      addedAt: new Date()
+    };
+    
+    this.practiceGroupPhrases.set(id, newLink);
+    
+    // Update the group's lastUpdated timestamp
+    await this.updatePracticeGroup(groupId, { updatedAt: new Date() });
+    
+    return newLink;
+  }
+  
+  async getPhrasesByGroupId(groupId: number): Promise<UserSavedPhrase[]> {
+    // Get all link entries for this group
+    const links = Array.from(this.practiceGroupPhrases.values())
+      .filter(link => link.groupId === groupId);
+    
+    // Get the corresponding phrases
+    const phrases: UserSavedPhrase[] = [];
+    for (const link of links) {
+      const phrase = await this.getUserSavedPhraseById(link.phraseId);
+      if (phrase) {
+        phrases.push(phrase);
+      }
+    }
+    
+    return phrases;
+  }
+  
+  async removePhraseFromGroup(groupId: number, phraseId: number): Promise<void> {
+    // Find the link to remove
+    const linkToRemove = Array.from(this.practiceGroupPhrases.values())
+      .find(link => link.groupId === groupId && link.phraseId === phraseId);
+    
+    if (linkToRemove) {
+      this.practiceGroupPhrases.delete(linkToRemove.id);
+      
+      // Update the group's lastUpdated timestamp
+      await this.updatePracticeGroup(groupId, { updatedAt: new Date() });
+    }
   }
 }
 
