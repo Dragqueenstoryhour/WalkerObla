@@ -349,12 +349,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/speech/synthesize', async (req, res) => {
     try {
       const schema = z.object({
-        text: z.string(),
+        text: z.string().min(1, "Text cannot be empty"),
         voice: z.string().optional(),
       });
 
       const { text, voice } = schema.parse(req.body);
+      console.log(`Speech synthesis request: "${text.substring(0, 30)}${text.length > 30 ? '...' : ''}" (${text.length} chars)`);
+      
       const audioBuffer = await azureService.synthesizeSpeech(text, voice);
+      
+      if (!audioBuffer || audioBuffer.length === 0) {
+        console.error("Empty audio buffer returned from synthesizeSpeech");
+        return res.status(500).json({ error: "Failed to generate speech audio" });
+      }
+      
+      console.log(`Successfully generated speech audio: ${audioBuffer.length} bytes`);
       
       // Set proper headers for audio streaming
       res.setHeader('Content-Type', 'audio/mpeg');
