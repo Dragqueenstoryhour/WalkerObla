@@ -474,53 +474,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate the request body
       const schema = z.object({
         phrases: z.array(z.object({
-          text: z.string(),
+          text: z.string().min(1, "Phrase text cannot be empty"),
           difficulty: z.string().optional(),
           phonetic: z.string().optional()
-        }))
+        })).min(1, "At least one phrase must be provided")
       });
       
-      const { phrases } = schema.parse(req.body);
-      
-      // Generate a UUID for sharing
-      const shareId = `share-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-      
-      // Get user ID if logged in
-      let userId = null;
-      if (req.isAuthenticated && req.isAuthenticated() && req.user && req.user.claims) {
-        userId = req.user.claims.sub;
+      // Validate the incoming data with detailed error handling
+      try {
+        console.log(`Validating /api/share request body:`, JSON.stringify(req.body, null, 2));
+        const { phrases } = schema.parse(req.body);
+        
+        // Additional validation - check if phrases data is in expected format
+        if (!Array.isArray(phrases) || phrases.length === 0) {
+          console.error(`Invalid phrases format - expected non-empty array but got:`, phrases);
+          return res.status(400).json({ error: 'Invalid phrases format. Expected non-empty array.' });
+        }
+        
+        // Log the validated phrases
+        console.log(`Validated phrases (${phrases.length}):`, phrases.map(p => p.text).join(', '));
+        
+        // Generate a UUID for sharing
+        const shareId = `share-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        console.log(`Generated shareId: ${shareId}`);
+        
+        // Get user ID if logged in
+        let userId = null;
+        if (req.isAuthenticated && req.isAuthenticated() && req.user && req.user.claims) {
+          userId = req.user.claims.sub;
+          console.log(`Request from authenticated user: ${userId}`);
+        } else {
+          console.log(`Request from unauthenticated user`);
+        }
+        
+        // Format the data for insertion
+        const collectionData = {
+          shareId,
+          phrases: phrases as any, // Cast to any for JSONB compatibility
+          userId,
+          name: `Shared phrases (${new Date().toLocaleDateString()})`
+        };
+        
+        // Create the shared collection with better error handling
+        try {
+          console.log(`Creating shared collection with data:`, {
+            ...collectionData,
+            phrases: `[${phrases.length} items]` // Don't log the full array
+          });
+          
+          const sharedCollection = await storage.createSharedPhraseCollection(collectionData);
+          console.log(`Successfully created shared collection with ID: ${sharedCollection.id}`);
+          
+          // Return a shareable URL
+          const shareableUrl = `/new-phrases?shareId=${shareId}`;
+          return res.json({ shareableUrl, shareId });
+        } catch (dbError) {
+          console.error('Database error creating shared collection:', dbError);
+          return res.status(500).json({ 
+            error: 'Database error creating shared collection', 
+            details: dbError instanceof Error ? dbError.message : 'Unknown error'
+          });
+        }
+      } catch (validationError) {
+        console.error('Validation error for share request:', validationError);
+        return res.status(400).json({ 
+          error: 'Invalid request data', 
+          details: validationError instanceof Error ? validationError.message : 'Validation failed'
+        });
       }
-      
-      // Create the shared collection
-      const sharedCollection = await storage.createSharedPhraseCollection({
-        shareId,
-        phrases,
-        userId,
-        name: `Shared phrases (${new Date().toLocaleDateString()})`
-      });
-      
-      // Return a shareable URL
-      const shareableUrl = `/new-phrases?shareId=${shareId}`;
-      res.json({ shareableUrl, shareId });
     } catch (error) {
-      console.error('Error sharing phrases:', error);
-      res.status(500).json({ error: 'Failed to generate shareable link' });
+      console.error('Unhandled error sharing phrases:', error);
+      res.status(500).json({ 
+        error: 'Failed to generate shareable link',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
   
   app.get('/api/share/:shareId', async (req, res) => {
     try {
       const shareId = req.params.shareId;
-      const collection = await storage.getSharedPhraseCollection(shareId);
+      console.log(`Fetching shared phrase collection with shareId: ${shareId}`);
       
-      if (!collection) {
-        return res.status(404).json({ error: 'Shared phrase collection not found' });
+      if (!shareId || typeof shareId !== 'string' || shareId.trim() === '') {
+        console.error('Invalid shareId provided:', shareId);
+        return res.status(400).json({ error: 'Invalid shareId format' });
       }
       
-      res.json({ collection });
+      try {
+        const collection = await storage.getSharedPhraseCollection(shareId);
+        
+        if (!collection) {
+          console.log(`Shared phrase collection not found for shareId: ${shareId}`);
+          return res.status(404).json({ error: 'Shared phrase collection not found' });
+        }
+        
+        // Validate collection structure
+        if (!collection.phrases || !Array.isArray(collection.phrases)) {
+          console.error(`Invalid collection phrases format for shareId ${shareId}:`, collection.phrases);
+          return res.status(500).json({ error: 'Invalid shared phrase collection format' });
+        }
+        
+        console.log(`Successfully retrieved shared collection with ID: ${collection.id} containing ${collection.phrases.length} phrases`);
+        res.json({ collection });
+      } catch (dbError) {
+        console.error(`Database error fetching shared collection with shareId ${shareId}:`, dbError);
+        res.status(500).json({ 
+          error: 'Error retrieving shared phrase collection',
+          details: dbError instanceof Error ? dbError.message : 'Unknown database error'
+        });
+      }
     } catch (error) {
-      console.error('Error fetching shared phrase collection:', error);
-      res.status(500).json({ error: 'Failed to fetch shared phrase collection' });
+      console.error('Unhandled error fetching shared phrase collection:', error);
+      res.status(500).json({ 
+        error: 'Failed to fetch shared phrase collection',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
   
