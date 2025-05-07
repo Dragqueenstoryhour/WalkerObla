@@ -329,7 +329,7 @@ export default function MyWords() {
     mutationFn: async (data: { name: string; description: string }) => {
       return apiRequest('POST', '/api/practice-groups', data);
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/practice-groups'] });
       toast({
         title: 'Group created',
@@ -425,7 +425,7 @@ export default function MyWords() {
     mutationFn: async (groupId: number) => {
       return apiRequest('POST', `/api/practice-groups/${groupId}/share`);
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       if (data && data.shareId) {
         queryClient.invalidateQueries({ queryKey: ['/api/practice-groups'] });
         const shareableLink = `${window.location.origin}/shared-phrases/${data.shareId}`;
@@ -498,7 +498,7 @@ export default function MyWords() {
 
   // Redirect if not authenticated
   useEffect(() => {
-    if (!isAuthenticated && !isLoading) {
+    if (!isAuthenticated && !isLoadingPhrases) {
       navigate('/');
       toast({
         title: 'Authentication Required',
@@ -506,7 +506,7 @@ export default function MyWords() {
         variant: 'destructive',
       });
     }
-  }, [isAuthenticated, isLoading, navigate, toast]);
+  }, [isAuthenticated, isLoadingPhrases, navigate, toast]);
 
   if (!isAuthenticated) {
     return <div className="flex items-center justify-center h-screen">
@@ -681,151 +681,381 @@ export default function MyWords() {
         <h1 className="text-3xl font-bold">My Saved Phrases</h1>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Left panel - Saved phrases list */}
-        <div className="md:col-span-2">
-          {/* Add new phrase */}
-          <Card className="mb-4">
-            <CardContent className="p-4">
-              <form onSubmit={handleAddPhrase} className="space-y-2">
-                <h2 className="text-xl font-semibold mb-2">Add New Phrase</h2>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newPhrase}
-                    onChange={(e) => setNewPhrase(e.target.value)}
-                    placeholder="Enter a new word or phrase"
-                    className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  />
-                  <Button type="submit" disabled={!newPhrase.trim()}>
-                    Add
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              {isLoading ? (
-                <div className="p-4 text-center">Loading your saved phrases...</div>
-              ) : phrasesArray.length === 0 ? (
-                <div className="p-4 text-center flex flex-col items-center space-y-2">
-                  <AlertCircle className="h-12 w-12 text-muted-foreground" />
-                  <p>You don't have any saved phrases yet.</p>
-                  <p className="text-sm text-muted-foreground">Go to New Phrases to discover and save phrases for practice.</p>
-                  <Button onClick={() => navigate('/new-phrases')} className="mt-2">
-                    Discover New Phrases
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {phrasesArray.map((phrase: SavedPhrase) => (
-                    <div 
-                      key={phrase.id} 
-                      className={`p-3 border rounded-md cursor-pointer transition-colors ${selectedPhrase?.id === phrase.id ? 'bg-primary/10 border-primary' : 'hover:bg-accent'}`}
-                      onClick={() => handleSelectPhrase(phrase)}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium">{phrase.phrase}</p>
-                          {phrase.phonetic && (
-                            <p className="text-sm text-muted-foreground">{phrase.phonetic}</p>
-                          )}
-                          {phrase.difficulty && (
-                            <div className="mt-1">
-                              <span className={`text-xs px-2 py-1 rounded-full ${phrase.difficulty === 'easy' ? 'bg-green-100 text-green-800' : phrase.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
-                                {phrase.difficulty.charAt(0).toUpperCase() + phrase.difficulty.slice(1)}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteConfirm(phrase.id);
-                          }}
-                          className="text-destructive hover:bg-destructive/10 p-1 rounded"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
+      {/* Practice Groups and Phrases Tabs */}
+      <Tabs defaultValue="all-phrases" value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="all-phrases">All Phrases</TabsTrigger>
+          <TabsTrigger value="practice-groups">Practice Groups</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="all-phrases" className="mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Left panel - Saved phrases list */}
+            <div className="md:col-span-2">
+              {/* Add new phrase */}
+              <Card className="mb-4">
+                <CardContent className="p-4">
+                  <form onSubmit={handleAddPhrase} className="space-y-2">
+                    <h2 className="text-xl font-semibold mb-2">Add New Phrase</h2>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newPhrase}
+                        onChange={(e) => setNewPhrase(e.target.value)}
+                        placeholder="Enter a new word or phrase"
+                        className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      />
+                      <Button type="submit" disabled={!newPhrase.trim()}>
+                        Add
+                      </Button>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                  </form>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4">
+                  {isLoadingPhrases ? (
+                    <div className="p-4 text-center">Loading your saved phrases...</div>
+                  ) : phrasesArray.length === 0 ? (
+                    <div className="p-4 text-center flex flex-col items-center space-y-2">
+                      <AlertCircle className="h-12 w-12 text-muted-foreground" />
+                      <p>You don't have any saved phrases yet.</p>
+                      <p className="text-sm text-muted-foreground">Go to New Phrases to discover and save phrases for practice.</p>
+                      <Button onClick={() => navigate('/new-phrases')} className="mt-2">
+                        Discover New Phrases
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {phrasesArray.map((phrase: SavedPhrase) => (
+                        <div 
+                          key={phrase.id} 
+                          className={`p-3 border rounded-md cursor-pointer transition-colors ${selectedPhrase?.id === phrase.id ? 'bg-primary/10 border-primary' : 'hover:bg-accent'}`}
+                          onClick={() => handleSelectPhrase(phrase)}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium">{phrase.phrase}</p>
+                              {phrase.phonetic && (
+                                <p className="text-sm text-muted-foreground">{phrase.phonetic}</p>
+                              )}
+                              {phrase.difficulty && (
+                                <div className="mt-1">
+                                  <span className={`text-xs px-2 py-1 rounded-full ${phrase.difficulty === 'easy' ? 'bg-green-100 text-green-800' : phrase.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                                    {phrase.difficulty.charAt(0).toUpperCase() + phrase.difficulty.slice(1)}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              {groupsArray.length > 0 && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                      <BookmarkPlus className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    {groupsArray.map((group) => (
+                                      <DropdownMenuItem 
+                                        key={`add-to-${group.id}`}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleAddToGroup(phrase.id, group.id);
+                                        }}
+                                      >
+                                        <Folder className="mr-2 h-4 w-4" />
+                                        Add to "{group.name}"
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                              <Button 
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteConfirm(phrase.id);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
 
-        {/* Right panel - Practice selected phrase */}
-        <div className="md:col-span-1">
-          <Card>
-            <CardContent className="p-4">
-              {selectedPhrase ? (
-                <div className="space-y-4">
-                  <h2 className="text-xl font-semibold">Practice Mode</h2>
-                  <Separator />
-                  <div className="p-3 border rounded-md bg-accent/50">
-                    <p className="font-medium">{selectedPhrase.phrase}</p>
-                    {selectedPhrase.phonetic && (
-                      <p className="text-sm text-muted-foreground">{selectedPhrase.phonetic}</p>
-                    )}
-                  </div>
-                  <div className="flex flex-col space-y-2">
-                    <Button 
-                      onClick={recording ? stopRecording : startRecording}
-                      variant={recording ? "destructive" : "default"}
-                      className="w-full"
-                    >
-                      {recording ? (
-                        <>
-                          <X className="mr-2 h-4 w-4" /> Stop Recording
-                        </>
-                      ) : (
-                        <>
-                          <Mic className="mr-2 h-4 w-4" /> Record Practice
-                        </>
-                      )}
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="w-full"
-                      onClick={() => {
-                        // Request speech synthesis
-                        fetch(`/api/speech/synthesize?text=${encodeURIComponent(selectedPhrase.phrase)}`)
-                          .then(response => response.arrayBuffer())
-                          .then(arrayBuffer => {
-                            const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
-                            const url = URL.createObjectURL(blob);
-                            const audio = new Audio(url);
-                            audio.play();
-                          })
-                          .catch(error => {
-                            toast({
-                              title: 'Error',
-                              description: 'Failed to synthesize speech',
-                              variant: 'destructive',
-                            });
-                          });
-                      }}
-                    >
-                      <Play className="mr-2 h-4 w-4" /> Listen
-                    </Button>
+            {/* Right panel - Practice selected phrase */}
+            <div className="md:col-span-1">
+              <Card>
+                <CardContent className="p-4">
+                  {selectedPhrase ? (
+                    <div className="space-y-4">
+                      <h2 className="text-xl font-semibold">Practice Mode</h2>
+                      <Separator />
+                      <div className="p-3 border rounded-md bg-accent/50">
+                        <p className="font-medium">{selectedPhrase.phrase}</p>
+                        {selectedPhrase.phonetic && (
+                          <p className="text-sm text-muted-foreground">{selectedPhrase.phonetic}</p>
+                        )}
+                      </div>
+                      <div className="flex flex-col space-y-2">
+                        <Button 
+                          onClick={recording ? stopRecording : startRecording}
+                          variant={recording ? "destructive" : "default"}
+                          className="w-full"
+                        >
+                          {recording ? (
+                            <>
+                              <X className="mr-2 h-4 w-4" /> Stop Recording
+                            </>
+                          ) : (
+                            <>
+                              <Mic className="mr-2 h-4 w-4" /> Record Practice
+                            </>
+                          )}
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="w-full"
+                          onClick={() => {
+                            // Request speech synthesis
+                            fetch(`/api/speech/synthesize?text=${encodeURIComponent(selectedPhrase.phrase)}`)
+                              .then(response => response.arrayBuffer())
+                              .then(arrayBuffer => {
+                                const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+                                const url = URL.createObjectURL(blob);
+                                const audio = new Audio(url);
+                                audio.play();
+                              })
+                              .catch(error => {
+                                toast({
+                                  title: 'Error',
+                                  description: 'Failed to synthesize speech',
+                                  variant: 'destructive',
+                                });
+                              });
+                          }}
+                        >
+                          <Play className="mr-2 h-4 w-4" /> Listen
+                        </Button>
+                      </div>
+                      
+                      {/* Show assessment results if available */}
+                      {assessmentResults && renderAssessmentResults()}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center">
+                      <p className="text-muted-foreground">Select a phrase to practice</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="practice-groups" className="mt-6">
+          <div className="grid grid-cols-1 gap-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Practice Groups</h2>
+              <Dialog open={newGroupOpen} onOpenChange={setNewGroupOpen}>
+                <DialogTrigger asChild>
+                  <Button className="flex items-center gap-2">
+                    <FolderPlus className="h-4 w-4" />
+                    Create New Group
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Practice Group</DialogTitle>
+                    <DialogDescription>
+                      Create a collection of phrases to practice together or share with others.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Group Name</Label>
+                      <Input
+                        id="name"
+                        value={newGroupName}
+                        onChange={(e) => setNewGroupName(e.target.value)}
+                        placeholder="E.g., Common Greetings, Medical Terms, etc."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Description (Optional)</Label>
+                      <Textarea
+                        id="description"
+                        value={newGroupDescription}
+                        onChange={(e) => setNewGroupDescription(e.target.value)}
+                        placeholder="Add a description for this group..."
+                        rows={3}
+                      />
+                    </div>
                   </div>
                   
-                  {/* Show assessment results if available */}
-                  {assessmentResults && renderAssessmentResults()}
-                </div>
-              ) : (
-                <div className="p-4 text-center">
-                  <p className="text-muted-foreground">Select a phrase to practice</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setNewGroupOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleCreateGroup}
+                      disabled={!newGroupName.trim()}
+                    >
+                      Create Group
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+            
+            {isLoadingGroups ? (
+              <div className="p-4 text-center">Loading your practice groups...</div>
+            ) : groupsArray.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-center flex flex-col items-center space-y-3">
+                  <Folder className="h-12 w-12 text-muted-foreground" />
+                  <h3 className="text-lg font-medium">No Practice Groups Yet</h3>
+                  <p className="text-sm text-muted-foreground max-w-md">
+                    Create practice groups to organize your phrases for focused practice or to share with others.
+                  </p>
+                  <Button onClick={() => setNewGroupOpen(true)} className="mt-2">
+                    <FolderPlus className="mr-2 h-4 w-4" /> Create Your First Group
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {groupsArray.map((group) => (
+                  <Card key={group.id} className={selectedGroupId === group.id ? 'border-primary' : ''}>
+                    <CardHeader className="pb-2">
+                      <div className="flex justify-between items-start">
+                        <CardTitle className="text-lg font-semibold">{group.name}</CardTitle>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleShareGroup(group.id)}>
+                              <Share2 className="mr-2 h-4 w-4" /> Share Group
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDeleteGroupConfirm(group.id)}>
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete Group
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      {group.description && (
+                        <p className="text-sm text-muted-foreground mt-1">{group.description}</p>
+                      )}
+                    </CardHeader>
+                    <CardContent className="pt-0 pb-2">
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <span>{group.isShared ? 'Shared' : 'Private'}</span>
+                        <span>Created: {new Date(group.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="pt-2">
+                      <Button 
+                        variant="outline" 
+                        className="w-full" 
+                        onClick={() => handleSelectGroup(group.id)}
+                      >
+                        <FolderOpen className="mr-2 h-4 w-4" /> View Phrases
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            )}
+            
+            {selectedGroupId !== null && groupPhrasesData && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <CardTitle>
+                      {groupPhrasesData.group?.name || 'Group Phrases'} 
+                      <span className="text-sm font-normal text-muted-foreground ml-2">
+                        ({currentGroupPhrases.length} phrases)
+                      </span>
+                    </CardTitle>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setSelectedGroupId(null)}
+                    >
+                      Back to Groups
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingGroupPhrases ? (
+                    <div className="p-4 text-center">Loading phrases...</div>
+                  ) : currentGroupPhrases.length === 0 ? (
+                    <div className="p-4 text-center flex flex-col items-center space-y-2">
+                      <FileText className="h-10 w-10 text-muted-foreground" />
+                      <p>No phrases in this group yet.</p>
+                      <p className="text-sm text-muted-foreground">
+                        Add phrases to this group from the "All Phrases" tab.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {currentGroupPhrases.map((phrase) => (
+                        <div 
+                          key={phrase.id} 
+                          className="p-3 border rounded-md cursor-pointer transition-colors hover:bg-accent"
+                          onClick={() => handleSelectPhrase(phrase)}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium">{phrase.phrase}</p>
+                              {phrase.phonetic && (
+                                <p className="text-sm text-muted-foreground">{phrase.phonetic}</p>
+                              )}
+                              {phrase.difficulty && (
+                                <div className="mt-1">
+                                  <span className={`text-xs px-2 py-1 rounded-full ${phrase.difficulty === 'easy' ? 'bg-green-100 text-green-800' : phrase.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                                    {phrase.difficulty.charAt(0).toUpperCase() + phrase.difficulty.slice(1)}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <Button 
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (selectedGroupId) {
+                                  handleRemoveFromGroup(phrase.id, selectedGroupId);
+                                }
+                              }}
+                            >
+                              <X className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
@@ -839,6 +1069,23 @@ export default function MyWords() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete group confirmation dialog */}
+      <AlertDialog open={confirmDeleteGroupOpen} onOpenChange={setConfirmDeleteGroupOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this practice group?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently remove the group and unlink all phrases.
+              The phrases themselves won't be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteGroup}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
