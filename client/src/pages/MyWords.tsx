@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,10 +16,60 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from '@/hooks/use-toast';
-import { Mic, X, Share2, BookmarkPlus, AlertCircle, Play, Trash2, Volume2 } from 'lucide-react';
+import { 
+  Mic, X, Share2, BookmarkPlus, AlertCircle, Play, Trash2, Volume2, 
+  FolderPlus, Folder, FolderOpen, MoreVertical, Copy, Edit, FileText, Plus 
+} from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+// Define the Types
+interface SavedPhrase {
+  id: number;
+  phrase: string;
+  phonetic?: string | null;
+  difficulty?: string | null;
+  source?: string | null;
+  assessmentResults?: any;
+  createdAt: string;
+  userId: string;
+}
+
+interface PracticeGroup {
+  id: number;
+  name: string;
+  description?: string | null;
+  userId: string;
+  shareId?: string | null;
+  isShared: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface PracticeGroupPhrase {
+  id: number;
+  groupId: number;
+  phraseId: number;
+  addedAt: string;
+}
 
 export default function MyWords() {
   const { isAuthenticated, user } = useAuth();
@@ -33,31 +83,51 @@ export default function MyWords() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [assessmentResults, setAssessmentResults] = useState<any | null>(null);
-
-  // Define the SavedPhrase type
-  interface SavedPhrase {
-    id: number;
-    phrase: string;
-    phonetic?: string | null;
-    difficulty?: string | null;
-    source?: string | null;
-    assessmentResults?: any;
-    createdAt: string;
-    userId: string;
-  }
+  
+  // Practice Groups state
+  const [activeTab, setActiveTab] = useState<string>("all-phrases");
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [newGroupOpen, setNewGroupOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupDescription, setNewGroupDescription] = useState('');
+  const [confirmDeleteGroupOpen, setConfirmDeleteGroupOpen] = useState(false);
+  const [deletingGroupId, setDeletingGroupId] = useState<number | null>(null);
 
   // State for new phrase input
   const [newPhrase, setNewPhrase] = useState('');
 
   // Fetch user saved phrases
-  const { data, isLoading, error, refetch } = useQuery<{savedPhrases: SavedPhrase[]}>({
+  const { data: phrasesData, isLoading: isLoadingPhrases, error: phrasesError, refetch: refetchPhrases } = useQuery<{savedPhrases: SavedPhrase[]}>({
     queryKey: ['/api/phrases/saved'],
     enabled: isAuthenticated,
   });
 
   // Ensure savedPhrases is always an array
-  const savedPhrases = data?.savedPhrases || [];
+  const savedPhrases = phrasesData?.savedPhrases || [];
   const phrasesArray = Array.isArray(savedPhrases) ? savedPhrases : [];
+  
+  // Fetch practice groups
+  const { data: groupsData, isLoading: isLoadingGroups, error: groupsError, refetch: refetchGroups } = useQuery<{groups: PracticeGroup[]}>({
+    queryKey: ['/api/practice-groups'],
+    enabled: isAuthenticated,
+  });
+  
+  // Ensure groups is always an array
+  const practiceGroups = groupsData?.groups || [];
+  const groupsArray = Array.isArray(practiceGroups) ? practiceGroups : [];
+  
+  // Fetch phrases for a specific group when selected
+  const { data: groupPhrasesData, isLoading: isLoadingGroupPhrases } = useQuery<{phrases: SavedPhrase[], group: PracticeGroup}>({
+    queryKey: ['/api/practice-groups', selectedGroupId],
+    enabled: isAuthenticated && selectedGroupId !== null,
+  });
+  
+  // Phrases for the selected group
+  const groupPhrases = groupPhrasesData?.phrases || [];
+  const currentGroupPhrases = Array.isArray(groupPhrases) ? groupPhrases : [];
+  
+  // Show all phrases or filtered by selected group
+  const displayedPhrases = selectedGroupId !== null ? currentGroupPhrases : phrasesArray;
   
   // Add phrase mutation
   const addPhraseMutation = useMutation({
@@ -252,6 +322,178 @@ export default function MyWords() {
       recorder.stop();
       setRecording(false);
     }
+  };
+
+  // Create practice group mutation
+  const createGroupMutation = useMutation({
+    mutationFn: async (data: { name: string; description: string }) => {
+      return apiRequest('POST', '/api/practice-groups', data);
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/practice-groups'] });
+      toast({
+        title: 'Group created',
+        description: 'Your new practice group has been created successfully.',
+      });
+      setNewGroupOpen(false);
+      setNewGroupName('');
+      setNewGroupDescription('');
+      // Select the newly created group
+      if (data && data.id) {
+        setSelectedGroupId(data.id);
+        setActiveTab('practice-groups');
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to create the practice group. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Delete practice group mutation
+  const deleteGroupMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest('DELETE', `/api/practice-groups/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/practice-groups'] });
+      setSelectedGroupId(null);
+      setActiveTab('all-phrases');
+      setConfirmDeleteGroupOpen(false);
+      setDeletingGroupId(null);
+      toast({
+        title: 'Group deleted',
+        description: 'The practice group has been deleted successfully.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete the practice group. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Add phrase to group mutation
+  const addToGroupMutation = useMutation({
+    mutationFn: async ({ groupId, phraseId }: { groupId: number; phraseId: number }) => {
+      return apiRequest('POST', `/api/practice-groups/${groupId}/phrases`, { phraseId });
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/practice-groups', variables.groupId] });
+      toast({
+        title: 'Phrase added to group',
+        description: 'The phrase has been added to your practice group.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to add the phrase to the group. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Remove phrase from group mutation
+  const removeFromGroupMutation = useMutation({
+    mutationFn: async ({ groupId, phraseId }: { groupId: number; phraseId: number }) => {
+      return apiRequest('DELETE', `/api/practice-groups/${groupId}/phrases/${phraseId}`);
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/practice-groups', variables.groupId] });
+      toast({
+        title: 'Phrase removed from group',
+        description: 'The phrase has been removed from your practice group.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to remove the phrase from the group. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Generate share link mutation
+  const generateShareLinkMutation = useMutation({
+    mutationFn: async (groupId: number) => {
+      return apiRequest('POST', `/api/practice-groups/${groupId}/share`);
+    },
+    onSuccess: (data) => {
+      if (data && data.shareId) {
+        queryClient.invalidateQueries({ queryKey: ['/api/practice-groups'] });
+        const shareableLink = `${window.location.origin}/shared-phrases/${data.shareId}`;
+        
+        // Copy link to clipboard
+        navigator.clipboard.writeText(shareableLink).then(() => {
+          toast({
+            title: 'Share link created',
+            description: 'The link has been copied to your clipboard.',
+          });
+        }).catch(() => {
+          toast({
+            title: 'Share link created',
+            description: `Share link: ${shareableLink}`,
+          });
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to generate a share link. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Handle adding a new practice group
+  const handleCreateGroup = () => {
+    if (newGroupName.trim()) {
+      createGroupMutation.mutate({
+        name: newGroupName.trim(),
+        description: newGroupDescription.trim()
+      });
+    }
+  };
+
+  // Handle deleting a practice group
+  const handleDeleteGroupConfirm = (id: number) => {
+    setDeletingGroupId(id);
+    setConfirmDeleteGroupOpen(true);
+  };
+
+  const confirmDeleteGroup = () => {
+    if (deletingGroupId !== null) {
+      deleteGroupMutation.mutate(deletingGroupId);
+    }
+  };
+
+  // Handle selecting a practice group
+  const handleSelectGroup = (groupId: number) => {
+    setSelectedGroupId(groupId);
+    setActiveTab('practice-groups');
+  };
+
+  // Handle adding a phrase to a group
+  const handleAddToGroup = (phraseId: number, groupId: number) => {
+    addToGroupMutation.mutate({ phraseId, groupId });
+  };
+
+  // Handle removing a phrase from a group
+  const handleRemoveFromGroup = (phraseId: number, groupId: number) => {
+    removeFromGroupMutation.mutate({ groupId, phraseId });
+  };
+
+  // Handle creating a share link
+  const handleShareGroup = (groupId: number) => {
+    generateShareLinkMutation.mutate(groupId);
   };
 
   // Redirect if not authenticated
