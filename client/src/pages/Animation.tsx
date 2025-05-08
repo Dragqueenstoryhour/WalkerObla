@@ -33,10 +33,21 @@ interface BlendshapeData {
 }
 
 interface AnimationResult {
+  success: boolean;
   request_id: string;
   audio_url: string;
   blendshapes_url: string;
   emotions_url: string | null;
+  error?: string;
+}
+
+// API request type for animation generation
+interface AnimationRequest {
+  method: string;
+  body: {
+    text: string;
+    model: string;
+  };
 }
 
 const Animation = () => {
