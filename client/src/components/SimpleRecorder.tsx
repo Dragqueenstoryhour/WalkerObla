@@ -363,23 +363,84 @@ export function SimpleRecorder({
 
         {assessmentResults && (
           <div className="bg-primary/10 rounded-lg p-4">
-            <h4 className="font-semibold mb-2">Speech Assessment Results:</h4>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Pronunciation Score</p>
-                <p className="text-lg font-medium">{assessmentResults.pronunciationScore.toFixed(1)}%</p>
+            <h4 className="font-semibold mb-4">Speech Assessment Results:</h4>
+            <div className="text-4xl font-bold text-center mb-4" style={{ color: assessmentResults.pronunciationScore >= 80 ? '#2a9d8f' : '#e76f51' }}>
+              {Math.round(assessmentResults.pronunciationScore)}%
+            </div>
+            <p className="text-center text-gray-600 mb-4">
+              {assessmentResults.pronunciationScore >= 80 
+                ? "Great job! Your pronunciation is very clear."
+                : "Good effort! Try again to improve your score."}
+            </p>
+            
+            {/* Detailed scores breakdown with bar charts */}
+            <div className="space-y-3 mb-5">
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">Pronunciation</span>
+                  <span>{Math.round(assessmentResults.pronunciationScore)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="h-2.5 rounded-full" 
+                    style={{ 
+                      width: `${Math.round(assessmentResults.pronunciationScore)}%`,
+                      backgroundColor: assessmentResults.pronunciationScore >= 80 ? '#2a9d8f' : 
+                                       assessmentResults.pronunciationScore >= 60 ? '#e9c46a' : '#e76f51' 
+                    }}
+                  ></div>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Fluency Score</p>
-                <p className="text-lg font-medium">{assessmentResults.fluencyScore.toFixed(1)}%</p>
+              
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">Fluency</span>
+                  <span>{Math.round(assessmentResults.fluencyScore)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="h-2.5 rounded-full" 
+                    style={{ 
+                      width: `${Math.round(assessmentResults.fluencyScore)}%`,
+                      backgroundColor: assessmentResults.fluencyScore >= 80 ? '#2a9d8f' : 
+                                      assessmentResults.fluencyScore >= 60 ? '#e9c46a' : '#e76f51' 
+                    }}
+                  ></div>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Completeness Score</p>
-                <p className="text-lg font-medium">{assessmentResults.completenessScore.toFixed(1)}%</p>
+              
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">Completeness</span>
+                  <span>{Math.round(assessmentResults.completenessScore)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="h-2.5 rounded-full" 
+                    style={{ 
+                      width: `${Math.round(assessmentResults.completenessScore)}%`,
+                      backgroundColor: assessmentResults.completenessScore >= 80 ? '#2a9d8f' : 
+                                      assessmentResults.completenessScore >= 60 ? '#e9c46a' : '#e76f51' 
+                    }}
+                  ></div>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Accuracy Score</p>
-                <p className="text-lg font-medium">{assessmentResults.accuracyScore.toFixed(1)}%</p>
+              
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">Accuracy</span>
+                  <span>{Math.round(assessmentResults.accuracyScore)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="h-2.5 rounded-full" 
+                    style={{ 
+                      width: `${Math.round(assessmentResults.accuracyScore)}%`,
+                      backgroundColor: assessmentResults.accuracyScore >= 80 ? '#2a9d8f' : 
+                                      assessmentResults.accuracyScore >= 60 ? '#e9c46a' : '#e76f51' 
+                    }}
+                  ></div>
+                </div>
               </div>
             </div>
 

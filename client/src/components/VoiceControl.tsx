@@ -159,6 +159,12 @@ const VoiceControl = () => {
           </div>
         </div>
         
+        {/* Fixed prompt above the green box */}
+        <div className="mb-3">
+          <p className="text-sm text-textColor opacity-70 mb-1">Try saying:</p>
+          <p className="font-medium">{voicePrompt}</p>
+        </div>
+        
         <div className="bg-secondary bg-opacity-30 rounded-lg p-4 flex items-center">
           <div className="flex items-center mr-4">
             <button 
@@ -193,12 +199,8 @@ const VoiceControl = () => {
                 )}
               </div>
             ) : (
-              <div className="space-y-3">
-                <div>
-                  <p className="text-sm text-textColor opacity-70 mb-1">Try saying:</p>
-                  <p className="font-medium">{voicePrompt}</p>
-                </div>
-
+              <div className="text-center text-gray-500">
+                <p>Press the microphone button to start speaking</p>
               </div>
             )}
           </div>
