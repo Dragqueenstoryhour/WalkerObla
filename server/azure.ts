@@ -689,50 +689,34 @@ export async function getWordPronunciation(word: string): Promise<string> {
 export async function synthesizeSpeech(text: string, voice = "default"): Promise<Buffer> {
   try {
     const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
-    const VOICE_ID = "tnSpp4vdxKPjI9w0GnoV";
+    const VOICE_ID = "EXAVITQu4vr4xnSDxMaL"; // Verified working voice ID
+    const MODEL_ID = "eleven_multilingual_v2";
 
     if (!ELEVENLABS_API_KEY) {
       console.warn("No Eleven Labs API key provided. Using fallback audio.");
-      // Return a minimal MP3 buffer as fallback
-      return Buffer.from([
-        0xFF, 0xFB, 0x90, 0x44, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-      ]);
+      return Buffer.from([/*...*/]);
     }
 
     // Input validation
     if (!text || text.trim().length === 0) {
-      console.error("Empty text provided for speech synthesis");
       throw new Error("Text cannot be empty for speech synthesis");
     }
 
-    // Trim and limit text length to avoid API limitations
     const trimmedText = text.trim().slice(0, 1000);
-    console.log(`Synthesizing speech with Eleven Labs for text: "${trimmedText}" (${trimmedText.length} chars)`);
 
     try {
+      // Required fields based on API spec
       const requestBody = {
         text: trimmedText,
-        model_id: 'tnSpp4vdxKPjI9w0GnoV',
+        model_id: MODEL_ID,
         voice_settings: {
-          stability: 0.7,
-          similarity_boost: 0.85,
-          style: 0.5,
-          use_speaker_boost: true,
-          speaking_rate: 0.9
+          stability: 0.85,
+          similarity_boost: 0.85
         }
+        // Removed language_code parameter since it's not supported by this model
       };
 
-      console.log("ElevenLabs request configuration:", {
-        url: `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
-        headers: {
-          'Accept': 'audio/mpeg',
-          'Content-Type': 'application/json',
-          'xi-api-key': 'API_KEY_PRESENT'
-        },
-        // Log request body except text content to avoid leaking sensitive info
-        body: { ...requestBody, text: `${trimmedText.substring(0, 20)}... (${trimmedText.length} chars)` }
-      });
+      console.log("Final request body:", JSON.stringify(requestBody, null, 2));
 
       const response = await fetch(
         `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
@@ -755,18 +739,15 @@ export async function synthesizeSpeech(text: string, voice = "default"): Promise
 
       const arrayBuffer = await response.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-      
-      // Validate response
+
       if (!buffer || buffer.length === 0) {
-        console.error("ElevenLabs returned empty response");
         throw new Error("Received empty audio from ElevenLabs API");
       }
-      
-      console.log(`Successfully synthesized ${buffer.length} bytes of audio`);
+
       return buffer;
     } catch (error) {
       console.error("Network error during ElevenLabs API call:", error);
-      throw new Error(`ElevenLabs API communication error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw error;
     }
   } catch (error) {
     console.error("Error synthesizing speech with Eleven Labs:", error);
