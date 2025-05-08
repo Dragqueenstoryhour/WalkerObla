@@ -12,6 +12,7 @@ import SubscriptionSuccess from "@/pages/SubscriptionSuccess";
 import AzureTest from "@/pages/AzureTest";
 import NewPhrases from "@/pages/NewPhrases";
 import MyWords from "@/pages/MyWords";
+import Animation from "@/pages/Animation";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ReadingProvider } from "./contexts/ReadingContext";
 import { GameProvider } from "./contexts/GameContext";
@@ -35,6 +36,9 @@ function Navigation() {
         </Link>
         <Link href="/my-words" className="text-primary hover:underline">
           My Words
+        </Link>
+        <Link href="/animation" className="text-primary hover:underline">
+          Animation
         </Link>
         
         <div className="ml-auto">
@@ -80,6 +84,7 @@ function Router() {
         <Route path="/shared-phrases/:shareId" component={NewPhrases} />
         <Route path="/my-words" component={MyWords} />
         <Route path="/account" component={Account} />
+        <Route path="/animation" component={Animation} />
         <Route component={NotFound} />
       </Switch>
     </>
