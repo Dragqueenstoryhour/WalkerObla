@@ -81,13 +81,10 @@ const Animation = () => {
       // Call animation API
       const response = await apiRequest('/api/animation/generate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
+        body: {
           text: text.trim(),
           model: selectedModel
-        })
+        }
       });
 
       setProgress(50);

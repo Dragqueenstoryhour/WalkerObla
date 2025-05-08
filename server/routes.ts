@@ -14,6 +14,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import Stripe from "stripe";
 import fs from 'fs';
 import { join } from 'path';
+import { spawn } from 'child_process';
 
 // Configure multer for file uploads (in-memory storage)
 const upload = multer({ 
@@ -1071,6 +1072,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error saving test recording:', error);
       return res.status(500).json({ error: 'Failed to save test recording' });
+    }
+  });
+
+  // Animation API routes for NVIDIA Audio2Face-3D integration
+  const ANIMATION_API_URL = process.env.ANIMATION_API_URL || 'http://localhost:5050';
+  
+  // Start the animation server (Flask) when the Express server starts
+  let animationProcess: any = null;
+  
+  try {
+    console.log('Starting Animation Server...');
+    animationProcess = spawn('python3', ['api/animation/animation_server.py'], {
+      env: { ...process.env, NVIDIA_API_KEY: process.env.NVIDIA_API_KEY || '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' },
+      detached: true,
+    });
+    
+    animationProcess.stdout.on('data', (data: Buffer) => {
+      console.log(`Animation Server: ${data.toString()}`);
+    });
+    
+    animationProcess.stderr.on('data', (data: Buffer) => {
+      console.error(`Animation Server Error: ${data.toString()}`);
+    });
+    
+    animationProcess.on('close', (code: number) => {
+      console.log(`Animation Server exited with code ${code}`);
+    });
+    
+    // Ensure the animation server gets killed when the Node process ends
+    process.on('exit', () => {
+      if (animationProcess) {
+        // On Windows, we need to call process.kill with the PID directly
+        if (process.platform === 'win32') {
+          process.kill(animationProcess.pid);
+        } else {
+          // On Linux/Mac, we can kill the entire process group
+          process.kill(-animationProcess.pid);
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Failed to start Animation Server:', error);
+  }
+  
+  // Endpoint to generate animation
+  app.post('/api/animation/generate', async (req, res) => {
+    try {
+      const { text, model } = req.body;
+      
+      if (!text) {
+        return res.status(400).json({ error: 'No text provided' });
+      }
+      
+      // Call the animation server API
+      const response = await fetch(`${ANIMATION_API_URL}/generate-animation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ text, model })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to generate animation');
+      }
+      
+      // Proxy the response from the animation server
+      return res.json({
+        success: true,
+        request_id: result.request_id,
+        audio_url: `/api/animation/audio/${result.request_id}`,
+        blendshapes_url: `/api/animation/blendshapes/${result.request_id}`,
+        emotions_url: result.emotions_url ? `/api/animation/emotions/${result.request_id}` : null
+      });
+    } catch (error) {
+      console.error('Error generating animation:', error);
+      return res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to generate animation' 
+      });
+    }
+  });
+  
+  // Proxy endpoints for animation resources
+  app.get('/api/animation/audio/:requestId', async (req, res) => {
+    try {
+      const { requestId } = req.params;
+      const response = await fetch(`${ANIMATION_API_URL}/animation/audio/${requestId}`);
+      
+      if (!response.ok) {
+        return res.status(response.status).json({ error: 'Audio file not found' });
+      }
+      
+      const audioBuffer = await response.arrayBuffer();
+      res.setHeader('Content-Type', 'audio/wav');
+      return res.send(Buffer.from(audioBuffer));
+    } catch (error) {
+      console.error('Error fetching animation audio:', error);
+      return res.status(500).json({ error: 'Failed to fetch audio' });
+    }
+  });
+  
+  app.get('/api/animation/blendshapes/:requestId', async (req, res) => {
+    try {
+      const { requestId } = req.params;
+      const response = await fetch(`${ANIMATION_API_URL}/animation/blendshapes/${requestId}`);
+      
+      if (!response.ok) {
+        return res.status(response.status).json({ error: 'Blendshapes file not found' });
+      }
+      
+      const csvBuffer = await response.arrayBuffer();
+      res.setHeader('Content-Type', 'text/csv');
+      return res.send(Buffer.from(csvBuffer));
+    } catch (error) {
+      console.error('Error fetching animation blendshapes:', error);
+      return res.status(500).json({ error: 'Failed to fetch blendshapes' });
+    }
+  });
+  
+  app.get('/api/animation/emotions/:requestId', async (req, res) => {
+    try {
+      const { requestId } = req.params;
+      const response = await fetch(`${ANIMATION_API_URL}/animation/emotions/${requestId}`);
+      
+      if (!response.ok) {
+        return res.status(response.status).json({ error: 'Emotions file not found' });
+      }
+      
+      const csvBuffer = await response.arrayBuffer();
+      res.setHeader('Content-Type', 'text/csv');
+      return res.send(Buffer.from(csvBuffer));
+    } catch (error) {
+      console.error('Error fetching animation emotions:', error);
+      return res.status(500).json({ error: 'Failed to fetch emotions' });
     }
   });
 
