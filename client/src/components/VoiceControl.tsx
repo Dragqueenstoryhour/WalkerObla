@@ -29,11 +29,16 @@ const VoiceControl = () => {
     
     // Update transcribed text immediately for real-time feedback
     if (transcribedText) {
+      const wordCount = transcribedText.split(/\s+/).length;
       setCurrentContent({
         id: Date.now(),
         title: "Voice Input",
         content: transcribedText,
-        difficulty: "medium"
+        source: "Voice Recognition",
+        wordCount: wordCount,
+        readingTime: wordCount * 3, // Estimate 3 seconds per word
+        difficulty: "medium", 
+        createdAt: new Date().toISOString()
       });
     }
     

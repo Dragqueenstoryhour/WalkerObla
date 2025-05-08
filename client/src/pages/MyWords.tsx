@@ -384,7 +384,15 @@ export default function MyWords() {
       return apiRequest('POST', `/api/practice-groups/${groupId}/phrases`, { phraseId });
     },
     onSuccess: (data, variables) => {
+      // Invalidate both the general groups query and the specific group query
+      queryClient.invalidateQueries({ queryKey: ['/api/practice-groups'] });
       queryClient.invalidateQueries({ queryKey: ['/api/practice-groups', variables.groupId] });
+      
+      // If we're currently viewing this group, refetch the phrases
+      if (selectedGroupId === variables.groupId) {
+        refetchGroups();
+      }
+      
       toast({
         title: 'Phrase added to group',
         description: 'The phrase has been added to your practice group.',
@@ -405,7 +413,15 @@ export default function MyWords() {
       return apiRequest('DELETE', `/api/practice-groups/${groupId}/phrases/${phraseId}`);
     },
     onSuccess: (data, variables) => {
+      // Invalidate both the general groups query and the specific group query
+      queryClient.invalidateQueries({ queryKey: ['/api/practice-groups'] });
       queryClient.invalidateQueries({ queryKey: ['/api/practice-groups', variables.groupId] });
+      
+      // If we're currently viewing this group, refetch the phrases
+      if (selectedGroupId === variables.groupId) {
+        refetchGroups();
+      }
+      
       toast({
         title: 'Phrase removed from group',
         description: 'The phrase has been removed from your practice group.',

@@ -15,11 +15,15 @@ import MyWords from "@/pages/MyWords";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ReadingProvider } from "./contexts/ReadingContext";
 import { GameProvider } from "./contexts/GameContext";
+import { useAuth } from "@/hooks/useAuth";
+import Account from "./pages/Account";
 
 function Navigation() {
+  const { isAuthenticated, user } = useAuth();
+  
   return (
     <div className="bg-primary/5 border-b py-2 px-4 mb-4">
-      <div className="container flex gap-4">
+      <div className="container flex gap-4 items-center">
         <Link href="/game" className="text-primary hover:underline">
           SpeakUp
         </Link>
@@ -32,9 +36,30 @@ function Navigation() {
         <Link href="/my-words" className="text-primary hover:underline">
           My Words
         </Link>
-        <Link href="/subscription" className="text-primary hover:underline ml-auto">
-          Premium
-        </Link>
+        
+        <div className="ml-auto">
+          {isAuthenticated && user ? (
+            <Link href="/account" className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 border-2 border-primary rounded-full flex items-center justify-center bg-primary text-primary-foreground">
+                  {user.username.charAt(0).toUpperCase()}
+                </div>
+                <div className="hidden md:flex flex-col">
+                  <span className="text-sm font-medium leading-none">
+                    {user.username}
+                  </span>
+                  <span className="text-xs text-muted-foreground leading-none mt-1">
+                    Logged In
+                  </span>
+                </div>
+              </div>
+            </Link>
+          ) : (
+            <Link href="/api/login" className="text-primary hover:underline">
+              Log In / Sign Up
+            </Link>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -54,6 +79,7 @@ function Router() {
         <Route path="/new-phrases" component={NewPhrases} />
         <Route path="/shared-phrases/:shareId" component={NewPhrases} />
         <Route path="/my-words" component={MyWords} />
+        <Route path="/account" component={Account} />
         <Route component={NotFound} />
       </Switch>
     </>
