@@ -77,78 +77,103 @@ async function convertAudioToWav(audioBuffer: Buffer, tempDir: string = "/tmp"):
  * These are simplified mouth shapes corresponding to Azure's 22 viseme IDs (0-21)
  */
 function generateVisemeSvg(visemeId: number): string {
-  // Define paths for each viseme ID (0-21)
+  // Define the mouth shapes for each viseme ID (0-21) from Azure's documentation
   const visemePaths = [
-    // 0: Silent viseme (neutral/closed)
-    '<path d="M50,70 Q65,75 80,70" stroke="black" stroke-width="2" fill="none" />',
+    // 0: Silence - closed mouth
+    `<path d="M45,70 Q65,72 85,70" stroke="black" stroke-width="2" fill="none" />`,
     
-    // 1: ae, ax, eh (as in "bat", "about", "met")
-    '<path d="M50,65 Q65,80 80,65" stroke="black" stroke-width="2" fill="none" />',
+    // 1: æ, ə, ʌ - as in "bat", "about", "cut"
+    `<path d="M45,65 Q65,75 85,65" stroke="black" stroke-width="2" fill="none" />`,
     
-    // 2: aa (as in "father")
-    '<path d="M50,60 Q65,85 80,60" stroke="black" stroke-width="2" fill="none" />',
+    // 2: ɑ - as in "father" - wide open mouth
+    `<path d="M45,60 Q65,85 85,60" stroke="black" stroke-width="2" fill="none" />`,
     
-    // 3: ao (as in "dog")
-    '<path d="M50,65 Q65,80 80,65" stroke="black" stroke-width="2" fill="none" />',
+    // 3: ɔ - as in "dog" - rounded open mouth 
+    `<path d="M50,65 Q65,78 80,65" stroke="black" stroke-width="2" fill="none" />`,
     
-    // 4: ey, eh, uh (as in "say", "pet", "book")
-    '<path d="M50,68 Q65,77 80,68" stroke="black" stroke-width="2" fill="none" />',
+    // 4: ɛ, ʊ - as in "pet", "book"
+    `<path d="M45,65 Q65,72 85,65" stroke="black" stroke-width="2" fill="none" />`,
     
-    // 5: er (as in "bird")
-    '<path d="M50,67 Q65,77 80,67" stroke="black" stroke-width="2" fill="none" />',
+    // 5: ɝ - as in "bird"
+    `<path d="M50,68 Q65,75 80,68" stroke="black" stroke-width="2" fill="none" />`,
     
-    // 6: y, iy, ih, ix (as in "yes", "see", "sit")
-    '<path d="M55,70 Q65,73 75,70" stroke="black" stroke-width="2" fill="none" />',
+    // 6: j, i, ɪ - as in "yes", "see", "sit" - slight smile
+    `<path d="M45,68 Q65,72 85,68" stroke="black" stroke-width="2" fill="none" />
+     <path d="M45,68 C50,65 80,65 85,68" stroke="black" stroke-width="1.5" fill="none" />`,
     
-    // 7: w, uw (as in "we", "blue")
-    '<circle cx="65" cy="70" r="5" stroke="black" stroke-width="2" fill="none" />',
+    // 7: w, u - as in "we", "blue" - pursed lips
+    `<circle cx="65" cy="70" r="5" stroke="black" stroke-width="2" fill="none" />`,
     
-    // 8: ow (as in "show")
-    '<circle cx="65" cy="70" r="8" stroke="black" stroke-width="2" fill="none" />',
+    // 8: o - as in "show" - rounded o shape
+    `<circle cx="65" cy="70" r="8" stroke="black" stroke-width="2" fill="none" />`,
     
-    // 9: aw (as in "how")
-    '<circle cx="65" cy="70" r="10" stroke="black" stroke-width="2" fill="none" />',
+    // 9: aʊ - as in "how" - larger rounded shape
+    `<circle cx="65" cy="70" r="12" stroke="black" stroke-width="2" fill="none" />`,
     
-    // 10: oy (as in "boy")
-    '<path d="M55,67 Q65,77 75,67" stroke="black" stroke-width="2" fill="none" />',
+    // 10: ɔɪ - as in "boy" - transition from o to y
+    `<path d="M50,65 Q65,75 80,65" stroke="black" stroke-width="2" fill="none" />
+     <path d="M55,65 C60,63 70,63 75,65" stroke="black" stroke-width="1.5" fill="none" />`,
     
-    // 11: ay (as in "fly")
-    '<path d="M50,68 Q65,78 80,68" stroke="black" stroke-width="2" fill="none" />',
+    // 11: aɪ - as in "fly" - transition from a to y
+    `<path d="M45,65 Q65,75 85,65" stroke="black" stroke-width="2" fill="none" />
+     <path d="M50,65 C55,63 75,63 80,65" stroke="black" stroke-width="1.5" fill="none" />`,
     
-    // 12: h (as in "help")
-    '<path d="M50,68 Q65,75 80,68" stroke="black" stroke-width="2" fill="none" />',
+    // 12: h - as in "help" - slight opening
+    `<path d="M50,68 Q65,73 80,68" stroke="black" stroke-width="2" fill="none" />`,
     
-    // 13: r (as in "red")
-    '<path d="M55,68 Q65,73 75,68" stroke="black" stroke-width="2" fill="none" />',
+    // 13: ɹ - as in "red" - rounded with slight protrusion
+    `<path d="M55,68 Q65,73 75,68" stroke="black" stroke-width="2" fill="none" />
+     <path d="M60,68 Q65,73 70,68" stroke="black" stroke-width="1.5" fill="none" />`,
     
-    // 14: l (as in "look")
-    '<path d="M50,70 Q65,77 80,70" stroke="black" stroke-width="2" fill="none" />',
+    // 14: l - as in "look" - tongue against upper palate
+    `<path d="M50,68 Q65,72 80,68" stroke="black" stroke-width="2" fill="none" />
+     <path d="M58,68 H72" stroke="black" stroke-width="1" fill="none" />
+     <path d="M65,68 L65,73" stroke="black" stroke-width="1.5" fill="none" />`,
     
-    // 15: s, z (as in "say", "zoo")
-    '<path d="M55,70 Q65,72 75,70" stroke="black" stroke-width="2" fill="none" />',
+    // 15: s, z - as in "say", "zoo" - teeth almost closed
+    `<path d="M50,69 Q65,71 80,69" stroke="black" stroke-width="2" fill="none" />
+     <path d="M50,69 L80,69" stroke="black" stroke-width="1" stroke-dasharray="2,1" fill="none" />`,
     
-    // 16: sh, ch, jh, zh (as in "show", "cheese", "measure")
-    '<path d="M55,70 Q65,75 75,70" stroke="black" stroke-width="2" fill="none" />',
+    // 16: ʃ, tʃ, dʒ, ʒ - as in "show", "cheese", "judge" - rounded pursed
+    `<path d="M55,68 Q65,72 75,68" stroke="black" stroke-width="2" fill="none" />
+     <path d="M60,68 Q65,71 70,68" stroke="black" stroke-width="1.5" fill="none" />`,
     
-    // 17: th, dh (as in "thin", "then")
-    '<path d="M55,68 Q65,73 75,68" stroke="black" stroke-width="2" fill="none" />',
+    // 17: ð - as in "then" - tongue between teeth
+    `<path d="M50,69 Q65,70 80,69" stroke="black" stroke-width="2" fill="none" />
+     <path d="M58,69 L72,69" stroke="black" stroke-width="1" fill="none" />
+     <path d="M65,69 L65,74" stroke="black" stroke-width="2" fill="none" />`,
     
-    // 18: f, v (as in "fan", "van")
-    '<path d="M50,68 Q65,72 80,68" stroke="black" stroke-width="2" fill="none" /><path d="M65,68 L65,73" stroke="black" stroke-width="1" />',
+    // 18: f, v - as in "fan", "van" - lower lip against upper teeth
+    `<path d="M50,68 Q65,70 80,68" stroke="black" stroke-width="2" fill="none" />
+     <path d="M50,65 L80,65" stroke="black" stroke-width="1" stroke-dasharray="2,1" fill="none" />
+     <path d="M55,68 H75" stroke="black" stroke-width="1.5" fill="none" />`,
     
-    // 19: d, t, n (as in "did", "talk", "now")
-    '<path d="M50,70 Q65,73 80,70" stroke="black" stroke-width="2" fill="none" />',
+    // 19: d, t, n, θ - as in "did", "talk", "now", "thin"
+    `<path d="M50,69 Q65,71 80,69" stroke="black" stroke-width="2" fill="none" />
+     <path d="M60,69 L70,69" stroke="black" stroke-width="1" fill="none" />
+     <path d="M65,66 L65,69" stroke="black" stroke-width="1" fill="none" />`,
     
-    // 20: k, g, ng (as in "cat", "guest", "sing")
-    '<path d="M50,70 Q65,74 80,70" stroke="black" stroke-width="2" fill="none" />',
+    // 20: k, g, ŋ - as in "cat", "guest", "sing" - back of tongue against palate
+    `<path d="M50,69 Q65,71 80,69" stroke="black" stroke-width="2" fill="none" />
+     <path d="M55,69 C60,66 70,66 75,69" stroke="black" stroke-width="1" fill="none" />`,
     
-    // 21: p, b, m (as in "put", "big", "mat")
-    '<path d="M50,70 Q65,72 80,70" stroke="black" stroke-width="2" fill="none" />',
+    // 21: p, b, m - as in "put", "big", "mat" - lips pressed together
+    `<path d="M50,70 L80,70" stroke="black" stroke-width="2.5" fill="none" />`,
   ];
   
-  // Return the corresponding SVG or a default if the ID is out of range
+  // Add face outline to make the mouth shapes more understandable
+  const faceOutline = `
+    <ellipse cx="65" cy="65" rx="45" ry="55" stroke="black" stroke-width="1.5" fill="none" />
+    <circle cx="48" cy="50" r="3" fill="black" /> <!-- left eye -->
+    <circle cx="82" cy="50" r="3" fill="black" /> <!-- right eye -->
+    <path d="M65,42 L65,55 M55,95 Q65,100 75,95" stroke="black" stroke-width="1" fill="none" /> <!-- nose and chin -->
+  `;
+  
+  // Return the corresponding SVG with the face outline
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 130" width="130" height="130">
     <rect width="100%" height="100%" fill="none" />
+    ${faceOutline}
+    <text x="65" y="20" text-anchor="middle" font-size="10" fill="black">Viseme ${visemeId}</text>
     ${visemePaths[visemeId] || visemePaths[0]}
   </svg>`;
   
@@ -274,7 +299,7 @@ export async function generateSpeechWithVisemes(
   let audioReceived = false;
   let durationMs = 0;
   
-  // Register event handlers
+  // Register viseme event handler
   synthesizer.visemeReceived = (s, e) => {
     // Extract offset and viseme ID
     const visemeId = e.visemeId;
@@ -290,11 +315,6 @@ export async function generateSpeechWithVisemes(
       audioOffset,
       animation
     });
-  };
-  
-  synthesizer.synthesisCompleted = (s, e) => {
-    // Calculate the total duration from the audio data
-    durationMs = e.result.audioDuration / 10000; // Convert 100-nanosecond units to milliseconds
   };
   
   return new Promise<ConsolidatedVisemeData>((resolve, reject) => {
@@ -316,6 +336,12 @@ export async function generateSpeechWithVisemes(
       } catch (error) {
         console.error('Error processing audio data:', error);
       }
+    };
+
+    // Event for when synthesis is completed
+    synthesizer.synthesisCompleted = (s, e) => {
+      // Calculate the total duration from the audio data
+      durationMs = e.result.audioDuration / 10000; // Convert 100-nanosecond units to milliseconds
     };
     
     // Start the synthesis
@@ -370,74 +396,87 @@ export async function processAudioForVisemes(
     throw new Error("Azure Speech credentials not found. Please set AZURE_SPEECH_KEY and AZURE_SPEECH_REGION");
   }
   
-  // Convert audio to WAV format for Azure Speech API
-  const wavFilePath = await convertAudioToWav(audioBuffer);
-  
-  // Create Azure Speech Config with credentials
-  const speechConfig = speechsdk.SpeechConfig.fromSubscription(
-    process.env.AZURE_SPEECH_KEY, 
-    process.env.AZURE_SPEECH_REGION
-  );
-  
-  // Use the WAV file for recognition
-  const audioConfig = speechsdk.AudioConfig.fromWavFileInput(wavFilePath);
-  
-  // Create a speech recognizer
-  const recognizer = new speechsdk.SpeechRecognizer(speechConfig, audioConfig);
-  
-  // Keep track of the viseme data
-  const visemes: VisemeAnimationData[] = [];
-  let durationMs = 0;
-  
-  return new Promise<ConsolidatedVisemeData>((resolve, reject) => {
-    // Set up the viseme event handler
-    recognizer.visemeReceived = (s, e) => {
-      // Extract offset and viseme ID
-      const visemeId = e.visemeId;
-      const audioOffset = e.audioOffset / 10000; // Convert 100-nanosecond units to milliseconds
-      
-      // Map viseme ID to animation data
-      const animation = format === "svg"
-        ? generateVisemeSvg(visemeId)
-        : generateVisemeBlendShapes(visemeId);
-      
-      visemes.push({
-        visemeId,
-        audioOffset,
-        animation
-      });
-      
-      // Update duration if this is the latest viseme
-      durationMs = Math.max(durationMs, audioOffset);
-    };
+  try {
+    // Convert audio to WAV format for Azure Speech API
+    const wavFilePath = await convertAudioToWav(audioBuffer);
     
-    // Start recognition
-    recognizer.recognizeOnceAsync(
-      result => {
-        // No matter the recognition result, we just care about the visemes
-        console.log(`Recognition result: ${result.text}`);
-        
-        // Sort visemes by audio offset
-        visemes.sort((a, b) => a.audioOffset - b.audioOffset);
-        
-        // Clean up
-        recognizer.close();
-        
-        // Return the consolidated data - using the original audio buffer
-        resolve({
-          visemes,
-          audioBuffer,
-          // Duration: add 1 second to last viseme to ensure animation completes
-          duration: durationMs + 1000
-        });
-      },
-      error => {
-        console.error(`Error recognizing speech: ${error}`);
-        recognizer.close();
-        reject(error);
-      }
+    // Read the converted WAV file into memory
+    const wavBuffer = await promisify(fs.readFile)(wavFilePath);
+    
+    // Create Azure Speech Config with credentials
+    const speechConfig = speechsdk.SpeechConfig.fromSubscription(
+      process.env.AZURE_SPEECH_KEY, 
+      process.env.AZURE_SPEECH_REGION
     );
-  });
+    
+    // Create a PushAudioInputStream and write the WAV data to it
+    const pushStream = speechsdk.AudioInputStream.createPushStream();
+    pushStream.write(wavBuffer);
+    pushStream.close();
+    
+    // Create audio config from the push stream instead of from a file
+    const audioConfig = speechsdk.AudioConfig.fromStreamInput(pushStream);
+    
+    // Create a speech recognizer
+    const recognizer = new speechsdk.SpeechRecognizer(speechConfig, audioConfig);
+    
+    // Keep track of the viseme data
+    const visemes: VisemeAnimationData[] = [];
+    let durationMs = 0;
+    
+    return new Promise<ConsolidatedVisemeData>((resolve, reject) => {
+      // Set up the viseme event handler
+      recognizer.visemeReceived = (s, e) => {
+        // Extract offset and viseme ID
+        const visemeId = e.visemeId;
+        const audioOffset = e.audioOffset / 10000; // Convert 100-nanosecond units to milliseconds
+        
+        // Map viseme ID to animation data
+        const animation = format === "svg"
+          ? generateVisemeSvg(visemeId)
+          : generateVisemeBlendShapes(visemeId);
+        
+        visemes.push({
+          visemeId,
+          audioOffset,
+          animation
+        });
+        
+        // Update duration if this is the latest viseme
+        durationMs = Math.max(durationMs, audioOffset);
+      };
+      
+      // Start recognition
+      recognizer.recognizeOnceAsync(
+        result => {
+          // No matter the recognition result, we just care about the visemes
+          console.log(`Recognition result: ${result.text}`);
+          
+          // Sort visemes by audio offset
+          visemes.sort((a, b) => a.audioOffset - b.audioOffset);
+          
+          // Clean up
+          recognizer.close();
+          
+          // Return the consolidated data - using the original audio buffer
+          resolve({
+            visemes,
+            audioBuffer,
+            // Duration: add 1 second to last viseme to ensure animation completes
+            duration: durationMs + 1000
+          });
+        },
+        error => {
+          console.error(`Error recognizing speech: ${error}`);
+          recognizer.close();
+          reject(error);
+        }
+      );
+    });
+  } catch (error) {
+    console.error('Error processing audio for visemes:', error);
+    throw error;
+  }
 }
 
 /**

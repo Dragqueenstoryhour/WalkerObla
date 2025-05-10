@@ -5,30 +5,30 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// The possible viseme IDs from Azure (0-21)
+// The possible viseme IDs from Azure Documentation (0-21)
 export const VISEME_DESCRIPTIONS = [
-  "Silent/neutral (0)",
-  "ae, ax, eh (1)",
-  "aa (2)",
-  "ao (3)",
-  "ey, eh, uh (4)",
-  "er (5)",
-  "y, iy, ih, ix (6)",
-  "w, uw (7)",
-  "ow (8)",
-  "aw (9)",
-  "oy (10)",
-  "ay (11)",
-  "h (12)",
-  "r (13)",
-  "l (14)",
-  "s, z (15)",
-  "sh, ch, jh, zh (16)",
-  "th, dh (17)",
-  "f, v (18)",
-  "d, t, n (19)",
-  "k, g, ng (20)",
-  "p, b, m (21)"
+  "Silence (0)",
+  "æ, ə, ʌ - as in 'bat', 'about', 'cut' (1)",
+  "ɑ - as in 'father' (2)",
+  "ɔ - as in 'dog' (3)",
+  "ɛ, ʊ - as in 'pet', 'book' (4)",
+  "ɝ - as in 'bird' (5)",
+  "j, i, ɪ - as in 'yes', 'see', 'sit' (6)",
+  "w, u - as in 'we', 'blue' (7)",
+  "o - as in 'show' (8)",
+  "aʊ - as in 'how' (9)",
+  "ɔɪ - as in 'boy' (10)",
+  "aɪ - as in 'fly' (11)",
+  "h - as in 'help' (12)",
+  "ɹ - as in 'red' (13)",
+  "l - as in 'look' (14)",
+  "s, z - as in 'say', 'zoo' (15)",
+  "ʃ, tʃ, dʒ, ʒ - as in 'show', 'cheese', 'judge', 'measure' (16)",
+  "ð - as in 'then' (17)",
+  "f, v - as in 'fan', 'van' (18)",
+  "d, t, n, θ - as in 'did', 'talk', 'now', 'thin' (19)",
+  "k, g, ŋ - as in 'cat', 'guest', 'sing' (20)", 
+  "p, b, m - as in 'put', 'big', 'mat' (21)"
 ];
 
 // Interface for a viseme animation frame
@@ -251,47 +251,134 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
   
   // Get the SVG for a viseme ID
   const getVisemeSvg = (visemeId: number): React.ReactNode => {
-    // Find the SVG for this viseme ID
-    const visemeFrame = animationData.find(frame => frame.visemeId === visemeId);
-    
-    if (visemeFrame?.svg) {
-      // Return the SVG directly from the frame
-      return <div dangerouslySetInnerHTML={{ __html: visemeFrame.svg }} />;
+    // Find the SVG for this viseme ID if we have animation data
+    if (animationData.length > 0) {
+      const visemeFrame = animationData.find(frame => frame.visemeId === visemeId);
+      
+      if (visemeFrame?.svg) {
+        // Return the SVG directly from the frame
+        return <div dangerouslySetInnerHTML={{ __html: visemeFrame.svg }} />;
+      }
     }
     
-    // Fallback - use simple shapes for the visemes
-    switch (visemeId) {
-      case 0: // Silent/neutral
-        return (
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 130" width="130" height="130">
-            <rect width="100%" height="100%" fill="none" />
-            <path d="M50,70 Q65,75 80,70" stroke="black" strokeWidth="2" fill="none" />
-          </svg>
-        );
-      case 1: // ae, ax, eh
-        return (
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 130" width="130" height="130">
-            <rect width="100%" height="100%" fill="none" />
-            <path d="M50,65 Q65,80 80,65" stroke="black" strokeWidth="2" fill="none" />
-          </svg>
-        );
-      case 2: // aa
-        return (
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 130" width="130" height="130">
-            <rect width="100%" height="100%" fill="none" />
-            <path d="M50,60 Q65,85 80,60" stroke="black" strokeWidth="2" fill="none" />
-          </svg>
-        );
-      // Add more viseme SVGs as needed
-      default:
-        return (
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 130" width="130" height="130">
-            <rect width="100%" height="100%" fill="none" />
-            <path d="M50,70 Q65,75 80,70" stroke="black" strokeWidth="2" fill="none" />
-            <text x="65" y="50" textAnchor="middle" fontSize="12" fill="black">{visemeId}</text>
-          </svg>
-        );
-    }
+    // When in preview mode or no animation data, use a placeholder for demonstration
+    // This is just a preview for the user to see the viseme IDs
+    return (
+      <div className="flex flex-col items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 130" width="130" height="130">
+          <rect width="100%" height="100%" fill="none" />
+          
+          {/* Face outline */}
+          <ellipse cx="65" cy="65" rx="45" ry="55" stroke="black" strokeWidth="1.5" fill="none" />
+          <circle cx="48" cy="50" r="3" fill="black" /> {/* left eye */}
+          <circle cx="82" cy="50" r="3" fill="black" /> {/* right eye */}
+          <path d="M65,42 L65,55 M55,95 Q65,100 75,95" stroke="black" strokeWidth="1" fill="none" /> {/* nose and chin */}
+          
+          {/* Viseme number */}
+          <text x="65" y="20" textAnchor="middle" fontSize="10" fill="black">Viseme {visemeId}</text>
+          
+          {/* Mouth shape based on viseme ID */}
+          {visemeId === 0 && <path d="M45,70 Q65,72 85,70" stroke="black" strokeWidth="2" fill="none" />}
+          {visemeId === 1 && <path d="M45,65 Q65,75 85,65" stroke="black" strokeWidth="2" fill="none" />}
+          {visemeId === 2 && <path d="M45,60 Q65,85 85,60" stroke="black" strokeWidth="2" fill="none" />}
+          {visemeId === 3 && <path d="M50,65 Q65,78 80,65" stroke="black" strokeWidth="2" fill="none" />}
+          {visemeId === 4 && <path d="M45,65 Q65,72 85,65" stroke="black" strokeWidth="2" fill="none" />}
+          {visemeId === 5 && <path d="M50,68 Q65,75 80,68" stroke="black" strokeWidth="2" fill="none" />}
+          
+          {visemeId === 6 && (
+            <>
+              <path d="M45,68 Q65,72 85,68" stroke="black" strokeWidth="2" fill="none" />
+              <path d="M45,68 C50,65 80,65 85,68" stroke="black" strokeWidth="1.5" fill="none" />
+            </>
+          )}
+          
+          {visemeId === 7 && <circle cx="65" cy="70" r="5" stroke="black" strokeWidth="2" fill="none" />}
+          {visemeId === 8 && <circle cx="65" cy="70" r="8" stroke="black" strokeWidth="2" fill="none" />}
+          {visemeId === 9 && <circle cx="65" cy="70" r="12" stroke="black" strokeWidth="2" fill="none" />}
+          
+          {visemeId === 10 && (
+            <>
+              <path d="M50,65 Q65,75 80,65" stroke="black" strokeWidth="2" fill="none" />
+              <path d="M55,65 C60,63 70,63 75,65" stroke="black" strokeWidth="1.5" fill="none" />
+            </>
+          )}
+          
+          {visemeId === 11 && (
+            <>
+              <path d="M45,65 Q65,75 85,65" stroke="black" strokeWidth="2" fill="none" />
+              <path d="M50,65 C55,63 75,63 80,65" stroke="black" strokeWidth="1.5" fill="none" />
+            </>
+          )}
+          
+          {visemeId === 12 && <path d="M50,68 Q65,73 80,68" stroke="black" strokeWidth="2" fill="none" />}
+          
+          {visemeId === 13 && (
+            <>
+              <path d="M55,68 Q65,73 75,68" stroke="black" strokeWidth="2" fill="none" />
+              <path d="M60,68 Q65,73 70,68" stroke="black" strokeWidth="1.5" fill="none" />
+            </>
+          )}
+          
+          {visemeId === 14 && (
+            <>
+              <path d="M50,68 Q65,72 80,68" stroke="black" strokeWidth="2" fill="none" />
+              <path d="M58,68 H72" stroke="black" strokeWidth="1" fill="none" />
+              <path d="M65,68 L65,73" stroke="black" strokeWidth="1.5" fill="none" />
+            </>
+          )}
+          
+          {visemeId === 15 && (
+            <>
+              <path d="M50,69 Q65,71 80,69" stroke="black" strokeWidth="2" fill="none" />
+              <path d="M50,69 L80,69" stroke="black" strokeWidth="1" strokeDasharray="2,1" fill="none" />
+            </>
+          )}
+          
+          {visemeId === 16 && (
+            <>
+              <path d="M55,68 Q65,72 75,68" stroke="black" strokeWidth="2" fill="none" />
+              <path d="M60,68 Q65,71 70,68" stroke="black" strokeWidth="1.5" fill="none" />
+            </>
+          )}
+          
+          {visemeId === 17 && (
+            <>
+              <path d="M50,69 Q65,70 80,69" stroke="black" strokeWidth="2" fill="none" />
+              <path d="M58,69 L72,69" stroke="black" strokeWidth="1" fill="none" />
+              <path d="M65,69 L65,74" stroke="black" strokeWidth="2" fill="none" />
+            </>
+          )}
+          
+          {visemeId === 18 && (
+            <>
+              <path d="M50,68 Q65,70 80,68" stroke="black" strokeWidth="2" fill="none" />
+              <path d="M50,65 L80,65" stroke="black" strokeWidth="1" strokeDasharray="2,1" fill="none" />
+              <path d="M55,68 H75" stroke="black" strokeWidth="1.5" fill="none" />
+            </>
+          )}
+          
+          {visemeId === 19 && (
+            <>
+              <path d="M50,69 Q65,71 80,69" stroke="black" strokeWidth="2" fill="none" />
+              <path d="M60,69 L70,69" stroke="black" strokeWidth="1" fill="none" />
+              <path d="M65,66 L65,69" stroke="black" strokeWidth="1" fill="none" />
+            </>
+          )}
+          
+          {visemeId === 20 && (
+            <>
+              <path d="M50,69 Q65,71 80,69" stroke="black" strokeWidth="2" fill="none" />
+              <path d="M55,69 C60,66 70,66 75,69" stroke="black" strokeWidth="1" fill="none" />
+            </>
+          )}
+          
+          {visemeId === 21 && <path d="M50,70 L80,70" stroke="black" strokeWidth="2.5" fill="none" />}
+        </svg>
+        <div className="text-xs mt-1 text-center">
+          {VISEME_DESCRIPTIONS[visemeId]}
+        </div>
+      </div>
+    );
   };
   
   return (
