@@ -1116,7 +1116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error('Failed to start Animation Server:', error);
   }
   
-  // Endpoint to generate animation
+  // Endpoint to generate animation from text
   app.post('/api/animation/generate', async (req, res) => {
     try {
       const { text, model } = req.body;
@@ -1152,6 +1152,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error generating animation:', error);
       return res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Failed to generate animation' 
+      });
+    }
+  });
+  
+  // Endpoint to generate animation from audio file
+  app.post('/api/animation/generate-from-audio', upload.single('audio'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No audio file provided' });
+      }
+      
+      const model = req.body.model || 'claire'; // Default to Claire model
+      
+      // We need to use node-fetch FormData for server-side
+      // Create a multipart form to send to the Flask server
+      const { default: FormData } = await import('form-data');
+      const formData = new FormData();
+      formData.append('model', model);
+      
+      // Append the audio file buffer directly
+      formData.append('audio', req.file.buffer, {
+        filename: req.file.originalname,
+        contentType: req.file.mimetype
+      });
+      
+      // Call the animation server API
+      const response = await fetch(`${ANIMATION_API_URL}/generate-from-audio`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to generate animation from audio');
+      }
+      
+      // Proxy the response from the animation server
+      return res.json({
+        success: true,
+        request_id: result.request_id,
+        audio_url: `/api/animation/audio/${result.request_id}`,
+        blendshapes_url: `/api/animation/blendshapes/${result.request_id}`,
+        emotions_url: result.emotions_url ? `/api/animation/emotions/${result.request_id}` : null
+      });
+    } catch (error) {
+      console.error('Error generating animation from audio:', error);
+      return res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to generate animation from audio' 
       });
     }
   });
