@@ -61,6 +61,54 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
   const startTimeRef = useRef<number>(0);
 
   // Function to generate animation data from text
+  // Generate just the speech audio without animation
+  const generateSpeech = async () => {
+    if (!text.trim()) return;
+    
+    try {
+      setError(null);
+      setLoading(true);
+      
+      console.log("Requesting speech synthesis for: \"" + text + "\"");
+      
+      // Call the OpenAI TTS endpoint
+      const response = await fetch('/api/tts/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          text,
+          voice: 'alloy'  // Using OpenAI's voice
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to generate speech: ${response.status}`);
+      }
+      
+      // Convert the response to an audio blob
+      const audioBlob = await response.blob();
+      console.log(`Received audio blob: ${audioBlob.size} bytes, type: ${audioBlob.type}`);
+      
+      // Create a URL for the audio blob
+      const url = URL.createObjectURL(audioBlob);
+      setAudioUrl(url);
+      
+      if (audioRef.current) {
+        audioRef.current.src = url;
+        audioRef.current.load();
+      }
+      
+    } catch (err) {
+      console.error('Error generating speech:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Generate animation with visemes
   const generateAnimation = async () => {
     if (!text.trim()) return;
     
