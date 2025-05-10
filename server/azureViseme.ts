@@ -74,107 +74,21 @@ async function convertAudioToWav(audioBuffer: Buffer, tempDir: string = "/tmp"):
 /**
  * Generate an SVG for a specific viseme
  * 
- * These are simplified mouth shapes corresponding to Azure's 22 viseme IDs (0-21)
+ * Now using the viseme image files in client/src/assets/Visemes
+ * Each viseme ID (0-21) corresponds to a file named viseme-id-{n}.jpg
  */
 function generateVisemeSvg(visemeId: number): string {
-  // Define the mouth shapes for each viseme ID (0-21) from Azure's documentation
-  const visemePaths = [
-    // 0: Silence - closed mouth
-    `<path d="M45,70 Q65,72 85,70" stroke="black" stroke-width="2" fill="none" />`,
-    
-    // 1: æ, ə, ʌ - as in "bat", "about", "cut"
-    `<path d="M45,65 Q65,75 85,65" stroke="black" stroke-width="2" fill="none" />`,
-    
-    // 2: ɑ - as in "father" - wide open mouth
-    `<path d="M45,60 Q65,85 85,60" stroke="black" stroke-width="2" fill="none" />`,
-    
-    // 3: ɔ - as in "dog" - rounded open mouth 
-    `<path d="M50,65 Q65,78 80,65" stroke="black" stroke-width="2" fill="none" />`,
-    
-    // 4: ɛ, ʊ - as in "pet", "book"
-    `<path d="M45,65 Q65,72 85,65" stroke="black" stroke-width="2" fill="none" />`,
-    
-    // 5: ɝ - as in "bird"
-    `<path d="M50,68 Q65,75 80,68" stroke="black" stroke-width="2" fill="none" />`,
-    
-    // 6: j, i, ɪ - as in "yes", "see", "sit" - slight smile
-    `<path d="M45,68 Q65,72 85,68" stroke="black" stroke-width="2" fill="none" />
-     <path d="M45,68 C50,65 80,65 85,68" stroke="black" stroke-width="1.5" fill="none" />`,
-    
-    // 7: w, u - as in "we", "blue" - pursed lips
-    `<circle cx="65" cy="70" r="5" stroke="black" stroke-width="2" fill="none" />`,
-    
-    // 8: o - as in "show" - rounded o shape
-    `<circle cx="65" cy="70" r="8" stroke="black" stroke-width="2" fill="none" />`,
-    
-    // 9: aʊ - as in "how" - larger rounded shape
-    `<circle cx="65" cy="70" r="12" stroke="black" stroke-width="2" fill="none" />`,
-    
-    // 10: ɔɪ - as in "boy" - transition from o to y
-    `<path d="M50,65 Q65,75 80,65" stroke="black" stroke-width="2" fill="none" />
-     <path d="M55,65 C60,63 70,63 75,65" stroke="black" stroke-width="1.5" fill="none" />`,
-    
-    // 11: aɪ - as in "fly" - transition from a to y
-    `<path d="M45,65 Q65,75 85,65" stroke="black" stroke-width="2" fill="none" />
-     <path d="M50,65 C55,63 75,63 80,65" stroke="black" stroke-width="1.5" fill="none" />`,
-    
-    // 12: h - as in "help" - slight opening
-    `<path d="M50,68 Q65,73 80,68" stroke="black" stroke-width="2" fill="none" />`,
-    
-    // 13: ɹ - as in "red" - rounded with slight protrusion
-    `<path d="M55,68 Q65,73 75,68" stroke="black" stroke-width="2" fill="none" />
-     <path d="M60,68 Q65,73 70,68" stroke="black" stroke-width="1.5" fill="none" />`,
-    
-    // 14: l - as in "look" - tongue against upper palate
-    `<path d="M50,68 Q65,72 80,68" stroke="black" stroke-width="2" fill="none" />
-     <path d="M58,68 H72" stroke="black" stroke-width="1" fill="none" />
-     <path d="M65,68 L65,73" stroke="black" stroke-width="1.5" fill="none" />`,
-    
-    // 15: s, z - as in "say", "zoo" - teeth almost closed
-    `<path d="M50,69 Q65,71 80,69" stroke="black" stroke-width="2" fill="none" />
-     <path d="M50,69 L80,69" stroke="black" stroke-width="1" stroke-dasharray="2,1" fill="none" />`,
-    
-    // 16: ʃ, tʃ, dʒ, ʒ - as in "show", "cheese", "judge" - rounded pursed
-    `<path d="M55,68 Q65,72 75,68" stroke="black" stroke-width="2" fill="none" />
-     <path d="M60,68 Q65,71 70,68" stroke="black" stroke-width="1.5" fill="none" />`,
-    
-    // 17: ð - as in "then" - tongue between teeth
-    `<path d="M50,69 Q65,70 80,69" stroke="black" stroke-width="2" fill="none" />
-     <path d="M58,69 L72,69" stroke="black" stroke-width="1" fill="none" />
-     <path d="M65,69 L65,74" stroke="black" stroke-width="2" fill="none" />`,
-    
-    // 18: f, v - as in "fan", "van" - lower lip against upper teeth
-    `<path d="M50,68 Q65,70 80,68" stroke="black" stroke-width="2" fill="none" />
-     <path d="M50,65 L80,65" stroke="black" stroke-width="1" stroke-dasharray="2,1" fill="none" />
-     <path d="M55,68 H75" stroke="black" stroke-width="1.5" fill="none" />`,
-    
-    // 19: d, t, n, θ - as in "did", "talk", "now", "thin"
-    `<path d="M50,69 Q65,71 80,69" stroke="black" stroke-width="2" fill="none" />
-     <path d="M60,69 L70,69" stroke="black" stroke-width="1" fill="none" />
-     <path d="M65,66 L65,69" stroke="black" stroke-width="1" fill="none" />`,
-    
-    // 20: k, g, ŋ - as in "cat", "guest", "sing" - back of tongue against palate
-    `<path d="M50,69 Q65,71 80,69" stroke="black" stroke-width="2" fill="none" />
-     <path d="M55,69 C60,66 70,66 75,69" stroke="black" stroke-width="1" fill="none" />`,
-    
-    // 21: p, b, m - as in "put", "big", "mat" - lips pressed together
-    `<path d="M50,70 L80,70" stroke="black" stroke-width="2.5" fill="none" />`,
-  ];
+  // Ensure visemeId is in the valid range 0-21
+  const safeVisemeId = Math.min(Math.max(0, visemeId), 21);
   
-  // Add face outline to make the mouth shapes more understandable
-  const faceOutline = `
-    <ellipse cx="65" cy="65" rx="45" ry="55" stroke="black" stroke-width="1.5" fill="none" />
-    <circle cx="48" cy="50" r="3" fill="black" /> <!-- left eye -->
-    <circle cx="82" cy="50" r="3" fill="black" /> <!-- right eye -->
-    <path d="M65,42 L65,55 M55,95 Q65,100 75,95" stroke="black" stroke-width="1" fill="none" /> <!-- nose and chin -->
-  `;
+  // Define the image path for the frontend (this will be accessed via the assets alias in the frontend)
+  const visemeImagePath = `@assets/Visemes/viseme-id-${safeVisemeId}.jpg`;
   
-  // Return the corresponding SVG with the face outline
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 130" width="130" height="130">
+  // Create an SVG that embeds the image
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 150" width="150" height="150">
     <rect width="100%" height="100%" fill="none" />
-    ${faceOutline}
-    <text x="65" y="20" text-anchor="middle" font-size="10" fill="black">Viseme ${visemeId}</text>
-    ${visemePaths[visemeId] || visemePaths[0]}
+    <text x="75" y="20" text-anchor="middle" font-size="12" fill="black">Viseme ${safeVisemeId}</text>
+    <image href="${visemeImagePath}" x="10" y="25" width="130" height="130" />
   </svg>`;
   
   return svg;
