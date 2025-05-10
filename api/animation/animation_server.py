@@ -69,8 +69,29 @@ def generate_animation():
         # Generate speech from text
         logger.info(f"Generating speech for text: {text}")
         tts = gTTS(text=text, lang='en', slow=False)
-        tts.save(audio_file)
-        logger.info(f"Speech generated and saved to {audio_file}")
+        
+        # Save the MP3 file first
+        mp3_file = os.path.join(TEMP_DIR, f"{request_id}_temp.mp3")
+        tts.save(mp3_file)
+        logger.info(f"Speech generated and saved to {mp3_file}")
+        
+        # Convert MP3 to WAV with proper PCM format
+        try:
+            import subprocess
+            # Use the full path to ffmpeg
+            ffmpeg_path = "/nix/store/3zc5jbvqzrn8zmva4fx5p0nh4yy03wk4-ffmpeg-6.1.1-bin/bin/ffmpeg"
+            logger.info(f"Using ffmpeg at {ffmpeg_path}")
+            ffmpeg_cmd = [ffmpeg_path, "-y", "-i", mp3_file, "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", audio_file]
+                
+            logger.info(f"Converting MP3 to WAV with command: {' '.join(ffmpeg_cmd)}")
+            subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
+            logger.info(f"Converted audio saved to {audio_file}")
+            
+            # Remove temporary MP3 file
+            os.remove(mp3_file)
+        except Exception as e:
+            logger.error(f"Error converting MP3 to WAV: {str(e)}")
+            return jsonify({"error": f"Failed to convert audio: {str(e)}"}), 500
 
         # Call Audio2Face API to generate blendshapes
         csv_file = os.path.join(TEMP_DIR, f"{request_id}_blendshapes.csv")
@@ -204,6 +225,57 @@ def generate_from_audio():
         # Save uploaded audio file
         audio_file.save(temp_audio_path)
         logger.info(f"Audio file saved to {temp_audio_path}")
+        
+        # Check file format and convert if needed
+        try:
+            import subprocess
+            from scipy.io import wavfile
+            
+            try:
+                # Try to read the file with scipy to check format
+                samplerate, data = wavfile.read(temp_audio_path)
+                logger.info(f"Audio file validated: {samplerate}Hz, shape: {data.shape}")
+                
+                # If file is not 16kHz mono, convert it
+                if samplerate != 16000 or len(data.shape) > 1:
+                    logger.info(f"Converting audio to 16kHz mono PCM format")
+                    converted_path = os.path.join(TEMP_DIR, f"{request_id}_converted.wav")
+                    
+                    # Use the full path to ffmpeg
+                    ffmpeg_path = "/nix/store/3zc5jbvqzrn8zmva4fx5p0nh4yy03wk4-ffmpeg-6.1.1-bin/bin/ffmpeg"
+                    logger.info(f"Using ffmpeg at {ffmpeg_path}")
+                    ffmpeg_cmd = [ffmpeg_path, "-y", "-i", temp_audio_path, "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", converted_path]
+                    
+                    logger.info(f"Converting audio with command: {' '.join(ffmpeg_cmd)}")
+                    subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
+                    logger.info(f"Converted audio saved to {converted_path}")
+                    
+                    # Replace original file with converted file
+                    os.replace(converted_path, temp_audio_path)
+                    logger.info(f"Replaced original audio with converted version")
+            except Exception as read_error:
+                # If scipy can't read the file, it's likely in an unsupported format (MP3, etc.)
+                logger.warning(f"Could not read audio file with scipy: {str(read_error)}")
+                logger.info(f"Converting to WAV PCM format")
+                
+                # Convert the audio file to a format that scipy can read
+                converted_path = os.path.join(TEMP_DIR, f"{request_id}_converted.wav")
+                
+                # Use the full path to ffmpeg
+                ffmpeg_path = "/nix/store/3zc5jbvqzrn8zmva4fx5p0nh4yy03wk4-ffmpeg-6.1.1-bin/bin/ffmpeg"
+                logger.info(f"Using ffmpeg at {ffmpeg_path}")
+                ffmpeg_cmd = [ffmpeg_path, "-y", "-i", temp_audio_path, "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", converted_path]
+                
+                logger.info(f"Converting audio with command: {' '.join(ffmpeg_cmd)}")
+                subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
+                logger.info(f"Converted audio saved to {converted_path}")
+                
+                # Replace original file with converted file
+                os.replace(converted_path, temp_audio_path)
+                logger.info(f"Replaced original audio with converted version")
+        except Exception as e:
+            logger.error(f"Error preprocessing audio file: {str(e)}")
+            return jsonify({"error": f"Failed to preprocess audio: {str(e)}"}), 500
         
         # Call Audio2Face API to generate blendshapes
         csv_file = os.path.join(TEMP_DIR, f"{request_id}_blendshapes.csv")

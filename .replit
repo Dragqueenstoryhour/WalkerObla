@@ -4,7 +4,7 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["c-ares", "glibcLocales", "grpc", "libxcrypt", "libyaml", "openssl", "pkg-config", "xsimd", "zlib"]
+packages = ["c-ares", "ffmpeg", "glibcLocales", "grpc", "libxcrypt", "libyaml", "openssl", "pkg-config", "xsimd", "zlib"]
 
 [deployment]
 deploymentTarget = "autoscale"

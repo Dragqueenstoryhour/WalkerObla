@@ -1178,9 +1178,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Call the animation server API
+      // We need to get the headers from FormData to properly set content-type boundaries
+      const headers = formData.getHeaders ? formData.getHeaders() : {};
+      
       const response = await fetch(`${ANIMATION_API_URL}/generate-from-audio`, {
         method: 'POST',
-        body: formData
+        body: formData.getBuffer ? formData.getBuffer() : formData as any,
+        headers
       });
       
       const result = await response.json();
