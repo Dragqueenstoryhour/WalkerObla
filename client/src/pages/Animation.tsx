@@ -22,7 +22,8 @@ import {
   Wand2,
   Copy,
   Check,
-  AlertTriangle
+  AlertTriangle,
+  Upload
 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 
@@ -587,9 +588,9 @@ const Animation = () => {
         {/* Input Section */}
         <Card>
           <CardHeader>
-            <CardTitle>Input Text</CardTitle>
+            <CardTitle>Input Options</CardTitle>
             <CardDescription>
-              Enter text to generate a lip-sync animation
+              Choose how to generate the lip-sync animation
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -611,59 +612,230 @@ const Animation = () => {
                   </SelectContent>
                 </Select>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="text">Text to Animate</Label>
-                <Textarea
-                  id="text"
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder="Enter text to animate..."
-                  rows={4}
-                  disabled={isLoading}
-                />
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {samplePhrases.map((phrase, index) => (
-                  <Button
-                    key={index}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setText(phrase)}
-                    disabled={isLoading}
-                  >
-                    {phrase.length > 20 ? `${phrase.substring(0, 20)}...` : phrase}
-                  </Button>
-                ))}
-              </div>
+              
+              <Tabs defaultValue="text" onValueChange={(value) => setUploadMode(value as any)}>
+                <TabsList className="grid grid-cols-3 w-full">
+                  <TabsTrigger value="text">Text to Speech</TabsTrigger>
+                  <TabsTrigger value="record">Record Audio</TabsTrigger>
+                  <TabsTrigger value="file">Upload Audio</TabsTrigger>
+                </TabsList>
+                
+                {/* Text to Speech Tab */}
+                <TabsContent value="text" className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="text">Text to Animate</Label>
+                    <Textarea
+                      id="text"
+                      value={text}
+                      onChange={(e) => setText(e.target.value)}
+                      placeholder="Enter text to animate..."
+                      rows={4}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {samplePhrases.map((phrase, index) => (
+                      <Button
+                        key={index}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setText(phrase)}
+                        disabled={isLoading}
+                      >
+                        {phrase.length > 20 ? `${phrase.substring(0, 20)}...` : phrase}
+                      </Button>
+                    ))}
+                  </div>
+                  
+                  <div className="flex justify-between pt-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setText('')}
+                      disabled={isLoading || !text}
+                    >
+                      Clear
+                    </Button>
+                    <Button
+                      onClick={generateAnimation}
+                      disabled={isLoading || !text.trim()}
+                    >
+                      {isLoading ? (
+                        <>
+                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="mr-2 h-4 w-4" />
+                          Generate Animation
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </TabsContent>
+                
+                {/* Record Audio Tab */}
+                <TabsContent value="record" className="space-y-4">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-full p-4 border rounded-lg bg-muted/30 flex flex-col items-center">
+                      {isRecording ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="h-16 w-16 rounded-full bg-destructive flex items-center justify-center animate-pulse">
+                            <MicOff className="h-8 w-8 text-white" />
+                          </div>
+                          <div className="text-sm text-muted-foreground">Recording in progress...</div>
+                        </div>
+                      ) : audioBlob ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center">
+                            <Volume2 className="h-8 w-8 text-primary" />
+                          </div>
+                          <div className="text-sm text-muted-foreground">Recording complete</div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center">
+                            <Mic className="h-8 w-8 text-primary" />
+                          </div>
+                          <div className="text-sm text-muted-foreground">Click to start recording</div>
+                        </div>
+                      )}
+                      
+                      <audio ref={audioRef} controls className="w-full mt-4" />
+                      
+                      <div className="flex justify-center gap-4 mt-4 w-full">
+                        {isRecording ? (
+                          <Button 
+                            variant="destructive" 
+                            onClick={stopRecording}
+                            className="w-full"
+                          >
+                            <MicOff className="mr-2 h-4 w-4" />
+                            Stop Recording
+                          </Button>
+                        ) : (
+                          <Button 
+                            variant="outline" 
+                            onClick={startRecording}
+                            className="w-full"
+                            disabled={isLoading || audioBlob !== null}
+                          >
+                            <Mic className="mr-2 h-4 w-4" />
+                            Start Recording
+                          </Button>
+                        )}
+                        
+                        {audioBlob && (
+                          <Button 
+                            variant="outline"
+                            onClick={() => setAudioBlob(null)}
+                            className="w-full"
+                            disabled={isLoading}
+                          >
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Record Again
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <Button
+                      onClick={generateAnimationFromAudio}
+                      disabled={isLoading || !audioBlob}
+                      className="w-full"
+                    >
+                      {isLoading ? (
+                        <>
+                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="mr-2 h-4 w-4" />
+                          Generate Animation from Recording
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </TabsContent>
+                
+                {/* Upload Audio File Tab */}
+                <TabsContent value="file" className="space-y-4">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-full p-4 border rounded-lg bg-muted/30 flex flex-col items-center">
+                      <Label 
+                        htmlFor="audio-file" 
+                        className="cursor-pointer w-full flex flex-col items-center gap-2"
+                      >
+                        {selectedFile ? (
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center">
+                              <Volume2 className="h-8 w-8 text-primary" />
+                            </div>
+                            <div className="text-sm font-medium">{selectedFile.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {(selectedFile.size / 1024).toFixed(1)} KB
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center">
+                              <Upload className="h-8 w-8 text-primary" />
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              Click to upload audio (WAV format recommended)
+                            </div>
+                          </div>
+                        )}
+                      </Label>
+                      
+                      <Input
+                        id="audio-file"
+                        type="file"
+                        accept="audio/*"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                        disabled={isLoading}
+                      />
+                      
+                      <audio ref={audioRef} controls className="w-full mt-4" />
+                      
+                      {selectedFile && (
+                        <Button 
+                          variant="outline"
+                          onClick={() => setSelectedFile(null)}
+                          className="w-full mt-4"
+                          disabled={isLoading}
+                        >
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Choose Another File
+                        </Button>
+                      )}
+                    </div>
+                    
+                    <Button
+                      onClick={generateAnimationFromAudio}
+                      disabled={isLoading || !selectedFile}
+                      className="w-full"
+                    >
+                      {isLoading ? (
+                        <>
+                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="mr-2 h-4 w-4" />
+                          Generate Animation from File
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
           </CardContent>
-          <CardFooter className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={() => setText('')}
-              disabled={isLoading || !text}
-            >
-              Clear
-            </Button>
-            <Button
-              onClick={generateAnimation}
-              disabled={isLoading || !text.trim()}
-            >
-              {isLoading ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Wand2 className="mr-2 h-4 w-4" />
-                  Generate Animation
-                </>
-              )}
-            </Button>
-          </CardFooter>
         </Card>
 
         {/* Animation Preview */}

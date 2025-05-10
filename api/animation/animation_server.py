@@ -181,6 +181,104 @@ def list_files():
     files = glob.glob(os.path.join(TEMP_DIR, "*"))
     return jsonify({"files": files})
 
+@app.route("/generate-from-audio", methods=["POST"])
+def generate_from_audio():
+    """Generate animation from audio file upload"""
+    if 'audio' not in request.files:
+        return jsonify({"error": "No audio file provided"}), 400
+        
+    audio_file = request.files['audio']
+    model = request.form.get('model', 'claire')  # Default to Claire model
+    
+    if not audio_file.filename:
+        return jsonify({"error": "No audio file selected"}), 400
+        
+    if model not in FUNCTION_IDS:
+        return jsonify({"error": f"Invalid model. Choose from: {', '.join(FUNCTION_IDS.keys())}"}), 400
+    
+    try:
+        # Generate unique ID for this request
+        request_id = str(uuid.uuid4())
+        temp_audio_path = os.path.join(TEMP_DIR, f"{request_id}.wav")
+        
+        # Save uploaded audio file
+        audio_file.save(temp_audio_path)
+        logger.info(f"Audio file saved to {temp_audio_path}")
+        
+        # Call Audio2Face API to generate blendshapes
+        csv_file = os.path.join(TEMP_DIR, f"{request_id}_blendshapes.csv")
+        emotion_file = os.path.join(TEMP_DIR, f"{request_id}_emotions.csv")
+        
+        # Prepare Audio2Face API call
+        config_file = os.path.join(A2F_CONFIG_DIR, f"config_{model}.yml")
+        function_id = FUNCTION_IDS[model]
+        
+        # Execute the Audio2Face client
+        try:
+            cmd = [
+                VENV_PYTHON, A2F_CLIENT_SCRIPT,
+                temp_audio_path, config_file,
+                "--apikey", API_KEY,
+                "--function-id", function_id
+            ]
+            
+            logger.info(f"Executing command: {' '.join(cmd)}")
+            process = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=True,
+                cwd=TEMP_DIR
+            )
+            
+            logger.info(f"Audio2Face client output: {process.stdout}")
+            
+            # The Audio2Face client saves blendshapes.csv and emotions.csv in TEMP_DIR
+            try:
+                if os.path.exists(os.path.join(TEMP_DIR, "blendshapes.csv")):
+                    os.rename(os.path.join(TEMP_DIR, "blendshapes.csv"), csv_file)
+                    logger.info(f"Blendshapes saved to {csv_file}")
+                else:
+                    logger.error("blendshapes.csv not found after A2F processing")
+                    return jsonify({"error": "blendshapes.csv not found after A2F processing"}), 500
+                
+                if os.path.exists(os.path.join(TEMP_DIR, "emotions.csv")):
+                    os.rename(os.path.join(TEMP_DIR, "emotions.csv"), emotion_file)
+                    logger.info(f"Emotions saved to {emotion_file}")
+                else:
+                    logger.warning("emotions.csv not found after A2F processing")
+            except Exception as e:
+                logger.error(f"Error moving output files: {str(e)}")
+            
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Error calling Audio2Face client: {str(e)}")
+            logger.error(f"STDOUT: {e.stdout}")
+            logger.error(f"STDERR: {e.stderr}")
+            return jsonify({
+                "error": "Failed to generate animation", 
+                "details": str(e),
+                "stdout": e.stdout,
+                "stderr": e.stderr
+            }), 500
+            
+        # Verify we have the CSV file
+        if not os.path.exists(csv_file):
+            return jsonify({"error": "Failed to generate blendshapes CSV file"}), 500
+            
+        # Return the results
+        return jsonify({
+            "success": True,
+            "request_id": request_id,
+            "audio_url": f"/animation/audio/{request_id}",
+            "blendshapes_url": f"/animation/blendshapes/{request_id}",
+            "emotions_url": f"/animation/emotions/{request_id}" if os.path.exists(emotion_file) else None
+        })
+        
+    except Exception as e:
+        logger.exception("Error generating animation from audio")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/cleanup", methods=["POST"])
 def cleanup():
     """Clean up temporary files"""
