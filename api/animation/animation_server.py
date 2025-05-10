@@ -7,6 +7,7 @@ import logging
 import csv
 import shutil
 import math
+import json
 from flask import Flask, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 
@@ -20,14 +21,12 @@ app = Flask(__name__)
 # Configuration
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(os.path.dirname(BASE_DIR))  # Project root directory
-A2F_DIR = os.path.join(ROOT_DIR, "Audio2Face-3D-Samples")
-A2F_SCRIPT = os.path.join(A2F_DIR, "scripts/audio2face_3d_microservices_interaction_app/a2f_3d.py")
-CONFIG_DIR = os.path.join(A2F_DIR, "scripts/audio2face_3d_microservices_interaction_app/config")
 TEMP_DIR = os.path.join(BASE_DIR, "temp")
+# Define models for viseme animation
 MODEL_CONFIGS = {
-    "claire": "config_claire.yml",
-    "mark": "config_mark.yml",
-    "james": "config_james.yml"
+    "claire": "en-US-JennyNeural",
+    "mark": "en-US-GuyNeural",
+    "james": "en-US-DavisNeural"
 }
 
 def convert_animation_data(source_csv, target_csv):
@@ -102,65 +101,73 @@ def validate_audio_file(file_path):
         raise RuntimeError(f"Error validating audio file: {str(e)}")
 
 def process_audio(audio_path, model="james"):
-            try:
-                # Generate a unique ID for this request
-                request_id = str(uuid.uuid4())
+    try:
+        # Generate a unique ID for this request
+        request_id = str(uuid.uuid4())
 
-                # Create timestamped output directory for A2F processing
-                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-                output_dir = os.path.join(TEMP_DIR, timestamp)
-                os.makedirs(output_dir, exist_ok=True)
+        # Create timestamped output directory for processing
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        output_dir = os.path.join(TEMP_DIR, timestamp)
+        os.makedirs(output_dir, exist_ok=True)
 
-                # Validate and convert audio file if needed
-                validated_audio_path = validate_audio_file(audio_path)
+        # Validate and convert audio file if needed
+        validated_audio_path = validate_audio_file(audio_path)
 
-                # Build CORRECTED A2F command (removed --output-dir)
-                config_path = os.path.join(CONFIG_DIR, MODEL_CONFIGS.get(model, MODEL_CONFIGS["james"]))
+        # Get the appropriate voice based on model
+        voice_name = MODEL_CONFIGS.get(model, MODEL_CONFIGS["james"])
+        logger.info(f"Using Azure voice: {voice_name}")
 
-                cmd = [
-                    "python3", A2F_SCRIPT,
-                    "run_inference",
-                    validated_audio_path,
-                    config_path,
-                    "-u", "localhost:52000"  # Removed invalid --output-dir parameter
-                ]
-
-                logger.info(f"Executing command: {' '.join(cmd)}")
-
-                # Execute Audio2Face in the output directory
-                try:
-                    result = subprocess.run(
-                        cmd,
-                        check=True,
-                        capture_output=True,
-                        text=True,
-                        cwd=output_dir  # Run in the output directory
-                    )
-
-                except subprocess.CalledProcessError as e:
-                    logger.error(f"A2F processing failed with error: {e.stderr}")
-                    raise RuntimeError(f"A2F processing failed: {e.stderr}")
-
-                # Find generated files IN THE OUTPUT DIRECTORY
-                animation_file = os.path.join(output_dir, "animation_frames.csv")
-                emotions_file = os.path.join(output_dir, "a2f_3d_smoothed_emotion_output.csv")
+        # Call the Node.js Azure Viseme API via curl
+        viseme_endpoint = "http://localhost:5000/api/viseme/process-audio"
         
-        if not os.path.exists(animation_file):
-            logger.error("Animation output file not generated")
-            raise FileNotFoundError("Animation output not generated")
+        # Build the curl command to call the Node API
+        cmd = [
+            "curl", "-X", "POST",
+            "-F", f"audio=@{validated_audio_path}",
+            "-F", f"voice={voice_name}",
+            "-F", "format=blendshapes", 
+            viseme_endpoint
+        ]
         
-        # Create blendshapes and emotions files with the request_id as part of the filename
-        blendshapes_file = os.path.join(TEMP_DIR, f"{request_id}_blendshapes.csv")
+        logger.info(f"Calling Azure Viseme API: {' '.join(cmd)}")
         
-        # Convert the animation data to our required format
-        convert_animation_data(animation_file, blendshapes_file)
+        # Execute the curl command
+        result = subprocess.run(
+            cmd,
+            check=True,
+            capture_output=True,
+            text=True
+        )
         
-        # Copy emotions file if it exists
-        emotions_output_file = None
-        if os.path.exists(emotions_file):
-            emotions_output_file = os.path.join(TEMP_DIR, f"{request_id}_emotions.csv")
-            shutil.copy2(emotions_file, emotions_output_file)
-            logger.info(f"Emotions data copied to {emotions_output_file}")
+        # Parse the JSON response
+        try:
+            response_data = json.loads(result.stdout)
+            
+            if not response_data.get("success"):
+                logger.error(f"Azure Viseme API returned error: {response_data.get('error', 'Unknown error')}")
+                raise RuntimeError(f"Azure Viseme processing failed: {response_data.get('error', 'Unknown error')}")
+                
+            # Create the blendshapes file
+            blendshapes_file = os.path.join(TEMP_DIR, f"{request_id}_blendshapes.csv")
+            with open(blendshapes_file, 'w') as f:
+                f.write(response_data.get("blendshapesCsv", ""))
+            
+            logger.info(f"Saved blendshapes file to {blendshapes_file}")
+            
+            # Save the audio file if provided
+            audio_output_path = audio_path
+            if response_data.get("audioData"):
+                import base64
+                audio_data = base64.b64decode(response_data.get("audioData"))
+                audio_output_path = os.path.join(TEMP_DIR, f"{request_id}.wav")
+                with open(audio_output_path, 'wb') as f:
+                    f.write(audio_data)
+                logger.info(f"Saved audio file to {audio_output_path}")
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse API response: {e}")
+            logger.error(f"Response was: {result.stdout[:200]}...")
+            raise RuntimeError(f"Failed to parse Azure Viseme API response: {e}")
         
         # Clean up the temporary validated audio file if it was converted
         if validated_audio_path != audio_path and os.path.exists(validated_audio_path):
@@ -171,15 +178,15 @@ def process_audio(audio_path, model="james"):
         
         return {
             "request_id": request_id,
-            "audio_file": audio_path,
+            "audio_file": audio_output_path,
             "blendshapes_file": blendshapes_file,
-            "emotions_file": emotions_output_file,
+            "emotions_file": None,  # Azure Viseme doesn't currently provide emotions data
             "output_dir": output_dir
         }
     
     except subprocess.CalledProcessError as e:
-        logger.error(f"A2F processing failed: {e.stderr}")
-        raise RuntimeError(f"A2F processing failed: {e.stderr}")
+        logger.error(f"API call failed: {e.stderr}")
+        raise RuntimeError(f"Azure Viseme API call failed: {e.stderr}")
     except Exception as e:
         logger.error(f"Error processing audio: {str(e)}")
         raise

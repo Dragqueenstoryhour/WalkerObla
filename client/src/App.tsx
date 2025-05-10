@@ -13,6 +13,7 @@ import AzureTest from "@/pages/AzureTest";
 import NewPhrases from "@/pages/NewPhrases";
 import MyWords from "@/pages/MyWords";
 import Animation from "@/pages/Animation";
+import AzureAnimation from "@/pages/AzureAnimation";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ReadingProvider } from "./contexts/ReadingContext";
 import { GameProvider } from "./contexts/GameContext";
@@ -39,6 +40,9 @@ function Navigation() {
         </Link>
         <Link href="/animation" className="text-primary hover:underline">
           Animation
+        </Link>
+        <Link href="/azure-animation" className="text-primary hover:underline">
+          Azure Viseme
         </Link>
         
         <div className="ml-auto">
@@ -85,6 +89,7 @@ function Router() {
         <Route path="/my-words" component={MyWords} />
         <Route path="/account" component={Account} />
         <Route path="/animation" component={Animation} />
+        <Route path="/azure-animation" component={AzureAnimation} />
         <Route component={NotFound} />
       </Switch>
     </>

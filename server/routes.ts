@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import OpenAI from "openai";
 import * as openaiService from "./openai";
 import * as azureService from "./azure";
+import * as azureVisemeService from "./azureViseme";
 import * as realtimeService from "./realtime";
 import * as stripeService from "./stripe";
 import multer from 'multer';
@@ -1075,7 +1076,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Animation API routes for NVIDIA Audio2Face-3D integration
+  // Animation API routes - now using Azure viseme-based animation
   const ANIMATION_API_URL = process.env.ANIMATION_API_URL || 'http://localhost:5050';
   
   // Text-to-Speech endpoint using OpenAI
@@ -1292,5 +1293,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Create a simple HTTP server
   const httpServer = createServer(app);
+  // Add endpoints for Azure Viseme-based animation
+  app.post('/api/viseme/process-audio', upload.single('audio'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No audio file provided' });
+      }
+      
+      const voice = req.body.voice || 'en-US-GuyNeural';
+      const format = req.body.format === 'svg' ? 'svg' : 'blendshapes';
+      
+      console.log(`Processing audio for viseme animation with format: ${format}, voice: ${voice}`);
+      
+      // Process the audio file with Azure Viseme API
+      const visemeData = await azureVisemeService.processAudioForVisemes(req.file.buffer, format);
+      
+      // Convert the viseme data to CSV format
+      const blendshapesCsv = azureVisemeService.convertVisemesToCsv(visemeData, format);
+      
+      // Encode the audio buffer as base64 to return in the response
+      const audioBase64 = visemeData.audioBuffer.toString('base64');
+      
+      return res.json({
+        success: true,
+        blendshapesCsv,
+        audioData: audioBase64,
+        duration: visemeData.duration,
+        visemeCount: visemeData.visemes.length
+      });
+    } catch (error) {
+      console.error('Error processing audio for visemes:', error);
+      return res.status(500).json({ 
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to process audio for visemes' 
+      });
+    }
+  });
+  
+  // Endpoint to generate speech with visemes
+  app.post('/api/viseme/generate', async (req, res) => {
+    try {
+      const { text, voice, format } = req.body;
+      
+      if (!text) {
+        return res.status(400).json({ error: 'No text provided' });
+      }
+      
+      const voiceName = voice || 'en-US-GuyNeural';
+      const visemeFormat = format === 'svg' ? 'svg' : 'blendshapes';
+      
+      console.log(`Generating speech with visemes: format=${visemeFormat}, voice=${voiceName}`);
+      
+      // Generate speech with viseme data
+      const visemeData = await azureVisemeService.generateSpeechWithVisemes(text, voiceName, visemeFormat);
+      
+      // Convert the viseme data to CSV format
+      const blendshapesCsv = azureVisemeService.convertVisemesToCsv(visemeData, visemeFormat);
+      
+      // Encode the audio buffer as base64 to return in the response
+      const audioBase64 = visemeData.audioBuffer.toString('base64');
+      
+      return res.json({
+        success: true,
+        blendshapesCsv,
+        audioData: audioBase64,
+        duration: visemeData.duration,
+        visemeCount: visemeData.visemes.length
+      });
+    } catch (error) {
+      console.error('Error generating speech with visemes:', error);
+      return res.status(500).json({ 
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to generate speech with visemes' 
+      });
+    }
+  });
+
   return httpServer;
 }
