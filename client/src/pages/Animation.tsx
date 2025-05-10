@@ -102,7 +102,7 @@ const Animation = () => {
       formData.append('audio', audioBlob, 'recording.wav');
       formData.append('model', selectedModel);
       
-      const response = await fetch('/api/animation/generate', {
+      const response = await fetch('/api/animation/generate-from-audio', {
         method: 'POST',
         body: formData
       });
