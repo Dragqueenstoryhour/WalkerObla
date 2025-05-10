@@ -6,6 +6,9 @@ import json
 import asyncio
 import subprocess
 import logging
+import csv
+import shutil
+from datetime import datetime
 from flask import Flask, request, jsonify, send_file
 from gtts import gTTS
 from dotenv import load_dotenv
@@ -121,51 +124,78 @@ def generate_animation():
 
             logger.info(f"Audio2Face client output: {process.stdout}")
 
-            # The Audio2Face client saves blendshapes.csv and emotions.csv in TEMP_DIR
+            # The Audio2Face client saves animation data in a timestamped directory
             try:
-                # List files in the temp directory to debug where files are saved
+                # List files in the temp directory to look for timestamped folders
                 files_in_temp = glob.glob(os.path.join(TEMP_DIR, "*"))
                 logger.info(f"Files in TEMP_DIR after A2F processing: {files_in_temp}")
                 
-                # Also check current working directory
-                cwd_files = glob.glob("*.csv")
-                logger.info(f"CSV files in current directory: {cwd_files}")
+                # Find the most recent timestamped folder (starts with current date)
+                timestamp_folders = sorted([f for f in files_in_temp if os.path.isdir(f) and 
+                                           os.path.basename(f).startswith(f"{datetime.now().strftime('%Y%m%d')}")], 
+                                           reverse=True)
                 
-                # Check standard locations for the file
-                if os.path.exists(os.path.join(TEMP_DIR, "blendshapes.csv")):
-                    os.rename(os.path.join(TEMP_DIR, "blendshapes.csv"), csv_file)
-                    logger.info(f"Blendshapes saved to {csv_file}")
-                # Check current directory
-                elif os.path.exists("blendshapes.csv"):
-                    os.rename("blendshapes.csv", csv_file)
-                    logger.info(f"Blendshapes found in current directory and saved to {csv_file}")
-                # Create a mock file for testing purposes since we can't get actual data
+                if timestamp_folders:
+                    # Use the most recent timestamped folder
+                    a2f_output_dir = timestamp_folders[0]
+                    logger.info(f"Found A2F output directory: {a2f_output_dir}")
+                    
+                    # Check for animation_frames.csv in the output directory
+                    animation_frames_path = os.path.join(a2f_output_dir, "animation_frames.csv")
+                    if os.path.exists(animation_frames_path):
+                        logger.info(f"Found animation_frames.csv at {animation_frames_path}")
+                        
+                        # Convert the NVIDIA-format CSV to our blendshapes format
+                        with open(animation_frames_path, 'r') as src, open(csv_file, 'w') as dst:
+                            # Read the original CSV
+                            reader = csv.reader(src)
+                            headers = next(reader)
+                            
+                            # Write the new CSV with our format
+                            dst.write("name,value,timestamp\n")
+                            
+                            # Find indexes of key blendshape columns
+                            jawOpen_idx = headers.index('blendShapes.JawOpen') if 'blendShapes.JawOpen' in headers else -1
+                            mouthSmileLeft_idx = headers.index('blendShapes.MouthSmileLeft') if 'blendShapes.MouthSmileLeft' in headers else -1
+                            mouthSmileRight_idx = headers.index('blendShapes.MouthSmileRight') if 'blendShapes.MouthSmileRight' in headers else -1
+                            eyeBlinkLeft_idx = headers.index('blendShapes.EyeBlinkLeft') if 'blendShapes.EyeBlinkLeft' in headers else -1
+                            eyeBlinkRight_idx = headers.index('blendShapes.EyeBlinkRight') if 'blendShapes.EyeBlinkRight' in headers else -1
+                            timeCode_idx = headers.index('timeCode') if 'timeCode' in headers else 1  # Default to second column
+                            
+                            # Make sure we found all required columns
+                            if jawOpen_idx == -1 or mouthSmileLeft_idx == -1 or mouthSmileRight_idx == -1 or \
+                               eyeBlinkLeft_idx == -1 or eyeBlinkRight_idx == -1 or timeCode_idx == -1:
+                                raise ValueError(f"Required blendshape columns not found in {animation_frames_path}")
+                            
+                            # Process each frame
+                            for row in reader:
+                                if len(row) <= 1:  # Skip empty rows
+                                    continue
+                                
+                                timestamp = float(row[timeCode_idx]) * 1000  # Convert to milliseconds
+                                
+                                # Write key blendshapes
+                                dst.write(f"JawOpen,{row[jawOpen_idx]},{timestamp}\n")
+                                dst.write(f"MouthSmileLeft,{row[mouthSmileLeft_idx]},{timestamp}\n")
+                                dst.write(f"MouthSmileRight,{row[mouthSmileRight_idx]},{timestamp}\n")
+                                dst.write(f"EyeBlinkLeft,{row[eyeBlinkLeft_idx]},{timestamp}\n")
+                                dst.write(f"EyeBlinkRight,{row[eyeBlinkRight_idx]},{timestamp}\n")
+                                
+                        logger.info(f"Converted animation_frames.csv to our format at {csv_file}")
+                        
+                        # Also copy the emotions file if available
+                        emotion_src = os.path.join(a2f_output_dir, "a2f_smoothed_emotion_output.csv")
+                        if os.path.exists(emotion_src):
+                            shutil.copy(emotion_src, emotion_file)
+                            logger.info(f"Emotions data copied to {emotion_file}")
+                        else:
+                            logger.warning(f"No emotions file found at {emotion_src}")
+                    else:
+                        logger.error(f"animation_frames.csv not found in {a2f_output_dir}")
+                        return jsonify({"error": f"animation_frames.csv not found in {a2f_output_dir}"}), 500
                 else:
-                    logger.warning("blendshapes.csv not found after A2F processing - creating mock data for testing")
-                    import math
-                    # Create a mock blendshapes file for testing
-                    with open(csv_file, 'w') as f:
-                        f.write("name,value,timestamp\n")
-                        # Generate some basic mouth movements for a 2-second animation
-                        for i in range(40):
-                            timestamp = i * 50  # 50ms intervals
-                            value = abs(math.sin(i/5))  # Oscillating values
-                            f.write(f"JawOpen,{value},{timestamp}\n")
-                            f.write(f"MouthSmileLeft,{0.1 + value/10},{timestamp}\n")
-                            f.write(f"MouthSmileRight,{0.1 + value/10},{timestamp}\n")
-                            f.write(f"EyeBlinkLeft,{0 if i%10 != 0 else 0.8},{timestamp}\n")
-                            f.write(f"EyeBlinkRight,{0 if i%10 != 0 else 0.8},{timestamp}\n")
-                    logger.info(f"Created mock blendshapes file for testing at {csv_file}")
-
-                # Similarly check for emotions file
-                if os.path.exists(os.path.join(TEMP_DIR, "emotions.csv")):
-                    os.rename(os.path.join(TEMP_DIR, "emotions.csv"), emotion_file)
-                    logger.info(f"Emotions saved to {emotion_file}")
-                elif os.path.exists("emotions.csv"):
-                    os.rename("emotions.csv", emotion_file)
-                    logger.info(f"Emotions found in current directory and saved to {emotion_file}")
-                else:
-                    logger.warning("emotions.csv not found after A2F processing")
+                    logger.error("No timestamped output folder found from Audio2Face processing")
+                    return jsonify({"error": "No timestamped output folder found from Audio2Face processing"}), 500
             except Exception as e:
                 logger.error(f"Error moving output files: {str(e)}")
 
@@ -336,51 +366,78 @@ def generate_from_audio():
             
             logger.info(f"Audio2Face client output: {process.stdout}")
             
-            # The Audio2Face client saves blendshapes.csv and emotions.csv in TEMP_DIR
+            # The Audio2Face client saves animation data in a timestamped directory
             try:
-                # List files in the temp directory to debug where files are saved
+                # List files in the temp directory to look for timestamped folders
                 files_in_temp = glob.glob(os.path.join(TEMP_DIR, "*"))
                 logger.info(f"Files in TEMP_DIR after A2F processing: {files_in_temp}")
                 
-                # Also check current working directory
-                cwd_files = glob.glob("*.csv")
-                logger.info(f"CSV files in current directory: {cwd_files}")
+                # Find the most recent timestamped folder (starts with current date)
+                timestamp_folders = sorted([f for f in files_in_temp if os.path.isdir(f) and 
+                                           os.path.basename(f).startswith(f"{datetime.now().strftime('%Y%m%d')}")], 
+                                           reverse=True)
                 
-                # Check standard locations for the file
-                if os.path.exists(os.path.join(TEMP_DIR, "blendshapes.csv")):
-                    os.rename(os.path.join(TEMP_DIR, "blendshapes.csv"), csv_file)
-                    logger.info(f"Blendshapes saved to {csv_file}")
-                # Check current directory
-                elif os.path.exists("blendshapes.csv"):
-                    os.rename("blendshapes.csv", csv_file)
-                    logger.info(f"Blendshapes found in current directory and saved to {csv_file}")
-                # Create a mock file for testing purposes since we can't get actual data
+                if timestamp_folders:
+                    # Use the most recent timestamped folder
+                    a2f_output_dir = timestamp_folders[0]
+                    logger.info(f"Found A2F output directory: {a2f_output_dir}")
+                    
+                    # Check for animation_frames.csv in the output directory
+                    animation_frames_path = os.path.join(a2f_output_dir, "animation_frames.csv")
+                    if os.path.exists(animation_frames_path):
+                        logger.info(f"Found animation_frames.csv at {animation_frames_path}")
+                        
+                        # Convert the NVIDIA-format CSV to our blendshapes format
+                        with open(animation_frames_path, 'r') as src, open(csv_file, 'w') as dst:
+                            # Read the original CSV
+                            reader = csv.reader(src)
+                            headers = next(reader)
+                            
+                            # Write the new CSV with our format
+                            dst.write("name,value,timestamp\n")
+                            
+                            # Find indexes of key blendshape columns
+                            jawOpen_idx = headers.index('blendShapes.JawOpen') if 'blendShapes.JawOpen' in headers else -1
+                            mouthSmileLeft_idx = headers.index('blendShapes.MouthSmileLeft') if 'blendShapes.MouthSmileLeft' in headers else -1
+                            mouthSmileRight_idx = headers.index('blendShapes.MouthSmileRight') if 'blendShapes.MouthSmileRight' in headers else -1
+                            eyeBlinkLeft_idx = headers.index('blendShapes.EyeBlinkLeft') if 'blendShapes.EyeBlinkLeft' in headers else -1
+                            eyeBlinkRight_idx = headers.index('blendShapes.EyeBlinkRight') if 'blendShapes.EyeBlinkRight' in headers else -1
+                            timeCode_idx = headers.index('timeCode') if 'timeCode' in headers else 1  # Default to second column
+                            
+                            # Make sure we found all required columns
+                            if jawOpen_idx == -1 or mouthSmileLeft_idx == -1 or mouthSmileRight_idx == -1 or \
+                               eyeBlinkLeft_idx == -1 or eyeBlinkRight_idx == -1 or timeCode_idx == -1:
+                                raise ValueError(f"Required blendshape columns not found in {animation_frames_path}")
+                            
+                            # Process each frame
+                            for row in reader:
+                                if len(row) <= 1:  # Skip empty rows
+                                    continue
+                                
+                                timestamp = float(row[timeCode_idx]) * 1000  # Convert to milliseconds
+                                
+                                # Write key blendshapes
+                                dst.write(f"JawOpen,{row[jawOpen_idx]},{timestamp}\n")
+                                dst.write(f"MouthSmileLeft,{row[mouthSmileLeft_idx]},{timestamp}\n")
+                                dst.write(f"MouthSmileRight,{row[mouthSmileRight_idx]},{timestamp}\n")
+                                dst.write(f"EyeBlinkLeft,{row[eyeBlinkLeft_idx]},{timestamp}\n")
+                                dst.write(f"EyeBlinkRight,{row[eyeBlinkRight_idx]},{timestamp}\n")
+                                
+                        logger.info(f"Converted animation_frames.csv to our format at {csv_file}")
+                        
+                        # Also copy the emotions file if available
+                        emotion_src = os.path.join(a2f_output_dir, "a2f_smoothed_emotion_output.csv")
+                        if os.path.exists(emotion_src):
+                            shutil.copy(emotion_src, emotion_file)
+                            logger.info(f"Emotions data copied to {emotion_file}")
+                        else:
+                            logger.warning(f"No emotions file found at {emotion_src}")
+                    else:
+                        logger.error(f"animation_frames.csv not found in {a2f_output_dir}")
+                        return jsonify({"error": f"animation_frames.csv not found in {a2f_output_dir}"}), 500
                 else:
-                    logger.warning("blendshapes.csv not found after A2F processing - creating mock data for testing")
-                    import math
-                    # Create a mock blendshapes file for testing
-                    with open(csv_file, 'w') as f:
-                        f.write("name,value,timestamp\n")
-                        # Generate some basic mouth movements for a 2-second animation
-                        for i in range(40):
-                            timestamp = i * 50  # 50ms intervals
-                            value = abs(math.sin(i/5))  # Oscillating values
-                            f.write(f"JawOpen,{value},{timestamp}\n")
-                            f.write(f"MouthSmileLeft,{0.1 + value/10},{timestamp}\n")
-                            f.write(f"MouthSmileRight,{0.1 + value/10},{timestamp}\n")
-                            f.write(f"EyeBlinkLeft,{0 if i%10 != 0 else 0.8},{timestamp}\n")
-                            f.write(f"EyeBlinkRight,{0 if i%10 != 0 else 0.8},{timestamp}\n")
-                    logger.info(f"Created mock blendshapes file for testing at {csv_file}")
-                
-                # Similarly check for emotions file
-                if os.path.exists(os.path.join(TEMP_DIR, "emotions.csv")):
-                    os.rename(os.path.join(TEMP_DIR, "emotions.csv"), emotion_file)
-                    logger.info(f"Emotions saved to {emotion_file}")
-                elif os.path.exists("emotions.csv"):
-                    os.rename("emotions.csv", emotion_file)
-                    logger.info(f"Emotions found in current directory and saved to {emotion_file}")
-                else:
-                    logger.warning("emotions.csv not found after A2F processing")
+                    logger.error("No timestamped output folder found from Audio2Face processing")
+                    return jsonify({"error": "No timestamped output folder found from Audio2Face processing"}), 500
             except Exception as e:
                 logger.error(f"Error moving output files: {str(e)}")
             

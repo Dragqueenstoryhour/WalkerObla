@@ -375,6 +375,14 @@ const Animation = () => {
       (data) => Math.abs(data.timestamp - blendshapeData[frameIndex].timestamp) < 0.01
     );
 
+    // Validate we have proper NVIDIA-derived blendshape data
+    const hasJawOpen = frameData.some(d => d.name === 'JawOpen');
+    
+    if (!hasJawOpen) {
+      console.error('Invalid blendshape data - missing essential NVIDIA outputs');
+      return;
+    }
+
     // Extract face parameters from blendshape data
     const jawOpen = frameData.find(d => d.name === 'JawOpen')?.value || 0;
     const mouthSmileLeft = frameData.find(d => d.name === 'MouthSmileLeft')?.value || 0;
