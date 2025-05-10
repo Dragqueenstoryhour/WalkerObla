@@ -68,6 +68,7 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
     try {
       setError(null);
       setLoading(true);
+      setAudioUrl(null);
       
       console.log("Requesting speech synthesis for: \"" + text + "\"");
       
@@ -79,7 +80,7 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
         },
         body: JSON.stringify({
           text,
-          voice: 'alloy'  // Using OpenAI's voice
+          voice: 'alloy'  // Using OpenAI's voice - this service is more reliable than Azure for simple TTS
         })
       });
       
@@ -99,6 +100,9 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
         audioRef.current.src = url;
         audioRef.current.load();
       }
+      
+      // Clear any existing animation data since we're just playing audio
+      setAnimationData([]);
       
     } catch (err) {
       console.error('Error generating speech:', err);
@@ -466,7 +470,10 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
               </Select>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <Button onClick={generateSpeech} disabled={loading}>
+                {loading ? 'Generating...' : 'Hear Phrase'}
+              </Button>
               <Button onClick={generateAnimation} disabled={loading}>
                 {loading ? 'Generating...' : 'Generate Animation'}
               </Button>

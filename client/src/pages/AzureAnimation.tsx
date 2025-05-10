@@ -13,7 +13,7 @@ export function AzureAnimationPage() {
         </p>
         <p className="text-gray-700">
           Type some text, choose a voice, and click "Generate Animation" to see the facial animation.
-          You can also use the "Preview Visemes" button to examine each individual mouth shape.
+          Use "Hear Phrase" to play audio without animation, or "Preview Visemes" to examine each individual mouth shape.
         </p>
       </div>
       
