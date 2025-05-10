@@ -102,82 +102,48 @@ def validate_audio_file(file_path):
         raise RuntimeError(f"Error validating audio file: {str(e)}")
 
 def process_audio(audio_path, model="james"):
-    try:
-        # Generate a unique ID for this request
-        request_id = str(uuid.uuid4())
-        
-        # Create timestamped output directory for A2F processing
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        output_dir = os.path.join(TEMP_DIR, timestamp)
-        os.makedirs(output_dir, exist_ok=True)
-        
-        logger.info(f"Processing audio file: {audio_path}")
-        logger.info(f"Using model: {model}")
-        logger.info(f"Output directory: {output_dir}")
-        
-        # Validate and convert audio file if needed
-        validated_audio_path = validate_audio_file(audio_path)
-        logger.info(f"Validated audio path: {validated_audio_path}")
-        
-        # Build A2F command
-        config_path = os.path.join(CONFIG_DIR, MODEL_CONFIGS.get(model, MODEL_CONFIGS["james"]))
-        
-        # Check if A2F script exists
-        if not os.path.exists(A2F_SCRIPT):
-            logger.error(f"A2F script not found at: {A2F_SCRIPT}")
-            
-            # Create a mock result for testing purposes when A2F is not available
-            logger.warning("Creating mock animation result for testing purposes")
-            mock_blendshapes_file = os.path.join(TEMP_DIR, f"{request_id}_blendshapes.csv")
-            
-            # Create a simple mock CSV with blendshapes data
-            with open(mock_blendshapes_file, 'w', newline='') as f:
-                writer = csv.writer(f)
-                writer.writerow(['timeCode', 'jawOpen', 'mouthClose', 'mouthFunnel', 'mouthPucker', 'eyeBlinkLeft'])
-                # Add some sample data
-                for i in range(0, 100, 5):
-                    time_code = i / 30.0
-                    jaw_value = abs(math.sin(time_code * 3)) * 0.5
-                    writer.writerow([time_code, jaw_value, 0.2, 0.1, 0.05, 0.0])
-            
-            return {
-                "request_id": request_id,
-                "audio_file": audio_path,
-                "blendshapes_file": mock_blendshapes_file,
-                "emotions_file": None,
-                "output_dir": output_dir
-            }
-            
-        # If A2F is available, execute it
-        cmd = [
-            "python3", A2F_SCRIPT,
-            "run_inference",
-            validated_audio_path,
-            config_path,
-            "-u", "localhost:52000",
-            "--output-dir", output_dir
-        ]
-        
-        logger.info(f"Executing command: {' '.join(cmd)}")
-        
-        # Execute Audio2Face
-        try:
-            result = subprocess.run(
-                cmd,
-                check=True,
-                capture_output=True,
-                text=True
-            )
-            
-            logger.info(f"A2F process completed with exit code: {result.returncode}")
-            
-        except subprocess.CalledProcessError as e:
-            logger.error(f"A2F processing failed with error: {e.stderr}")
-            raise RuntimeError(f"A2F processing failed: {e.stderr}")
-        
-        # Find generated files
-        animation_file = os.path.join(output_dir, "animation_frames.csv")
-        emotions_file = os.path.join(output_dir, "a2f_3d_smoothed_emotion_output.csv")
+            try:
+                # Generate a unique ID for this request
+                request_id = str(uuid.uuid4())
+
+                # Create timestamped output directory for A2F processing
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                output_dir = os.path.join(TEMP_DIR, timestamp)
+                os.makedirs(output_dir, exist_ok=True)
+
+                # Validate and convert audio file if needed
+                validated_audio_path = validate_audio_file(audio_path)
+
+                # Build CORRECTED A2F command (removed --output-dir)
+                config_path = os.path.join(CONFIG_DIR, MODEL_CONFIGS.get(model, MODEL_CONFIGS["james"]))
+
+                cmd = [
+                    "python3", A2F_SCRIPT,
+                    "run_inference",
+                    validated_audio_path,
+                    config_path,
+                    "-u", "localhost:52000"  # Removed invalid --output-dir parameter
+                ]
+
+                logger.info(f"Executing command: {' '.join(cmd)}")
+
+                # Execute Audio2Face in the output directory
+                try:
+                    result = subprocess.run(
+                        cmd,
+                        check=True,
+                        capture_output=True,
+                        text=True,
+                        cwd=output_dir  # Run in the output directory
+                    )
+
+                except subprocess.CalledProcessError as e:
+                    logger.error(f"A2F processing failed with error: {e.stderr}")
+                    raise RuntimeError(f"A2F processing failed: {e.stderr}")
+
+                # Find generated files IN THE OUTPUT DIRECTORY
+                animation_file = os.path.join(output_dir, "animation_frames.csv")
+                emotions_file = os.path.join(output_dir, "a2f_3d_smoothed_emotion_output.csv")
         
         if not os.path.exists(animation_file):
             logger.error("Animation output file not generated")

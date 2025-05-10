@@ -1,0 +1,121 @@
+Get facial position with viseme
+Article
+03/10/2025
+3 contributors
+Choose a programming language
+In this article
+Overall workflow of producing viseme with speech
+Viseme ID
+2D SVG animation
+3D blend shapes animation
+Show 2 more
+ Note
+
+To explore the locales supported for viseme ID and blend shapes, refer to the list of all supported locales. Scalable Vector Graphics (SVG) is only supported for the en-US locale.
+
+A viseme is the visual description of a phoneme in spoken language. It defines the position of the face and mouth while a person is speaking. Each viseme depicts the key facial poses for a specific set of phonemes.
+
+You can use visemes to control the movement of 2D and 3D avatar models, so that the facial positions are best aligned with synthetic speech. For example, you can:
+
+Create an animated virtual voice assistant for intelligent kiosks, building multi-mode integrated services for your customers.
+Build immersive news broadcasts and improve audience experiences with natural face and mouth movements.
+Generate more interactive gaming avatars and cartoon characters that can speak with dynamic content.
+Make more effective language teaching videos that help language learners understand the mouth behavior of each word and phoneme.
+People with hearing impairment can also pick up sounds visually and "lip-read" speech content that shows visemes on an animated face.
+For more information about visemes, view this introductory video.
+
+
+Overall workflow of producing viseme with speech
+Neural Text to speech (Neural TTS) turns input text or SSML (Speech Synthesis Markup Language) into lifelike synthesized speech. Speech audio output can be accompanied by viseme ID, Scalable Vector Graphics (SVG), or blend shapes. Using a 2D or 3D rendering engine, you can use these viseme events to animate your avatar.
+
+The overall workflow of viseme is depicted in the following flowchart:
+
+Diagram of the overall workflow of viseme.
+
+Viseme ID
+Viseme ID refers to an integer number that specifies a viseme. We offer 22 different visemes, each depicting the mouth position for a specific set of phonemes. There's no one-to-one correspondence between visemes and phonemes. Often, several phonemes correspond to a single viseme, because they looked the same on the speaker's face when they're produced, such as s and z. For more specific information, see the table for mapping phonemes to viseme IDs.
+
+Speech audio output can be accompanied by viseme IDs and Audio offset. The Audio offset indicates the offset timestamp that represents the start time of each viseme, in ticks (100 nanoseconds).
+
+Map phonemes to visemes
+Visemes vary by language and locale. Each locale has a set of visemes that correspond to its specific phonemes. The SSML phonetic alphabets documentation maps viseme IDs to the corresponding International Phonetic Alphabet (IPA) phonemes. The table in this section shows a mapping relationship between viseme IDs and mouth positions, listing typical IPA phonemes for each viseme ID.
+
+Viseme ID	IPA	Mouth position
+0	Silence	The mouth position when viseme ID is 0
+1	æ, ə, ʌ	The mouth position when viseme ID is 1
+2	ɑ	The mouth position when viseme ID is 2
+3	ɔ	The mouth position when viseme ID is 3
+4	ɛ, ʊ	The mouth position when viseme ID is 4
+5	ɝ	The mouth position when viseme ID is 5
+6	j, i, ɪ	The mouth position when viseme ID is 6
+7	w, u	The mouth position when viseme ID is 7
+8	o	The mouth position when viseme ID is 8
+9	aʊ	The mouth position when viseme ID is 9
+10	ɔɪ	The mouth position when viseme ID is 10
+11	aɪ	The mouth position when viseme ID is 11
+12	h	The mouth position when viseme ID is 12
+13	ɹ	The mouth position when viseme ID is 13
+14	l	The mouth position when viseme ID is 14
+15	s, z	The mouth position when viseme ID is 15
+16	ʃ, tʃ, dʒ, ʒ	The mouth position when viseme ID is 16
+17	ð	The mouth position when viseme ID is 17
+18	f, v	The mouth position when viseme ID is 18
+19	d, t, n, θ	The mouth position when viseme ID is 19
+20	k, g, ŋ	The mouth position when viseme ID is 20
+21	p, b, m	The mouth position when viseme ID is 21
+2D SVG animation
+For 2D characters, you can design a character that suits your scenario and use Scalable Vector Graphics (SVG) for each viseme ID to get a time-based face position.
+
+With temporal tags that are provided in a viseme event, these well-designed SVGs is processed with smoothing modifications, and provide robust animation to the users. For example, the following illustration shows a red-lipped character designed for language learning.
+
+Screenshot showing a 2D rendering example of four red-lipped mouths, each representing a different viseme ID that corresponds to a phoneme.
+
+3D blend shapes animation
+You can use blend shapes to drive the facial movements of a 3D character that you designed.
+
+The blend shapes JSON string is represented as a 2-dimensional matrix. Each row represents a frame. Each frame (in 60 FPS) contains an array of 55 facial positions.
+
+Get viseme events with the Speech SDK
+To get viseme with your synthesized speech, subscribe to the VisemeReceived event in the Speech SDK.
+
+ Note
+
+To request SVG or blend shapes output, you should use the mstts:viseme element in SSML. For details, see how to use viseme element in SSML.
+
+The following snippet shows how to subscribe to the viseme event:
+
+JavaScript
+
+Copy
+var synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig, audioConfig);
+
+// Subscribes to viseme received event
+synthesizer.visemeReceived = function (s, e) {
+    window.console.log("(Viseme), Audio offset: " + e.audioOffset / 10000 + "ms. Viseme ID: " + e.visemeId);
+
+    // `Animation` is an xml string for SVG or a json string for blend shapes
+    var animation = e.animation;
+}
+
+// If VisemeID is the only thing you want, you can also use `speakTextAsync()`
+synthesizer.speakSsmlAsync(ssml);
+Here's an example of the viseme output.
+
+Viseme ID
+2D SVG
+3D blend shapes
+text
+
+Copy
+(Viseme), Viseme ID: 1, Audio offset: 200ms.
+
+(Viseme), Viseme ID: 5, Audio offset: 850ms.
+
+……
+
+(Viseme), Viseme ID: 13, Audio offset: 2350ms.
+After you obtain the viseme output, you can use these events to drive character animation. You can build your own characters and automatically animate them.
+
+Next steps
+SSML phonetic alphabets
+How to improve synthesis with SSML
