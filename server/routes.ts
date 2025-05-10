@@ -1088,7 +1088,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Generate speech using OpenAI
-      const audioBuffer = await openai.generateSpeechResponse(text, voice);
+      const audioBuffer = await openaiService.generateSpeechResponse(text, voice);
       
       // Set appropriate headers for audio data
       res.setHeader('Content-Type', 'audio/mpeg');
