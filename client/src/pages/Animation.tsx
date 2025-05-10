@@ -59,12 +59,18 @@ const Animation = () => {
   const [currentFrame, setCurrentFrame] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [selectedModel, setSelectedModel] = useState<string>('claire');
+  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadMode, setUploadMode] = useState<'text' | 'record' | 'file'>('text');
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<BlobPart[]>([]);
   const animationFrameRef = useRef<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [progress, setProgress] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Sample phrases for quick testing
   const samplePhrases = [
     "Hello, how are you today?",
@@ -89,33 +95,31 @@ const Animation = () => {
     setProgress(10);
 
     try {
-      // Call animation API
-      const response = await apiRequest('/api/animation/generate', {
-        method: 'POST',
-        body: {
-          text: text.trim(),
-          model: selectedModel
-        }
-      });
+      // Call animation API with separate parameters
+      const response = await apiRequest(
+        '/api/animation/generate',
+        'POST',
+        { text: text.trim(), model: selectedModel }
+      );
 
       setProgress(50);
-      
+
       if (!response.success) {
         throw new Error(response.error || 'Failed to generate animation');
       }
-      
+
       setAnimationResult(response);
-      
+
       // Fetch blendshape data
       const blendshapesResponse = await fetch(response.blendshapes_url);
       const blendshapesText = await blendshapesResponse.text();
-      
+
       // Parse CSV data (format: name,value,timestamp)
       const parsedData = parseBlendshapesCSV(blendshapesText);
       setBlendshapeData(parsedData);
-      
+
       setProgress(100);
-      
+
       toast({
         title: "Animation generated",
         description: "The animation has been generated successfully.",
@@ -133,16 +137,159 @@ const Animation = () => {
     }
   };
 
+  // Start audio recording
+  const startRecording = async () => {
+    if (isRecording) return;
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
+      
+      mediaRecorder.ondataavailable = (e) => {
+        chunksRef.current.push(e.data);
+      };
+      
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(chunksRef.current, { type: 'audio/wav' });
+        setAudioBlob(audioBlob);
+        chunksRef.current = [];
+        
+        // Create a preview URL for the recorded audio
+        if (audioRef.current) {
+          const audioURL = URL.createObjectURL(audioBlob);
+          audioRef.current.src = audioURL;
+          audioRef.current.load();
+        }
+      };
+      
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Error starting recording:', err);
+      toast({
+        title: "Recording Error",
+        description: "Failed to access microphone. Please check permissions.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Stop audio recording
+  const stopRecording = () => {
+    if (!isRecording || !mediaRecorderRef.current) return;
+    
+    mediaRecorderRef.current.stop();
+    setIsRecording(false);
+    
+    // Stop all tracks on the active stream
+    if (mediaRecorderRef.current.stream) {
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+    }
+  };
+  
+  // Handle file upload
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Check file type
+    if (!file.type.includes('audio/')) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload an audio file (WAV, MP3, etc.)",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setSelectedFile(file);
+    
+    // Create a preview URL for the uploaded audio
+    if (audioRef.current) {
+      const audioURL = URL.createObjectURL(file);
+      audioRef.current.src = audioURL;
+      audioRef.current.load();
+    }
+  };
+  
+  // Generate animation from audio (recorded or uploaded)
+  const generateAnimationFromAudio = async () => {
+    setIsLoading(true);
+    setError(null);
+    setProgress(10);
+    
+    const formData = new FormData();
+    formData.append('model', selectedModel);
+    
+    if (uploadMode === 'record' && audioBlob) {
+      formData.append('audio', audioBlob, 'recording.wav');
+    } else if (uploadMode === 'file' && selectedFile) {
+      formData.append('audio', selectedFile);
+    } else {
+      toast({
+        title: "Audio Required",
+        description: "Please record or upload an audio file first.",
+        variant: "destructive"
+      });
+      setIsLoading(false);
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/animation/generate-from-audio', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      setProgress(50);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate animation');
+      }
+      
+      const result = await response.json();
+      setAnimationResult(result);
+      
+      // Fetch blendshape data
+      const blendshapesResponse = await fetch(result.blendshapes_url);
+      const blendshapesText = await blendshapesResponse.text();
+      
+      // Parse CSV data
+      const parsedData = parseBlendshapesCSV(blendshapesText);
+      setBlendshapeData(parsedData);
+      
+      setProgress(100);
+      
+      toast({
+        title: "Animation generated",
+        description: "The animation has been generated successfully.",
+      });
+    } catch (err) {
+      console.error('Error generating animation from audio:', err);
+      setError(err instanceof Error ? err.message : 'Failed to generate animation');
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to generate animation',
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   // Parse blendshapes CSV into structured data
   const parseBlendshapesCSV = (csvText: string): BlendshapeData[] => {
     const lines = csvText.trim().split('\n');
     const data: BlendshapeData[] = [];
-    
+
     // Skip header line
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
-      
+
       const parts = line.split(',');
       if (parts.length >= 3) {
         data.push({
@@ -152,14 +299,14 @@ const Animation = () => {
         });
       }
     }
-    
+
     return data;
   };
 
   // Play/pause animation
   const togglePlayback = () => {
     if (!animationResult || !blendshapeData.length) return;
-    
+
     if (isPlaying) {
       // Pause playback
       setIsPlaying(false);
@@ -181,7 +328,7 @@ const Animation = () => {
         }
         audioRef.current.play();
       }
-      
+
       // Start animation loop
       animateFrame();
     }
@@ -190,19 +337,19 @@ const Animation = () => {
   // Animation frame update
   const animateFrame = () => {
     if (!audioRef.current || !isPlaying) return;
-    
+
     const currentTime = audioRef.current.currentTime * 1000; // Convert to milliseconds
-    
+
     // Find the current frame based on timestamp
     const frameIndex = blendshapeData.findIndex(
       (data) => data.timestamp >= currentTime
     );
-    
+
     if (frameIndex !== -1) {
       setCurrentFrame(frameIndex);
       drawFace(frameIndex);
     }
-    
+
     // Continue animation if not at the end
     if (audioRef.current.currentTime < audioRef.current.duration) {
       animationFrameRef.current = requestAnimationFrame(animateFrame);
@@ -214,26 +361,26 @@ const Animation = () => {
   // Draw face animation based on blendshape data
   const drawFace = (frameIndex: number) => {
     if (!canvasRef.current || frameIndex < 0 || frameIndex >= blendshapeData.length) return;
-    
+
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    
+
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     // Get all blendshapes for current frame
     const frameData = blendshapeData.filter(
       (data) => Math.abs(data.timestamp - blendshapeData[frameIndex].timestamp) < 0.01
     );
-    
+
     // Extract face parameters from blendshape data
     const jawOpen = frameData.find(d => d.name === 'JawOpen')?.value || 0;
     const mouthSmileLeft = frameData.find(d => d.name === 'MouthSmileLeft')?.value || 0;
     const mouthSmileRight = frameData.find(d => d.name === 'MouthSmileRight')?.value || 0;
     const eyeBlinkLeft = frameData.find(d => d.name === 'EyeBlinkLeft')?.value || 0;
     const eyeBlinkRight = frameData.find(d => d.name === 'EyeBlinkRight')?.value || 0;
-    
+
     // Draw face
     drawSimpleFace(ctx, canvas.width, canvas.height, {
       jawOpen,
@@ -260,7 +407,7 @@ const Animation = () => {
     const centerX = width / 2;
     const centerY = height / 2;
     const faceRadius = Math.min(width, height) * 0.35;
-    
+
     // Draw face outline
     ctx.beginPath();
     ctx.arc(centerX, centerY, faceRadius, 0, Math.PI * 2);
@@ -269,12 +416,12 @@ const Animation = () => {
     ctx.strokeStyle = '#a0744e';
     ctx.lineWidth = 2;
     ctx.stroke();
-    
+
     // Draw eyes
     const eyeY = centerY - faceRadius * 0.15;
     const eyeRadius = faceRadius * 0.12;
     const eyeDistance = faceRadius * 0.5;
-    
+
     // Left eye
     const leftEyeOpenness = 1 - params.eyeBlinkLeft;
     ctx.beginPath();
@@ -292,7 +439,7 @@ const Animation = () => {
     ctx.strokeStyle = 'black';
     ctx.lineWidth = 1;
     ctx.stroke();
-    
+
     // Right eye
     const rightEyeOpenness = 1 - params.eyeBlinkRight;
     ctx.beginPath();
@@ -310,7 +457,7 @@ const Animation = () => {
     ctx.strokeStyle = 'black';
     ctx.lineWidth = 1;
     ctx.stroke();
-    
+
     // Draw pupils if eyes are open
     if (leftEyeOpenness > 0.3) {
       ctx.beginPath();
@@ -318,23 +465,23 @@ const Animation = () => {
       ctx.fillStyle = 'black';
       ctx.fill();
     }
-    
+
     if (rightEyeOpenness > 0.3) {
       ctx.beginPath();
       ctx.arc(centerX + eyeDistance, eyeY, eyeRadius * 0.4, 0, Math.PI * 2);
       ctx.fillStyle = 'black';
       ctx.fill();
     }
-    
+
     // Draw mouth
     const mouthY = centerY + faceRadius * 0.3;
     const mouthWidth = faceRadius * 0.7;
     const mouthHeight = faceRadius * 0.1 + (params.jawOpen * faceRadius * 0.4);
-    
+
     // Calculate smile curve
     const smileAmount = (params.mouthSmileLeft + params.mouthSmileRight) / 2;
     const mouthCurve = smileAmount * 0.4;
-    
+
     ctx.beginPath();
     ctx.ellipse(
       centerX, 
@@ -350,7 +497,7 @@ const Animation = () => {
     ctx.strokeStyle = '#a02233';
     ctx.lineWidth = 2;
     ctx.stroke();
-    
+
     // If mouth is open, draw tongue and teeth
     if (params.jawOpen > 0.1) {
       // Teeth
@@ -366,7 +513,7 @@ const Animation = () => {
       );
       ctx.fillStyle = 'white';
       ctx.fill();
-      
+
       // Tongue
       if (params.jawOpen > 0.3) {
         ctx.beginPath();
@@ -411,7 +558,7 @@ const Animation = () => {
         });
       }
     }
-    
+
     // Clean up animation frame on unmount
     return () => {
       if (animationFrameRef.current !== null) {
@@ -435,7 +582,7 @@ const Animation = () => {
       <p className="text-lg mb-8">
         Test real-time lip-sync animations with NVIDIA Audio2Face-3D technology.
       </p>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Input Section */}
         <Card>
@@ -464,7 +611,7 @@ const Animation = () => {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="text">Text to Animate</Label>
                 <Textarea
@@ -476,7 +623,7 @@ const Animation = () => {
                   disabled={isLoading}
                 />
               </div>
-              
+
               <div className="flex flex-wrap gap-2">
                 {samplePhrases.map((phrase, index) => (
                   <Button
@@ -518,7 +665,7 @@ const Animation = () => {
             </Button>
           </CardFooter>
         </Card>
-        
+
         {/* Animation Preview */}
         <Card>
           <CardHeader>
@@ -549,7 +696,7 @@ const Animation = () => {
                   height={400} 
                   className="border rounded-md mb-4"
                 />
-                
+
                 {animationResult && (
                   <div className="w-full space-y-4">
                     <audio 
@@ -559,7 +706,7 @@ const Animation = () => {
                       className="w-full"
                       controls
                     />
-                    
+
                     <Button
                       onClick={togglePlayback}
                       className="w-full"
@@ -584,7 +731,7 @@ const Animation = () => {
           </CardContent>
         </Card>
       </div>
-      
+
       {/* Blendshapes Data (Optional) */}
       {blendshapeData.length > 0 && (
         <Card className="mt-8">
