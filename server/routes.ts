@@ -1078,6 +1078,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Animation API routes for NVIDIA Audio2Face-3D integration
   const ANIMATION_API_URL = process.env.ANIMATION_API_URL || 'http://localhost:5050';
   
+  // Text-to-Speech endpoint using OpenAI
+  app.post('/api/tts/generate', async (req, res) => {
+    try {
+      const { text, voice = 'alloy' } = req.body;
+      
+      if (!text) {
+        return res.status(400).json({ error: 'No text provided' });
+      }
+      
+      // Generate speech using OpenAI
+      const audioBuffer = await openai.generateSpeechResponse(text, voice);
+      
+      // Set appropriate headers for audio data
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Content-Length', audioBuffer.length);
+      
+      // Send the buffer as the response
+      return res.send(audioBuffer);
+    } catch (error) {
+      console.error('Error generating speech:', error);
+      return res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to generate speech' 
+      });
+    }
+  });
+  
   // Start the animation server (Flask) when the Express server starts
   let animationProcess: any = null;
   
