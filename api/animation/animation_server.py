@@ -218,51 +218,129 @@ def process_audio(audio_path, model="james"):
         logger.error(f"Error processing audio: {str(e)}")
         raise
 
+@app.route('/generate-from-audio', methods=['POST'])
 @app.route('/generate-animation', methods=['POST'])
 def generate_animation():
-    """Process audio file and generate animation data"""
-    if 'audio' not in request.files:
-        logger.error("No audio file provided in request")
-        return jsonify({"error": "No audio file provided"}), 400
-    
-    audio_file = request.files['audio']
-    if not audio_file.filename:
-        logger.error("Empty audio filename")
-        return jsonify({"error": "No audio file selected"}), 400
-    
+    """Process audio file or text and generate animation data"""
     model = request.form.get('model', 'james')
     
-    try:
-        # Create unique filename for the audio
-        audio_id = str(uuid.uuid4())
-        filename = f"{audio_id}.wav"
-        audio_path = os.path.join(TEMP_DIR, filename)
+    # Check for audio file in request
+    if 'audio' in request.files:
+        audio_file = request.files['audio']
+        if not audio_file.filename:
+            logger.error("Empty audio filename")
+            return jsonify({"error": "No audio file selected"}), 400
         
-        # Save uploaded file
-        audio_file.save(audio_path)
-        logger.info(f"Saved audio file to {audio_path}")
+        try:
+            # Create unique filename for the audio
+            audio_id = str(uuid.uuid4())
+            filename = f"{audio_id}.wav"
+            audio_path = os.path.join(TEMP_DIR, filename)
+            
+            # Save uploaded file
+            audio_file.save(audio_path)
+            logger.info(f"Saved audio file to {audio_path}")
+            
+            # Process through Audio2Face
+            result = process_audio(audio_path, model)
+            
+            response_data = {
+                "success": True,
+                "request_id": result["request_id"],
+                "audio_url": f"/animation/audio/{result['request_id']}",
+                "blendshapes_url": f"/animation/blendshapes/{result['request_id']}",
+            }
+            
+            if result.get("emotions_file"):
+                response_data["emotions_url"] = f"/animation/emotions/{result['request_id']}"
+            
+            return jsonify(response_data)
         
-        # Process through Audio2Face
-        result = process_audio(audio_path, model)
-        
-        response_data = {
-            "success": True,
-            "request_id": result["request_id"],
-            "audio_url": f"/animation/audio/{result['request_id']}",
-            "blendshapes_url": f"/animation/blendshapes/{result['request_id']}",
-        }
-        
-        if result.get("emotions_file"):
-            response_data["emotions_url"] = f"/animation/emotions/{result['request_id']}"
-        
-        return jsonify(response_data)
+        except Exception as e:
+            logger.error(f"Error generating animation: {str(e)}")
+            return jsonify({
+                "success": False,
+                "error": str(e)
+            }), 500
     
-    except Exception as e:
-        logger.error(f"Error generating animation: {str(e)}")
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
+    # Check for text in request (for text-to-speech)
+    elif request.json and 'text' in request.json:
+        from tempfile import NamedTemporaryFile
+        import subprocess
+        
+        try:
+            text = request.json['text']
+            voice = request.json.get('voice', 'default')
+            
+            logger.info(f"Received text for TTS: {text[:50]}...")
+            logger.info(f"Using voice: {voice}")
+            
+            # Generate a unique filename for audio
+            audio_id = str(uuid.uuid4())
+            audio_path = os.path.join(TEMP_DIR, f"{audio_id}_tts.wav")
+            
+            # For now, we'll use a simple text-to-wav utility
+            # In a production system, this would use a proper TTS API
+            try:
+                with NamedTemporaryFile(suffix='.txt', delete=False) as text_file:
+                    text_file.write(text.encode('utf-8'))
+                    text_path = text_file.name
+                
+                # Use espeak or any other TTS tool available (this is just a placeholder)
+                # In production this would call our TTS API
+                try:
+                    subprocess.run(
+                        ["espeak", "-w", audio_path, "-f", text_path],
+                        check=True, capture_output=True
+                    )
+                except (subprocess.SubprocessError, FileNotFoundError):
+                    # If espeak is not available, create a simple sine wave as a placeholder
+                    logger.warning("TTS utility not available, creating a placeholder audio file")
+                    subprocess.run(
+                        ["ffmpeg", "-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=3",
+                         "-ar", "16000", "-ac", "1", audio_path],
+                        check=True, capture_output=True
+                    )
+                
+                # Clean up the temporary text file
+                try:
+                    os.unlink(text_path)
+                except:
+                    pass
+                
+                # Process the generated audio through Audio2Face
+                result = process_audio(audio_path, model)
+                
+                response_data = {
+                    "success": True,
+                    "request_id": result["request_id"],
+                    "audio_url": f"/animation/audio/{result['request_id']}",
+                    "blendshapes_url": f"/animation/blendshapes/{result['request_id']}",
+                }
+                
+                if result.get("emotions_file"):
+                    response_data["emotions_url"] = f"/animation/emotions/{result['request_id']}"
+                
+                return jsonify(response_data)
+                
+            except Exception as e:
+                logger.error(f"Error generating TTS audio: {str(e)}")
+                return jsonify({
+                    "success": False,
+                    "error": f"Error generating TTS audio: {str(e)}"
+                }), 500
+                
+        except Exception as e:
+            logger.error(f"Error processing TTS request: {str(e)}")
+            return jsonify({
+                "success": False,
+                "error": str(e)
+            }), 500
+    
+    # If neither audio nor text is provided
+    else:
+        logger.error("Neither audio file nor text provided in request")
+        return jsonify({"error": "No audio file or text provided"}), 400
 
 @app.route('/animation/audio/<request_id>')
 def get_animation_audio(request_id):
