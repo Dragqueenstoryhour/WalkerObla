@@ -123,6 +123,8 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
       setAudioUrl(null);
       setPlaying(false);
       
+      console.log(`Requesting animation for: "${text}" with voice: ${voice}`);
+      
       // Call server API to generate viseme data
       const response = await fetch('/api/viseme/generate', {
         method: 'POST',
@@ -131,7 +133,8 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
         },
         body: JSON.stringify({
           text,
-          voice,
+          // Always use Guy or Ana Neural voices as they have better viseme support
+          voice: voice || 'en-US-GuyNeural',
           format: 'svg'
         })
       });
@@ -154,10 +157,13 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
           const audioBlob = new Blob([audioBuffer], { type: 'audio/wav' });
           const url = URL.createObjectURL(audioBlob);
           setAudioUrl(url);
+          
+          console.log(`Generated ${frames.length} viseme frames with audio (duration: ${data.duration}ms)`);
+        } else {
+          console.warn("No audio data received with viseme frames");
         }
-        
-        console.log(`Generated ${frames.length} viseme frames with audio (duration: ${data.duration}ms)`);
       } else {
+        console.error("Invalid response format from server:", data);
         throw new Error('Invalid response format from server');
       }
     } catch (err) {
@@ -170,15 +176,23 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
   
   // Parse CSV data into animation frames
   const parseVisemeCsv = (csv: string): VisemeFrame[] => {
+    if (!csv || !csv.trim()) {
+      console.warn("Empty CSV data provided to parseVisemeCsv");
+      return [];
+    }
+    
     const lines = csv.trim().split('\n');
     const headers = lines[0].split(',');
     
     // Check if we have the required columns
-    if (!headers.includes('time') || !headers.includes('viseme_id')) {
-      throw new Error('Invalid CSV format: missing required columns');
+    if (!headers.includes('time') && !headers.includes('viseme_id')) {
+      console.error('Invalid CSV format: missing required columns');
+      return [];
     }
     
     const frames: VisemeFrame[] = [];
+    
+    // Standard CSV parsing with header row
     for (let i = 1; i < lines.length; i++) {
       const cols = lines[i].split(',');
       
@@ -204,11 +218,13 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
         const time = parseFloat(cols[0]);
         const visemeId = parseInt(cols[1], 10);
         
-        frames.push({
-          time,
-          visemeId,
-          svg: svgData
-        });
+        if (!isNaN(time) && !isNaN(visemeId) && visemeId >= 0 && visemeId <= 21) {
+          frames.push({
+            time,
+            visemeId,
+            svg: svgData
+          });
+        }
       } catch (e) {
         console.error('Error parsing CSV line:', cols, e);
       }
