@@ -42,7 +42,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       // Get or create user from storage
-      const user = await storage.getUserById(userId.toString());
+      const user = await storage.getUser(userId.toString());
       
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
@@ -151,6 +151,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Failed to generate speech' 
       });
+    }
+  });
+
+  // Content endpoints
+  app.get('/api/content/sample', async (req, res) => {
+    try {
+      const sampleContent = await openaiService.generateSampleContent();
+      res.json(sampleContent);
+    } catch (error) {
+      console.error('Error generating sample content:', error);
+      res.status(500).json({ error: 'Failed to generate sample content' });
+    }
+  });
+
+  app.post('/api/content/generate', async (req, res) => {
+    try {
+      const schema = z.object({
+        topic: z.string(),
+        difficulty: z.enum(['easy', 'medium', 'hard']),
+      });
+
+      const { topic, difficulty } = schema.parse(req.body);
+      const content = await openaiService.generateReadingContent(topic, difficulty);
+      res.json(content);
+    } catch (error) {
+      console.error('Error generating content:', error);
+      res.status(500).json({ error: 'Failed to generate content' });
+    }
+  });
+  
+  // Process phrases for pronunciation practice
+  app.post('/api/content/process-phrases', async (req, res) => {
+    try {
+      const schema = z.object({
+        phrases: z.array(z.string())
+      });
+
+      const { phrases } = schema.parse(req.body);
+      
+      if (phrases.length === 0) {
+        return res.status(400).json({ error: 'No phrases provided' });
+      }
+      
+      // Process the phrases with OpenAI
+      const processedPhrases = await openaiService.processPhrases(phrases);
+      res.json({ phrases: processedPhrases });
+    } catch (error) {
+      console.error('Error processing phrases:', error);
+      res.status(500).json({ error: 'Failed to process phrases' });
+    }
+  });
+  
+  // Generate similar phrases based on an existing phrase
+  app.post('/api/content/generate-similar', async (req, res) => {
+    try {
+      const schema = z.object({
+        phrase: z.string()
+      });
+
+      const { phrase } = schema.parse(req.body);
+      
+      // Generate similar phrases with OpenAI
+      const similarPhrases = await openaiService.generateSimilarPhrases(phrase);
+      res.json({ phrases: similarPhrases });
+    } catch (error) {
+      console.error('Error generating similar phrases:', error);
+      res.status(500).json({ error: 'Failed to generate similar phrases' });
+    }
+  });
+  
+  // Generate phrases on a specific topic
+  app.post('/api/content/generate-topic-phrases', async (req, res) => {
+    try {
+      const schema = z.object({
+        topic: z.string(),
+      });
+
+      const { topic } = schema.parse(req.body);
+      
+      // Use OpenAI to generate phrases related to the topic
+      const response = await openaiService.generateTopicPhrases(topic);
+      res.json({ phrases: response });
+    } catch (error) {
+      console.error('Error generating phrases:', error);
+      res.status(500).json({ error: 'Failed to generate phrases' });
+    }
+  });
+
+  // New phrases practice page
+  app.get('/NewPhrases', (req, res) => {
+    // Serve the same debug-recorder HTML file at the new path
+    const debugRecorderPath = join(process.cwd(), 'debug-recorder.html');
+    if (fs.existsSync(debugRecorderPath)) {
+      res.sendFile(debugRecorderPath);
+    } else {
+      res.status(404).send('New phrases practice page not found');
     }
   });
 
