@@ -1,32 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { VISEME_DESCRIPTIONS } from './FacialAnimation';
 
-// We'll use the file paths without import
-const visemeImagePaths = [
-  '/assets/Visemes/viseme-id-0.jpg',
-  '/assets/Visemes/viseme-id-1.jpg',
-  '/assets/Visemes/viseme-id-2.jpg',
-  '/assets/Visemes/viseme-id-3.jpg',
-  '/assets/Visemes/viseme-id-4.jpg',
-  '/assets/Visemes/viseme-id-5.jpg',
-  '/assets/Visemes/viseme-id-6.jpg',
-  '/assets/Visemes/viseme-id-7.jpg',
-  '/assets/Visemes/viseme-id-8.jpg',
-  '/assets/Visemes/viseme-id-9.jpg',
-  '/assets/Visemes/viseme-id-10.jpg',
-  '/assets/Visemes/viseme-id-11.jpg',
-  '/assets/Visemes/viseme-id-12.jpg',
-  '/assets/Visemes/viseme-id-13.jpg',
-  '/assets/Visemes/viseme-id-14.jpg',
-  '/assets/Visemes/viseme-id-15.jpg',
-  '/assets/Visemes/viseme-id-16.jpg',
-  '/assets/Visemes/viseme-id-17.jpg',
-  '/assets/Visemes/viseme-id-18.jpg',
-  '/assets/Visemes/viseme-id-19.jpg',
-  '/assets/Visemes/viseme-id-20.jpg',
-  '/assets/Visemes/viseme-id-21.jpg'
-];
-
 interface VisemeFrame {
   time: number;      // Time in seconds
   visemeId: number;  // Azure viseme ID (0-21)
@@ -58,17 +32,39 @@ export function CssAnimatedViseme({
     // Clear any existing content
     containerRef.current.innerHTML = '';
     
-    // Create a container for the viseme images
-    const visemeContainer = document.createElement('div');
-    visemeContainer.className = 'viseme-container';
-    visemeContainer.style.position = 'absolute';
-    visemeContainer.style.top = '0';
-    visemeContainer.style.left = '0';
-    visemeContainer.style.width = '100%';
-    visemeContainer.style.height = '100%';
-    containerRef.current.appendChild(visemeContainer);
+    // Create a container for the face elements (that won't change)
+    const faceContainer = document.createElement('div');
+    faceContainer.className = 'face-container';
+    faceContainer.style.position = 'absolute';
+    faceContainer.style.top = '0';
+    faceContainer.style.left = '0';
+    faceContainer.style.width = '100%';
+    faceContainer.style.height = '100%';
     
-    // Create each viseme image and position it with CSS animation
+    // Add face outline SVG (this stays consistent)
+    faceContainer.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 130" width="100%" height="100%">
+        <rect width="100%" height="100%" fill="none" />
+        <ellipse cx="65" cy="65" rx="45" ry="55" stroke="black" stroke-width="1.5" fill="none" />
+        <circle cx="48" cy="50" r="3" fill="black" /> <!-- left eye -->
+        <circle cx="82" cy="50" r="3" fill="black" /> <!-- right eye -->
+        <path d="M65,42 L65,55 M55,95 Q65,100 75,95" stroke="black" stroke-width="1" fill="none" /> <!-- nose and chin -->
+      </svg>
+    `;
+    
+    containerRef.current.appendChild(faceContainer);
+    
+    // Create a container for the mouth animations
+    const mouthContainer = document.createElement('div');
+    mouthContainer.className = 'mouth-container';
+    mouthContainer.style.position = 'absolute';
+    mouthContainer.style.top = '0';
+    mouthContainer.style.left = '0';
+    mouthContainer.style.width = '100%';
+    mouthContainer.style.height = '100%';
+    containerRef.current.appendChild(mouthContainer);
+    
+    // Create each viseme mouth shape and position it with CSS animation
     frames.forEach((frame, index) => {
       // Create div for this viseme frame
       const visemeElement = document.createElement('div');
@@ -80,11 +76,16 @@ export function CssAnimatedViseme({
       visemeElement.style.height = '100%';
       visemeElement.style.opacity = '0'; // Start hidden
       
-      // Add the viseme image
-      visemeElement.innerHTML = generateVisemeHtml(frame.visemeId);
+      // Add the mouth shape SVG for this viseme
+      if (frame.svg) {
+        visemeElement.innerHTML = frame.svg;
+      } else {
+        // Fallback to predefined SVG shape based on viseme ID
+        visemeElement.innerHTML = generateVisemeSvg(frame.visemeId);
+      }
       
       // Add to container
-      visemeContainer.appendChild(visemeElement);
+      mouthContainer.appendChild(visemeElement);
       
       // Add CSS animation for timing
       const isLastFrame = index === frames.length - 1;
@@ -157,12 +158,95 @@ export function CssAnimatedViseme({
   );
 }
 
-// Function to generate HTML for a specific viseme ID
-function generateVisemeHtml(visemeId: number): string {
-  // Ensure visemeId is in valid range
-  const safeVisemeId = Math.min(Math.max(0, visemeId), 21);
+// Function to generate SVG for a specific viseme ID
+function generateVisemeSvg(visemeId: number): string {
+  // Define mouth shapes for each viseme ID (0-21)
+  const visemePaths = [
+    // 0: Silence - closed mouth
+    `<path d="M45,70 Q65,72 85,70" stroke="black" stroke-width="2" fill="none" />`,
+    
+    // 1: æ, ə, ʌ - as in "bat", "about", "cut"
+    `<path d="M45,65 Q65,75 85,65" stroke="black" stroke-width="2" fill="none" />`,
+    
+    // 2: ɑ - as in "father" - wide open mouth
+    `<path d="M45,60 Q65,85 85,60" stroke="black" stroke-width="2" fill="none" />`,
+    
+    // 3: ɔ - as in "dog" - rounded open mouth 
+    `<path d="M50,65 Q65,78 80,65" stroke="black" stroke-width="2" fill="none" />`,
+    
+    // 4: ɛ, ʊ - as in "pet", "book"
+    `<path d="M45,65 Q65,72 85,65" stroke="black" stroke-width="2" fill="none" />`,
+    
+    // 5: ɝ - as in "bird"
+    `<path d="M50,68 Q65,75 80,68" stroke="black" stroke-width="2" fill="none" />`,
+    
+    // 6: j, i, ɪ - as in "yes", "see", "sit" - slight smile
+    `<path d="M45,68 Q65,72 85,68" stroke="black" stroke-width="2" fill="none" />
+     <path d="M45,68 C50,65 80,65 85,68" stroke="black" stroke-width="1.5" fill="none" />`,
+    
+    // 7: w, u - as in "we", "blue" - pursed lips
+    `<circle cx="65" cy="70" r="5" stroke="black" stroke-width="2" fill="none" />`,
+    
+    // 8: o - as in "show" - rounded o shape
+    `<circle cx="65" cy="70" r="8" stroke="black" stroke-width="2" fill="none" />`,
+    
+    // 9: aʊ - as in "how" - larger rounded shape
+    `<circle cx="65" cy="70" r="12" stroke="black" stroke-width="2" fill="none" />`,
+    
+    // 10: ɔɪ - as in "boy" - transition from o to y
+    `<path d="M50,65 Q65,75 80,65" stroke="black" stroke-width="2" fill="none" />
+     <path d="M55,65 C60,63 70,63 75,65" stroke="black" stroke-width="1.5" fill="none" />`,
+    
+    // 11: aɪ - as in "fly" - transition from a to y
+    `<path d="M45,65 Q65,75 85,65" stroke="black" stroke-width="2" fill="none" />
+     <path d="M50,65 C55,63 75,63 80,65" stroke="black" stroke-width="1.5" fill="none" />`,
+    
+    // 12: h - as in "help" - slight opening
+    `<path d="M50,68 Q65,73 80,68" stroke="black" stroke-width="2" fill="none" />`,
+    
+    // 13: ɹ - as in "red" - rounded with slight protrusion
+    `<path d="M55,68 Q65,73 75,68" stroke="black" stroke-width="2" fill="none" />
+     <path d="M60,68 Q65,73 70,68" stroke="black" stroke-width="1.5" fill="none" />`,
+    
+    // 14: l - as in "look" - tongue against upper palate
+    `<path d="M50,68 Q65,72 80,68" stroke="black" stroke-width="2" fill="none" />
+     <path d="M58,68 H72" stroke="black" stroke-width="1" fill="none" />
+     <path d="M65,68 L65,73" stroke="black" stroke-width="1.5" fill="none" />`,
+    
+    // 15: s, z - as in "say", "zoo" - teeth almost closed
+    `<path d="M50,69 Q65,71 80,69" stroke="black" stroke-width="2" fill="none" />
+     <path d="M50,69 L80,69" stroke="black" stroke-width="1" stroke-dasharray="2,1" fill="none" />`,
+    
+    // 16: ʃ, tʃ, dʒ, ʒ - as in "show", "cheese", "judge" - rounded pursed
+    `<path d="M55,68 Q65,72 75,68" stroke="black" stroke-width="2" fill="none" />
+     <path d="M60,68 Q65,71 70,68" stroke="black" stroke-width="1.5" fill="none" />`,
+    
+    // 17: ð - as in "then" - tongue between teeth
+    `<path d="M50,69 Q65,70 80,69" stroke="black" stroke-width="2" fill="none" />
+     <path d="M58,69 L72,69" stroke="black" stroke-width="1" fill="none" />
+     <path d="M65,69 L65,74" stroke="black" stroke-width="2" fill="none" />`,
+    
+    // 18: f, v - as in "fan", "van" - lower lip against upper teeth
+    `<path d="M50,68 Q65,70 80,68" stroke="black" stroke-width="2" fill="none" />
+     <path d="M50,65 L80,65" stroke="black" stroke-width="1" stroke-dasharray="2,1" fill="none" />
+     <path d="M55,68 H75" stroke="black" stroke-width="1.5" fill="none" />`,
+    
+    // 19: d, t, n, θ - as in "did", "talk", "now", "thin"
+    `<path d="M50,69 Q65,71 80,69" stroke="black" stroke-width="2" fill="none" />
+     <path d="M60,69 L70,69" stroke="black" stroke-width="1" fill="none" />
+     <path d="M65,66 L65,69" stroke="black" stroke-width="1" fill="none" />`,
+    
+    // 20: k, g, ŋ - as in "cat", "guest", "sing" - back of tongue against palate
+    `<path d="M50,69 Q65,71 80,69" stroke="black" stroke-width="2" fill="none" />
+     <path d="M55,69 C60,66 70,66 75,69" stroke="black" stroke-width="1" fill="none" />`,
+    
+    // 21: p, b, m - as in "put", "big", "mat" - lips pressed together
+    `<path d="M50,70 L80,70" stroke="black" stroke-width="2.5" fill="none" />`,
+  ];
   
-  // Return an img tag for the viseme
-  return `<img src="${visemeImagePaths[safeVisemeId]}" alt="Viseme ${safeVisemeId}" 
-    style="width: 100%; height: 100%; object-fit: contain;" />`;
+  // Return the SVG with the appropriate mouth shape
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 130" width="100%" height="100%">
+    <rect width="100%" height="100%" fill="none" />
+    ${visemePaths[visemeId] || visemePaths[0]}
+  </svg>`;
 }
