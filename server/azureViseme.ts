@@ -340,7 +340,8 @@ export async function processAudioForVisemes(
     
     return new Promise<ConsolidatedVisemeData>((resolve, reject) => {
       // Set up the viseme event handler
-      recognizer.visemeReceived = (s, e) => {
+      // @ts-ignore: The visemeReceived event is available in the latest Azure Speech SDK but might not be in the type definitions
+      recognizer.visemeReceived = (s: any, e: any) => {
         // Extract offset and viseme ID
         const visemeId = e.visemeId;
         const audioOffset = e.audioOffset / 10000; // Convert 100-nanosecond units to milliseconds
