@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CssAnimatedViseme } from './CssAnimatedViseme';
 
 // The possible viseme IDs from Azure Documentation (0-21)
 export const VISEME_DESCRIPTIONS = [
@@ -486,7 +487,17 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
               />
               
               <div className="w-48 h-48 bg-gray-50 rounded border flex items-center justify-center">
-                {getVisemeSvg(currentViseme)}
+                {animationData.length > 0 ? (
+                  <CssAnimatedViseme 
+                    frames={animationData}
+                    playing={playing}
+                    onEnd={handleAudioEnded}
+                    width={180}
+                    height={180}
+                  />
+                ) : (
+                  getVisemeSvg(currentViseme)
+                )}
               </div>
               
               <div className="flex gap-2">

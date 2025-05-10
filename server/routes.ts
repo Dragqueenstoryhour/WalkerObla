@@ -1332,6 +1332,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Endpoint to generate speech with visemes
   app.post('/api/viseme/generate', async (req, res) => {
+    // Map characters to likely viseme IDs based on English phonetics
+    function getVisemeIdForChar(char: string): number {
+      const charMap: Record<string, number> = {
+        'a': 1, // æ, ə, ʌ - as in "bat", "about", "cut"
+        'e': 4, // ɛ - as in "pet"
+        'i': 6, // i, ɪ - as in "see", "sit"
+        'o': 8, // o - as in "show"
+        'u': 7, // u - as in "blue"
+        'p': 21, // p, b, m
+        'b': 21, 
+        'm': 21,
+        'f': 18, // f, v
+        'v': 18,
+        't': 19, // d, t, n
+        'd': 19,
+        'n': 19,
+        's': 15, // s, z
+        'z': 15,
+        'r': 13, // ɹ - as in "red"
+        'l': 14, // l - as in "look"
+        'k': 20, // k, g, ŋ
+        'g': 20,
+        'w': 7,  // w, u
+        'y': 6,  // j, i, ɪ
+        'h': 12, // h
+        'j': 16, // like in "judge"
+        'c': 16, // often like in "cheese"
+        'q': 20, // similar to k
+        'x': 15  // often has s sound
+      };
+      
+      // Default to the slightly open mouth position for unknown characters
+      return charMap[char.toLowerCase()] || 4;
+    }
+    
+    // Helper function to generate mock viseme data for testing
+    function generateMockVisemeData(text: string, format: string = 'svg'): { 
+      csv: string, 
+      duration: number, 
+      visemeCount: number 
+    } {
+      // Split text into words for timing
+      const words = text.split(/\s+/);
+      const visemes: Array<{ time: number, visemeId: number }> = [];
+      
+      // Add initial silence
+      visemes.push({ time: 0, visemeId: 0 });
+      
+      let timeOffset = 0.2; // Start after 200ms
+      
+      // Generate visemes for each word
+      words.forEach((word, index) => {
+        // Create 2-5 visemes per word based on word length
+        const numVisemes = Math.max(2, Math.min(5, Math.ceil(word.length / 2)));
+        
+        for (let i = 0; i < numVisemes; i++) {
+          // Get a reasonable viseme ID based on character
+          const char = word.charAt(i % word.length);
+          const visemeId = getVisemeIdForChar(char);
+          
+          visemes.push({ time: timeOffset, visemeId });
+          timeOffset += 0.15; // 150ms per viseme
+        }
+        
+        // Small pause between words
+        timeOffset += 0.1;
+      });
+      
+      // End with silence
+      visemes.push({ time: timeOffset, visemeId: 0 });
+      
+      // Convert to CSV format
+      let csv = 'time,viseme_id,svg\n';
+      visemes.forEach(v => {
+        csv += `${v.time.toFixed(3)},${v.visemeId},\n`;
+      });
+      
+      return {
+        csv,
+        duration: timeOffset * 1000, // Convert to ms
+        visemeCount: visemes.length
+      };
+    }
+    
     try {
       const { text, voice, format } = req.body;
       
@@ -1344,22 +1428,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Generating speech with visemes: format=${visemeFormat}, voice=${voiceName}`);
       
-      // Generate speech with viseme data
-      const visemeData = await azureVisemeService.generateSpeechWithVisemes(text, voiceName, visemeFormat);
-      
-      // Convert the viseme data to CSV format
-      const blendshapesCsv = azureVisemeService.convertVisemesToCsv(visemeData, visemeFormat);
-      
-      // Encode the audio buffer as base64 to return in the response
-      const audioBase64 = visemeData.audioBuffer.toString('base64');
-      
-      return res.json({
-        success: true,
-        blendshapesCsv,
-        audioData: audioBase64,
-        duration: visemeData.duration,
-        visemeCount: visemeData.visemes.length
-      });
+      try {
+        // Try generating speech with Azure's viseme data
+        const visemeData = await azureVisemeService.generateSpeechWithVisemes(text, voiceName, visemeFormat);
+        
+        // Convert the viseme data to CSV format
+        const blendshapesCsv = azureVisemeService.convertVisemesToCsv(visemeData, visemeFormat);
+        
+        // Encode the audio buffer as base64 to return in the response
+        const audioBase64 = visemeData.audioBuffer.toString('base64');
+        
+        return res.json({
+          success: true,
+          blendshapesCsv,
+          audioData: audioBase64,
+          duration: visemeData.duration,
+          visemeCount: visemeData.visemes.length
+        });
+      } catch (azureError) {
+        console.error('Azure Speech Services error:', azureError);
+        
+        // For development purposes, provide mock data for UI testing
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('Using mock viseme data for development testing');
+          
+          // Generate mock viseme data for testing UI
+          const mockData = generateMockVisemeData(text, visemeFormat);
+          
+          return res.json({
+            success: true,
+            blendshapesCsv: mockData.csv,
+            audioData: '', // No audio in mock mode
+            duration: mockData.duration,
+            visemeCount: mockData.visemeCount,
+            isMock: true
+          });
+        } else {
+          // In production, propagate the error
+          throw azureError;
+        }
+      }
     } catch (error) {
       console.error('Error generating speech with visemes:', error);
       return res.status(500).json({ 
