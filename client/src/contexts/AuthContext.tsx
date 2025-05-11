@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useAuth, AuthUser, LoginCredentials, SignupCredentials } from '../hooks/useAuth';
+import { useAuth, AuthUser, LoginCredentials, SignupCredentials, OAuthProvider } from '../hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 // Create a type that explicitly handles the undefined to null conversion

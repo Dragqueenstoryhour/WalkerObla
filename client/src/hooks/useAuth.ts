@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getSupabaseClient } from '../lib/supabaseClient';
+import { getSupabaseClient, supabaseClient } from '../lib/supabaseClient';
 
 // Define the user type
 export interface AuthUser {
@@ -24,6 +24,8 @@ export interface SignupCredentials extends LoginCredentials {
   firstName?: string;
   lastName?: string;
 }
+
+export type OAuthProvider = 'google' | 'github' | 'facebook' | 'twitter';
 
 export function useAuth() {
   const queryClient = useQueryClient();
@@ -107,6 +109,43 @@ export function useAuth() {
     },
   });
 
+  // OAuth login mutation
+  const oauthLogin = useMutation({
+    mutationFn: async (provider: OAuthProvider) => {
+      const response = await fetch('/api/auth/oauth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ provider }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'OAuth login failed');
+      }
+      
+      return response.json();
+    },
+  });
+
+  // Direct Supabase OAuth login (client-side alternative)
+  const supabaseOAuthLogin = async (provider: OAuthProvider) => {
+    const { data, error } = await supabaseClient.auth.signInWithOAuth({
+      provider: provider,
+      options: {
+        redirectTo: window.location.origin + '/api/auth/callback',
+      },
+    });
+    
+    if (error) throw error;
+    
+    if (data && data.url) {
+      // Redirect user to the OAuth provider's login page
+      window.location.href = data.url;
+    }
+  };
+
   return {
     user,
     isLoading,
@@ -124,5 +163,10 @@ export function useAuth() {
     logoutAsync: logout.mutateAsync,
     isLoggingOut: logout.isPending,
     logoutError: logout.error,
+    oauthLogin: oauthLogin.mutate,
+    oauthLoginAsync: oauthLogin.mutateAsync,
+    isOAuthLoggingIn: oauthLogin.isPending,
+    oauthLoginError: oauthLogin.error,
+    supabaseOAuthLogin
   };
 }

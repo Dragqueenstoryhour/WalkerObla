@@ -48,32 +48,27 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
   const handleOAuthLogin = async (provider: string) => {
     try {
       setIsOAuthLoading(true);
-      const response = await fetch('/api/auth/oauth', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      
+      // Use the direct Supabase OAuth login for a better user experience
+      await supabaseClient.auth.signInWithOAuth({
+        provider: provider as any,
+        options: {
+          redirectTo: `${window.location.origin}/api/auth/callback`,
         },
-        body: JSON.stringify({ provider }),
       });
       
-      const data = await response.json();
+      // The page will redirect automatically, but we'll add a fallback here
+      setTimeout(() => {
+        setIsOAuthLoading(false);
+      }, 5000);
       
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      
-      if (data.url) {
-        // Redirect the user to the OAuth provider's login page
-        window.location.href = data.url;
-      }
     } catch (error: any) {
+      setIsOAuthLoading(false);
       toast({
         variant: "destructive",
         title: "OAuth Error",
         description: error.message || "Failed to start OAuth login. Please try again."
       });
-    } finally {
-      setIsOAuthLoading(false);
     }
   };
   
@@ -213,6 +208,23 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
               Sign in to save your progress and access all features.
             </DialogDescription>
           </DialogHeader>
+          <div className="pt-4 pb-6">
+            <Button 
+              type="button" 
+              className="w-full bg-white text-black border-gray-300 hover:bg-gray-100 hover:text-black" 
+              onClick={() => handleOAuthLogin('google')}
+              disabled={isOAuthLoading}
+              size="lg"
+            >
+              <SiGoogle className="mr-2 h-5 w-5 text-[#4285F4]" />
+              {isOAuthLoading ? 'Connecting...' : 'Continue with Google'}
+            </Button>
+            
+            <Separator className="my-6">
+              <span className="px-2 text-xs text-muted-foreground">OR USE EMAIL</span>
+            </Separator>
+          </div>
+          
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>
@@ -252,36 +264,6 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
                   </Button>
                 </form>
               </Form>
-              
-              <div className="mt-4">
-                <Separator className="mb-4">
-                  <span className="px-2 text-xs text-muted-foreground">OR</span>
-                </Separator>
-                
-                <div className="grid grid-cols-1 gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    className="w-full" 
-                    onClick={() => handleOAuthLogin('google')}
-                    disabled={isOAuthLoading}
-                  >
-                    <SiGoogle className="mr-2 h-4 w-4" />
-                    Sign in with Google
-                  </Button>
-                  
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    className="w-full" 
-                    onClick={() => handleOAuthLogin('github')}
-                    disabled={isOAuthLoading}
-                  >
-                    <Github className="mr-2 h-4 w-4" />
-                    Sign in with GitHub
-                  </Button>
-                </div>
-              </div>
             </TabsContent>
             <TabsContent value="signup">
               <Form {...signupForm}>
@@ -345,6 +327,8 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
                   </Button>
                 </form>
               </Form>
+              
+              {/* No additional OAuth buttons needed here since we have them at the top */}
             </TabsContent>
           </Tabs>
         </DialogContent>
