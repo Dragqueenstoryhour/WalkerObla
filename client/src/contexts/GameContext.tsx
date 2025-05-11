@@ -8,6 +8,7 @@ import {
   PronunciationAssessmentResult
 } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { levelWords, getWordsForLevel } from '@/lib/levelWords';
 
 // Define the types for our context
 interface GameContextType {
@@ -154,97 +155,58 @@ export function GameProvider({ children, initialUsername = 'player1' }: GameProv
   // Start a specific level
   const startLevel = async (levelNumber: number): Promise<void> => {
     try {
-      // In a real app, this would be an API call to get level data
-      // For now we'll generate mock data
+      // Only allow levels 1-24 (A-X)
+      if (levelNumber < 1 || levelNumber > 24) {
+        throw new Error("Invalid level number. Must be between 1 and 24.");
+      }
+      
+      // Generate the letter for the level (A=1, B=2, etc.)
+      const letter = String.fromCharCode(64 + levelNumber);
       
       // "Get" the current level
       const level: GameLevel = {
         id: levelNumber,
         levelNumber,
-        name: levelNumber === 1 ? "Beginner Words" :
-              levelNumber === 2 ? "Simple Phrases" : "Complete Sentences",
-        description: levelNumber === 1 ? "Practice simple words to build your pronunciation skills" :
-                    levelNumber === 2 ? "Practice short phrases to improve your fluency" :
-                    "Practice complete sentences for better speech rhythm",
-        requiredXP: calculateXpForLevel(levelNumber - 1),
-        unlockableRewards: levelNumber === 1 ? { hat: "baseball_cap" } :
-                          levelNumber === 2 ? { accessory: "headphones" } :
-                          { outfit: "casual_tshirt" },
-        difficulty: levelNumber === 3 ? "medium" : "easy",
+        name: `Level ${letter}: Words that start with ${letter}`,
+        description: `Practice pronouncing words that start with the letter ${letter}`,
+        requiredXP: (levelNumber - 1) * 100,
+        unlockableRewards: { accessory: levelNumber % 3 === 0 ? "headphones" : 
+                            levelNumber % 3 === 1 ? "hat" : "outfit" },
+        difficulty: levelNumber <= 8 ? "easy" : 
+                  levelNumber <= 16 ? "medium" : "hard",
         createdAt: new Date().toISOString()
       };
       
-      // "Get" the next level
-      const nextLevelData: GameLevel | null = levelNumber < 3 ? {
-        id: levelNumber + 1,
-        levelNumber: levelNumber + 1,
-        name: levelNumber === 1 ? "Simple Phrases" : "Complete Sentences",
-        description: levelNumber === 1 ? "Practice short phrases to improve your fluency" :
-                    "Practice complete sentences for better speech rhythm",
-        requiredXP: calculateXpForLevel(levelNumber),
-        unlockableRewards: levelNumber === 1 ? { accessory: "headphones" } : { outfit: "casual_tshirt" },
-        difficulty: levelNumber === 2 ? "medium" : "easy",
+      // "Get" the next level (if it exists)
+      const nextLevelNum = levelNumber + 1;
+      const nextLevelData: GameLevel | null = nextLevelNum <= 24 ? {
+        id: nextLevelNum,
+        levelNumber: nextLevelNum,
+        name: `Level ${String.fromCharCode(64 + nextLevelNum)}: Words that start with ${String.fromCharCode(64 + nextLevelNum)}`,
+        description: `Practice pronouncing words that start with the letter ${String.fromCharCode(64 + nextLevelNum)}`,
+        requiredXP: (nextLevelNum - 1) * 100,
+        unlockableRewards: { accessory: nextLevelNum % 3 === 0 ? "headphones" : 
+                            nextLevelNum % 3 === 1 ? "hat" : "outfit" },
+        difficulty: nextLevelNum <= 8 ? "easy" : 
+                  nextLevelNum <= 16 ? "medium" : "hard",
         createdAt: new Date().toISOString()
       } : null;
       
-      // "Get" exercises for this level
-      let levelExercises: Exercise[] = [];
+      // Get words for this level from our levelWords file
+      const words = getWordsForLevel(levelNumber);
       
-      if (levelNumber === 1) {
-        // Level 1: Simple words
-        const words = ["Hello", "World", "Cat", "Dog", "Book", "Water", "Apple", "Sun", "Moon", "Star", "Tree", "House"];
-        levelExercises = words.map((word, i) => ({
-          id: i + 1,
-          levelId: level.id,
-          type: "word",
-          content: word,
-          difficulty: "easy",
-          xpReward: 10,
-          order: i + 1,
-          createdAt: new Date().toISOString()
-        }));
-      } else if (levelNumber === 2) {
-        // Level 2: Phrases
-        const phrases = [
-          "Good morning",
-          "How are you",
-          "Thank you very much",
-          "Nice to meet you",
-          "What time is it",
-          "I like reading",
-          "The blue sky",
-          "A beautiful day"
-        ];
-        levelExercises = phrases.map((phrase, i) => ({
-          id: 100 + i + 1,
-          levelId: level.id,
-          type: "phrase",
-          content: phrase,
-          difficulty: "easy",
-          xpReward: 15,
-          order: i + 1,
-          createdAt: new Date().toISOString()
-        }));
-      } else {
-        // Level 3: Sentences
-        const sentences = [
-          "Today is a beautiful day for a walk in the park.",
-          "I enjoy reading books about science and history.",
-          "The quick brown fox jumps over the lazy dog.",
-          "Learning to speak clearly is an important skill.",
-          "Practice makes perfect when you're learning something new."
-        ];
-        levelExercises = sentences.map((sentence, i) => ({
-          id: 200 + i + 1,
-          levelId: level.id,
-          type: "sentence",
-          content: sentence,
-          difficulty: "medium",
-          xpReward: 25,
-          order: i + 1,
-          createdAt: new Date().toISOString()
-        }));
-      }
+      // Create exercises based on these words
+      const levelExercises: Exercise[] = words.map((word, i) => ({
+        id: levelNumber * 100 + i + 1, // Create unique ids for each exercise
+        levelId: level.id,
+        type: "word",
+        content: word,
+        difficulty: level.difficulty as "easy" | "medium" | "hard",
+        xpReward: level.difficulty === "easy" ? 10 : 
+                 level.difficulty === "medium" ? 15 : 20,
+        order: i + 1,
+        createdAt: new Date().toISOString()
+      }));
       
       // "Get" user exercises (or create new ones if they don't exist)
       const userExercisesData = levelExercises.map((exercise) => ({
