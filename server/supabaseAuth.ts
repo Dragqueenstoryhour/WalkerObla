@@ -4,6 +4,7 @@ import session from 'express-session';
 import connectPg from 'connect-pg-simple';
 import { storage } from './storage';
 import { db } from './db';
+import { Provider } from '@supabase/supabase-js';
 
 // Declare a custom session to add user property
 declare module 'express-session' {
@@ -11,6 +12,16 @@ declare module 'express-session' {
     user: any;
   }
 }
+
+// List of available OAuth providers
+export const OAUTH_PROVIDERS = {
+  GOOGLE: 'google',
+  GITHUB: 'github',
+  FACEBOOK: 'facebook',
+  TWITTER: 'twitter'
+} as const;
+
+export type OAuthProvider = typeof OAUTH_PROVIDERS[keyof typeof OAUTH_PROVIDERS];
 
 // Set up session management
 export function getSession() {
@@ -126,16 +137,87 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  // Logout endpoint
-  app.post('/api/auth/logout', (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        console.error('Error destroying session:', err);
-        return res.status(500).json({ error: 'Failed to log out' });
+  // OAuth login endpoint
+  app.post('/api/auth/oauth', async (req, res) => {
+    const { provider } = req.body;
+    
+    if (!provider) {
+      return res.status(400).json({ error: 'Provider is required' });
+    }
+    
+    try {
+      // Generate the OAuth URL
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: provider as Provider,
+        options: {
+          redirectTo: `${req.protocol}://${req.headers.host}/api/auth/callback`,
+        },
+      });
+      
+      if (error) throw error;
+      
+      if (data && data.url) {
+        return res.json({ url: data.url });
       }
       
-      res.json({ success: true });
-    });
+      return res.status(400).json({ error: 'Could not generate OAuth URL' });
+    } catch (error: any) {
+      console.error('Error generating OAuth URL:', error);
+      return res.status(500).json({ error: error.message || 'Authentication failed' });
+    }
+  });
+
+  // OAuth callback handling
+  app.get('/api/auth/callback', async (req, res) => {
+    const code = req.query.code as string;
+    
+    if (!code) {
+      return res.redirect('/?error=missing_code');
+    }
+    
+    try {
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+      
+      if (error) throw error;
+      
+      if (data.user) {
+        await upsertUser(data.user);
+        
+        // Set the user in the session
+        req.session.user = data.user;
+        
+        // Redirect to the home page or a success page
+        return res.redirect('/');
+      }
+      
+      return res.redirect('/?error=auth_failed');
+    } catch (error: any) {
+      console.error('Error handling OAuth callback:', error);
+      return res.redirect(`/?error=${encodeURIComponent(error.message || 'Authentication failed')}`);
+    }
+  });
+
+  // Logout endpoint
+  app.post('/api/auth/logout', async (req, res) => {
+    try {
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) throw error;
+      
+      // Clear the session
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('Error destroying session:', err);
+          return res.status(500).json({ error: 'Failed to log out' });
+        }
+        
+        res.json({ success: true });
+      });
+    } catch (error: any) {
+      console.error('Error logging out:', error);
+      return res.status(500).json({ error: error.message || 'Logout failed' });
+    }
   });
 
   // Get current user endpoint

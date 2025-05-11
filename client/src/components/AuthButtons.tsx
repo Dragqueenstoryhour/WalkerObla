@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthContext } from '../contexts/AuthContext';
+import { supabaseClient } from '../lib/supabaseClient';
 import { Button } from "@/components/ui/button";
-import { User, LogOut, LogIn } from 'lucide-react';
+import { User, LogOut, LogIn, Mail, Github, Twitter, Facebook } from 'lucide-react';
+import { SiGoogle } from 'react-icons/si';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -35,9 +38,44 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
   size = "default",
   showText = true
 }) => {
-  const { user, isLoading, isAuthenticated, login, logout, signup, isLoggingIn, isSigningUp } = useAuth();
+  const { user, isLoading, isAuthenticated, login, logout, signup } = useAuthContext();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isSigningUp, setIsSigningUp] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   const { toast } = useToast();
+  
+  const handleOAuthLogin = async (provider: string) => {
+    try {
+      setIsOAuthLoading(true);
+      const response = await fetch('/api/auth/oauth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ provider }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      if (data.url) {
+        // Redirect the user to the OAuth provider's login page
+        window.location.href = data.url;
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "OAuth Error",
+        description: error.message || "Failed to start OAuth login. Please try again."
+      });
+    } finally {
+      setIsOAuthLoading(false);
+    }
+  };
   
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -59,6 +97,7 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
   
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
     try {
+      setIsLoggingIn(true);
       await login(values);
       setIsDialogOpen(false);
       toast({
@@ -71,11 +110,14 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
         description: error.message || "Please check your credentials and try again",
         variant: "destructive",
       });
+    } finally {
+      setIsLoggingIn(false);
     }
   };
   
   const onSignupSubmit = async (values: z.infer<typeof signupSchema>) => {
     try {
+      setIsSigningUp(true);
       await signup(values);
       setIsDialogOpen(false);
       toast({
@@ -88,6 +130,8 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
         description: error.message || "There was an error creating your account",
         variant: "destructive",
       });
+    } finally {
+      setIsSigningUp(false);
     }
   };
   
@@ -208,6 +252,36 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
                   </Button>
                 </form>
               </Form>
+              
+              <div className="mt-4">
+                <Separator className="mb-4">
+                  <span className="px-2 text-xs text-muted-foreground">OR</span>
+                </Separator>
+                
+                <div className="grid grid-cols-1 gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full" 
+                    onClick={() => handleOAuthLogin('google')}
+                    disabled={isOAuthLoading}
+                  >
+                    <SiGoogle className="mr-2 h-4 w-4" />
+                    Sign in with Google
+                  </Button>
+                  
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full" 
+                    onClick={() => handleOAuthLogin('github')}
+                    disabled={isOAuthLoading}
+                  >
+                    <Github className="mr-2 h-4 w-4" />
+                    Sign in with GitHub
+                  </Button>
+                </div>
+              </div>
             </TabsContent>
             <TabsContent value="signup">
               <Form {...signupForm}>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth, AuthUser } from '@/hooks/useAuth';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from '@/hooks/use-toast';
@@ -7,7 +7,7 @@ import { Link, useLocation } from 'wouter';
 import { Star, Trophy, Clock, BarChart2 } from 'lucide-react';
 
 const Account = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user } = useAuthContext();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [userStats, setUserStats] = useState({

@@ -1,32 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 
-// These values will be derived from our backend
-async function getSupabaseConfig() {
-  const response = await fetch('/api/auth/config');
-  const data = await response.json();
-  return data;
-}
+// Define the Supabase URL and anon key directly in the client
+const SUPABASE_URL = 'https://hehogfyncmkakwxrgocj.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlaG9nZnluY21rYWt3eHJnb2NqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY5Njg2NDksImV4cCI6MjA2MjU0NDY0OX0.yR5n4YzA4sbr4GQejD_yT4mnPU6_Zwhs9twDvOu60Jk';
 
-// Initialize supabase client
-let supabaseClient: ReturnType<typeof createClient> | null = null;
-
-export async function initSupabaseClient() {
-  if (supabaseClient) return supabaseClient;
-  
-  try {
-    const { supabaseUrl, supabaseAnonKey } = await getSupabaseConfig();
-    supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
-    return supabaseClient;
-  } catch (error) {
-    console.error('Failed to initialize Supabase client:', error);
-    throw error;
+// Create Supabase client
+export const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    storageKey: 'supabase-auth-token',
+    detectSessionInUrl: true
   }
-}
+});
 
-// Export a function to get the client
+// Export a function to get the client (for backward compatibility)
 export async function getSupabaseClient() {
-  if (!supabaseClient) {
-    return initSupabaseClient();
-  }
   return supabaseClient;
 }
