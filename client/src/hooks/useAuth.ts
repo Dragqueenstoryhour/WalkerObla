@@ -63,12 +63,12 @@ async function fetchUserData(authUser: AuthUser | null): Promise<AuthUser | null
     if (!token) return authUser;
     
     // Fetch additional user data from our API
-    const userData = await apiRequest<AuthUser>('/api/auth/user', {
+    const userData = await fetch('/api/auth/user', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`
       }
-    } as RequestInit);
+    }).then(res => res.json());
     
     // Merge the data
     return {

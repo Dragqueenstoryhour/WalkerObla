@@ -113,8 +113,7 @@ export async function setupAuth(app: Express) {
       const updatedUser = await storage.updateUser(userId, {
         firstName,
         lastName,
-        bio,
-        updatedAt: new Date()
+        bio
       });
       
       // Also update user metadata in Supabase
