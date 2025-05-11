@@ -2,6 +2,9 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useAuth, AuthUser, LoginCredentials, SignupCredentials } from '../hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
+// Create a type that explicitly handles the undefined to null conversion
+type SafeAuthUser = AuthUser | null;
+
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
@@ -75,10 +78,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Convert undefined to null explicitly
+  const safeUser: SafeAuthUser = user || null;
+  
   return (
     <AuthContext.Provider
       value={{
-        user,
+        user: safeUser,
         isLoading,
         isAuthenticated,
         login,

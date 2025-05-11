@@ -17,11 +17,13 @@ import AzureAnimation from "@/pages/AzureAnimation";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ReadingProvider } from "./contexts/ReadingContext";
 import { GameProvider } from "./contexts/GameContext";
-import { useAuth } from "@/hooks/useAuth";
+import { AuthProvider } from "./contexts/AuthContext";
+import { useAuthContext } from "./contexts/AuthContext";
+import { AuthButtons } from "./components/AuthButtons";
 import Account from "./pages/Account";
 
 function Navigation() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user } = useAuthContext();
   
   return (
     <div className="bg-primary/5 border-b py-2 px-4 mb-4">
@@ -48,27 +50,29 @@ function Navigation() {
         */}
         
         <div className="ml-auto">
-          {isAuthenticated && user ? (
-            <Link href="/account" className="flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 border-2 border-primary rounded-full flex items-center justify-center bg-primary text-primary-foreground">
-                  {user.username.charAt(0).toUpperCase()}
+          <div className="flex items-center gap-2">
+            {isAuthenticated && user ? (
+              <Link href="/account" className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 border-2 border-primary rounded-full flex items-center justify-center bg-primary text-primary-foreground">
+                    {user.username?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                  <div className="hidden md:flex flex-col">
+                    <span className="text-sm font-medium leading-none">
+                      {user.username || 'User'}
+                    </span>
+                    <span className="text-xs text-muted-foreground leading-none mt-1">
+                      Logged In
+                    </span>
+                  </div>
                 </div>
-                <div className="hidden md:flex flex-col">
-                  <span className="text-sm font-medium leading-none">
-                    {user.username}
-                  </span>
-                  <span className="text-xs text-muted-foreground leading-none mt-1">
-                    Logged In
-                  </span>
-                </div>
+              </Link>
+            ) : (
+              <div className="ml-auto">
+                <AuthButtons showText={true} />
               </div>
-            </Link>
-          ) : (
-            <Link href="/api/login" className="text-primary hover:underline">
-              Log In / Sign Up
-            </Link>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -103,8 +107,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <SettingsProvider>
         <ReadingProvider>
-          <Router />
-          <Toaster />
+          <AuthProvider>
+            <Router />
+            <Toaster />
+          </AuthProvider>
         </ReadingProvider>
       </SettingsProvider>
     </QueryClientProvider>
