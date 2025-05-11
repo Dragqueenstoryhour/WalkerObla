@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Authentication Callback</title>
+  <script>
+    // This script handles the OAuth callback
+    window.onload = function() {
+      try {
+        // Auth callback logic
+        // The hash fragment will contain the access token and other auth data
+        if (window.location.hash) {
+          // Notify the parent window that auth was successful
+          window.opener && window.opener.postMessage(
+            {
+              type: 'supabase.auth.callback',
+              hash: window.location.hash
+            },
+            window.location.origin
+          );
+        }
+      } catch (error) {
+        console.error('Auth callback error:', error);
+      } finally {
+        // Close the popup window if it exists
+        if (window.opener) {
+          window.close();
+        } else {
+          // If not a popup, redirect to the main page
+          window.location.href = '/';
+        }
+      }
+    };
+  </script>
+</head>
+<body>
+  <h3>Completing authentication, please wait...</h3>
+</body>
+</html>

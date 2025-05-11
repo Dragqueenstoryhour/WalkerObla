@@ -2,9 +2,6 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useAuth, AuthUser, LoginCredentials, SignupCredentials, OAuthProvider } from '../hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
-// Create a type that explicitly handles the undefined to null conversion
-type SafeAuthUser = AuthUser | null;
-
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
@@ -27,7 +24,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     loginAsync,
     signupAsync,
     logoutAsync,
-    supabaseOAuthLogin,
+    oauthLoginAsync,
     isOAuthLoggingIn
   } = useAuth();
 
@@ -84,7 +81,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const oauthLogin = async (provider: OAuthProvider) => {
     try {
-      await supabaseOAuthLogin(provider);
+      await oauthLoginAsync(provider);
       // No toast here as the page will redirect to OAuth provider
     } catch (error: any) {
       toast({
@@ -95,14 +92,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       throw error;
     }
   };
-
-  // Convert undefined to null explicitly
-  const safeUser: SafeAuthUser = user || null;
   
   return (
     <AuthContext.Provider
       value={{
-        user: safeUser,
+        user,
         isLoading,
         isAuthenticated,
         login,

@@ -1,17 +1,7 @@
 import { Request, Response, NextFunction, Express, RequestHandler } from 'express';
 import { supabase } from './supabaseClient';
-import session from 'express-session';
-import connectPg from 'connect-pg-simple';
-import { storage } from './storage';
-import { db } from './db';
 import { Provider } from '@supabase/supabase-js';
-
-// Declare a custom session to add user property
-declare module 'express-session' {
-  interface SessionData {
-    user: any;
-  }
-}
+import { storage } from './storage';
 
 // List of available OAuth providers
 export const OAUTH_PROVIDERS = {
@@ -23,268 +13,126 @@ export const OAUTH_PROVIDERS = {
 
 export type OAuthProvider = typeof OAUTH_PROVIDERS[keyof typeof OAUTH_PROVIDERS];
 
-// Set up session management
-export function getSession() {
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: true,
-    ttl: sessionTtl,
-    tableName: "sessions",
-  });
-  
-  return session({
-    secret: process.env.SESSION_SECRET || 'speakup-speech-therapy-app-supabase',
-    store: sessionStore,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: sessionTtl,
-    },
-  });
-}
-
-// Function to update the user in our database from Supabase auth data
-async function upsertUser(supabaseUser: any) {
+/**
+ * Verify a Supabase JWT token
+ */
+export async function verifyToken(token: string) {
   try {
-    await storage.upsertUser({
-      id: supabaseUser.id,
-      username: supabaseUser.email ? supabaseUser.email.split('@')[0] : `user-${supabaseUser.id.substring(0, 8)}`,
-      email: supabaseUser.email,
-      firstName: supabaseUser.user_metadata?.first_name,
-      lastName: supabaseUser.user_metadata?.last_name,
-      bio: supabaseUser.user_metadata?.bio,
-      profileImageUrl: supabaseUser.user_metadata?.avatar_url,
-    });
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error) {
+      console.error('Error verifying token:', error.message);
+      return null;
+    }
+    return data.user;
   } catch (error) {
-    console.error('Error upserting user:', error);
-    throw error;
+    console.error('Error in token verification:', error);
+    return null;
   }
 }
 
+/**
+ * Extract JWT token from Authorization header
+ */
+function extractToken(req: Request): string | null {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+  return authHeader.split(' ')[1];
+}
+
+/**
+ * JWT authentication middleware
+ */
+export const authMiddleware: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+  const token = extractToken(req);
+  
+  if (!token) {
+    return res.status(401).json({ error: 'No authentication token provided' });
+  }
+  
+  const user = await verifyToken(token);
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+  
+  // Attach the user to the request
+  (req as any).user = user;
+  next();
+};
+
+/**
+ * Register auth-related routes
+ */
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
-  app.use(getSession());
-
-  // Sign up endpoint
-  app.post('/api/auth/signup', async (req, res) => {
-    const { email, password, firstName, lastName } = req.body;
-    
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
-    
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-          }
-        }
-      });
-      
-      if (error) throw error;
-      
-      if (data.user) {
-        await upsertUser(data.user);
-        
-        // Set the user in the session
-        req.session.user = data.user;
-        return res.json({ user: data.user });
-      }
-      
-      return res.status(400).json({ error: 'Could not sign up user' });
-    } catch (error: any) {
-      console.error('Error signing up:', error);
-      return res.status(500).json({ error: error.message || 'Authentication failed' });
-    }
+  
+  // Health check/configuration endpoint
+  app.get('/api/auth/config', (req, res) => {
+    res.json({
+      providers: Object.values(OAUTH_PROVIDERS),
+      redirectUrl: '/auth-callback.html',
+    });
   });
-
-  // Login endpoint
-  app.post('/api/auth/login', async (req, res) => {
-    const { email, password } = req.body;
-    
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
-    
+  
+  // User data endpoint (requires authentication)
+  app.get('/api/auth/user', authMiddleware, async (req: any, res) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      // Get user data from storage based on auth ID
+      const userId = req.user.id;
+      let user = await storage.getUserById(userId);
       
-      if (error) throw error;
-      
-      if (data.user) {
-        await upsertUser(data.user);
-        
-        // Set the user in the session
-        req.session.user = data.user;
-        return res.json({ user: data.user });
-      }
-      
-      return res.status(400).json({ error: 'Could not log in user' });
-    } catch (error: any) {
-      console.error('Error logging in:', error);
-      return res.status(500).json({ error: error.message || 'Authentication failed' });
-    }
-  });
-
-  // OAuth login endpoint
-  app.post('/api/auth/oauth', async (req, res) => {
-    const { provider } = req.body;
-    
-    if (!provider) {
-      return res.status(400).json({ error: 'Provider is required' });
-    }
-    
-    try {
-      // Check if provider is valid and supported
-      const validProviders = ['google', 'github', 'facebook', 'twitter'];
-      if (!validProviders.includes(provider)) {
-        return res.status(400).json({ 
-          error: `Invalid provider: ${provider}. Supported providers: ${validProviders.join(', ')}`,
-          code: 'invalid_provider'
+      // If user doesn't exist in our database yet, create them
+      if (!user) {
+        user = await storage.createUser({
+          id: userId,
+          username: req.user.email ? req.user.email.split('@')[0] : `user_${userId.substring(0, 8)}`, 
+          email: req.user.email,
+          firstName: req.user.user_metadata?.first_name || '',
+          lastName: req.user.user_metadata?.last_name || '',
+          createdAt: new Date(),
+          updatedAt: new Date(),
         });
       }
       
-      // Generate the OAuth URL
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: provider as Provider,
-        options: {
-          redirectTo: `${req.protocol}://${req.headers.host}/api/auth/callback`,
-        },
-      });
-      
-      if (error) {
-        // If provider is not enabled in Supabase, provide helpful error
-        if (error.message.includes('provider is not enabled')) {
-          return res.status(400).json({ 
-            error: `The ${provider} provider is not enabled in your Supabase project. Please see ENABLE_GOOGLE_OAUTH.md for setup instructions.`,
-            code: 'provider_not_enabled'
-          });
-        }
-        throw error;
-      }
-      
-      if (data && data.url) {
-        return res.json({ url: data.url });
-      }
-      
-      return res.status(400).json({ error: 'Could not generate OAuth URL' });
-    } catch (error: any) {
-      console.error('Error generating OAuth URL:', error);
-      return res.status(500).json({ 
-        error: error.message || 'Authentication failed',
-        details: error.code || 'unknown_error'
-      });
-    }
-  });
-
-  // OAuth callback handling
-  app.get('/api/auth/callback', async (req, res) => {
-    const code = req.query.code as string;
-    
-    if (!code) {
-      return res.redirect('/?error=missing_code');
-    }
-    
-    try {
-      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-      
-      if (error) throw error;
-      
-      if (data.user) {
-        await upsertUser(data.user);
-        
-        // Set the user in the session
-        req.session.user = data.user;
-        
-        // Redirect to the home page or a success page
-        return res.redirect('/');
-      }
-      
-      return res.redirect('/?error=auth_failed');
-    } catch (error: any) {
-      console.error('Error handling OAuth callback:', error);
-      return res.redirect(`/?error=${encodeURIComponent(error.message || 'Authentication failed')}`);
-    }
-  });
-
-  // Logout endpoint
-  app.post('/api/auth/logout', async (req, res) => {
-    try {
-      // Sign out from Supabase
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) throw error;
-      
-      // Clear the session
-      req.session.destroy((err) => {
-        if (err) {
-          console.error('Error destroying session:', err);
-          return res.status(500).json({ error: 'Failed to log out' });
-        }
-        
-        res.json({ success: true });
-      });
-    } catch (error: any) {
-      console.error('Error logging out:', error);
-      return res.status(500).json({ error: error.message || 'Logout failed' });
-    }
-  });
-
-  // Get current user endpoint
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.user.id;
-      const user = await storage.getUser(userId);
-      
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-      
+      // Return user data
       res.json(user);
-    } catch (error) {
-      console.error('Error fetching user:', error);
-      res.status(500).json({ error: 'Failed to fetch user' });
+    } catch (error: any) {
+      console.error('Error fetching user data:', error);
+      res.status(500).json({ error: 'Failed to fetch user data' });
+    }
+  });
+  
+  // User profile update endpoint (requires authentication)
+  app.post('/api/auth/profile', authMiddleware, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { firstName, lastName, bio } = req.body;
+      
+      // Update user profile in our database
+      const updatedUser = await storage.updateUser(userId, {
+        firstName,
+        lastName,
+        bio,
+        updatedAt: new Date()
+      });
+      
+      // Also update user metadata in Supabase
+      await supabase.auth.updateUser({
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          bio
+        }
+      });
+      
+      res.json(updatedUser);
+    } catch (error: any) {
+      console.error('Error updating user profile:', error);
+      res.status(500).json({ error: 'Failed to update user profile' });
     }
   });
 }
 
-// Middleware to check if user is authenticated
-export const isAuthenticated: RequestHandler = async (req: any, res, next) => {
-  if (!req.session || !req.session.user) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  
-  try {
-    // Verify the session with Supabase
-    const { data, error } = await supabase.auth.getUser();
-    
-    if (error || !data.user) {
-      // Session is invalid, clear it
-      req.session.destroy();
-      return res.status(401).json({ error: 'Session expired or invalid' });
-    }
-    
-    // Check if the user in session matches current authenticated user
-    if (req.session.user.id !== data.user.id) {
-      // User mismatch, clear session
-      req.session.destroy();
-      return res.status(401).json({ error: 'Session user mismatch' });
-    }
-    
-    next();
-  } catch (error) {
-    console.error('Error validating authentication:', error);
-    return res.status(500).json({ error: 'Authentication validation failed' });
-  }
-};
+// For backward compatibility (used in routes.ts)
+export const isAuthenticated = authMiddleware;

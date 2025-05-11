@@ -41,6 +41,7 @@ import { db } from "./db";
 export interface IStorage {
   // User methods
   getUser(id: string): Promise<User | undefined>;
+  getUserById(id: string): Promise<User | null>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
@@ -428,6 +429,11 @@ export class MemStorage implements IStorage {
   // User methods
   async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
+  }
+  
+  async getUserById(id: string): Promise<User | null> {
+    const user = this.users.get(id);
+    return user || null;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
@@ -893,6 +899,16 @@ export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
+  }
+  
+  async getUserById(id: string): Promise<User | null> {
+    try {
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      return user || null;
+    } catch (error) {
+      console.error('Error fetching user by ID:', error);
+      return null;
+    }
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
