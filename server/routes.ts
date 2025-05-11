@@ -11,7 +11,7 @@ import multer from 'multer';
 import { z } from "zod";
 import { insertReadingContentSchema, insertReadingSessionSchema, insertSharedPhraseCollectionSchema, insertUserSavedPhraseSchema, insertPracticeGroupSchema, insertPracticeGroupPhraseSchema } from "@shared/schema";
 import WebSocket from "ws";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./supabaseAuth";
 import Stripe from "stripe";
 import fs from 'fs';
 import { join } from 'path';
@@ -36,18 +36,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.warn("WARNING: OPENAI_API_KEY is not set. AI features will not work properly.");
   }
   
-  // Set up authentication
+  // Set up authentication with Supabase
   await setupAuth(app);
   
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Add Supabase configuration endpoint
+  app.get('/api/auth/config', (req, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
+      // For development purposes, we're using hardcoded values
+      // In production, these would come from environment variables
+      const supabaseUrl = 'https://your-project.supabase.co';
+      const supabaseAnonKey = 'your-anon-key';
+      
+      res.json({ 
+        supabaseUrl, 
+        supabaseAnonKey 
+      });
     } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+      console.error('Error providing Supabase config:', error);
+      res.status(500).json({ error: 'Failed to provide Supabase configuration' });
     }
   });
 
@@ -399,7 +405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stripe subscription endpoints
   app.post('/api/subscription/create', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.user.id;
       
       // Create a subscription for the user
       const subscriptionResponse = await stripeService.createSubscription(userId);
@@ -435,7 +441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/subscription/cancel', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.user.id;
       
       // Cancel the user's subscription
       await stripeService.cancelSubscription(userId);
@@ -449,7 +455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/subscription/status', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.user.id;
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -503,7 +509,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get user ID if logged in
         let userId = null;
         if (req.isAuthenticated && req.isAuthenticated() && req.user && req.user.claims) {
-          userId = req.user.claims.sub;
+          userId = req.session.user.id;
           console.log(`Request from authenticated user: ${userId}`);
         } else {
           console.log(`Request from unauthenticated user`);
@@ -598,7 +604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User saved phrases endpoints
   app.post('/api/phrases/save', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.user.id;
       const data = insertUserSavedPhraseSchema.parse({
         ...req.body,
         userId // Ensure the userId from auth is used
@@ -614,7 +620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get('/api/phrases/saved', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.user.id;
       const savedPhrases = await storage.getUserSavedPhrases(userId);
       res.json({ savedPhrases });
     } catch (error) {
@@ -625,7 +631,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.delete('/api/phrases/saved/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.user.id;
       const phraseId = parseInt(req.params.id, 10);
       
       // First check if the phrase belongs to the user
@@ -650,7 +656,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Practice groups endpoints
   app.get('/api/practice-groups', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.user.id;
       const groups = await storage.getPracticeGroups(userId);
       res.json({ groups });
     } catch (error) {
@@ -661,7 +667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/practice-groups', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.user.id;
       const data = insertPracticeGroupSchema.parse({
         ...req.body,
         userId // Ensure the userId from auth is used
@@ -677,7 +683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get('/api/practice-groups/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.user.id;
       const groupId = parseInt(req.params.id, 10);
       
       const group = await storage.getPracticeGroupById(groupId);
@@ -703,7 +709,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.patch('/api/practice-groups/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.user.id;
       const groupId = parseInt(req.params.id, 10);
       
       const group = await storage.getPracticeGroupById(groupId);
@@ -726,7 +732,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.delete('/api/practice-groups/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.user.id;
       const groupId = parseInt(req.params.id, 10);
       
       const group = await storage.getPracticeGroupById(groupId);
@@ -749,7 +755,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/practice-groups/:id/share', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.user.id;
       const groupId = parseInt(req.params.id, 10);
       
       const group = await storage.getPracticeGroupById(groupId);
@@ -804,7 +810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Practice group phrases endpoints
   app.post('/api/practice-groups/:groupId/phrases', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.user.id;
       const groupId = parseInt(req.params.groupId, 10);
       
       // Validate ownership of the group
@@ -845,7 +851,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.delete('/api/practice-groups/:groupId/phrases/:phraseId', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.user.id;
       const groupId = parseInt(req.params.groupId, 10);
       const phraseId = parseInt(req.params.phraseId, 10);
       
@@ -896,7 +902,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if logged in user has premium access
-      const userId = req.user.claims.sub;
+      const userId = req.session.user.id;
       const user = await storage.getUser(userId);
       
       if (!user) {

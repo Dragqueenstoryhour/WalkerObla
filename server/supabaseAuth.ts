@@ -5,6 +5,13 @@ import connectPg from 'connect-pg-simple';
 import { storage } from './storage';
 import { db } from './db';
 
+// Declare a custom session to add user property
+declare module 'express-session' {
+  interface SessionData {
+    user: any;
+  }
+}
+
 // Set up session management
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
