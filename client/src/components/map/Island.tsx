@@ -44,16 +44,16 @@ export function Island({ level, status, position, onSelect, onHover, isActive }:
     
     switch (level.difficulty) {
       case 'hard': return { 
+        width: 200 * sizeFactor, 
+        height: 140 * sizeFactor 
+      };
+      case 'medium': return { 
         width: 180 * sizeFactor, 
         height: 120 * sizeFactor 
       };
-      case 'medium': return { 
+      default: return { 
         width: 160 * sizeFactor, 
         height: 100 * sizeFactor 
-      };
-      default: return { 
-        width: 140 * sizeFactor, 
-        height: 80 * sizeFactor 
       };
     }
   };
@@ -290,7 +290,7 @@ export function Island({ level, status, position, onSelect, onHover, isActive }:
               status === 'inProgress' ? 'text-amber-600' :
               'text-blue-500'}
             `}>
-              {level.levelNumber}
+              {String.fromCharCode(64 + level.levelNumber)} {/* Convert number to letter (1=A, 2=B, etc) */}
             </span>
           )}
         </div>
@@ -335,7 +335,7 @@ export function Island({ level, status, position, onSelect, onHover, isActive }:
         transition={{ duration: 0.2 }}
       >
         <span className={`font-medium ${isLocked ? 'text-gray-500' : 'text-blue-800'}`}>
-          {level.name}
+          Words that start with {String.fromCharCode(64 + level.levelNumber)}
         </span>
       </motion.div>
     </motion.div>

@@ -18,14 +18,6 @@
   transform-origin: center bottom;
 }
 
-.wave-fast {
-  animation: wave 8s cubic-bezier(0.36, 0.45, 0.63, 0.53) infinite;
-}
-
-.wave-slow {
-  animation: wave 15s cubic-bezier(0.36, 0.45, 0.63, 0.53) infinite;
-}
-
 /* Path dash animation */
 @keyframes dash {
   to {
@@ -52,34 +44,6 @@
 
 .float {
   animation: float 6s ease-in-out infinite;
-}
-
-.float-slow {
-  animation: float 8s ease-in-out infinite;
-}
-
-.float-fast {
-  animation: float 4s ease-in-out infinite;
-}
-
-/* Sparkle animation for water highlights */
-@keyframes sparkle {
-  0% {
-    opacity: 0.3;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.8;
-    transform: scale(1.2);
-  }
-  100% {
-    opacity: 0.3;
-    transform: scale(1);
-  }
-}
-
-.sparkle {
-  animation: sparkle 3s ease-in-out infinite;
 }
 
 /* Island Carousel Customizations */
@@ -117,96 +81,17 @@
   }
 }
 
-/* Enhanced water ripple effect */
-.water-effect {
-  background: linear-gradient(
-    180deg,
-    rgba(96, 165, 250, 0.2) 0%,
-    rgba(59, 130, 246, 0.4) 100%
-  );
-  mask-image: radial-gradient(circle at center, transparent 30%, black 70%);
-  animation: ripple 8s ease-in-out infinite;
-}
-
-@keyframes ripple {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.8;
-  }
-  50% {
-    transform: scale(1.1);
-    opacity: 0.6;
-  }
-}
-
 /* Parallax container */
 .parallax-container {
   perspective: 1000px;
   overflow: hidden;
 }
 
-/* Water effect */
-.water-effect {
-  background-image: linear-gradient(
-    to bottom,
-    rgba(4, 120, 215, 0.2),
-    rgba(5, 102, 183, 0.5)
-  );
-  background-size: 200% 200%;
-  animation: water-movement 8s ease infinite;
-}
-
-@keyframes water-movement {
-  0% {
-    background-position: 0% 0%;
-  }
-  50% {
-    background-position: 100% 100%;
-  }
-  100% {
-    background-position: 0% 0%;
-  }
-}
-
-/* Cloud movement */
-@keyframes cloud-drift {
-  from {
-    transform: translateX(-5%);
-  }
-  to {
-    transform: translateX(105%);
-  }
-}
-
-.cloud-drift {
-  animation: cloud-drift 60s linear infinite;
-}
-
-.cloud-drift-slow {
-  animation: cloud-drift 90s linear infinite;
-}
-
-/* Birds flying animation */
-@keyframes bird-fly {
-  0% {
-    transform: translateX(0) translateY(0);
-  }
-  25% {
-    transform: translateX(20%) translateY(-15%);
-  }
-  50% {
-    transform: translateX(40%) translateY(0);
-  }
-  75% {
-    transform: translateX(60%) translateY(-15%);
-  }
-  100% {
-    transform: translateX(100%) translateY(0);
-  }
-}
-
-.bird-fly {
-  animation: bird-fly 20s linear infinite;
+/* Map vertical scroll styles */
+.map-vertical-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
 }
 
 /* Fade in animation */

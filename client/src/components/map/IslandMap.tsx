@@ -1,12 +1,11 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import Draggable from 'react-draggable';
 import { useGame } from '@/contexts/GameContext';
 import { GameLevel } from '@/lib/types';
 import { Island } from './Island';
 import { OceanBackground } from './OceanBackground';
 import { SoundManager } from './SoundManager';
-import { PirateShip } from './PirateShip';
+import './islandMap.css';
 
 interface IslandMapProps {
   onSelectLevel: (levelId: number) => void;
@@ -16,127 +15,136 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
   const { currentLevel, userExercises } = useGame();
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [activeLevelId, setActiveLevelId] = useState<number | null>(null);
-  const [selectedIslandPosition, setSelectedIslandPosition] = useState<{ x: number, y: number } | null>(null);
-  const [showShip, setShowShip] = useState(false);
   const soundManager = useRef<SoundManager>(new SoundManager());
 
-  const islandLevels: GameLevel[] = useMemo(() => ([
-    { id: 1, levelNumber: 1, name: "Mixed Easy Words Island", description: "Practice basic pronunciation", difficulty: "easy", requiredXP: 0, isActive: true, isCompleted: false, exercises: 10 },
-    { id: 2, levelNumber: 2, name: "Trickier Words Isle", description: "Challenge yourself with harder words", difficulty: "easy", requiredXP: 100, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 3, levelNumber: 3, name: "Multisyllabic Atoll", description: "Master words with multiple syllables", difficulty: "medium", requiredXP: 200, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 4, levelNumber: 4, name: "Complex Words Cay", description: "Navigate complex pronunciation challenges", difficulty: "medium", requiredXP: 300, isActive: false, isCompleted: false, exercises: 9 },
-    { id: 5, levelNumber: 5, name: "Fun Phrases Bay", description: "Begin forming simple phrases", difficulty: "medium", requiredXP: 400, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 6, levelNumber: 6, name: "Expressive Phrases Peninsula", description: "Add emotion to your speech", difficulty: "medium", requiredXP: 500, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 7, levelNumber: 7, name: "Advanced Phrases Archipelago", description: "Master complex expressions", difficulty: "hard", requiredXP: 600, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 8, levelNumber: 8, name: "Simple Sentences Isle", description: "Form complete thoughts fluently", difficulty: "medium", requiredXP: 700, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 9, levelNumber: 9, name: "Creative Sentences Reef", description: "Express yourself with flair", difficulty: "hard", requiredXP: 800, isActive: false, isCompleted: false, exercises: 10 },
-    { id: 10, levelNumber: 10, name: "Whimsical Sentences Lagoon", description: "Have fun with creative language", difficulty: "hard", requiredXP: 900, isActive: false, isCompleted: false, exercises: 10 },
-  ]), []);
+  // Generate levels for islands A through X (24 islands)
+  const islandLevels: GameLevel[] = useMemo(() => {
+    const levels: GameLevel[] = [];
+    // Generate letter-themed levels (A through X - 24 levels)
+    for (let i = 1; i <= 24; i++) {
+      const letter = String.fromCharCode(64 + i); // Convert to uppercase letter (A=1, B=2, etc.)
+      levels.push({
+        id: i,
+        levelNumber: i,
+        name: `Letter ${letter} Island`,
+        description: `Practice words that start with the letter ${letter}`,
+        difficulty: i <= 8 ? "easy" : (i <= 16 ? "medium" : "hard"),
+        requiredXP: (i - 1) * 100,
+        isActive: i === 1,
+        isCompleted: false,
+        exercises: 10 // Each level has 10 exercises
+      });
+    }
+    return levels;
+  }, []);
 
   const islandPositions = useMemo(() => {
-    return [
-      { x: 150, y: 150 },   // Island 1 - Starting point - centered higher
-      { x: 400, y: 180 },   // Island 2 - centered higher
-      { x: 650, y: 210 },   // Island 3 - centered higher
-      { x: 900, y: 180 },   // Island 4 - centered higher
-      { x: 1150, y: 150 },  // Island 5 - centered higher
-      { x: 1400, y: 180 },  // Island 6 - centered higher
-      { x: 1650, y: 210 },  // Island 7 - centered higher
-      { x: 1900, y: 180 },  // Island 8 - centered higher
-      { x: 2150, y: 150 },  // Island 9 - centered higher
-      { x: 2400, y: 120 }   // Island 10 - centered higher
-    ];
+    // Create a 6x4 grid layout for islands A through X (24 islands)
+    const positions = [];
+    const gridRows = 6;
+    const gridCols = 4;
+    const baseX = 180; // Starting X position
+    const baseY = 150; // Starting Y position
+    const colSpacing = 300; // Horizontal spacing between islands
+    const rowSpacing = 250; // Vertical spacing between rows
+    
+    // Generate positions for all islands in a grid
+    for (let row = 0; row < gridRows; row++) {
+      for (let col = 0; col < gridCols; col++) {
+        const index = row * gridCols + col;
+        if (index < 24) { // Ensure we only create 24 islands (A-X)
+          // Add slight variations to positions to make the layout more natural
+          const variationX = Math.sin(index * 0.7) * 20;
+          const variationY = Math.cos(index * 0.5) * 15;
+          
+          positions.push({
+            x: baseX + (col * colSpacing) + variationX,
+            y: baseY + (row * rowSpacing) + variationY
+          });
+        }
+      }
+    }
+    
+    return positions;
   }, []);
 
   const pathData = useMemo(() => {
-    return `M${islandPositions[0].x},${islandPositions[0].y} ` +
-      islandPositions.slice(1).map((p, i) => {
-        const prev = islandPositions[i];
-        const midX = (prev.x + p.x) / 2;
-        const midY = (prev.y + p.y) / 2 - 30;
-        return `Q${midX},${midY} ${p.x},${p.y}`;
-      }).join(' ');
+    // Create a path that connects islands in each row left to right, then continues to next row
+    let path = `M${islandPositions[0].x},${islandPositions[0].y}`;
+    
+    for (let i = 1; i < islandPositions.length; i++) {
+      const prev = islandPositions[i-1];
+      const current = islandPositions[i];
+      
+      // Check if we're moving to a new row (every 4 islands)
+      if (i % 4 === 0 && i > 0) {
+        // Connect last island of previous row to first island of next row
+        const lastInRow = islandPositions[i-1];
+        const firstInNextRow = current;
+        
+        // Create a diagonal curve between rows
+        const controlX = (lastInRow.x + firstInNextRow.x) / 2;
+        const controlY = (lastInRow.y + firstInNextRow.y) / 2 + 30;
+        
+        path += ` Q${controlX},${controlY} ${firstInNextRow.x},${firstInNextRow.y}`;
+      } else {
+        // Normal path within a row
+        const midX = (prev.x + current.x) / 2;
+        const midY = (prev.y + current.y) / 2 - 10;
+        path += ` Q${midX},${midY} ${current.x},${current.y}`;
+      }
+    }
+    
+    return path;
   }, [islandPositions]);
 
-  // Function to log line segments
+  // Initialize sound manager
   useEffect(() => {
-    const logLineSegments = () => {
-      const segments = islandPositions.map((pos, i) => ({
-        position: i + 1,
-        coordinates: pos,
-        nextIsland: i < islandPositions.length - 1 ? islandPositions[i + 1] : null
-      }));
-      console.log('Island positions:', segments);
-    };
-    logLineSegments();
-  }, [islandPositions]);
+    soundManager.current.initialize();
+    setIsInitialized(true);
+  }, []);
 
-  const getIslandPosition = (index: number) => islandPositions[index] || { x: 0, y: 0 };
-
-  const getLevelStatus = (level: GameLevel) => {
-    if (currentLevel?.id === level.id) return 'active';
-    const completed = userExercises.filter(ex => ex.levelId === level.id && ex.isCompleted).length;
-    const total = userExercises.filter(ex => ex.levelId === level.id).length;
-    if (total > 0 && completed === total) return 'completed';
-    if (completed > 0) return 'inProgress';
-    return 'notStarted';
-  };
-
+  // Handle level selection with visual feedback
   const handleLevelSelect = (levelId: number) => {
-    soundManager.current.playSound('select');
     setActiveLevelId(levelId);
-    const idx = islandLevels.findIndex(l => l.id === levelId);
-    if (idx >= 0) {
-      setSelectedIslandPosition(getIslandPosition(idx));
-      setShowShip(true);
-    }
-    onSelectLevel(levelId);
+    soundManager.current.playSound('select');
+    
+    // Delay before calling the parent handler for transition effect
+    setTimeout(() => {
+      onSelectLevel(levelId);
+      setActiveLevelId(null);
+    }, 500);
   };
-
-  useEffect(() => {
-    if (!isInitialized) {
-      soundManager.current.initialize();
-      const onKey = (e: KeyboardEvent) => {
-        const curIdx = islandLevels.findIndex(l => l.id === (activeLevelId ?? currentLevel?.id ?? 1));
-        if (e.key === 'ArrowRight' && curIdx < islandLevels.length - 1) {
-          handleLevelSelect(islandLevels[curIdx + 1].id);
-        }
-        if (e.key === 'ArrowLeft' && curIdx > 0) {
-          handleLevelSelect(islandLevels[curIdx - 1].id);
-        }
-      };
-      window.addEventListener('keydown', onKey);
-      setIsInitialized(true);
-      return () => window.removeEventListener('keydown', onKey);
-    }
-  }, [isInitialized, activeLevelId, currentLevel, islandLevels]);
 
   const handleIslandHover = () => {
     soundManager.current.playSound('hover');
   };
 
-  const [scrollPosition, setScrollPosition] = useState(0);
-  
-  // Update container position when scroll changes
-  useEffect(() => {
-    if (containerRef.current) {
-      // We're mapping 0-100 to our actual scroll range (0 to -2400)
-      const newX = Math.max(-2400, -scrollPosition * 24);
-      containerRef.current.style.transform = `translate(${newX}px, 0px)`;
-    }
-  }, [scrollPosition]);
-  
-  // Map island position to scroll value for selection
-  const scrollToIsland = (levelId: number) => {
-    const idx = islandLevels.findIndex(l => l.id === levelId);
-    if (idx >= 0) {
-      const scrollValue = Math.min(100, Math.max(0, (idx * 12) + 5));
-      setScrollPosition(scrollValue);
-    }
+  // Get status for level display
+  const getLevelStatus = (level: GameLevel): 'active' | 'completed' | 'inProgress' | 'notStarted' | 'locked' => {
+    // Currently selected level is active
+    if (level.id === activeLevelId) return 'active';
+    
+    // Current user's active level is 'active'
+    if (currentLevel && level.id === currentLevel.id) return 'active';
+    
+    // Levels that are complete (all exercises finished)
+    const levelExercises = userExercises.filter(ex => ex.levelId === level.id);
+    if (levelExercises.length > 0 && levelExercises.every(ex => ex.completed)) return 'completed';
+    
+    // Levels with some progress
+    if (levelExercises.length > 0) return 'inProgress';
+    
+    // Lock levels more than 2 ahead of current level
+    if (currentLevel && level.levelNumber > currentLevel.levelNumber + 2) return 'locked';
+    
+    // Default to not started
+    return 'notStarted';
   };
+
+  const getIslandPosition = (index: number) => islandPositions[index] || { x: 0, y: 0 };
   
   // Make layout responsive based on screen size
   const [screenSize, setScreenSize] = useState({
@@ -160,49 +168,29 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
   // Determine map height based on screen size
   const mapHeight = useMemo(() => {
     // Use screen height for calculating the map size to maintain proportion
-    const baseHeight = 700;
+    const baseHeight = 1800; // Increased height for vertical scrolling of 6 rows
     if (screenSize.height < 800) {
-      return Math.max(500, screenSize.height * 0.7); // Minimum 500px, maximum 70% of screen height
+      return Math.max(1600, screenSize.height * 2); // Adjusted for vertical scrolling
     }
     return baseHeight;
   }, [screenSize]);
   
   return (
-    <div className="relative w-full overflow-hidden bg-blue-50" style={{ height: `${mapHeight}px` }}>
+    <div className="relative w-full overflow-hidden bg-blue-50" style={{ maxHeight: `${screenSize.height * 0.8}px` }}>
       <OceanBackground />
 
-      {/* Horizontal Scroll Bar */}
-      <div className="absolute left-4 right-4 bottom-6 z-20">
-        <input 
-          type="range" 
-          min="0" 
-          max="100" 
-          value={scrollPosition} 
-          onChange={(e) => {
-            setScrollPosition(parseInt(e.target.value));
-            soundManager.current.playSound('drag');
-          }}
-          className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-blue-300 accent-blue-600"
-        />
-        <div className="flex justify-between text-xs text-blue-700 mt-1 px-2">
-          <span>Island 1</span>
-          <span>Island 10</span>
-        </div>
-      </div>
-
-      <Draggable
-        nodeRef={containerRef}
-        bounds={{ left: -2000, top: -200, right: 0, bottom: 200 }}
-        onStart={() => { setIsDragging(true); soundManager.current.playSound('drag'); }}
-        onStop={() => setIsDragging(false)}
+      {/* Vertical scroll container */}
+      <div 
+        className="map-vertical-scroll relative w-full" 
+        style={{ height: `${screenSize.height * 0.7}px`, overflowY: 'auto', overflowX: 'hidden' }}
       >
         <div
           ref={containerRef}
-          className="absolute top-1/2 -translate-y-1/2"
+          className="relative min-h-full"
           style={{ 
-            width: 2600, 
-            height: Math.max(600, mapHeight + 100), 
-            touchAction: 'none'
+            width: '100%', 
+            height: mapHeight,
+            position: 'relative'
           }}
         >
           {islandLevels.map((level, idx) => {
@@ -220,7 +208,7 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
             );
           })}
 
-          <svg className="absolute inset-0 z-0 pointer-events-none" width={2600} height={800}>
+          <svg className="absolute inset-0 z-0 pointer-events-none" width="100%" height="100%">
             <path
               d={pathData}
               fill="none"
@@ -244,23 +232,15 @@ export function IslandMap({ onSelectLevel }: IslandMapProps) {
             ))}
           </svg>
         </div>
-      </Draggable>
-
-      {showShip && selectedIslandPosition && (
-        <PirateShip
-          targetIslandPosition={selectedIslandPosition}
-          isActive
-          onArrival={() => soundManager.current.playSound('transition')}
-        />
-      )}
+      </div>
 
       <motion.div
-        className="absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-white/70 rounded-lg px-4 py-2 text-sm text-blue-900 pointer-events-none"
+        className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-white/70 rounded-lg px-4 py-2 text-sm text-blue-900 pointer-events-none"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1 }}
       >
-        Drag to explore the ocean • Tap islands to select levels
+        Scroll to explore islands • Tap islands to select levels
       </motion.div>
     </div>
   );
