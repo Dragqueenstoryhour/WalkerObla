@@ -146,6 +146,15 @@ export async function setupAuth(app: Express) {
     }
     
     try {
+      // Check if provider is valid and supported
+      const validProviders = ['google', 'github', 'facebook', 'twitter'];
+      if (!validProviders.includes(provider)) {
+        return res.status(400).json({ 
+          error: `Invalid provider: ${provider}. Supported providers: ${validProviders.join(', ')}`,
+          code: 'invalid_provider'
+        });
+      }
+      
       // Generate the OAuth URL
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: provider as Provider,
@@ -154,7 +163,16 @@ export async function setupAuth(app: Express) {
         },
       });
       
-      if (error) throw error;
+      if (error) {
+        // If provider is not enabled in Supabase, provide helpful error
+        if (error.message.includes('provider is not enabled')) {
+          return res.status(400).json({ 
+            error: `The ${provider} provider is not enabled in your Supabase project. Please see ENABLE_GOOGLE_OAUTH.md for setup instructions.`,
+            code: 'provider_not_enabled'
+          });
+        }
+        throw error;
+      }
       
       if (data && data.url) {
         return res.json({ url: data.url });
@@ -163,7 +181,10 @@ export async function setupAuth(app: Express) {
       return res.status(400).json({ error: 'Could not generate OAuth URL' });
     } catch (error: any) {
       console.error('Error generating OAuth URL:', error);
-      return res.status(500).json({ error: error.message || 'Authentication failed' });
+      return res.status(500).json({ 
+        error: error.message || 'Authentication failed',
+        details: error.code || 'unknown_error'
+      });
     }
   });
 

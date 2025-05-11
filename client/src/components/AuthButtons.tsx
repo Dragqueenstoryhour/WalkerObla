@@ -57,11 +57,20 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
     try {
       await oauthLogin(provider as any);
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "OAuth Error",
-        description: error.message || "Failed to start OAuth login. Please try again."
-      });
+      // Check for provider not enabled error
+      if (error.message && error.message.includes('provider is not enabled')) {
+        toast({
+          variant: "destructive",
+          title: "Google Sign-in Not Configured",
+          description: "Google sign-in needs to be enabled in Supabase. Please see the ENABLE_GOOGLE_OAUTH.md file for setup instructions."
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "OAuth Error",
+          description: error.message || "Failed to start OAuth login. Please try again."
+        });
+      }
     }
   };
   
@@ -201,7 +210,9 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
               Sign in to save your progress and access all features.
             </DialogDescription>
           </DialogHeader>
-          <div className="pt-4 pb-6">
+          <div className="py-8 flex flex-col items-center">
+            <h3 className="text-lg font-medium mb-6">Sign in with Google to get started</h3>
+            
             <Button 
               type="button" 
               className="w-full bg-white text-black border-gray-300 hover:bg-gray-100 hover:text-black" 
@@ -213,117 +224,11 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
               {isOAuthLoading ? 'Connecting...' : 'Continue with Google'}
             </Button>
             
-            <Separator className="my-6">
-              <span className="px-2 text-xs text-muted-foreground">OR USE EMAIL</span>
-            </Separator>
+            <p className="mt-6 text-sm text-muted-foreground max-w-md text-center">
+              We recommend using Google sign-in for the best experience. 
+              Your progress and achievements will be saved to your account.
+            </p>
           </div>
-          
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
-            <TabsContent value="login">
-              <Form {...loginForm}>
-                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4 pt-4">
-                  <FormField
-                    control={loginForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input placeholder="you@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={loginForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="••••••" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full" disabled={isLoggingIn}>
-                    {isLoggingIn ? 'Signing in...' : 'Sign In'}
-                  </Button>
-                </form>
-              </Form>
-            </TabsContent>
-            <TabsContent value="signup">
-              <Form {...signupForm}>
-                <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-4 pt-4">
-                  <FormField
-                    control={signupForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input placeholder="you@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={signupForm.control}
-                      name="firstName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>First Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="John" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signupForm.control}
-                      name="lastName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Last Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Doe" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <FormField
-                    control={signupForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="••••••" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full" disabled={isSigningUp}>
-                    {isSigningUp ? 'Creating Account...' : 'Create Account'}
-                  </Button>
-                </form>
-              </Form>
-              
-              {/* No additional OAuth buttons needed here since we have them at the top */}
-            </TabsContent>
-          </Tabs>
         </DialogContent>
       </Dialog>
     </>
