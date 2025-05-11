@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../../hooks/useAuth';
 import { PremiumLevelAccess } from '@/components/premium/PremiumLevelAccess';
+import { getWordsForLevel } from '@/lib/levelWords';
 
 interface LevelIntroProps {
   level: GameLevel;
@@ -285,6 +286,40 @@ export function LevelIntro({ level, onStart }: LevelIntroProps) {
                         <p className="text-center text-[#264653] mb-4 font-medium text-md">
                           {level.description}
                         </p>
+                        
+                        {/* Display examples of words in this level */}
+                        <div className="bg-white rounded-lg p-3 mb-4 shadow-md border-2 border-[#57cc99]">
+                          <h4 className="font-bold text-[#264653] text-sm mb-2 text-center">Example Words in This Level</h4>
+                          <div className="flex flex-wrap justify-center gap-2">
+                            {getWordsForLevel(level.levelNumber).slice(0, 5).map((word, index) => (
+                              <motion.div
+                                key={index}
+                                className="bg-[#e9f5db] px-3 py-1 rounded-full text-sm font-medium text-[#2a9d8f]"
+                                whileHover={{ scale: 1.05 }}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ 
+                                  opacity: 1, 
+                                  y: 0,
+                                  rotate: [0, index % 2 === 0 ? 3 : -3, 0]
+                                }}
+                                transition={{ 
+                                  delay: 0.5 + (index * 0.1),
+                                  rotate: {
+                                    repeat: Infinity,
+                                    repeatType: "reverse",
+                                    duration: 2,
+                                    delay: index * 0.2
+                                  }
+                                }}
+                              >
+                                {word}
+                              </motion.div>
+                            ))}
+                          </div>
+                          <p className="text-xs text-center mt-2 text-[#264653]/70 italic">
+                            ...and {getWordsForLevel(level.levelNumber).length - 5} more words to practice
+                          </p>
+                        </div>
 
                         <div className="grid grid-cols-2 gap-4 mb-4">
                           <div className="bg-white rounded-lg p-3 text-center shadow-md border-2 border-[#57cc99]">

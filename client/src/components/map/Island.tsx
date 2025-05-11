@@ -40,20 +40,20 @@ export function Island({ level, status, position, onSelect, onHover, isActive }:
     const isMediumScreen = typeof window !== 'undefined' && window.innerWidth < 1024 && window.innerWidth >= 768;
     
     // Scale down island sizes on smaller screens
-    let sizeFactor = isSmallScreen ? 0.7 : (isMediumScreen ? 0.85 : 1);
+    let sizeFactor = isSmallScreen ? 0.8 : (isMediumScreen ? 0.9 : 1.1);
     
     switch (level.difficulty) {
       case 'hard': return { 
-        width: 200 * sizeFactor, 
-        height: 140 * sizeFactor 
+        width: 220 * sizeFactor, 
+        height: 150 * sizeFactor 
       };
       case 'medium': return { 
-        width: 180 * sizeFactor, 
-        height: 120 * sizeFactor 
+        width: 200 * sizeFactor, 
+        height: 130 * sizeFactor 
       };
       default: return { 
-        width: 160 * sizeFactor, 
-        height: 100 * sizeFactor 
+        width: 180 * sizeFactor, 
+        height: 120 * sizeFactor 
       };
     }
   };
@@ -275,16 +275,16 @@ export function Island({ level, status, position, onSelect, onHover, isActive }:
       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
         <div className={`
           flex items-center justify-center 
-          w-12 h-12 rounded-full
+          w-14 h-14 rounded-full
           ${isLocked
             ? 'bg-gray-300 border-gray-400' 
             : 'bg-white shadow-md border-2 border-blue-100'}
         `}>
           {isLocked ? (
-            <Lock size={18} className="text-gray-500" />
+            <Lock size={20} className="text-gray-500" />
           ) : (
             <span className={`
-              text-xl font-bold
+              text-2xl font-bold
               ${status === 'active' ? 'text-blue-600' :
               status === 'completed' ? 'text-green-600' :
               status === 'inProgress' ? 'text-amber-600' :
