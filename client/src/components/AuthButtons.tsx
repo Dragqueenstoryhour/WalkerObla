@@ -38,32 +38,25 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
   size = "default",
   showText = true
 }) => {
-  const { user, isLoading, isAuthenticated, login, logout, signup } = useAuthContext();
+  const { 
+    user, 
+    isLoading, 
+    isAuthenticated, 
+    login, 
+    logout, 
+    signup, 
+    oauthLogin,
+    isOAuthLoading 
+  } = useAuthContext();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   const { toast } = useToast();
   
   const handleOAuthLogin = async (provider: string) => {
     try {
-      setIsOAuthLoading(true);
-      
-      // Use the direct Supabase OAuth login for a better user experience
-      await supabaseClient.auth.signInWithOAuth({
-        provider: provider as any,
-        options: {
-          redirectTo: `${window.location.origin}/api/auth/callback`,
-        },
-      });
-      
-      // The page will redirect automatically, but we'll add a fallback here
-      setTimeout(() => {
-        setIsOAuthLoading(false);
-      }, 5000);
-      
+      await oauthLogin(provider as any);
     } catch (error: any) {
-      setIsOAuthLoading(false);
       toast({
         variant: "destructive",
         title: "OAuth Error",

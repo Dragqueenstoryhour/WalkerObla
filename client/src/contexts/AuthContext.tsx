@@ -12,6 +12,8 @@ interface AuthContextType {
   login: (credentials: LoginCredentials) => Promise<void>;
   signup: (credentials: SignupCredentials) => Promise<void>;
   logout: () => Promise<void>;
+  oauthLogin: (provider: OAuthProvider) => Promise<void>;
+  isOAuthLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,7 +26,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isAuthenticated,
     loginAsync,
     signupAsync,
-    logoutAsync
+    logoutAsync,
+    supabaseOAuthLogin,
+    isOAuthLoggingIn
   } = useAuth();
 
   const login = async (credentials: LoginCredentials) => {
@@ -78,6 +82,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const oauthLogin = async (provider: OAuthProvider) => {
+    try {
+      await supabaseOAuthLogin(provider);
+      // No toast here as the page will redirect to OAuth provider
+    } catch (error: any) {
+      toast({
+        title: 'OAuth login failed',
+        description: error.message || 'Could not start OAuth login process.',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
   // Convert undefined to null explicitly
   const safeUser: SafeAuthUser = user || null;
   
@@ -90,6 +108,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         login,
         signup,
         logout,
+        oauthLogin,
+        isOAuthLoading: isOAuthLoggingIn,
       }}
     >
       {children}
