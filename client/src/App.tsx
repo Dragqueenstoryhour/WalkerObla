@@ -38,12 +38,14 @@ function Navigation() {
         <Link href="/my-words" className="text-primary hover:underline">
           My Words
         </Link>
+        {/* Animation and Azure Viseme links temporarily hidden
         <Link href="/animation" className="text-primary hover:underline">
           Animation
         </Link>
         <Link href="/azure-animation" className="text-primary hover:underline">
           Azure Viseme
         </Link>
+        */}
         
         <div className="ml-auto">
           {isAuthenticated && user ? (
