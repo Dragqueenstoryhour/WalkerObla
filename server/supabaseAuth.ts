@@ -88,10 +88,10 @@ export async function setupAuth(app: Express) {
           id: userId,
           username: req.user.email ? req.user.email.split('@')[0] : `user_${userId.substring(0, 8)}`, 
           email: req.user.email,
-          firstName: req.user.user_metadata?.first_name || '',
-          lastName: req.user.user_metadata?.last_name || '',
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          firstName: req.user.user_metadata?.first_name || null,
+          lastName: req.user.user_metadata?.last_name || null,
+          bio: req.user.user_metadata?.bio || null,
+          profileImageUrl: req.user.user_metadata?.avatar_url || null
         });
       }
       

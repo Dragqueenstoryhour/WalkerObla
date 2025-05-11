@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode } from 'react';
 import { useAuth, AuthUser, LoginCredentials, SignupCredentials, OAuthProvider } from '../hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -82,7 +82,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const oauthLogin = async (provider: OAuthProvider) => {
     try {
       await oauthLoginAsync(provider);
-      // No toast here as the page will redirect to OAuth provider
+      // No toast here as this will open a popup window for OAuth
     } catch (error: any) {
       toast({
         title: 'OAuth login failed',
@@ -111,10 +111,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
-export const useAuthContext = () => {
+export function useAuthContext() {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuthContext must be used within an AuthProvider');
   }
   return context;
-};
+}

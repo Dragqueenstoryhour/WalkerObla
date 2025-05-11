@@ -9,20 +9,8 @@ export const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    storageKey: 'supabase-auth-token',
-    detectSessionInUrl: true,
-    flowType: 'pkce'
-  }
-});
-
-// Setup auth state change listener
-supabaseClient.auth.onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_IN' && session) {
-    console.log('User signed in:', session.user.id);
-    // Optionally store user data or update UI
-  } else if (event === 'SIGNED_OUT') {
-    console.log('User signed out');
-    // Clear any user data from the UI
+    storageKey: 'supabase.auth.token',
+    detectSessionInUrl: false // We'll handle this manually with auth-callback.html
   }
 });
 
@@ -46,7 +34,73 @@ export async function getCurrentUser() {
   return data.user;
 }
 
+// Get auth token for API requests
+export async function getAuthToken(): Promise<string | null> {
+  const session = await getSession();
+  return session?.access_token || null;
+}
+
+// Add authorization header to fetch requests
+export async function getAuthHeaders(): Promise<HeadersInit> {
+  const token = await getAuthToken();
+  return token 
+    ? { Authorization: `Bearer ${token}` }
+    : {};
+}
+
+// Setup auth state change listener for debugging
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  console.log('Auth state changed:', event);
+});
+
+// Initialize auth - check for hash params from OAuth redirect
+export async function initializeAuth() {
+  // Listen for OAuth callback message from popup window
+  window.addEventListener('message', async (event) => {
+    if (event.origin !== window.location.origin) return;
+    
+    if (event.data?.type === 'SUPABASE_AUTH_CALLBACK' && event.data?.hash) {
+      try {
+        // Process the hash
+        const hashParams = new URLSearchParams(
+          event.data.hash.substring(1) // Remove the # character
+        );
+        
+        // Get auth parameters from hash
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const expiresIn = hashParams.get('expires_in');
+        
+        if (accessToken && refreshToken) {
+          // Set the session from the hash params
+          const { error } = await supabaseClient.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+          
+          if (error) {
+            console.error('Error setting session:', error);
+          } else {
+            console.log('Session set successfully from OAuth callback');
+          }
+        } else {
+          console.error('Missing tokens in OAuth callback');
+        }
+      } catch (error) {
+        console.error('Error processing OAuth callback:', error);
+      }
+    }
+  });
+  
+  // Get existing session
+  const { data, error } = await supabaseClient.auth.getSession();
+  if (error) {
+    console.error('Error getting initial session:', error);
+  }
+  return data.session;
+}
+
 // Export a function to get the client (for backward compatibility)
-export async function getSupabaseClient() {
+export function getSupabaseClient() {
   return supabaseClient;
 }

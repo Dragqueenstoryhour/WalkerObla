@@ -1,7 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from 'react';
-import { supabaseClient, getCurrentUser, getSession } from '../lib/supabaseClient';
+import { 
+  supabaseClient, 
+  getCurrentUser, 
+  getSession, 
+  initializeAuth,
+  getAuthToken
+} from '../lib/supabaseClient';
 import { User, Session } from '@supabase/supabase-js';
+import { apiRequest } from '@/lib/queryClient';
 
 // Define the user type
 export interface AuthUser {
@@ -45,6 +52,41 @@ function mapSupabaseUser(user: User | null): AuthUser | null {
   };
 }
 
+/**
+ * Fetch user data from our API using the auth token
+ */
+async function fetchUserData(authUser: AuthUser | null): Promise<AuthUser | null> {
+  if (!authUser) return null;
+  
+  try {
+    const token = await getAuthToken();
+    if (!token) return authUser;
+    
+    // Fetch additional user data from our API
+    const userData = await apiRequest<AuthUser>('/api/auth/user', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    } as RequestInit);
+    
+    // Merge the data
+    return {
+      ...authUser,
+      ...userData,
+      // Ensure we keep auth user properties if they're missing from API response
+      email: userData.email || authUser.email,
+      username: userData.username || authUser.username,
+      firstName: userData.firstName || authUser.firstName,
+      lastName: userData.lastName || authUser.lastName,
+      profileImageUrl: userData.profileImageUrl || authUser.profileImageUrl
+    };
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+    return authUser;
+  }
+}
+
 export function useAuth() {
   const queryClient = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
@@ -53,18 +95,21 @@ export function useAuth() {
   
   // Set up auth state listener
   useEffect(() => {
-    // Check for existing session
-    const initializeAuth = async () => {
+    // Initialize auth and check for existing session
+    const setupAuth = async () => {
       setIsLoading(true);
       try {
-        // Get current session
-        const currentSession = await getSession();
+        // Initialize auth and handle OAuth callback if needed
+        const currentSession = await initializeAuth();
         setSession(currentSession);
         
-        // Get user data
+        // Get user data from Supabase
         if (currentSession?.user) {
           const authUser = mapSupabaseUser(currentSession.user);
-          setUser(authUser);
+          
+          // Fetch additional user data from our API
+          const fullUserData = await fetchUserData(authUser);
+          setUser(fullUserData);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -73,7 +118,7 @@ export function useAuth() {
       }
     };
     
-    initializeAuth();
+    setupAuth();
     
     // Listen for auth changes
     const { data: authListener } = supabaseClient.auth.onAuthStateChange(
@@ -83,12 +128,27 @@ export function useAuth() {
         
         if (event === 'SIGNED_IN' && newSession?.user) {
           const authUser = mapSupabaseUser(newSession.user);
-          setUser(authUser);
+          
+          // Fetch additional user data from our API
+          const fullUserData = await fetchUserData(authUser);
+          setUser(fullUserData);
+          
+          // Invalidate any cached user data
+          queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
+          
+          // Clear user data from cache
+          queryClient.invalidateQueries();
         } else if (event === 'USER_UPDATED' && newSession?.user) {
           const authUser = mapSupabaseUser(newSession.user);
-          setUser(authUser);
+          
+          // Fetch additional user data from our API
+          const fullUserData = await fetchUserData(authUser);
+          setUser(fullUserData);
+          
+          // Invalidate any cached user data
+          queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
         }
       }
     );
@@ -97,7 +157,7 @@ export function useAuth() {
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, []);
+  }, [queryClient]);
   
   // Email/password login
   const loginWithEmail = async (credentials: LoginCredentials) => {
@@ -133,24 +193,68 @@ export function useAuth() {
     if (error) throw error;
   };
   
-  // OAuth login
+  // OAuth login with popup window
   const oauthLogin = async (provider: OAuthProvider) => {
-    const { data, error } = await supabaseClient.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/auth-callback.html`,
-        skipBrowserRedirect: false
+    try {
+      // Start OAuth flow with popup window
+      const { data, error } = await supabaseClient.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth-callback.html`,
+          skipBrowserRedirect: true // Important: We'll use the popup approach
+        }
+      });
+      
+      if (error) {
+        if (error.message.includes('provider is not enabled')) {
+          throw new Error(`The ${provider} provider is not enabled in your Supabase project. Please see ENABLE_GOOGLE_OAUTH.md for setup instructions.`);
+        }
+        throw error;
       }
-    });
-    
-    if (error) {
-      if (error.message.includes('provider is not enabled')) {
-        throw new Error(`The ${provider} provider is not enabled in your Supabase project. Please see ENABLE_GOOGLE_OAUTH.md for setup instructions.`);
+      
+      if (!data.url) {
+        throw new Error('No OAuth URL returned from Supabase');
       }
+      
+      // Open popup window for the OAuth flow
+      const popup = window.open(
+        data.url,
+        'Login with ' + provider,
+        'width=800,height=600'
+      );
+      
+      if (!popup) {
+        throw new Error('Popup window was blocked. Please allow popups for this site.');
+      }
+      
+      // Return a promise that will resolve when the popup completes
+      return new Promise((resolve, reject) => {
+        // Set a timeout to reject if the popup doesn't complete in a reasonable time
+        const timeout = setTimeout(() => {
+          reject(new Error('OAuth login timed out. Please try again.'));
+        }, 120000); // 2 minutes timeout
+        
+        // Listen for messages from the popup
+        const messageListener = (event: MessageEvent) => {
+          if (event.origin !== window.location.origin) return;
+          
+          if (event.data?.type === 'SUPABASE_AUTH_CALLBACK') {
+            // Clear timeout and remove listener
+            clearTimeout(timeout);
+            window.removeEventListener('message', messageListener);
+            
+            // Resolve the promise
+            resolve({ provider, success: true });
+          }
+        };
+        
+        // Add message listener
+        window.addEventListener('message', messageListener);
+      });
+    } catch (error) {
+      console.error('OAuth login error:', error);
       throw error;
     }
-    
-    return data;
   };
   
   // Login mutation
@@ -165,7 +269,11 @@ export function useAuth() {
   
   // Logout mutation
   const logoutMutation = useMutation({
-    mutationFn: logout
+    mutationFn: logout,
+    onSuccess: () => {
+      // Clear all query cache on logout
+      queryClient.clear();
+    }
   });
   
   // OAuth login mutation
