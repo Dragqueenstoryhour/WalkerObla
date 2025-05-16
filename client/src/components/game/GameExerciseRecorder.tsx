@@ -253,7 +253,7 @@ export function GameExerciseRecorder({
                     <AlertTitle>Recording in progress</AlertTitle>
                   </div>
                   <AlertDescription>
-                    {formatTime(recordingDuration)}
+                    Speak the word or phrase clearly
                   </AlertDescription>
                 </Alert>
               )}

@@ -298,7 +298,7 @@ export function SimpleRecorder({
           {isRecording && (
             <div className="flex items-center text-red-500">
               <span className="inline-block w-3 h-3 rounded-full bg-red-500 mr-2 animate-pulse"></span>
-              Recording: {formatTime(recordingTime)}
+              Recording in Progress
             </div>
           )}
         </div>
