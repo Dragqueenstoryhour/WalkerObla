@@ -1020,18 +1020,17 @@ export default function NewPhrases() {
         });
       }
 
-    }```text
-      } catch (error) {
-        console.error('Error generating shareable link:', error);
-        toast({
-          title: 'Error',
-          description: error instanceof Error ? error.message : 'Failed to generate shareable link. Please try again.',
-          variant: 'destructive'
-        });
-      } finally {
-        setIsProcessing(false);
-      }
-    };
+    } catch (error) {
+      console.error('Error generating shareable link:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to generate shareable link. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   // Save the current phrase to user's saved phrases
   const handleSavePhrase = async () => {
