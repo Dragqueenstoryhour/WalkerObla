@@ -151,33 +151,46 @@ function createDefaultContent(topic: string, rawContent: string): any {
 
 export async function generateReadingContent(topic: string, difficulty: string): Promise<ReadingContent> {
   try {
-    // Adjust language complexity based on difficulty level - keeping very concise for token efficiency
+    // Adjust language complexity based on difficulty level (1, 2, or 3)
     let languageLevel = "";
     let maxWords = 150; // Default max words to conserve tokens
     let sentenceLength = "";
+    let sentenceCount = 1;
+    let syllableCount = "";
     
     switch(difficulty) {
+      case "1":
       case "easy":
         languageLevel = "very simple, grades 1-3";
-        maxWords = 150;
+        maxWords = 100;
         sentenceLength = "5-7 words";
+        sentenceCount = 1;
+        syllableCount = "one syllable words only";
         break;
+      case "2":
       case "medium":
         languageLevel = "simple, grades 4-6";
-        maxWords = 175;
-        sentenceLength = "8-10 words";
+        maxWords = 150;
+        sentenceLength = "7-9 words";
+        sentenceCount = 3;
+        syllableCount = "mostly two syllable words";
         break;
+      case "3":
       case "hard":
       default:
         languageLevel = "straightforward, middle school";
         maxWords = 200;
-        sentenceLength = "10-12 words";
+        sentenceLength = "9-12 words";
+        sentenceCount = 5;
+        syllableCount = "multiple three syllable words";
         break;
     }
     
     // Using a more concise prompt to reduce token usage
     const systemPrompt = `You are creating short, ${languageLevel} level reading content about "${topic}".
+Create exactly ${sentenceCount} sentence(s) using ${syllableCount}.
 Keep it under ${maxWords} words total. Use short sentences (${sentenceLength}).
+Use commonly used words that people encounter in daily life.
 Return ONLY a JSON object with: {"title": "short title", "content": "simple content with paragraphs", "source": "ReadAssist"}`;
 
     console.log(`Using OpenAI to generate content about "${topic}" with difficulty "${difficulty}"`);
@@ -187,10 +200,10 @@ Return ONLY a JSON object with: {"title": "short title", "content": "simple cont
       model: "gpt-3.5-turbo", // Using a cheaper model to conserve tokens
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Write an interesting, current, ${maxWords}-word max article about ${topic}. 
-Use ${languageLevel} vocabulary and ${sentenceLength} sentences. 
-Include 2-3 very short paragraphs with breaks between them.
-IMPORTANT: Keep it engaging, informative, and under ${maxWords} words total. Focus on recent events or useful information.` }
+        { role: "user", content: `Write an interesting ${maxWords}-word max content about ${topic}. 
+Use ${languageLevel} vocabulary and create exactly ${sentenceCount} sentence(s) with ${syllableCount}.
+Use only commonly used words that people encounter in everyday situations.
+IMPORTANT: Keep it engaging, informative, and under ${maxWords} words total.` }
       ],
       temperature: 0.7,
       max_tokens: 300, // Strict token limit to prevent large responses

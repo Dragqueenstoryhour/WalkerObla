@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 const ReadingContent = () => {
   const { currentContent, setCurrentContent, currentHighlightedText, isReading } = useReading();
   const { toast } = useToast();
-  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
+  const [difficulty, setDifficulty] = useState<'1' | '2' | '3'>('1');
   const [isGenerating, setIsGenerating] = useState(false);
   const readingContentRef = useRef<HTMLDivElement>(null);
 
@@ -43,17 +43,17 @@ const ReadingContent = () => {
 
   // Toggle difficulty and automatically regenerate content with new difficulty
   const toggleDifficulty = async () => {
-    let newDifficulty: 'easy' | 'medium' | 'hard';
+    let newDifficulty: '1' | '2' | '3';
 
-    if (difficulty === 'easy') newDifficulty = 'medium';
-    else if (difficulty === 'medium') newDifficulty = 'hard';
-    else newDifficulty = 'easy';
+    if (difficulty === '1') newDifficulty = '2';
+    else if (difficulty === '2') newDifficulty = '3';
+    else newDifficulty = '1';
 
     setDifficulty(newDifficulty);
 
     // Show toast about difficulty change
     toast({
-      title: `Difficulty: ${newDifficulty.charAt(0).toUpperCase() + newDifficulty.slice(1)}`,
+      title: `Difficulty: Level ${newDifficulty}`,
       description: "Generating new content with updated difficulty level...",
     });
 
@@ -165,7 +165,7 @@ const ReadingContent = () => {
               className="text-sm"
             >
               <BarChart2 className="w-4 h-4 mr-1" />
-              Difficulty: {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+              Difficulty: Level {difficulty}
             </Button>
           </div>
         </div>
