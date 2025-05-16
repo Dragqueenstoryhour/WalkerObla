@@ -1956,7 +1956,18 @@ I'd like to schedule an appointment."
                 <div>
                   <p className="text-sm font-medium mb-2">Example topics:</p>
                   <div className="flex flex-wrap gap-2">
-                    {['Golf', 'Kitchen', 'Therapy', 'Travel', 'Places in Florida', 'Restaurant'].map(topic => (
+                    {[
+                      'Groceries', 'Household Items', 'Clothing', 'Body Parts', 'Doctor Visits',
+                      'Emergencies', 'Restaurants', 'Cooking', 'Beverages', 'Public Transport',
+                      'Directions', 'Air Travel', 'Office Supplies', 'Email Phrases', 'Job Interviews',
+                      'Smartphone Terms', 'Social Media', 'Troubleshooting', 'Retail Shopping', 'Online Shopping',
+                      'Weather', 'Greetings', 'Small Talk', 'Banking Terms', 'Money Phrases',
+                      'School Supplies', 'Classroom Phrases', 'Sports', 'Music', 'Gardening',
+                      'Pets', 'Exercise', 'Holidays', 'Time & Dates', 'Colors',
+                      'Emotions', 'Family Members', 'Home Repairs', 'Cleaning Supplies', 'Cars & Driving',
+                      'Hotels', 'Nature', 'Fruits', 'Vegetables', 'Jobs & Careers',
+                      'Technology', 'Books & Reading', 'Art', 'Travel Destinations', 'Hobbies'
+                    ].map(topic => (
                       <Badge 
                         key={topic} 
                         className="cursor-pointer" 
