@@ -1176,10 +1176,9 @@ export default function NewPhrases() {
         loadingToast.dismiss?.();
         
         // Set playback rate to 0.5 (half speed) for slow playback
-        if (isSlowPlayback) {
-          audioRef.current.playbackRate = 0.5;
-        } else {
-          audioRef.current.playbackRate = 1.0;
+        const audio = audioRef.current;
+        if (audio) {
+          audio.playbackRate = isSlowPlayback ? 0.5 : 1.0;
         }
         
         audioRef.current?.play()
