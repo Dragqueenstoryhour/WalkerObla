@@ -13,6 +13,16 @@ const ReadingContent = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const readingContentRef = useRef<HTMLDivElement>(null);
 
+  // Helper function to convert numeric difficulty to server format
+  const mapDifficultyToServer = (diff: string): string => {
+    switch(diff) {
+      case '1': return 'easy';
+      case '2': return 'medium';
+      case '3': return 'hard';
+      default: return 'easy';
+    }
+  };
+
   const generateNewContent = async () => {
     setIsGenerating(true);
     try {
@@ -22,8 +32,12 @@ const ReadingContent = () => {
         'music', 'technology', 'health', 'science', 'nature'
       ];
       const randomTopic = topics[Math.floor(Math.random() * topics.length)];
-
-      const content = await generateReadingContent(randomTopic, difficulty);
+      
+      // Convert numeric difficulty to server format (easy, medium, hard)
+      const serverDifficulty = mapDifficultyToServer(difficulty);
+      console.log(`Generating new content about "${randomTopic}" with difficulty "${serverDifficulty}"`);
+      
+      const content = await generateReadingContent(randomTopic, serverDifficulty);
       setCurrentContent(content);
       toast({
         title: "New Content Generated",
@@ -62,10 +76,19 @@ const ReadingContent = () => {
       setIsGenerating(true);
       try {
         const currentTopic = currentContent?.title.split(' ').slice(0, 2).join(' ').toLowerCase() || 'random';
-        const content = await generateReadingContent(currentTopic, newDifficulty);
+        // Convert numeric difficulty to server format (easy, medium, hard)
+        const serverDifficulty = mapDifficultyToServer(newDifficulty);
+        console.log(`Generating content about "${currentTopic}" with difficulty "${serverDifficulty}"`);
+        
+        const content = await generateReadingContent(currentTopic, serverDifficulty);
         setCurrentContent(content);
       } catch (error) {
         console.error("Error generating content with new difficulty:", error);
+        toast({
+          title: "Error",
+          description: "Failed to update difficulty. Please try again.",
+          variant: "destructive",
+        });
       } finally {
         setIsGenerating(false);
       }
