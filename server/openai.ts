@@ -161,37 +161,37 @@ export async function generateReadingContent(topic: string, difficulty: string):
     switch(difficulty) {
       case "1":
       case "easy":
-        languageLevel = "very simple, grades 1-3";
-        maxWords = 100;
-        sentenceLength = "5-7 words";
+        languageLevel = "adult-level, grammatically correct sentences with very simple vocabulary";
+        maxWords = 15;
+        sentenceLength = "5-15 words";
         sentenceCount = 1;
-        syllableCount = "one syllable words only";
+        syllableCount = "primarily one-syllable words (allow minor exceptions like 'the', 'and')";
         break;
       case "2":
       case "medium":
-        languageLevel = "simple, grades 4-6";
-        maxWords = 150;
-        sentenceLength = "7-9 words";
+        languageLevel = "adult-level, grammatically correct sentences with straightforward vocabulary";
+        maxWords = 30;
+        sentenceLength = "7-20 words";
         sentenceCount = 3;
-        syllableCount = "mostly two syllable words";
+        syllableCount = "mostly two-syllable words with some one-syllable words";
         break;
       case "3":
       case "hard":
-      default:
-        languageLevel = "straightforward, middle school";
-        maxWords = 200;
-        sentenceLength = "9-12 words";
+        languageLevel = "adult-level, grammatically correct sentences with varied vocabulary";
+        maxWords = 45;
+        sentenceLength = "10-20 words";
         sentenceCount = 5;
-        syllableCount = "multiple three syllable words";
+        syllableCount = "two to four-syllable words, including some complex terms";
         break;
     }
-    
-    // Using a more concise prompt to reduce token usage
-    const systemPrompt = `You are creating short, ${languageLevel} level reading content about "${topic}".
-Create exactly ${sentenceCount} sentence(s) using ${syllableCount}.
-Keep it under ${maxWords} words total. Use short sentences (${sentenceLength}).
-Use commonly used words that people encounter in daily life.
-Return ONLY a JSON object with: {"title": "short title", "content": "simple content with paragraphs", "source": "ReadAssist"}`;
+
+    const systemPrompt = `You are creating short, ${languageLevel} about "${topic}".
+    - Use ${syllableCount}. 
+    - Write exactly ${sentenceCount} sentence(s), ${sentenceLength} each.
+    - Keep it under ${maxWords} words total.
+    - Use **natural, grammatically correct phrasing** (e.g., avoid "See the cat run").
+    - Prioritize clarity and flow over strict syllable counts when needed.
+    - Return ONLY JSON: {"title": "string", "content": "string", "source": "ReadAssist"}`;
 
     console.log(`Using OpenAI to generate content about "${topic}" with difficulty "${difficulty}"`);
     
