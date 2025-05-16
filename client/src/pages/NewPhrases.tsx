@@ -48,13 +48,23 @@ export default function NewPhrases() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
-  // Use our audio recording hook
+  // State for phrase practice
+  const [currentlyPracticing, setCurrentlyPracticing] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isProcessingRecording, setIsProcessingRecording] = useState(false);
+  const [wordAssessmentResult, setWordAssessmentResult] = useState<any>(null);
+  
+  // Refs for media recording
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  
+  // Use our audio recording hook for the main recording functionality
   const { 
-    isRecording, 
     recordingDuration, 
     audioUrl, 
-    startRecording, 
-    stopRecording,
+    startRecording: startMainRecording, 
+    stopRecording: stopMainRecording,
     audioBlob
   } = useAudioRecording({
     onError: (error) => {
