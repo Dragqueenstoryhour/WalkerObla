@@ -30,22 +30,13 @@ export function SimpleRecorder({
 
   const { toast } = useToast();
 
-  // Handle timer for recording duration
+  // We don't need a timer counter anymore, but we'll keep the recording state management
   useEffect(() => {
-    if (isRecording) {
-      timerRef.current = window.setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-    } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    }
-
+    // Clean up function for when component unmounts or recording state changes
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = null;
       }
     };
   }, [isRecording]);
@@ -298,7 +289,7 @@ export function SimpleRecorder({
           {isRecording && (
             <div className="flex items-center text-red-500">
               <span className="inline-block w-3 h-3 rounded-full bg-red-500 mr-2 animate-pulse"></span>
-              Recording in Progress
+              Recording
             </div>
           )}
         </div>

@@ -250,7 +250,7 @@ export function GameExerciseRecorder({
                 <Alert className="mb-4 border-red-200 bg-red-100 dark:bg-red-900/20 dark:border-red-900/50">
                   <div className="flex items-center">
                     <div className="mr-2 h-2 w-2 rounded-full bg-red-600 animate-pulse"></div>
-                    <AlertTitle>Recording in progress</AlertTitle>
+                    <AlertTitle>Recording</AlertTitle>
                   </div>
                   <AlertDescription>
                     Speak the word or phrase clearly
@@ -275,7 +275,7 @@ export function GameExerciseRecorder({
                     className="flex-1 animate-pulse"
                   >
                     <StopCircleIcon className="mr-2 h-4 w-4" />
-                    Finished
+                    Stop Recording
                   </Button>
                 )}
 
