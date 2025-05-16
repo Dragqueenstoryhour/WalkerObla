@@ -33,7 +33,7 @@ export default function NewPhrases() {
   const { user } = useAuth();
   const params = useParams();
   const shareId = params.shareId; // Get the shared link ID from URL
-  
+
   const [manualEntryText, setManualEntryText] = useState('');
   const [imageUploadText, setImageUploadText] = useState('');
   const [aiGenerateTopic, setAiGenerateTopic] = useState('');
@@ -47,18 +47,18 @@ export default function NewPhrases() {
   const [showSharedDialog, setShowSharedDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  
+
   // State for phrase practice
   const [currentlyPracticing, setCurrentlyPracticing] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingRecording, setIsProcessingRecording] = useState(false);
   const [wordAssessmentResult, setWordAssessmentResult] = useState<any>(null);
-  
+
   // Refs for media recording
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  
+
   // Use our audio recording hook for the main recording functionality
   const { 
     recordingDuration, 
@@ -89,7 +89,7 @@ export default function NewPhrases() {
       { date: '2025-05-03', score: 79 },
       { date: '2025-05-04', score: 84 },
     ]);
-    
+
     // Add a CSS class for the recording pulse animation if it doesn't exist
     if (!document.getElementById('recording-pulse-animation')) {
       const style = document.createElement('style');
@@ -106,39 +106,39 @@ export default function NewPhrases() {
       `;
       document.head.appendChild(style);
     }
-    
+
     // Cleanup function to handle any lingering recording sessions
     return () => {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
       }
-      
+
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
     };
   }, []);
-  
+
   // Load shared phrases if the shareId is present in the URL
   useEffect(() => {
     const loadSharedPhrases = async () => {
       if (!shareId) return;
-      
+
       setIsProcessing(true);
-      
+
       try {
         // Use our new API endpoint
         const response = await fetch(`/api/share/${shareId}`);
-        
+
         if (!response.ok) {
           throw new Error('Failed to load shared phrases');
         }
-        
+
         const data = await response.json();
         if (!data.collection || !data.collection.phrases) {
           throw new Error('Invalid shared phrases data');
         }
-        
+
         // Process the phrases from the database
         let phrasesData;
         try {
@@ -146,7 +146,7 @@ export default function NewPhrases() {
           phrasesData = typeof data.collection.phrases === 'string'
             ? JSON.parse(data.collection.phrases)
             : data.collection.phrases;
-            
+
           if (!Array.isArray(phrasesData)) {
             phrasesData = [phrasesData]; // Convert to array if it's a single object
           }
@@ -154,7 +154,7 @@ export default function NewPhrases() {
           console.error('Error parsing phrases data:', parseError);
           throw new Error('Invalid shared phrases format');
         }
-        
+
         // Format the phrases for use in the component
         const newPhrases: ProcessedPhrase[] = phrasesData.map((phrase: any, index: number) => ({
           id: `shared-${Date.now()}-${index}`,
@@ -163,13 +163,13 @@ export default function NewPhrases() {
           difficulty: phrase.difficulty || undefined,
           status: 'idle'
         }));
-        
+
         if (newPhrases.length > 0) {
           console.log('Loaded shared phrases:', newPhrases);
           setProcessedPhrases(newPhrases);
           setCurrentPhraseIndex(0); // Select first phrase
           setShowSharedDialog(true); // Show the shared phrases notification
-          
+
           toast({
             title: 'Shared Phrases Loaded',
             description: `Loaded ${newPhrases.length} shared phrases for practice.`,
@@ -188,7 +188,7 @@ export default function NewPhrases() {
         setIsProcessing(false);
       }
     };
-    
+
     loadSharedPhrases();
   }, [shareId, toast]);
 
@@ -204,11 +204,11 @@ export default function NewPhrases() {
     }
 
     setIsProcessing(true);
-    
+
     try {
       // Split text by newlines and filter out empty lines
       const lines = manualEntryText.split('\n').filter(line => line.trim().length > 0);
-      
+
       // Prepare for OpenAI processing
       const response = await fetch('/api/content/process-phrases', {
         method: 'POST',
@@ -217,13 +217,13 @@ export default function NewPhrases() {
         },
         body: JSON.stringify({ phrases: lines }),
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to process phrases');
       }
-      
+
       const processedData = await response.json();
-      
+
       // Format the processed phrases
       const newPhrases: ProcessedPhrase[] = processedData.phrases.map((phrase: any, index: number) => ({
         id: `phrase-${Date.now()}-${index}`,
@@ -232,10 +232,10 @@ export default function NewPhrases() {
         difficulty: phrase.difficulty,
         status: 'idle'
       }));
-      
+
       setProcessedPhrases(newPhrases);
       setCurrentPhraseIndex(0); // Select first phrase
-      
+
       toast({
         title: 'Processing Complete',
         description: `${newPhrases.length} phrases are ready for practice.`,
@@ -263,10 +263,10 @@ export default function NewPhrases() {
                   file.name.toLowerCase().endsWith('.heic') || 
                   file.name.toLowerCase().endsWith('.heif');
     const isPdf = file.type === 'application/pdf';
-    
+
     // More detailed logging for debugging file types
     console.log(`Processing file: ${file.name}, type: ${file.type}`);
-    
+
     if (!isImage && !isPdf) {
       toast({
         title: 'Invalid File Type',
@@ -293,13 +293,13 @@ export default function NewPhrases() {
       }
 
       const result = await response.json();
-      
+
       // Check if the response contains an error (like an AI refusal) rather than actual text
       const lowerCaseText = result.text?.toLowerCase() || '';
       const containsError = lowerCaseText.includes("i'm sorry") || 
                          lowerCaseText.includes("i can't") || 
                          lowerCaseText.includes("unable to");
-      
+
       if (result.text && !containsError) {
         setImageUploadText(result.text);
         toast({
@@ -322,7 +322,7 @@ export default function NewPhrases() {
       setIsProcessing(false);
     }
   };
-  
+
   // Handle a file directly (used by camera capture)
   const handleFileSelection = (file: File) => {
     // Check file type - be more permissive with image formats
@@ -331,10 +331,10 @@ export default function NewPhrases() {
                   file.name.toLowerCase().endsWith('.heic') || 
                   file.name.toLowerCase().endsWith('.heif');
     const isPdf = file.type === 'application/pdf';
-    
+
     // More detailed logging for debugging file types
     console.log(`Processing selected file: ${file.name}, type: ${file.type}`);
-    
+
     if (!isImage && !isPdf) {
       toast({
         title: 'Invalid File Type',
@@ -366,7 +366,7 @@ export default function NewPhrases() {
       const containsError = lowerCaseText.includes("i'm sorry") || 
                          lowerCaseText.includes("i can't") || 
                          lowerCaseText.includes("unable to");
-      
+
       if (result.text && !containsError) {
         setImageUploadText(result.text);
         toast({
@@ -402,13 +402,13 @@ export default function NewPhrases() {
       });
       return;
     }
-    
+
     setIsProcessing(true);
-    
+
     try {
       // Split text by newlines and filter out empty lines
       const lines = imageUploadText.split('\n').filter(line => line.trim().length > 0);
-      
+
       // Prepare for OpenAI processing
       const response = await fetch('/api/content/process-phrases', {
         method: 'POST',
@@ -417,13 +417,13 @@ export default function NewPhrases() {
         },
         body: JSON.stringify({ phrases: lines }),
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to process phrases');
       }
-      
+
       const processedData = await response.json();
-      
+
       // Format the processed phrases
       const newPhrases: ProcessedPhrase[] = processedData.phrases.map((phrase: any, index: number) => ({
         id: `phrase-${Date.now()}-${index}`,
@@ -432,10 +432,10 @@ export default function NewPhrases() {
         difficulty: phrase.difficulty,
         status: 'idle'
       }));
-      
+
       setProcessedPhrases(newPhrases);
       setCurrentPhraseIndex(0); // Select first phrase
-      
+
       toast({
         title: 'Processing Complete',
         description: `${newPhrases.length} phrases are ready for practice.`,
@@ -455,14 +455,14 @@ export default function NewPhrases() {
   // Start recording for an individual phrase practice
   const startPhrasePractice = async (phraseIndex: number) => {
     if (phraseIndex < 0 || phraseIndex >= processedPhrases.length) return;
-    
+
     try {
       const phrase = processedPhrases[phraseIndex];
       setCurrentlyPracticing(phrase.id);
       setCurrentPhraseIndex(phraseIndex);
       setWordAssessmentResult(null);
       chunksRef.current = [];
-      
+
       // Update the phrase status to recording
       setProcessedPhrases(phrases => 
         phrases.map((p, idx) => 
@@ -471,22 +471,22 @@ export default function NewPhrases() {
             : p
         )
       );
-      
+
       // Get microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-      
+
       // Create media recorder
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
-      
+
       // Set up event handlers
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           chunksRef.current.push(e.data);
         }
       };
-      
+
       // Handle recording complete
       mediaRecorder.onstop = async () => {
         // Clean up the stream properly
@@ -495,11 +495,11 @@ export default function NewPhrases() {
           tracks.forEach(track => track.stop());
           streamRef.current = null;
         }
-        
+
         try {
           // Create audio blob
           const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
-          
+
           // Process the phrase recording
           await processPhraseRecording(audioBlob, phraseIndex);
         } catch (error) {
@@ -511,7 +511,7 @@ export default function NewPhrases() {
           });
           setIsRecording(false);
           setIsProcessingRecording(false);
-          
+
           // Reset phrase status
           setProcessedPhrases(phrases => 
             phrases.map((p, idx) => 
@@ -522,11 +522,11 @@ export default function NewPhrases() {
           );
         }
       };
-      
+
       // Start recording
       mediaRecorder.start(100); // Collect data every 100ms
       setIsRecording(true);
-      
+
       toast({
         title: 'Recording Started',
         description: `Say the phrase clearly`,
@@ -539,7 +539,7 @@ export default function NewPhrases() {
         variant: 'destructive'
       });
       setCurrentlyPracticing(null);
-      
+
       // Reset phrase status
       setProcessedPhrases(phrases => 
         phrases.map((p, idx) => 
@@ -550,29 +550,29 @@ export default function NewPhrases() {
       );
     }
   };
-  
+
   // Stop recording the phrase
   const stopPhrasePractice = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
-    
+
     // Make sure we clean up streams even if recorder fails
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
-    
+
     setIsRecording(false);
   };
-  
+
   // Process phrase recording with Azure
   const processPhraseRecording = async (audioBlob: Blob, phraseIndex: number) => {
     setIsProcessingRecording(true);
-    
+
     try {
       const phrase = processedPhrases[phraseIndex];
-      
+
       // Update status to assessing
       setProcessedPhrases(phrases => 
         phrases.map((p, idx) => 
@@ -581,15 +581,15 @@ export default function NewPhrases() {
             : p
         )
       );
-      
+
       toast({
         title: 'Processing Recording',
         description: 'Analyzing your pronunciation...'
       });
-      
+
       // Create a URL for the recording
       const recordingUrl = URL.createObjectURL(audioBlob);
-      
+
       // Send to Azure Speech for assessment
       const formData = new FormData();
       formData.append('audio', audioBlob);
@@ -606,15 +606,15 @@ export default function NewPhrases() {
 
       const result = await response.json();
       console.log('Received assessment results:', result);
-      
+
       // Validate the result has expected properties
       if (typeof result.pronunciationScore !== 'number') {
         throw new Error('Invalid assessment result format');
       }
-      
+
       // Update with results - both in the word assessment state and in the phrases
       setWordAssessmentResult(result);
-      
+
       // Also update in the phrases array
       setProcessedPhrases(phrases => 
         phrases.map((p, idx) => 
@@ -629,19 +629,19 @@ export default function NewPhrases() {
             : p
         )
       );
-      
+
       // Add to history
       const today = new Date().toLocaleDateString();
       setHistoryData(prev => [...prev, {
         date: today,
         score: result.pronunciationScore
       }]);
-      
+
       toast({
         title: 'Analysis Complete',
         description: `Pronunciation: ${result.pronunciationScore.toFixed(1)}%`
       });
-      
+
     } catch (error) {
       console.error('Error assessing word pronunciation:', error);
       toast({
@@ -649,7 +649,7 @@ export default function NewPhrases() {
         description: 'Could not analyze your speech. Please try again.',
         variant: 'destructive'
       });
-      
+
       // Reset status to idle
       setProcessedPhrases(phrases => 
         phrases.map((p, idx) => 
@@ -662,20 +662,20 @@ export default function NewPhrases() {
       setIsProcessingRecording(false);
     }
   };
-  
+
   // Cancel phrase practice
   const cancelPhrasePractice = (phraseIndex: number) => {
     // Stop any ongoing recording
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
-    
+
     // Clean up resources
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
-    
+
     // Reset phrase status
     setProcessedPhrases(phrases => 
       phrases.map((p, idx) => 
@@ -684,18 +684,18 @@ export default function NewPhrases() {
           : p
       )
     );
-    
+
     // Reset state
     setCurrentlyPracticing(null);
     setIsRecording(false);
     setIsProcessingRecording(false);
     setWordAssessmentResult(null);
   };
-  
+
   // Legacy functions for compatibility with old UI references
   const handleStartRecording = () => {
     if (currentPhraseIndex < 0 || currentPhraseIndex >= processedPhrases.length) return;
-    
+
     // Update the current phrase status
     setProcessedPhrases(phrases => 
       phrases.map((phrase, idx) => 
@@ -704,16 +704,16 @@ export default function NewPhrases() {
           : phrase
       )
     );
-    
+
     startMainRecording();
   };
 
   // Legacy function for compatibility
   const handleStopRecording = async () => {
     if (currentPhraseIndex < 0 || currentPhraseIndex >= processedPhrases.length) return;
-    
+
     stopMainRecording();
-    
+
     // Wait for audioBlob to be available
     setTimeout(async () => {
       if (!audioBlob) {
@@ -725,7 +725,7 @@ export default function NewPhrases() {
         });
         return;
       }
-      
+
       console.log('Processing recording with text:', processedPhrases[currentPhraseIndex].text);
       console.log('Audio URL available:', !!audioUrl, 'Audio blob size:', audioBlob.size);
 
@@ -755,7 +755,7 @@ export default function NewPhrases() {
 
         const result = await response.json();
         console.log('Received assessment results:', result);
-        
+
         // Validate the result has expected properties
         if (typeof result.pronunciationScore !== 'number') {
           throw new Error('Invalid assessment result format');
@@ -770,7 +770,7 @@ export default function NewPhrases() {
             status: 'complete',
             assessmentResult: result
           };
-          
+
           // Set this phrase as currently being practiced to show detailed results
           setCurrentlyPracticing(updatedPhrases[currentPhraseIndex].id);
           setProcessedPhrases(updatedPhrases);
@@ -781,7 +781,7 @@ export default function NewPhrases() {
           ...prev, 
           { date: new Date().toISOString().split('T')[0], score: Math.round(result.pronunciationScore) }
         ]);
-        
+
         // If score is really good, show a toast as well
         if (result.pronunciationScore >= 90) {
           toast({
@@ -796,7 +796,7 @@ export default function NewPhrases() {
           description: error instanceof Error ? error.message : 'Failed to assess pronunciation. Please try again.',
           variant: 'destructive'
         });
-        
+
         // Reset status to idle
         setProcessedPhrases(phrases => 
           phrases.map((phrase, idx) => 
@@ -812,9 +812,9 @@ export default function NewPhrases() {
   // Generate similar phrases using LLM
   const handleGenerateSimilar = async () => {
     if (currentPhraseIndex < 0 || currentPhraseIndex >= processedPhrases.length) return;
-    
+
     setIsProcessing(true);
-    
+
     try {
       const response = await fetch('/api/content/generate-similar', {
         method: 'POST',
@@ -823,13 +823,13 @@ export default function NewPhrases() {
         },
         body: JSON.stringify({ phrase: processedPhrases[currentPhraseIndex].text }),
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to generate similar phrases');
       }
-      
+
       const result = await response.json();
-      
+
       // Add the new phrases to our collection
       const newPhrases: ProcessedPhrase[] = result.phrases.map((text: string, index: number) => ({
         id: `phrase-${Date.now()}-similar-${index}`,
@@ -837,9 +837,9 @@ export default function NewPhrases() {
         difficulty: processedPhrases[currentPhraseIndex].difficulty,
         status: 'idle'
       }));
-      
+
       setProcessedPhrases(phrases => [...phrases, ...newPhrases]);
-      
+
       toast({
         title: 'Phrases Generated',
         description: `${newPhrases.length} similar phrases have been added.`,
@@ -866,15 +866,15 @@ export default function NewPhrases() {
       });
       return;
     }
-    
+
     setIsProcessing(true);
-    
+
     // Show a toast to indicate we're generating a link
     toast({
       title: 'Generating Link',
       description: 'Creating a shareable link for your phrases...',
     });
-    
+
     // Format the phrases for sharing (ensure they have text content)
     const phrasesToShare = processedPhrases
       .filter(phrase => phrase.text && phrase.text.trim()) // Filter out empty phrases
@@ -883,7 +883,7 @@ export default function NewPhrases() {
         phonetic: phrase.phonetic || null,
         difficulty: phrase.difficulty || 'medium'
       }));
-    
+
     if (phrasesToShare.length === 0) {
       setIsProcessing(false);
       toast({
@@ -893,10 +893,10 @@ export default function NewPhrases() {
       });
       return;
     }
-    
+
     try {
       console.log('Sending phrases to share:', phrasesToShare);
-      
+
       // Create the shareable link using the API endpoint
       const response = await fetch('/api/share', {
         method: 'POST',
@@ -905,14 +905,14 @@ export default function NewPhrases() {
         },
         body: JSON.stringify({ phrases: phrasesToShare })
       });
-      
+
       const responseText = await response.text();
       console.log('Share API response:', response.status, responseText);
-      
+
       if (!response.ok) {
         throw new Error(`Failed to generate shareable link: ${response.status} ${response.statusText}`);
       }
-      
+
       // Parse the JSON response (we've already read it as text above)
       let data;
       try {
@@ -923,17 +923,17 @@ export default function NewPhrases() {
         console.error('Raw response text:', responseText);
         throw new Error('Invalid response from server');
       }
-      
+
       if (!data.shareableUrl) {
         console.error('Missing shareableUrl in response:', data);
         throw new Error('Server response did not include a shareableUrl');
       }
-      
+
       // Create the full shareable link with origin
       const fullShareableLink = `${window.location.origin}${data.shareableUrl}`;
       console.log('Generated shareable link:', fullShareableLink);
       setShareableLink(fullShareableLink);
-      
+
       // Verify that the link works by testing the API endpoint
       try {
         // Extract shareId from the shareableUrl or use it directly from the response
@@ -941,7 +941,7 @@ export default function NewPhrases() {
         if (shareId) {
           const verifyResponse = await fetch(`/api/share/${shareId}`);
           console.log('Verification response:', verifyResponse.status);
-          
+
           if (!verifyResponse.ok) {
             console.warn('Shared link may not be accessible:', verifyResponse.status);
           }
@@ -951,7 +951,7 @@ export default function NewPhrases() {
       } catch (verifyError) {
         console.warn('Could not verify link accessibility:', verifyError);
       }
-      
+
       // Copy to clipboard
       try {
         await navigator.clipboard.writeText(fullShareableLink);
@@ -966,18 +966,19 @@ export default function NewPhrases() {
           description: 'Shareable link created successfully, but could not copy to clipboard automatically.',
         });
       }
-      
-    } catch (error) {
-      console.error('Error generating shareable link:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to generate shareable link. Please try again.',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+
+    }```text
+      } catch (error) {
+        console.error('Error generating shareable link:', error);
+        toast({
+          title: 'Error',
+          description: error instanceof Error ? error.message : 'Failed to generate shareable link. Please try again.',
+          variant: 'destructive'
+        });
+      } finally {
+        setIsProcessing(false);
+      }
+    };
 
   // Save the current phrase to user's saved phrases
   const handleSavePhrase = async () => {
@@ -992,7 +993,7 @@ export default function NewPhrases() {
         });
         return;
       }
-      
+
       if (currentPhraseIndex < 0 || currentPhraseIndex >= processedPhrases.length) {
         toast({
           title: 'No Phrase Selected',
@@ -1001,15 +1002,15 @@ export default function NewPhrases() {
         });
         return;
       }
-      
+
       const phraseToSave = processedPhrases[currentPhraseIndex];
-      
+
       // Show a loading toast
       const loadingToast = toast({
         title: 'Saving Phrase',
         description: 'Adding this phrase to your collection...',
       });
-      
+
       // Use the API to save the phrase (the server will use the user's session for userId)
       const response = await fetch('/api/phrases/save', {
         method: 'POST',
@@ -1025,33 +1026,33 @@ export default function NewPhrases() {
           sourceId: shareId || null
         })
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to save phrase');
       }
-      
+
       // Get the response data to show the saved phrase ID
       const data = await response.json();
-      
+
       // Set the saved phrase ID to trigger the animation
       setSavedPhraseId(phraseToSave.id);
-      
+
       // Create a "Saved!" animation with setTimeout to clear the state after 2 seconds
       setTimeout(() => {
         setSavedPhraseId(null);
       }, 2000);
-      
+
       // Dismiss the loading toast
       loadingToast.dismiss?.();
-      
+
       toast({
         title: 'Phrase Saved',
         description: 'This phrase has been saved to your collection.',
       });
-      
+
       // Removed confetti effect as per user request
       /* Confetti animation removed */
-      
+
     } catch (error) {
       console.error('Error saving phrase:', error);
       toast({
@@ -1061,7 +1062,7 @@ export default function NewPhrases() {
       });
     }
   };
-  
+
   // Play the recording for a phrase (user's voice recording)
   const handlePlayRecording = (phraseIndex: number) => {
     const phrase = processedPhrases[phraseIndex];
@@ -1099,7 +1100,7 @@ export default function NewPhrases() {
 
   // State to track which phrases are being played with slow speed
   const [slowPlaybackPhrases, setSlowPlaybackPhrases] = useState<Record<string, boolean>>({});
-  
+
   // Play TTS for a phrase (computer speech)
   const handleTextToSpeech = async (phraseIndex: number) => {
     const phrase = processedPhrases[phraseIndex];
@@ -1117,13 +1118,13 @@ export default function NewPhrases() {
       title: 'Loading Audio',
       description: 'Preparing text-to-speech...',
     });
-    
+
     // Check if we're already in slow playback mode for this phrase
     const isSlowPlayback = slowPlaybackPhrases[phrase.id] || false;
 
     try {
       console.log(`Requesting speech synthesis for: "${phrase.text}"`);
-      
+
       // Call the TTS API
       const response = await fetch('/api/speech/synthesize', {
         method: 'POST',
@@ -1132,31 +1133,31 @@ export default function NewPhrases() {
         },
         body: JSON.stringify({ text: phrase.text }),
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Speech synthesis error response:', errorText);
         throw new Error(`Failed to synthesize speech: ${response.status} ${response.statusText}`);
       }
-      
+
       // Get audio blob from response
       const audioBlob = await response.blob();
-      
+
       // Check if we received valid audio data
       if (audioBlob.size === 0) {
         throw new Error('Received empty audio data');
       }
-      
+
       console.log(`Received audio blob: ${audioBlob.size} bytes, type: ${audioBlob.type}`);
-      
+
       // Create an Object URL from the audio blob
       const audioUrl = URL.createObjectURL(audioBlob);
-      
+
       // Create a new Audio element if the ref is not set
       if (!audioRef.current) {
         audioRef.current = new Audio();
       }
-      
+
       // Set up error handling first
       audioRef.current.onerror = (e) => {
         console.error('Audio playback error:', e);
@@ -1165,22 +1166,22 @@ export default function NewPhrases() {
           description: 'Could not play the audio. Please try again.',
           variant: 'destructive'
         });
-        
+
         // Clean up
         URL.revokeObjectURL(audioUrl);
       };
-      
+
       // Play when ready
       audioRef.current.oncanplaythrough = () => {
         // Dismiss the loading toast
         loadingToast.dismiss?.();
-        
+
         // Set playback rate to 0.5 (half speed) for slow playback
         const audio = audioRef.current;
         if (audio) {
           audio.playbackRate = isSlowPlayback ? 0.5 : 1.0;
         }
-        
+
         audioRef.current?.play()
           .then(() => {
             // Update status to indicate we're now in slow playback mode for next time
@@ -1188,7 +1189,7 @@ export default function NewPhrases() {
               ...prev,
               [phrase.id]: true  // Mark this phrase for slow playback next time
             }));
-            
+
             toast({
               title: isSlowPlayback ? 'Playing Slowly' : 'Playing',
               description: `Playing: "${phrase.text.substring(0, 20)}${phrase.text.length > 20 ? '...' : ''}"`,
@@ -1201,15 +1202,15 @@ export default function NewPhrases() {
               description: 'Could not play the audio. Please try again.',
               variant: 'destructive'
             });
-            
+
             // Clean up
             URL.revokeObjectURL(audioUrl);
           });
       };
-      
+
       // Set source after adding event listeners
       audioRef.current.src = audioUrl;
-      
+
       // Add event listener for when playback ends to clean up resources
       audioRef.current.onended = () => {
         // Clean up the Object URL to avoid memory leaks
@@ -1217,10 +1218,10 @@ export default function NewPhrases() {
       };
     } catch (error) {
       console.error('TTS Error:', error);
-      
+
       // Dismiss the loading toast
       loadingToast.dismiss?.();
-      
+
       toast({
         title: 'TTS Error',
         description: error instanceof Error ? error.message : 'Could not generate audio for this phrase.',
@@ -1248,7 +1249,7 @@ export default function NewPhrases() {
     if (currentPhraseIndex >= 0 && 
         processedPhrases[currentPhraseIndex]?.assessmentResult && 
         Math.round(processedPhrases[currentPhraseIndex].assessmentResult!.pronunciationScore) >= 95) {
-      
+
       // Dynamically import canvas-confetti only when needed
       const celebrateHighScore = async () => {
         try {
@@ -1262,18 +1263,18 @@ export default function NewPhrases() {
           console.error('Error loading confetti:', error);
         }
       };
-      
+
       celebrateHighScore();
     }
   }, [currentPhraseIndex, processedPhrases]);
-  
+
   // Render assessment visualization
   const renderAssessmentVisualization = (phrase: ProcessedPhrase) => {
     if (!phrase.assessmentResult) return null;
-    
+
     const result = phrase.assessmentResult;
     const score = Math.round(result.pronunciationScore);
-    
+
     return (
       <div className="mt-4 space-y-4">
         <div className="border-2 border-[#57cc99] rounded-lg bg-[#f5f7fa] p-6 relative overflow-hidden shadow-md">
@@ -1290,7 +1291,7 @@ export default function NewPhrases() {
                 ? "Great job! Your pronunciation is very clear."
                 : "Good effort! Try again to improve your score."}
             </p>
-            
+
             {/* Detailed scores breakdown */}
             <div className="space-y-3 mb-5">
               <div className="space-y-1">
@@ -1309,7 +1310,7 @@ export default function NewPhrases() {
                   ></div>
                 </div>
               </div>
-              
+
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
                   <span className="font-medium">Fluency</span>
@@ -1326,7 +1327,7 @@ export default function NewPhrases() {
                   ></div>
                 </div>
               </div>
-              
+
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
                   <span className="font-medium">Completeness</span>
@@ -1343,7 +1344,7 @@ export default function NewPhrases() {
                   ></div>
                 </div>
               </div>
-              
+
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
                   <span className="font-medium">Accuracy</span>
@@ -1360,7 +1361,7 @@ export default function NewPhrases() {
                   ></div>
                 </div>
               </div>
-              
+
               {result.prosodyScore && (
                 <div className="space-y-1">
                   <div className="flex justify-between text-sm">
@@ -1380,7 +1381,7 @@ export default function NewPhrases() {
                 </div>
               )}
             </div>
-            
+
             {/* Word-by-word analysis */}
             {result.wordLevelResults && result.wordLevelResults.length > 0 && (
               <div className="mt-5 pt-5 border-t">
@@ -1395,7 +1396,7 @@ export default function NewPhrases() {
                     const textColor = score > 85 ? 'text-green-800' : 
                                     score > 70 ? 'text-yellow-800' : 
                                     'text-red-800';
-                    
+
                     return (
                       <div 
                         key={`word-${idx}`} 
@@ -1433,10 +1434,10 @@ export default function NewPhrases() {
   // Render a bar chart for the last 10 scores
   const renderHistoryChart = () => {
     if (historyData.length === 0) return null;
-    
+
     // Only show the last 10 scores
     const lastTenScores = historyData.slice(-10);
-    
+
     return (
       <Card className="mt-4 border-0 shadow-md bg-gradient-to-br from-white to-slate-50">
         <CardHeader className="pb-2">
@@ -1464,22 +1465,22 @@ export default function NewPhrases() {
                 </div>
               ))}
             </div>
-            
+
             {lastTenScores.map((item, idx) => {
               // Scale height based on the score (0-100% range)
               const heightPercent = item.score;
-              
+
               // Color based on score as requested:
               // 85+ in green, 70-84 in orange, 69 and below in red
               const barColor = item.score >= 85 ? 'bg-green-500' :
                              item.score >= 70 ? 'bg-amber-500' :
                              'bg-red-500';
-                             
+
               // Generate gradient overlay for 3D effect
               const gradientClass = item.score >= 85 ? 'from-green-400 to-green-600' :
                                   item.score >= 70 ? 'from-amber-400 to-amber-600' :
                                   'from-red-400 to-red-600';
-              
+
               return (
                 <div key={idx} className="flex flex-col items-center flex-1 relative">
                   <div className="relative w-full h-full flex items-end">
@@ -1501,7 +1502,7 @@ export default function NewPhrases() {
               );
             })}
           </div>
-          
+
           {/* Legend */}
           <div className="flex items-center justify-center mt-4 gap-4 text-xs">
             <div className="flex items-center">
@@ -1529,7 +1530,7 @@ export default function NewPhrases() {
       { name: 'Shared 5+ Exercises', icon: <Share2 className="h-4 w-4 mr-1" />, earned: false },
       { name: 'Perfect Pronunciation', icon: <CheckCircle className="h-4 w-4 mr-1" />, earned: false },
     ];
-    
+
     return (
       <Card className="mt-4">
         <CardHeader>
@@ -1588,7 +1589,7 @@ export default function NewPhrases() {
     }
 
     setIsProcessing(true);
-    
+
     try {
       const response = await fetch('/api/content/generate-topic-phrases', {
         method: 'POST',
@@ -1597,23 +1598,23 @@ export default function NewPhrases() {
         },
         body: JSON.stringify({ topic }),
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to generate phrases');
       }
-      
+
       const result = await response.json();
-      
+
       // Add the new phrases to our collection
       const newPhrases: ProcessedPhrase[] = result.phrases.map((text: string, index: number) => ({
         id: `phrase-${Date.now()}-topic-${index}`,
         text,
         status: 'idle'
       }));
-      
+
       setProcessedPhrases(newPhrases);
       setCurrentPhraseIndex(0); // Select first phrase
-      
+
       toast({
         title: 'Phrases Generated',
         description: `${newPhrases.length} phrases related to "${topic}" have been generated.`,
@@ -1648,7 +1649,7 @@ export default function NewPhrases() {
         </DialogContent>
       </Dialog>
       <h1 className="text-3xl font-bold mb-6">New Phrases</h1>
-      
+
       <Tabs defaultValue="ai-generate" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="ai-generate">
@@ -1661,7 +1662,7 @@ export default function NewPhrases() {
             <FileText className="h-4 w-4 mr-2" /> Text Entry
           </TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="manual-entry" className="space-y-4">
           <Card>
             <CardHeader>
@@ -1701,7 +1702,7 @@ I'd like to schedule an appointment."
             </CardFooter>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="image-upload" className="space-y-4">
           <Card>
             <CardHeader>
@@ -1729,7 +1730,7 @@ I'd like to schedule an appointment."
                       onChange={handleFileUpload}
                     />
                   </div>
-                  
+
                   <Button 
                     variant="outline" 
                     className="w-full flex items-center justify-center" 
@@ -1739,7 +1740,7 @@ I'd like to schedule an appointment."
                         // Create a video element to show the camera feed
                         const videoElement = document.createElement('video');
                         const canvasElement = document.createElement('canvas');
-                        
+
                         // Create and show a modal with the camera feed
                         const modal = document.createElement('div');
                         modal.style.position = 'fixed';
@@ -1754,14 +1755,14 @@ I'd like to schedule an appointment."
                         modal.style.justifyContent = 'flex-end'; // Position buttons at bottom
                         modal.style.padding = '20px';
                         modal.style.zIndex = '9999';
-                        
+
                         // Add the video element to the modal - make smaller on mobile
                         videoElement.style.maxWidth = '90%';
                         videoElement.style.maxHeight = '50vh'; // Reduced height to leave room for buttons
                         videoElement.style.borderRadius = '8px';
                         videoElement.autoplay = true;
                         modal.appendChild(videoElement);
-                        
+
                         // Create control container
                         const controlContainer = document.createElement('div');
                         controlContainer.style.display = 'flex';
@@ -1772,7 +1773,7 @@ I'd like to schedule an appointment."
                         controlContainer.style.position = 'fixed';
                         controlContainer.style.bottom = '20px';
                         controlContainer.style.zIndex = '10000';
-                        
+
                         // Add capture button
                         const captureButton = document.createElement('button');
                         captureButton.textContent = 'Take Photo';
@@ -1787,7 +1788,7 @@ I'd like to schedule an appointment."
                         captureButton.style.fontWeight = 'bold';
                         captureButton.style.flex = '1';
                         controlContainer.appendChild(captureButton);
-                        
+
                         // Add close button
                         const closeButton = document.createElement('button');
                         closeButton.textContent = 'Cancel';
@@ -1801,13 +1802,13 @@ I'd like to schedule an appointment."
                         closeButton.style.fontSize = '16px';
                         closeButton.style.flex = '1';
                         controlContainer.appendChild(closeButton);
-                        
+
                         modal.appendChild(controlContainer);
-                        
+
                         document.body.appendChild(modal);
-                        
+
                         let stream: MediaStream | null = null;
-                        
+
                         // Start the camera
                         navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
                           .then((mediaStream) => {
@@ -1823,14 +1824,14 @@ I'd like to schedule an appointment."
                               variant: 'destructive'
                             });
                           });
-                        
+
                         // Capture button event
                         captureButton.onclick = () => {
                           // Draw the current video frame to canvas
                           canvasElement.width = videoElement.videoWidth;
                           canvasElement.height = videoElement.videoHeight;
                           canvasElement.getContext('2d')?.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
-                          
+
                           // Convert to blob
                           canvasElement.toBlob((blob) => {
                             if (blob) {
@@ -1839,16 +1840,16 @@ I'd like to schedule an appointment."
                                 stream.getTracks().forEach(track => track.stop());
                               }
                               document.body.removeChild(modal);
-                              
+
                               // Create a File object from the blob
                               const file = new File([blob], `camera-capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
-                              
+
                               // Process the file like a normal upload
                               handleFileSelection(file);
                             }
                           }, 'image/jpeg', 0.95);
                         };
-                        
+
                         // Close button event
                         closeButton.onclick = () => {
                           if (stream) {
@@ -1869,7 +1870,7 @@ I'd like to schedule an appointment."
                     Take Picture
                   </Button>
                 </div>
-                
+
                 {/* Preview area */}
                 <div className="flex-1 min-h-[200px]">
                   {isProcessing ? (
@@ -1900,7 +1901,7 @@ I'd like to schedule an appointment."
                   )}
                 </div>
               </div>
-              
+
               {imageUploadText && (
                 <Button 
                   onClick={handleProcessImageText} 
@@ -1920,7 +1921,7 @@ I'd like to schedule an appointment."
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="ai-generate" className="space-y-4">
           <Card>
             <CardHeader>
@@ -1952,7 +1953,7 @@ I'd like to schedule an appointment."
                     </Button>
                   </div>
                 </div>
-                
+
                 <div>
                   <p className="text-sm font-medium mb-2">Example topics:</p>
                   <div className="flex flex-wrap gap-2">
@@ -1987,7 +1988,7 @@ I'd like to schedule an appointment."
           </Card>
         </TabsContent>
       </Tabs>
-      
+
       {/* Phrases Grid */}
       {processedPhrases.length > 0 && (
         <div className="mt-8">
@@ -2020,7 +2021,7 @@ I'd like to schedule an appointment."
               <span className="text-sm">{calculateProgress()}% complete</span>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Left column: phrases list */}
             <div className="space-y-4">
@@ -2058,33 +2059,33 @@ I'd like to schedule an appointment."
                                   {slowPlaybackPhrases[phrase.id] ? 'Listen Again' : 'Listen'}
                                 </span>
                               </Button>
-                              
+
                               <Button 
-                                variant="outline" 
-                                className={`${savedPhraseId === phrase.id 
-                                  ? 'border-green-500 bg-green-50 text-green-600' 
-                                  : 'border-amber-500 text-amber-600 hover:bg-amber-50 hover:text-amber-700'
-                                } flex items-center gap-1 transition-all duration-300`}
-                                onClick={() => {
-                                  setCurrentPhraseIndex(idx);
-                                  handleSavePhrase();
-                                }}
-                                title="Save to My Words"
-                                disabled={savedPhraseId === phrase.id}
-                              >
-                                {savedPhraseId === phrase.id ? (
-                                  <>
-                                    <CheckCircle className="h-4 w-4 animate-pulse" />
-                                    <span className="text-xs animate-pulse">Saved!</span>
-                                  </>
-                                ) : (
-                                  <Star className="h-4 w-4" />
-                                )}
-                              </Button>
+                                  variant="outline" 
+                                  className={`${savedPhraseId === phrase.id 
+                                    ? 'border-amber-500 bg-amber-50 text-amber-600' 
+                                    : 'border-amber-500 text-amber-600 hover:bg-amber-50 hover:text-amber-700'
+                                  } flex items-center gap-1 transition-all duration-300`}
+                                  onClick={() => {
+                                    setCurrentPhraseIndex(idx);
+                                    handleSavePhrase();
+                                  }}
+                                  title="Save to My Words"
+                                  disabled={savedPhraseId === phrase.id}
+                                >
+                                  <Star 
+                                    className={`h-4 w-4 ${savedPhraseId === phrase.id 
+                                      ? 'fill-amber-500 animate-bounce' 
+                                      : ''}`} 
+                                  />
+                                  {savedPhraseId === phrase.id && (
+                                    <span className="text-xs">Saved!</span>
+                                  )}
+                                </Button>
                             </div>
                           </div>
                         </div>
-                        
+
                         {/* Add Practice button */}
                         <div className="mt-3 flex justify-end">
                           <Button 
@@ -2096,7 +2097,7 @@ I'd like to schedule an appointment."
                             <span>Practice</span>
                           </Button>
                         </div>
-                        
+
                         {/* Score display (if previously completed) */}
                         {phrase.assessmentResult && (
                           <div className="mt-2">
@@ -2114,7 +2115,7 @@ I'd like to schedule an appointment."
                         )}
                       </div>
                     )}
-                    
+
                     {/* Recording view */}
                     {phrase.status === 'recording' && (
                       <div className="flex flex-col items-center py-3">
@@ -2140,7 +2141,7 @@ I'd like to schedule an appointment."
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Assessing view */}
                     {phrase.status === 'assessing' && (
                       <div className="flex flex-col items-center py-6">
@@ -2148,15 +2149,15 @@ I'd like to schedule an appointment."
                         <p className="text-center">Analyzing pronunciation...</p>
                       </div>
                     )}
-                    
+
                     {/* Complete view with detailed assessment - shown only when actively practicing and viewing results */}
                     {phrase.status === 'complete' && phrase.assessmentResult && currentlyPracticing === phrase.id && (
                       <div className="mt-2 space-y-4">
                         <p className="font-medium text-center">{phrase.text}</p>
-                        
+
                         <div className="border-2 border-[#57cc99] rounded-lg bg-[#f5f7fa] p-4 relative overflow-hidden shadow-sm">
                           <div className="absolute top-0 left-0 w-full h-2 bg-[#57cc99]"></div>
-                          
+
                           <h3 className="text-xl font-bold text-center text-[#264653] mb-2">Your Performance</h3>
                           <div className="text-5xl font-bold text-center mb-2" 
                               style={{ 
@@ -2166,7 +2167,7 @@ I'd like to schedule an appointment."
                               }}>
                             {Math.round(phrase.assessmentResult.pronunciationScore)}%
                           </div>
-                          
+
                           {/* Detailed scores breakdown */}
                           <div className="space-y-2 mb-3">
                             <div className="space-y-1">
@@ -2185,7 +2186,7 @@ I'd like to schedule an appointment."
                                 ></div>
                               </div>
                             </div>
-                            
+
                             <div className="space-y-1">
                               <div className="flex justify-between text-sm">
                                 <span className="font-medium">Fluency</span>
@@ -2203,7 +2204,7 @@ I'd like to schedule an appointment."
                               </div>
                             </div>
                           </div>
-                          
+
                           <div className="flex justify-center gap-2 mt-4">
                             <Button 
                               variant="outline" 
@@ -2225,7 +2226,7 @@ I'd like to schedule an appointment."
                   </CardContent>
                 </Card>
               ))}
-              
+
               {/* Add new phrase button */}
               <Button 
                 variant="outline" 
@@ -2242,7 +2243,7 @@ I'd like to schedule an appointment."
                 Add New Phrase
               </Button>
             </div>
-            
+
             {/* Right column: selected phrase and features */}
             <div>
               {currentPhraseIndex >= 0 && currentPhraseIndex < processedPhrases.length ? (
@@ -2264,7 +2265,7 @@ I'd like to schedule an appointment."
                         </p>
                       )}
                     </div>
-                    
+
                     <div className="flex justify-center items-center gap-4">
                       {isRecording ? (
                         <Button
@@ -2324,7 +2325,7 @@ I'd like to schedule an appointment."
                         </Button>
                       )}
                     </div>
-                    
+
                     {/* Status indicator */}
                     {processedPhrases[currentPhraseIndex].status === 'assessing' && (
                       <div className="text-center">
@@ -2332,10 +2333,10 @@ I'd like to schedule an appointment."
                         <p className="text-sm text-muted-foreground mt-2">Assessing pronunciation...</p>
                       </div>
                     )}
-                    
+
                     {/* Assessment visualization */}
                     {renderAssessmentVisualization(processedPhrases[currentPhraseIndex])}
-                    
+
                     {/* AI-powered drills */}
                     {processedPhrases[currentPhraseIndex].status === 'complete' && (
                       <div className="mt-4 pt-4 border-t flex flex-col gap-2">
@@ -2356,7 +2357,7 @@ I'd like to schedule an appointment."
                         </Button>
                       </div>
                     )}
-                    
+
                     {shareableLink && (
                       <Alert>
                         <AlertTitle>Shareable Link Created</AlertTitle>
@@ -2379,16 +2380,16 @@ I'd like to schedule an appointment."
                   </CardContent>
                 </Card>
               )}
-              
+
               {/* Progress history */}
               {renderHistoryChart()}
-              
+
               {/* Badges section hidden as requested */}
             </div>
           </div>
         </div>
       )}
-      
+
       {/* Hidden audio element for playback */}
       <audio ref={audioRef} className="hidden" />
     </div>
