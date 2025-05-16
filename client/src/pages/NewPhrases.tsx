@@ -2206,7 +2206,7 @@ I'd like to schedule an appointment."
               </Button>
             </div>
             
-            {/* Right column: current phrase recording */}
+            {/* Right column: selected phrase and features */}
             <div>
               {currentPhraseIndex >= 0 && currentPhraseIndex < processedPhrases.length ? (
                 <Card>
