@@ -761,14 +761,20 @@ export default function NewPhrases() {
           throw new Error('Invalid assessment result format');
         }
 
-        // Update the phrase with assessment results
-        setProcessedPhrases(phrases => 
-          phrases.map((phrase, idx) => 
-            idx === currentPhraseIndex 
-              ? { ...phrase, status: 'complete', assessmentResult: result } 
-              : phrase
-          )
-        );
+        // Update the phrase with assessment results, but set currentlyPracticing
+        // This will show the detailed results card initially
+        const updatedPhrases = [...processedPhrases];
+        if (updatedPhrases[currentPhraseIndex]) {
+          updatedPhrases[currentPhraseIndex] = {
+            ...updatedPhrases[currentPhraseIndex],
+            status: 'complete',
+            assessmentResult: result
+          };
+          
+          // Set this phrase as currently being practiced to show detailed results
+          setCurrentlyPracticing(updatedPhrases[currentPhraseIndex].id);
+          setProcessedPhrases(updatedPhrases);
+        }
 
         // Add to history data
         setHistoryData(prev => [
@@ -1091,6 +1097,9 @@ export default function NewPhrases() {
     }
   };
 
+  // State to track which phrases are being played with slow speed
+  const [slowPlaybackPhrases, setSlowPlaybackPhrases] = useState<Record<string, boolean>>({});
+  
   // Play TTS for a phrase (computer speech)
   const handleTextToSpeech = async (phraseIndex: number) => {
     const phrase = processedPhrases[phraseIndex];
@@ -1108,6 +1117,9 @@ export default function NewPhrases() {
       title: 'Loading Audio',
       description: 'Preparing text-to-speech...',
     });
+    
+    // Check if we're already in slow playback mode for this phrase
+    const isSlowPlayback = slowPlaybackPhrases[phrase.id] || false;
 
     try {
       console.log(`Requesting speech synthesis for: "${phrase.text}"`);
@@ -1163,10 +1175,23 @@ export default function NewPhrases() {
         // Dismiss the loading toast
         loadingToast.dismiss?.();
         
+        // Set playback rate to 0.5 (half speed) for slow playback
+        if (isSlowPlayback) {
+          audioRef.current.playbackRate = 0.5;
+        } else {
+          audioRef.current.playbackRate = 1.0;
+        }
+        
         audioRef.current?.play()
           .then(() => {
+            // Update status to indicate we're now in slow playback mode for next time
+            setSlowPlaybackPhrases(prev => ({
+              ...prev,
+              [phrase.id]: true  // Mark this phrase for slow playback next time
+            }));
+            
             toast({
-              title: 'Playing',
+              title: isSlowPlayback ? 'Playing Slowly' : 'Playing',
               description: `Playing: "${phrase.text.substring(0, 20)}${phrase.text.length > 20 ? '...' : ''}"`,
             });
           })
@@ -2019,7 +2044,9 @@ I'd like to schedule an appointment."
                                 onClick={() => handleTextToSpeech(idx)}
                               >
                                 <VolumeIcon className="h-4 w-4" />
-                                <span className="text-xs">Listen</span>
+                                <span className="text-xs">
+                                  {slowPlaybackPhrases[phrase.id] ? 'Listen Again' : 'Listen'}
+                                </span>
                               </Button>
                               
                               <Button 
@@ -2112,7 +2139,7 @@ I'd like to schedule an appointment."
                       </div>
                     )}
                     
-                    {/* Complete view with detailed assessment */}
+                    {/* Complete view with detailed assessment - shown only when actively practicing and viewing results */}
                     {phrase.status === 'complete' && phrase.assessmentResult && currentlyPracticing === phrase.id && (
                       <div className="mt-2 space-y-4">
                         <p className="font-medium text-center">{phrase.text}</p>
