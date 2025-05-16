@@ -913,6 +913,59 @@ export default function NewPhrases() {
         throw new Error(`Failed to generate shareable link: ${response.status} ${response.statusText}`);
       }
 
+      // Parse the JSON response
+      let data;
+      try {
+        data = JSON.parse(responseText);
+        console.log('Parsed share data:', data);
+      } catch (parseError) {
+        console.error('Error parsing JSON response:', parseError);
+        console.error('Raw response text:', responseText);
+        throw new Error('Invalid response from server');
+      }
+
+      if (!data.shareableUrl) {
+        console.error('Missing shareableUrl in response:', data);
+        throw new Error('Server response did not include a shareableUrl');
+      }
+
+      // Create the full shareable link with origin
+      const fullShareableLink = `${window.location.origin}${data.shareableUrl}`;
+      console.log('Generated shareable link:', fullShareableLink);
+      setShareableLink(fullShareableLink);
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(fullShareableLink);
+      toast({
+        title: 'Link Copied!',
+        description: 'Shareable link has been copied to your clipboard.',
+      });
+
+    } catch (error) {
+      console.error('Error generating shareable link:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to generate shareable link. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+      const response = await fetch('/api/share', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ phrases: phrasesToShare })
+      });
+
+      const responseText = await response.text();
+      console.log('Share API response:', response.status, responseText);
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate shareable link: ${response.status} ${response.statusText}`);
+      }
+
       // Parse the JSON response (we've already read it as text above)
       let data;
       try {
