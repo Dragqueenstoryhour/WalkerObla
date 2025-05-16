@@ -89,6 +89,34 @@ export default function NewPhrases() {
       { date: '2025-05-03', score: 79 },
       { date: '2025-05-04', score: 84 },
     ]);
+    
+    // Add a CSS class for the recording pulse animation if it doesn't exist
+    if (!document.getElementById('recording-pulse-animation')) {
+      const style = document.createElement('style');
+      style.id = 'recording-pulse-animation';
+      style.textContent = `
+        @keyframes pulse {
+          0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); }
+          70% { box-shadow: 0 0 0 15px rgba(22, 163, 74, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+        }
+        .pulse-animation {
+          animation: pulse 1.5s infinite;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    // Cleanup function to handle any lingering recording sessions
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
   }, []);
   
   // Load shared phrases if the shareId is present in the URL
