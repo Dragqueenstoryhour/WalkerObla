@@ -424,7 +424,247 @@ export default function NewPhrases() {
     }
   };
 
-  // Start recording the current phrase
+  // Start recording for an individual phrase practice
+  const startPhrasePractice = async (phraseIndex: number) => {
+    if (phraseIndex < 0 || phraseIndex >= processedPhrases.length) return;
+    
+    try {
+      const phrase = processedPhrases[phraseIndex];
+      setCurrentlyPracticing(phrase.id);
+      setCurrentPhraseIndex(phraseIndex);
+      setWordAssessmentResult(null);
+      chunksRef.current = [];
+      
+      // Update the phrase status to recording
+      setProcessedPhrases(phrases => 
+        phrases.map((p, idx) => 
+          idx === phraseIndex 
+            ? { ...p, status: 'recording' } 
+            : p
+        )
+      );
+      
+      // Get microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      
+      // Create media recorder
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      
+      // Set up event handlers
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+      
+      // Handle recording complete
+      mediaRecorder.onstop = async () => {
+        // Clean up the stream properly
+        if (streamRef.current) {
+          const tracks = streamRef.current.getTracks();
+          tracks.forEach(track => track.stop());
+          streamRef.current = null;
+        }
+        
+        try {
+          // Create audio blob
+          const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+          
+          // Process the phrase recording
+          await processPhraseRecording(audioBlob, phraseIndex);
+        } catch (error) {
+          console.error('Error processing phrase recording:', error);
+          toast({
+            title: 'Recording Error',
+            description: 'Could not process the recording. Please try again.',
+            variant: 'destructive'
+          });
+          setIsRecording(false);
+          setIsProcessingRecording(false);
+          
+          // Reset phrase status
+          setProcessedPhrases(phrases => 
+            phrases.map((p, idx) => 
+              idx === phraseIndex 
+                ? { ...p, status: 'idle' } 
+                : p
+            )
+          );
+        }
+      };
+      
+      // Start recording
+      mediaRecorder.start(100); // Collect data every 100ms
+      setIsRecording(true);
+      
+      toast({
+        title: 'Recording Started',
+        description: `Say the phrase clearly`,
+      });
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      toast({
+        title: 'Microphone Error',
+        description: 'Could not access the microphone. Please check permissions.',
+        variant: 'destructive'
+      });
+      setCurrentlyPracticing(null);
+      
+      // Reset phrase status
+      setProcessedPhrases(phrases => 
+        phrases.map((p, idx) => 
+          idx === phraseIndex 
+            ? { ...p, status: 'idle' } 
+            : p
+        )
+      );
+    }
+  };
+  
+  // Stop recording the phrase
+  const stopPhrasePractice = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    
+    // Make sure we clean up streams even if recorder fails
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    
+    setIsRecording(false);
+  };
+  
+  // Process phrase recording with Azure
+  const processPhraseRecording = async (audioBlob: Blob, phraseIndex: number) => {
+    setIsProcessingRecording(true);
+    
+    try {
+      const phrase = processedPhrases[phraseIndex];
+      
+      // Update status to assessing
+      setProcessedPhrases(phrases => 
+        phrases.map((p, idx) => 
+          idx === phraseIndex 
+            ? { ...p, status: 'assessing' } 
+            : p
+        )
+      );
+      
+      toast({
+        title: 'Processing Recording',
+        description: 'Analyzing your pronunciation...'
+      });
+      
+      // Create a URL for the recording
+      const recordingUrl = URL.createObjectURL(audioBlob);
+      
+      // Send to Azure Speech for assessment
+      const formData = new FormData();
+      formData.append('audio', audioBlob);
+      formData.append('text', phrase.text);
+
+      const response = await fetch('/api/pronunciation/assess', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to assess pronunciation');
+      }
+
+      const result = await response.json();
+      console.log('Received assessment results:', result);
+      
+      // Validate the result has expected properties
+      if (typeof result.pronunciationScore !== 'number') {
+        throw new Error('Invalid assessment result format');
+      }
+      
+      // Update with results - both in the word assessment state and in the phrases
+      setWordAssessmentResult(result);
+      
+      // Also update in the phrases array
+      setProcessedPhrases(phrases => 
+        phrases.map((p, idx) => 
+          idx === phraseIndex 
+            ? { 
+                ...p, 
+                status: 'complete', 
+                assessmentResult: result,
+                recordingBlob: audioBlob,
+                recordingUrl
+              } 
+            : p
+        )
+      );
+      
+      // Add to history
+      const today = new Date().toLocaleDateString();
+      setHistoryData(prev => [...prev, {
+        date: today,
+        score: result.pronunciationScore
+      }]);
+      
+      toast({
+        title: 'Analysis Complete',
+        description: `Pronunciation: ${result.pronunciationScore.toFixed(1)}%`
+      });
+      
+    } catch (error) {
+      console.error('Error assessing word pronunciation:', error);
+      toast({
+        title: 'Assessment Error',
+        description: 'Could not analyze your speech. Please try again.',
+        variant: 'destructive'
+      });
+      
+      // Reset status to idle
+      setProcessedPhrases(phrases => 
+        phrases.map((p, idx) => 
+          idx === phraseIndex 
+            ? { ...p, status: 'idle' } 
+            : p
+        )
+      );
+    } finally {
+      setIsProcessingRecording(false);
+    }
+  };
+  
+  // Cancel phrase practice
+  const cancelPhrasePractice = (phraseIndex: number) => {
+    // Stop any ongoing recording
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    
+    // Clean up resources
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    
+    // Reset phrase status
+    setProcessedPhrases(phrases => 
+      phrases.map((p, idx) => 
+        idx === phraseIndex 
+          ? { ...p, status: 'idle' } 
+          : p
+      )
+    );
+    
+    // Reset state
+    setCurrentlyPracticing(null);
+    setIsRecording(false);
+    setIsProcessingRecording(false);
+    setWordAssessmentResult(null);
+  };
+  
+  // Legacy functions for compatibility with old UI references
   const handleStartRecording = () => {
     if (currentPhraseIndex < 0 || currentPhraseIndex >= processedPhrases.length) return;
     
@@ -437,14 +677,14 @@ export default function NewPhrases() {
       )
     );
     
-    startRecording();
+    startMainRecording();
   };
 
-  // Stop recording and assess pronunciation
+  // Legacy function for compatibility
   const handleStopRecording = async () => {
     if (currentPhraseIndex < 0 || currentPhraseIndex >= processedPhrases.length) return;
     
-    stopRecording();
+    stopMainRecording();
     
     // Wait for audioBlob to be available
     setTimeout(async () => {
@@ -1724,76 +1964,196 @@ I'd like to schedule an appointment."
               {processedPhrases.map((phrase, idx) => (
                 <Card 
                   key={phrase.id} 
-                  className={`cursor-pointer transition-all ${currentPhraseIndex === idx ? 'ring-2 ring-primary' : ''}`}
-                  onClick={() => setCurrentPhraseIndex(idx)}
+                  className={`transition-all ${currentPhraseIndex === idx ? 'ring-2 ring-primary' : ''}`}
                 >
                   <CardContent className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        {phrase.text ? (
-                          <p className="font-medium">{phrase.text}</p>
-                        ) : (
-                          <Input 
-                            placeholder="Enter phrase here..." 
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => handlePhraseTextChange(idx, e.target.value)}
-                            autoFocus
-                          />
-                        )}
-                        {/* Phonetic pronunciation removed as requested */}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {renderDifficultyBadge(phrase.difficulty)}
-                        <div className="flex gap-1">
-                          <Button 
-                            variant="outline" 
-                            className="border-green-500 text-green-600 hover:bg-green-50 hover:text-green-700 flex items-center gap-1" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleTextToSpeech(idx);
-                            }}
-                          >
-                            <VolumeIcon className="h-4 w-4" />
-                            <span className="text-xs">Listen</span>
-                          </Button>
-                          
-                          <Button 
-                            variant="outline" 
-                            className={`${savedPhraseId === phrase.id 
-                              ? 'border-green-500 bg-green-50 text-green-600' 
-                              : 'border-amber-500 text-amber-600 hover:bg-amber-50 hover:text-amber-700'
-                            } flex items-center gap-1 transition-all duration-300`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setCurrentPhraseIndex(idx);
-                              handleSavePhrase();
-                            }}
-                            title="Save to My Words"
-                            disabled={savedPhraseId === phrase.id}
-                          >
-                            {savedPhraseId === phrase.id ? (
-                              <>
-                                <CheckCircle className="h-4 w-4 animate-pulse" />
-                                <span className="text-xs animate-pulse">Saved!</span>
-                              </>
+                    {/* Normal view when not recording or assessing */}
+                    {phrase.status === 'idle' && (
+                      <div className="flex flex-col">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1 cursor-pointer" onClick={() => setCurrentPhraseIndex(idx)}>
+                            {phrase.text ? (
+                              <p className="font-medium">{phrase.text}</p>
                             ) : (
-                              <Star className="h-4 w-4" />
+                              <Input 
+                                placeholder="Enter phrase here..." 
+                                onChange={(e) => handlePhraseTextChange(idx, e.target.value)}
+                                autoFocus
+                              />
                             )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {renderDifficultyBadge(phrase.difficulty)}
+                            <div className="flex gap-1">
+                              <Button 
+                                variant="outline" 
+                                className="border-green-500 text-green-600 hover:bg-green-50 hover:text-green-700 flex items-center gap-1" 
+                                onClick={() => handleTextToSpeech(idx)}
+                              >
+                                <VolumeIcon className="h-4 w-4" />
+                                <span className="text-xs">Listen</span>
+                              </Button>
+                              
+                              <Button 
+                                variant="outline" 
+                                className={`${savedPhraseId === phrase.id 
+                                  ? 'border-green-500 bg-green-50 text-green-600' 
+                                  : 'border-amber-500 text-amber-600 hover:bg-amber-50 hover:text-amber-700'
+                                } flex items-center gap-1 transition-all duration-300`}
+                                onClick={() => {
+                                  setCurrentPhraseIndex(idx);
+                                  handleSavePhrase();
+                                }}
+                                title="Save to My Words"
+                                disabled={savedPhraseId === phrase.id}
+                              >
+                                {savedPhraseId === phrase.id ? (
+                                  <>
+                                    <CheckCircle className="h-4 w-4 animate-pulse" />
+                                    <span className="text-xs animate-pulse">Saved!</span>
+                                  </>
+                                ) : (
+                                  <Star className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Add Practice button */}
+                        <div className="mt-3 flex justify-end">
+                          <Button 
+                            variant="outline"
+                            className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1"
+                            onClick={() => startPhrasePractice(idx)}
+                          >
+                            <Mic className="h-4 w-4" />
+                            <span>Practice</span>
+                          </Button>
+                        </div>
+                        
+                        {/* Score display (if previously completed) */}
+                        {phrase.assessmentResult && (
+                          <div className="mt-2">
+                            <Progress 
+                              value={phrase.assessmentResult.pronunciationScore} 
+                              className="h-2"
+                            />
+                            <div className="flex justify-between mt-1">
+                              <span className="text-xs">Score</span>
+                              <span className="text-xs font-medium">
+                                {Math.round(phrase.assessmentResult.pronunciationScore)}%
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Recording view */}
+                    {phrase.status === 'recording' && (
+                      <div className="flex flex-col items-center py-3">
+                        <p className="font-medium text-center mb-3">{phrase.text}</p>
+                        <div className="relative w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4 pulse-animation">
+                          <Mic className="h-12 w-12 text-primary animate-pulse" />
+                        </div>
+                        <p className="text-center text-sm mb-3">Recording</p>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            className="border-red-500 text-red-600 hover:bg-red-50"
+                            onClick={() => cancelPhrasePractice(idx)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            className="bg-primary text-primary-foreground" 
+                            onClick={() => stopPhrasePractice()}
+                          >
+                            Stop
                           </Button>
                         </div>
                       </div>
-                    </div>
-                    {phrase.status === 'complete' && phrase.assessmentResult && (
-                      <div className="mt-2">
-                        <Progress 
-                          value={phrase.assessmentResult.pronunciationScore} 
-                          className="h-2"
-                        />
-                        <div className="flex justify-between mt-1">
-                          <span className="text-xs">Score</span>
-                          <span className="text-xs font-medium">
+                    )}
+                    
+                    {/* Assessing view */}
+                    {phrase.status === 'assessing' && (
+                      <div className="flex flex-col items-center py-6">
+                        <RotateCw className="h-12 w-12 animate-spin text-primary mb-3" />
+                        <p className="text-center">Analyzing pronunciation...</p>
+                      </div>
+                    )}
+                    
+                    {/* Complete view with detailed assessment */}
+                    {phrase.status === 'complete' && phrase.assessmentResult && currentlyPracticing === phrase.id && (
+                      <div className="mt-2 space-y-4">
+                        <p className="font-medium text-center">{phrase.text}</p>
+                        
+                        <div className="border-2 border-[#57cc99] rounded-lg bg-[#f5f7fa] p-4 relative overflow-hidden shadow-sm">
+                          <div className="absolute top-0 left-0 w-full h-2 bg-[#57cc99]"></div>
+                          
+                          <h3 className="text-xl font-bold text-center text-[#264653] mb-2">Your Performance</h3>
+                          <div className="text-5xl font-bold text-center mb-2" 
+                              style={{ 
+                                color: phrase.assessmentResult.pronunciationScore >= 80 
+                                  ? '#2a9d8f' 
+                                  : '#e76f51' 
+                              }}>
                             {Math.round(phrase.assessmentResult.pronunciationScore)}%
-                          </span>
+                          </div>
+                          
+                          {/* Detailed scores breakdown */}
+                          <div className="space-y-2 mb-3">
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-sm">
+                                <span className="font-medium">Pronunciation</span>
+                                <span>{Math.round(phrase.assessmentResult.pronunciationScore)}%</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                <div 
+                                  className="h-2.5 rounded-full" 
+                                  style={{ 
+                                    width: `${Math.round(phrase.assessmentResult.pronunciationScore)}%`,
+                                    backgroundColor: phrase.assessmentResult.pronunciationScore >= 80 ? '#2a9d8f' : 
+                                                  phrase.assessmentResult.pronunciationScore >= 60 ? '#e9c46a' : '#e76f51' 
+                                  }}
+                                ></div>
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-sm">
+                                <span className="font-medium">Fluency</span>
+                                <span>{Math.round(phrase.assessmentResult.fluencyScore)}%</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                <div 
+                                  className="h-2.5 rounded-full" 
+                                  style={{ 
+                                    width: `${Math.round(phrase.assessmentResult.fluencyScore)}%`,
+                                    backgroundColor: phrase.assessmentResult.fluencyScore >= 80 ? '#2a9d8f' : 
+                                                  phrase.assessmentResult.fluencyScore >= 60 ? '#e9c46a' : '#e76f51' 
+                                  }}
+                                ></div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex justify-center gap-2 mt-4">
+                            <Button 
+                              variant="outline" 
+                              className="border-green-500 text-green-600 hover:bg-green-50"
+                              onClick={() => startPhrasePractice(idx)}
+                            >
+                              Try Again
+                            </Button>
+                            <Button 
+                              variant="outline"
+                              onClick={() => setCurrentlyPracticing(null)}
+                            >
+                              Close
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     )}
