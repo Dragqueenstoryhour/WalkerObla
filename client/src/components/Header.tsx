@@ -1,5 +1,5 @@
 import { Settings, HelpCircle } from 'lucide-react';
-import { AuthButtons } from './AuthButtons';
+// Remove the AuthButtons import since we won't be using it
 import { Button } from '@/components/ui/button';
 // @ts-ignore 
 import speakgudLogo from '../assets/speakgud-logo.jpg';
@@ -25,20 +25,10 @@ const Header = ({ onSettingsClick, onHelpClick }: HeaderProps) => {
             Reading<span className="text-gray-600 dark:text-gray-400 font-normal"> Practice</span>
           </h1>
         </div>
-        
+
         <div className="flex items-center gap-2 md:gap-4">
-          {/* Make auth buttons prominent */}
-          <div className="relative">
-            <AuthButtons 
-              variant="default" 
-              size="sm" 
-              className="shadow-md relative z-10"
-              showText={true}
-            />
-            {/* Decorative effect for login button */}
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full hidden md:block animate-ping"></div>
-          </div>
-          
+          {/* Removed the entire AuthButtons component and its decorative element */}
+
           <Button
             variant="ghost"
             size="icon"
@@ -48,7 +38,7 @@ const Header = ({ onSettingsClick, onHelpClick }: HeaderProps) => {
           >
             <Settings className="w-5 h-5" />
           </Button>
-          
+
           <Button
             variant="ghost"
             size="icon"
