@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { SpeedometerDifficulty } from './SpeedometerDifficulty';
 import { useDifficulty } from '@/contexts/DifficultyContext';
+import { DifficultySpeedometer } from './DifficultySpeedometer';
 
 interface DifficultySelectionDialogProps {
   open: boolean;
@@ -31,6 +32,10 @@ export function DifficultySelectionDialog({ open, onClose }: DifficultySelection
         </DialogHeader>
         
         <div className="py-4">
+          <div className="flex flex-col items-center">
+            <DifficultySpeedometer size="lg" className="mb-4" />
+          </div>
+          
           <SpeedometerDifficulty />
           
           <div className="mt-6 text-sm text-gray-600">

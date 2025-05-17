@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Slider } from '@/components/ui/slider';
 import { useDifficulty, difficultyLevelNames, DifficultyLevel } from '@/contexts/DifficultyContext';
 import { cn } from '@/lib/utils';
+import { Gauge } from 'lucide-react';
 
 interface SpeedometerDifficultyProps {
   className?: string;
@@ -85,14 +86,16 @@ export function SpeedometerDifficulty({ className, compact = false }: Speedomete
 // Dropdown component with the speedometer
 export function DifficultyDropdown() {
   const [isOpen, setIsOpen] = useState(false);
+  const { difficulty } = useDifficulty();
 
   return (
     <div className="relative">
       <button 
         onClick={() => setIsOpen(!isOpen)} 
-        className="flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 focus:outline-none"
+        className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 focus:outline-none"
       >
-        Difficulty
+        <span>Difficulty: {difficulty}/8</span>
+        <Gauge className="h-4 w-4" />
       </button>
       
       {isOpen && (
@@ -107,6 +110,9 @@ export function DifficultyDropdown() {
             </button>
           </div>
           <SpeedometerDifficulty />
+          <div className="mt-2 text-xs text-gray-500">
+            Adjust the difficulty level to match your speech needs. Higher levels provide more challenging content.
+          </div>
         </div>
       )}
     </div>

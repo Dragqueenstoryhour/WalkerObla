@@ -36,7 +36,7 @@ export default function NewPhrases() {
 
   const [manualEntryText, setManualEntryText] = useState('');
   const [imageUploadText, setImageUploadText] = useState('');
-  const [aiGenerateTopic, setAiGenerateTopic] = useState('');
+  const [aiGenerateTopic, setAiGenerateTopic] = useState('Commonly Used Phrases');
   const [processedPhrases, setProcessedPhrases] = useState<ProcessedPhrase[]>([]);
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(-1);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -77,9 +77,9 @@ export default function NewPhrases() {
     }
   });
 
-  // Set up some mock history data for visualization
+  // Set up history data and load initial phrases for "Commonly Used Phrases"
   useEffect(() => {
-    // This would normally come from your backend
+    // Set up some sample history data for visualization
     setHistoryData([
       { date: '2025-04-28', score: 65 },
       { date: '2025-04-29', score: 68 },
@@ -105,6 +105,11 @@ export default function NewPhrases() {
         }
       `;
       document.head.appendChild(style);
+    }
+    
+    // Auto-load commonly used phrases when the page opens
+    if (!shareId) { // Only if we're not loading shared phrases
+      handleGenerateTopicPhrases('Commonly Used Phrases');
     }
 
     // Cleanup function to handle any lingering recording sessions
