@@ -178,7 +178,7 @@ const ReadingContent = () => {
               className="text-sm"
             >
               <BarChart2 className="w-4 h-4 mr-1" />
-              Difficulty: Level {difficulty}
+              Difficulty: {difficulty}/8
             </Button>
           </div>
         </div>
