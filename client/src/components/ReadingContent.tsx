@@ -5,23 +5,14 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw, BarChart2 } from 'lucide-react';
 import { generateReadingContent } from '@/lib/openai';
 import { useToast } from '@/hooks/use-toast';
+import { useDifficulty, mapDifficultyToServer } from '@/contexts/DifficultyContext';
 
 const ReadingContent = () => {
   const { currentContent, setCurrentContent, currentHighlightedText, isReading } = useReading();
   const { toast } = useToast();
-  const [difficulty, setDifficulty] = useState<'1' | '2' | '3'>('1');
+  const { difficulty, setDifficulty } = useDifficulty();
   const [isGenerating, setIsGenerating] = useState(false);
   const readingContentRef = useRef<HTMLDivElement>(null);
-
-  // Helper function to convert numeric difficulty to server format
-  const mapDifficultyToServer = (diff: string): string => {
-    switch(diff) {
-      case '1': return 'easy';
-      case '2': return 'medium';
-      case '3': return 'hard';
-      default: return 'easy';
-    }
-  };
 
   const generateNewContent = async () => {
     setIsGenerating(true);
@@ -57,12 +48,11 @@ const ReadingContent = () => {
 
   // Toggle difficulty and automatically regenerate content with new difficulty
   const toggleDifficulty = async () => {
-    let newDifficulty: '1' | '2' | '3';
-
-    if (difficulty === '1') newDifficulty = '2';
-    else if (difficulty === '2') newDifficulty = '3';
-    else newDifficulty = '1';
-
+    // Cycle through difficulty levels 1-8
+    const currentLevel = parseInt(difficulty);
+    const newLevel = currentLevel < 8 ? currentLevel + 1 : 1;
+    const newDifficulty = String(newLevel) as any;
+    
     setDifficulty(newDifficulty);
 
     // Show toast about difficulty change
@@ -76,7 +66,7 @@ const ReadingContent = () => {
       setIsGenerating(true);
       try {
         const currentTopic = currentContent?.title.split(' ').slice(0, 2).join(' ').toLowerCase() || 'random';
-        // Convert numeric difficulty to server format (easy, medium, hard)
+        // Convert numeric difficulty to server format 
         const serverDifficulty = mapDifficultyToServer(newDifficulty);
         console.log(`Generating content about "${currentTopic}" with difficulty "${serverDifficulty}"`);
         
