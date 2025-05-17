@@ -21,6 +21,9 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { useAuthContext } from "./contexts/AuthContext";
 import { AuthButtons } from "./components/AuthButtons";
 import Account from "./pages/Account";
+import { useDifficulty } from "./contexts/DifficultyContext";
+import { DifficultySelectionDialog } from "./components/difficulty/DifficultySelectionDialog";
+import { useEffect, useState } from "react";
 
 function Navigation() {
   const { isAuthenticated, user } = useAuthContext();
@@ -79,10 +82,36 @@ function Navigation() {
   );
 }
 
+// Component to handle first-time user difficulty selection
+function FirstTimeUserDifficultySelection() {
+  const { hasSelectedDifficulty } = useDifficulty();
+  const [showDialog, setShowDialog] = useState(false);
+  
+  // Show dialog when component mounts if user hasn't selected difficulty
+  useEffect(() => {
+    if (!hasSelectedDifficulty) {
+      // Small delay to avoid immediate popup
+      const timer = setTimeout(() => {
+        setShowDialog(true);
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [hasSelectedDifficulty]);
+  
+  return (
+    <DifficultySelectionDialog 
+      open={showDialog} 
+      onClose={() => setShowDialog(false)} 
+    />
+  );
+}
+
 function Router() {
   return (
     <>
       <Navigation />
+      <FirstTimeUserDifficultySelection />
       <Switch>
         <Route path="/" component={Read} />
         <Route path="/game" component={() => <GameProvider initialUsername="player1"><RecordingTest /></GameProvider>} />

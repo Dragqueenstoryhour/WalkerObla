@@ -1,8 +1,9 @@
-import { Settings, HelpCircle } from 'lucide-react';
+import { Settings, HelpCircle, Gauge } from 'lucide-react';
 // Remove the AuthButtons import since we won't be using it
 import { Button } from '@/components/ui/button';
 // @ts-ignore 
 import speakgudLogo from '../assets/speakgud-logo.jpg';
+import { DifficultyDropdown } from './difficulty/SpeedometerDifficulty';
 
 interface HeaderProps {
   onSettingsClick: () => void;
@@ -27,7 +28,10 @@ const Header = ({ onSettingsClick, onHelpClick }: HeaderProps) => {
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
-          {/* Removed the entire AuthButtons component and its decorative element */}
+          {/* Difficulty Dropdown */}
+          <div className="mr-2">
+            <DifficultyDropdown />
+          </div>
 
           <Button
             variant="ghost"
