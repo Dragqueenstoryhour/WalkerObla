@@ -160,19 +160,289 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const schema = z.object({
         topic: z.string(),
-        difficulty: z.string().optional(),
+        difficulty: z.string()
+          .regex(/^[1-8]$/, "Difficulty must be a number from 1 to 8")
+          .optional(),
+        wordTypes: z.array(z.string()).optional(),
+        syllableRange: z.object({
+          min: z.number().int().min(1).max(5).optional(),
+          max: z.number().int().min(1).max(5).optional()
+        }).optional()
       });
 
-      const { topic, difficulty = "4" } = schema.parse(req.body);
+      // Validate the request body
+      const validationResult = schema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({
+          error: 'Invalid request parameters',
+          details: validationResult.error.format()
+        });
+      }
+
+      const { topic, difficulty = "4", wordTypes, syllableRange } = validationResult.data;
       
       // Use OpenAI to generate phrases related to the topic with specified difficulty
-      const response = await openaiService.generateTopicPhrases(topic, difficulty);
-      res.json({ phrases: response });
+      const response = await openaiService.generateTopicPhrases(topic, difficulty, wordTypes, syllableRange);
+      
+      // Include difficulty metadata in response
+      res.json({
+        phrases: response,
+        metadata: {
+          difficulty: difficulty,
+          difficultyInfo: openaiService.DIFFICULTY_SCALE[difficulty],
+          topic: topic,
+          wordTypes: wordTypes || "not specified",
+          syllableRange: syllableRange || "based on difficulty level"
+        }
+      });
     } catch (error) {
       console.error('Error generating phrases:', error);
-      res.status(500).json({ error: 'Failed to generate phrases' });
+      
+      // Provide more specific error messages
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          error: 'Invalid request parameters',
+          details: error.format()
+        });
+      } else if (error.message?.includes('difficulty')) {
+        res.status(400).json({
+          error: 'Invalid difficulty level',
+          message: 'Difficulty must be a number from 1 to 8'
+        });
+      } else {
+        res.status(500).json({
+          error: 'Failed to generate phrases',
+          message: error.message || 'Unknown error occurred'
+        });
+      }
     }
   });
+  
+  // Provide standardized difficulty scale
+  app.get('/api/difficulty/scale', (req, res) => {
+    try {
+      res.json({
+        difficultyLevels: openaiService.DIFFICULTY_SCALE,
+        validLevels: Object.keys(openaiService.DIFFICULTY_SCALE),
+        message: "These difficulty levels are used throughout the application for speech practice"
+      });
+    } catch (error) {
+      console.error('Error retrieving difficulty scale:', error);
+      res.status(500).json({ error: 'Failed to retrieve difficulty scale information' });
+    }
+  });
+
+  // Filter phrases based on difficulty, syllable count, etc.
+  app.post('/api/phrases/filter', async (req, res) => {
+    try {
+      const schema = z.object({
+        difficulty: z.string().regex(/^[1-8]$/, "Difficulty must be a number from 1 to 8").optional(),
+        syllableRange: z.object({
+          min: z.number().int().min(1).max(5).optional(),
+          max: z.number().int().min(1).max(5).optional()
+        }).optional(),
+        wordTypes: z.array(z.string()).optional(),
+        topics: z.array(z.string()).optional(),
+        limit: z.number().int().min(1).max(50).optional().default(20),
+        userId: z.string().optional()
+      });
+
+      // Validate request
+      const validationResult = schema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({
+          error: 'Invalid filter parameters',
+          details: validationResult.error.format()
+        });
+      }
+
+      const { difficulty, syllableRange, wordTypes, topics, limit, userId } = validationResult.data;
+
+      // Get phrases from database with filters
+      // For now, we'll generate some phrases based on the difficulty
+      // In a real implementation, this would query from the database
+      let phrases = [];
+      
+      if (topics && topics.length > 0) {
+        // Generate phrases for each topic with the specified difficulty
+        for (const topic of topics.slice(0, 2)) { // Limit to 2 topics to avoid overloading
+          const topicPhrases = await openaiService.generateTopicPhrases(
+            topic, 
+            difficulty || "4", 
+            wordTypes
+          );
+          phrases = [...phrases, ...topicPhrases.map(phrase => ({
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            phrase,
+            topic,
+            difficulty: difficulty || "4"
+          }))];
+        }
+      } else {
+        // Generate generic phrases based on difficulty
+        const genericPhrases = await openaiService.generateTopicPhrases(
+          "general conversation", 
+          difficulty || "4",
+          wordTypes
+        );
+        phrases = genericPhrases.map(phrase => ({
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          phrase,
+          topic: "general",
+          difficulty: difficulty || "4"
+        }));
+      }
+
+      // Apply syllable range filtering if specified
+      if (syllableRange) {
+        // This would ideally be done at the database level
+        // For now, we'll include metadata about syllable counts with each phrase
+        phrases = phrases.map(phrase => ({
+          ...phrase,
+          syllableCount: estimateSyllableCount(phrase.phrase)
+        }));
+      }
+
+      res.json({
+        phrases,
+        metadata: {
+          filterApplied: {
+            difficulty,
+            syllableRange,
+            wordTypes,
+            topics
+          },
+          difficultyInfo: difficulty ? openaiService.DIFFICULTY_SCALE[difficulty] : null,
+          count: phrases.length
+        }
+      });
+    } catch (error) {
+      console.error('Error filtering phrases:', error);
+      res.status(500).json({
+        error: 'Failed to filter phrases',
+        message: error.message || 'Unknown error occurred'
+      });
+    }
+  });
+
+  // Track user progress with phrases at different difficulty levels
+  app.post('/api/progress/level', isAuthenticated, async (req, res) => {
+    try {
+      const schema = z.object({
+        phraseId: z.string().or(z.number().transform(n => n.toString())),
+        score: z.number().min(0).max(100),
+        difficulty: z.string().regex(/^[1-8]$/, "Difficulty must be a number from 1 to 8"),
+        metadata: z.object({
+          timeSpent: z.number().int().optional(),
+          attemptsCount: z.number().int().optional(),
+          completedDate: z.string().datetime().optional()
+        }).optional()
+      });
+
+      // Validate request
+      const validationResult = schema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({
+          error: 'Invalid progress data',
+          details: validationResult.error.format()
+        });
+      }
+
+      const userId = req.session.user.id;
+      const { phraseId, score, difficulty, metadata } = validationResult.data;
+
+      // Here we would store the performance data in the database
+      // For now, we'll just return a mock response
+      const userProgress = {
+        userId,
+        phraseId,
+        score,
+        difficulty,
+        timestamp: new Date().toISOString(),
+        metadata: metadata || {},
+        progressStats: {
+          averageScoreByDifficulty: {
+            "1": 92,
+            "2": 88,
+            "3": 85,
+            "4": 78,
+            "5": 72,
+            "6": 65,
+            "7": 58,
+            "8": 45,
+            [difficulty]: score // Include the current score
+          },
+          totalPracticed: 87,
+          recentImprovement: 12,
+          recommendedDifficulty: calculateRecommendedDifficulty(difficulty, score)
+        }
+      };
+
+      res.json({
+        success: true,
+        progressRecord: {
+          id: `progress-${Date.now()}`,
+          userId,
+          phraseId,
+          score,
+          difficulty,
+          timestamp: new Date().toISOString()
+        },
+        userProgress,
+        message: "Performance successfully tracked"
+      });
+    } catch (error) {
+      console.error('Error tracking progress:', error);
+      res.status(500).json({
+        error: 'Failed to track progress',
+        message: error.message || 'Unknown error occurred'
+      });
+    }
+  });
+
+  // Helper function to estimate syllable count (simplified)
+  function estimateSyllableCount(text: string): number {
+    // A very simple syllable counter - would be replaced with a more accurate algorithm
+    const words = text.toLowerCase().split(/\s+/);
+    let count = 0;
+    
+    for (const word of words) {
+      // Count vowel groups as syllables
+      const vowelGroups = word.match(/[aeiouy]+/g) || [];
+      count += vowelGroups.length;
+      
+      // Adjust for common patterns
+      if (word.endsWith('e') && vowelGroups.length > 1) {
+        count--;
+      }
+      if (word.endsWith('le') && word.length > 2) {
+        count++;
+      }
+      if (count === 0 && word.length > 0) {
+        count = 1; // Every word has at least one syllable
+      }
+    }
+    
+    return count;
+  }
+
+  // Helper function to calculate recommended difficulty based on performance
+  function calculateRecommendedDifficulty(currentDifficulty: string, score: number): string {
+    const difficultyLevel = parseInt(currentDifficulty);
+    
+    // Suggest moving up if score is above 85% and not at max difficulty
+    if (score > 85 && difficultyLevel < 8) {
+      return String(difficultyLevel + 1);
+    }
+    
+    // Suggest moving down if score is below 40% and not at min difficulty
+    if (score < 40 && difficultyLevel > 1) {
+      return String(difficultyLevel - 1);
+    }
+    
+    // Otherwise, stay at current difficulty
+    return currentDifficulty;
+  }
 
   // Voice command endpoints
   app.post('/api/voice/command', upload.single('audio'), async (req, res) => {

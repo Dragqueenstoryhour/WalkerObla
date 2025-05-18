@@ -13,6 +13,82 @@ const MODEL = "gpt-3.5-turbo";
 // Use more capable model only when needed
 const ADVANCED_MODEL = "gpt-4o";
 
+// Standardized difficulty scale
+export const DIFFICULTY_SCALE = {
+  "1": {
+    name: "Very Easy",
+    syllableRange: "1 syllable only",
+    wordTypes: "basic everyday nouns and actions",
+    examples: ["cat", "dog", "run", "walk", "eat"],
+    complexity: "Extremely simple words with straightforward pronunciation",
+    phonetics: "Simple consonant-vowel patterns (CV, CVC)",
+    maxSentenceLength: 5
+  },
+  "2": {
+    name: "Easy",
+    syllableRange: "1-2 syllables",
+    wordTypes: "common everyday vocabulary, simple actions",
+    examples: ["water", "morning", "dinner", "talking"],
+    complexity: "Simple words with regular spelling patterns",
+    phonetics: "Basic consonant blends (bl, st, tr)",
+    maxSentenceLength: 7
+  },
+  "3": {
+    name: "Easy Medium",
+    syllableRange: "1-2 syllables, occasional 3",
+    wordTypes: "expanded everyday vocabulary",
+    examples: ["breakfast", "computer", "yesterday", "remember"],
+    complexity: "Familiar words with some phonetic challenges",
+    phonetics: "Multiple consonant sounds (str, spl)",
+    maxSentenceLength: 10
+  },
+  "4": {
+    name: "Medium",
+    syllableRange: "2-3 syllables",
+    wordTypes: "general vocabulary, basic specialized terms",
+    examples: ["important", "afternoon", "restaurant", "telephone"],
+    complexity: "Some challenging sounds and longer words",
+    phonetics: "Complex vowel sounds, diphthongs",
+    maxSentenceLength: 12
+  },
+  "5": {
+    name: "Medium Hard",
+    syllableRange: "2-3 syllables, some 4",
+    wordTypes: "varied vocabulary with specific contextual terms",
+    examples: ["dictionary", "information", "technology", "understanding"],
+    complexity: "Words with less predictable pronunciation",
+    phonetics: "Consonant clusters, varied stress patterns",
+    maxSentenceLength: 15
+  },
+  "6": {
+    name: "Hard",
+    syllableRange: "2-4 syllables",
+    wordTypes: "domain-specific vocabulary, abstract concepts",
+    examples: ["philosophy", "celebration", "education", "relationship"],
+    complexity: "Complex words with multiple syllables",
+    phonetics: "Challenging consonant combinations, stress shifts",
+    maxSentenceLength: 20
+  },
+  "7": {
+    name: "Very Hard",
+    syllableRange: "3-5 syllables",
+    wordTypes: "specialized terminology, abstract concepts",
+    examples: ["psychology", "pharmaceutical", "collaboration", "university"],
+    complexity: "Multisyllabic words with difficult sound combinations",
+    phonetics: "Difficult consonant clusters, subtle vowel distinctions",
+    maxSentenceLength: 25
+  },
+  "8": {
+    name: "Expert",
+    syllableRange: "3+ syllables, many 5+",
+    wordTypes: "technical terminology, advanced field-specific vocabulary",
+    examples: ["philosophical", "entrepreneurial", "biotechnology", "multidisciplinary"],
+    complexity: "Complex multisyllabic words with challenging pronunciation",
+    phonetics: "Most challenging sound combinations and stress patterns",
+    maxSentenceLength: 30
+  }
+};
+
 /**
  * Transcribe audio to text using OpenAI Whisper
  */
@@ -515,78 +591,96 @@ export async function extractTextFromImage(fileBuffer: Buffer, fileType: string)
 /**
  * Generate phrases related to a specific topic for pronunciation practice
  */
-export async function generateTopicPhrases(topic: string, difficulty: string = "4"): Promise<string[]> {
+/**
+ * Generate topic-specific phrases with enhanced difficulty level support
+ * 
+ * @param topic The topic for which to generate phrases
+ * @param difficulty Difficulty level (1-8)
+ * @param wordTypes Optional specific word types to include (e.g., ['nouns', 'verbs', 'adjectives'])
+ * @param syllableRange Optional specific syllable range to target
+ */
+export async function generateTopicPhrases(
+  topic: string, 
+  difficulty: string = "4", 
+  wordTypes?: string[],
+  syllableRange?: { min?: number, max?: number }
+): Promise<string[]> {
   try {
     console.log(`Generating phrases related to topic: "${topic}" with difficulty level: ${difficulty}`);
     
-    // Define complexity based on difficulty level (1-8)
-    let complexityGuideline = "";
-    let wordCount = "";
-    let syllableLimit = "";
-    
-    switch(difficulty) {
-      case "1":
-        complexityGuideline = "extremely simple, single-word items or very short phrases";
-        wordCount = "1-2 words each";
-        syllableLimit = "primarily one-syllable words, no complex sounds";
-        break;
-      case "2":
-        complexityGuideline = "very simple, mostly single words with a few basic phrases";
-        wordCount = "1-3 words each";
-        syllableLimit = "mostly one-syllable words with a few basic two-syllable words";
-        break; 
-      case "3":
-        complexityGuideline = "simple, common words and short phrases";
-        wordCount = "1-3 words each";
-        syllableLimit = "mix of one and two-syllable words, everyday vocabulary";
-        break;
-      case "4":
-        complexityGuideline = "straightforward words and phrases";
-        wordCount = "1-4 words each";
-        syllableLimit = "mostly two-syllable words with some one-syllable words";
-        break;
-      case "5":
-        complexityGuideline = "moderately complex words and practical phrases";
-        wordCount = "1-5 words each";
-        syllableLimit = "balanced mix of one, two, and occasional three-syllable words";
-        break;
-      case "6":
-        complexityGuideline = "moderately advanced vocabulary and phrases";
-        wordCount = "1-5 words each";
-        syllableLimit = "mix of two and three-syllable words with occasional specialized terms";
-        break;
-      case "7":
-        complexityGuideline = "advanced vocabulary and longer phrases";
-        wordCount = "2-6 words each";
-        syllableLimit = "mainly multi-syllable words with some technical vocabulary";
-        break;
-      case "8":
-        complexityGuideline = "sophisticated vocabulary and complex phrases relevant to the topic";
-        wordCount = "2-7 words each";
-        syllableLimit = "complex multi-syllable words with specialized terminology";
-        break;
-      default:
-        // Use level 4 (medium) as default
-        return generateTopicPhrases(topic, "4");
+    // Validate difficulty level
+    if (!DIFFICULTY_SCALE[difficulty]) {
+      console.warn(`Invalid difficulty level ${difficulty}, defaulting to level 4`);
+      difficulty = "4";
     }
-
-    const systemPrompt = `You are a speech therapy assistant. Generate ${complexityGuideline} related to the specified topic.
-    These should be helpful for pronunciation practice at difficulty level ${difficulty}/8.
+    
+    // Use the standardized difficulty scale
+    const difficultyInfo = DIFFICULTY_SCALE[difficulty];
+    
+    // Build enhanced syllable requirements
+    let syllableRequirement = difficultyInfo.syllableRange;
+    if (syllableRange) {
+      if (syllableRange.min && syllableRange.max) {
+        syllableRequirement = `${syllableRange.min}-${syllableRange.max} syllables`;
+      } else if (syllableRange.min) {
+        syllableRequirement = `minimum ${syllableRange.min} syllables`;
+      } else if (syllableRange.max) {
+        syllableRequirement = `maximum ${syllableRange.max} syllables`;
+      }
+    }
+    
+    // Build word type requirements
+    let wordTypeRequirement = difficultyInfo.wordTypes;
+    if (wordTypes && wordTypes.length > 0) {
+      wordTypeRequirement = wordTypes.join(", ");
+    }
+    
+    // Examples to guide the model
+    const examples = difficultyInfo.examples.slice(0, 3).join(", ");
+    
+    // Enhanced phonetic complexity instructions
+    let phoneticInstructions = "";
+    if (parseInt(difficulty) >= 5) {
+      phoneticInstructions = `
+      - Include words with varied stress patterns
+      - For consonants, include ${difficultyInfo.phonetics}
+      - Pay careful attention to syllable count (${syllableRequirement})`;
+    }
+    
+    // Build an enhanced system prompt with strict syllable counting instructions
+    const systemPrompt = `You are a speech rehabilitation assistant generating precisely tailored phrases for stroke survivors.
+    
+    DIFFICULTY LEVEL: ${difficulty}/8 (${difficultyInfo.name})
+    
+    STRICT SYLLABLE RULES:
+    - Generate phrases with EXACTLY ${syllableRequirement}
+    - Count syllables accurately: "cat" (1), "table" (2), "beautiful" (3), "education" (4), "university" (5)
+    - For words ending in "-le" (e.g., "table"), count the final "le" as a separate syllable
+    - For words ending in "-ed", count as a syllable only if preceded by d/t (e.g., "wanted" has 2 syllables)
+    - Double-check all syllable counts
+    
+    WORD REQUIREMENTS:
+    - Use ${wordTypeRequirement}
+    - Focus on words and phrases related to: ${topic}
+    - Example difficulty level: ${examples}
+    - Create meaningful, practical phrases for real-life use
+    ${phoneticInstructions}
+    
+    OUTPUT FORMAT:
     - Generate exactly 10 items
-    - Each item should be ${wordCount}
-    - Use ${syllableLimit}
-    - Focus entirely on words/phrases related to the topic
-    - For higher difficulty levels (7-8), include some specialized terminology related to the topic`;
+    - For each phrase, count the syllables and ensure they match the requirements
+    - Format as a JSON array of strings named 'phrases'`;
 
     // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
     const response = await openai.chat.completions.create({
       model: ADVANCED_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Generate a list of words and phrases related to: ${topic} at difficulty level ${difficulty}/8. Return them as a JSON array of strings named 'phrases'.` }
+        { role: "user", content: `Generate 10 phrases related to "${topic}" at difficulty level ${difficulty}/8 with ${syllableRequirement}. Include detailed syllable counting instructions and ensure accurate syllable counts. Return as a JSON array of strings named 'phrases'.` }
       ],
       temperature: 0.7,
-      response_format: { type: "json_object" }
+      response_format: { type: "json_object" },
+      max_tokens: 1000
     });
 
     const content = response.choices[0].message.content;
