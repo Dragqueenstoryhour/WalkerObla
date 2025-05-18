@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { FiMic, FiVolume2 } from 'react-icons/fi';
+import { FiVolume2 } from 'react-icons/fi';
 import { useToast } from '@/hooks/use-toast';
 import useEnhancedVoice from '@/hooks/useEnhancedVoice';
 import { generateReadingContent } from '@/lib/openai';
@@ -10,9 +10,6 @@ const VoiceControl = () => {
   const { toast } = useToast();
   const { setCurrentContent } = useReading();
   const [status, setStatus] = useState<'listening' | 'processing' | 'idle'>('idle');
-  const [voicePrompt, setVoicePrompt] = useState(
-    "'I want to read about space exploration' or 'Generate an article on baseball'"
-  );
   const [transcribedText, setTranscribedText] = useState<string>('');
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -22,11 +19,11 @@ const VoiceControl = () => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
     }
-    
+
     // Create a blob URL from the base64 audio data
     const blob = new Blob([Buffer.from(audioData, 'base64')], { type: 'audio/mp3' });
     const url = URL.createObjectURL(blob);
-    
+
     // Update transcribed text immediately for real-time feedback
     if (transcribedText) {
       const wordCount = transcribedText.split(/\s+/).length;
@@ -41,12 +38,12 @@ const VoiceControl = () => {
         createdAt: new Date().toISOString()
       });
     }
-    
+
     // Clean up old URL if it exists
     if (audioRef.current.src) {
       URL.revokeObjectURL(audioRef.current.src);
     }
-    
+
     // Set the new audio source and play it
     audioRef.current.src = url;
     audioRef.current.onplay = () => setIsPlaying(true);
@@ -58,7 +55,7 @@ const VoiceControl = () => {
   const handleVoiceResult = async (result: { action: string; topic?: string; parameters?: any }) => {
     if (result.action === 'generateContent' && result.topic) {
       try {
-        // Generate content based on the topic
+        // Generate content based on the topic and difficulty
         const content = await generateReadingContent(result.topic, result.parameters?.difficulty || 'easy');
         setCurrentContent(content);
         toast({
@@ -115,7 +112,7 @@ const VoiceControl = () => {
     } else {
       setStatus('idle');
     }
-    
+
     // If we have a transcript from the enhanced voice service, use it
     if (enhancedTranscript) {
       setTranscribedText(enhancedTranscript);
@@ -142,63 +139,51 @@ const VoiceControl = () => {
   };
 
   return (
-    <Card className="mb-6 border-green-500 bg-green-50">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Voice Control</h2>
-          <div className="flex items-center">
-            <div className={`h-3 w-3 rounded-full mr-2 ${
-              status === 'listening' 
-                ? 'bg-success animate-pulse' 
-                : status === 'processing' 
-                  ? 'bg-accent' 
-                  : 'bg-secondary'
-            }`} />
-            <span>
-              {status === 'listening' 
-                ? 'Listening' 
-                : status === 'processing' 
-                  ? 'Processing' 
-                  : 'Microphone off'}
-            </span>
-          </div>
+    <Card className="mb-6 bg-green-50">
+      <CardContent className="p-4">
+        {/* Microphone button, centered and twice as large */}
+        <div className="mb-2 flex justify-center">
+          <button 
+            onClick={toggleListening}
+            className={`relative flex items-center justify-center w-20 h-20 rounded-full p-4 cursor-pointer hover:bg-opacity-90 transition-all
+              ${status === 'listening' ? 'bg-red-500' : 'bg-blue-900'} 
+              ${isPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}
+            aria-label={status === 'listening' ? 'Stop listening' : 'Start listening'}
+            disabled={isPlaying}
+          >
+            <div className="relative w-full h-full">
+              <span className="absolute inset-0 flex items-center justify-center text-4xl text-white animate-[pulse_1.5s_infinite_ease-in-out] [text-shadow:0_0_20px_rgba(59,130,246,0.8)]">
+                🎤
+              </span>
+              {status === 'listening' && (
+                <>
+                  <div className="absolute inset-0 border-4 border-blue-400 rounded-full animate-[wave_2s_infinite_ease-out] opacity-0" />
+                  <div className="absolute inset-0 border-4 border-blue-400 rounded-full animate-[wave_2s_infinite_ease-out] [animation-delay:0.5s] opacity-0" />
+                  <div className="absolute inset-0 border-4 border-blue-400 rounded-full animate-[wave_2s_infinite_ease-out] [animation-delay:1s] opacity-0" />
+                </>
+              )}
+            </div>
+          </button>
         </div>
-        
-        {/* Fixed prompt above the green box */}
-        <div className="mb-3">
-          <p className="text-sm text-textColor opacity-70 mb-1">Try saying:</p>
-          <p className="font-medium">{voicePrompt}</p>
-        </div>
-        
-        <div className="bg-secondary bg-opacity-30 rounded-lg p-4 flex items-center">
-          <div className="flex items-center mr-4">
-            <button 
-              onClick={toggleListening}
-              className={`${
-                status === 'listening' ? 'bg-red-500' : 'bg-primary'
-              } text-white rounded-full p-2 mr-2 cursor-pointer hover:bg-opacity-90 transition-all`}
-              aria-label={status === 'listening' ? 'Stop listening' : 'Start listening'}
-              disabled={isPlaying}
-            >
-              <FiMic className="w-6 h-6" />
-            </button>
-            
+
+        <div className="bg-secondary bg-opacity-30 rounded-lg p-3 flex items-center">
+          <div className="flex items-center mr-3">
             {isPlaying && (
               <div className="rounded-full bg-accent p-2 animate-pulse">
                 <FiVolume2 className="w-6 h-6 text-white" />
               </div>
             )}
           </div>
-          
+
           <div className="flex-1">
             {transcribedText ? (
-              <div className={isPlaying ? "border-l-4 border-accent pl-3" : "animate-pulse"}>
+              <div className={isPlaying ? "border-l-4 border-accent pl-3" : ""}>
                 <p className="text-sm text-textColor opacity-70 mb-1">
                   {isPlaying ? "AI Response:" : "I heard:"}
                 </p>
                 <p className="font-medium">{transcribedText}</p>
                 {isPlaying && (
-                  <div className="mt-2 pt-2 border-t border-gray-200 text-sm text-textColor opacity-90 italic">
+                  <div className="mt-1 pt-1 border-t border-gray-200 text-sm text-textColor opacity-90 italic">
                     <p>ReadAssist is speaking...</p>
                   </div>
                 )}
@@ -214,5 +199,41 @@ const VoiceControl = () => {
     </Card>
   );
 };
+
+// Inline CSS keyframes for animations
+const styles = `
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    text-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+  }
+  50% {
+    transform: scale(1.2);
+    text-shadow: 0 0 40px rgba(59, 130, 246, 1);
+  }
+  100% {
+    transform: scale(1);
+    text-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+  }
+}
+
+@keyframes wave {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+`;
+
+// Inject styles into the document
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
 
 export default VoiceControl;
