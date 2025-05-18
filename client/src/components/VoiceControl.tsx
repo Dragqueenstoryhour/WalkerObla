@@ -55,8 +55,13 @@ const VoiceControl = () => {
   const handleVoiceResult = async (result: { action: string; topic?: string; parameters?: any }) => {
     if (result.action === 'generateContent' && result.topic) {
       try {
-        // Generate content based on the topic and difficulty
-        const content = await generateReadingContent(result.topic, result.parameters?.difficulty || 'easy');
+        // Get difficulty parameter from result, or use 'easy' as default
+        const difficulty = result.parameters?.difficulty || 'easy';
+        
+        // Ensure topic and difficulty are passed correctly to the API
+        console.log(`Generating content with topic="${result.topic}" and difficulty="${difficulty}"`);
+        const content = await generateReadingContent(result.topic, difficulty);
+        
         setCurrentContent(content);
         toast({
           title: "Content Generated",
