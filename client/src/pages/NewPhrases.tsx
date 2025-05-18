@@ -2687,7 +2687,6 @@ I'd like to schedule an appointment."
                           </div>
                         </div>
                       )}
-                              %
                             </div>
 
                             {/* Detailed scores breakdown */}
