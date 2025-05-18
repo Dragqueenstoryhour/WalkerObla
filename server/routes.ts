@@ -72,11 +72,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const schema = z.object({
         topic: z.string(),
-        difficulty: z.enum(['easy', 'medium', 'hard']),
+        difficulty: z.string(), // Accept any string for difficulty to support new difficulty levels
       });
 
       const { topic, difficulty } = schema.parse(req.body);
-      const content = await openaiService.generateReadingContent(topic, difficulty);
+      
+      // Map extended difficulty levels to the basic three for API compatibility
+      let mappedDifficulty = 'medium';
+      if (['very-easy', 'easy', 'easy-medium'].includes(difficulty)) {
+        mappedDifficulty = 'easy';
+      } else if (['medium', 'medium-hard'].includes(difficulty)) {
+        mappedDifficulty = 'medium';
+      } else if (['hard', 'very-hard', 'expert'].includes(difficulty)) {
+        mappedDifficulty = 'hard';
+      }
+      
+      const content = await openaiService.generateReadingContent(topic, mappedDifficulty);
       res.json(content);
     } catch (error) {
       console.error('Error generating content:', error);

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Slider } from '@/components/ui/slider';
 import { useDifficulty, difficultyLevelNames, DifficultyLevel, mapDifficultyToServer } from '@/contexts/DifficultyContext';
 import { cn } from '@/lib/utils';
 import { Gauge, RotateCw } from 'lucide-react';
@@ -8,25 +7,29 @@ import { useReading } from '@/contexts/ReadingContext';
 import { generateReadingContent } from '@/lib/openai';
 import { Button } from '@/components/ui/button';
 
-interface SpeedometerDifficultyProps {
+interface DifficultySliderProps {
   className?: string;
-  compact?: boolean;
+  onUpdate?: () => void;
 }
 
-export function SpeedometerDifficulty({ className, compact = false }: SpeedometerDifficultyProps) {
+export function DifficultySlider({ className, onUpdate }: DifficultySliderProps) {
   const { difficulty, setDifficulty } = useDifficulty();
-  const [sliderValue, setSliderValue] = useState<number[]>([parseInt(difficulty)]);
+  const [sliderValue, setSliderValue] = useState<number>(parseInt(difficulty));
 
   // Update slider when difficulty changes from outside
   useEffect(() => {
-    setSliderValue([parseInt(difficulty)]);
+    setSliderValue(parseInt(difficulty));
   }, [difficulty]);
 
   // Handle slider change
-  const handleSliderChange = (value: number[]) => {
+  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value);
     setSliderValue(value);
-    // Set difficulty with delay to avoid too many updates during slide
-    setDifficulty(String(value[0]) as DifficultyLevel);
+    setDifficulty(String(value) as DifficultyLevel);
+    
+    if (onUpdate) {
+      onUpdate();
+    }
   };
   
   // Get background gradient for difficulty bar
@@ -48,7 +51,7 @@ export function SpeedometerDifficulty({ className, compact = false }: Speedomete
         </span>
       </div>
 
-      {/* Use a custom thin slider that looks like a color gradient bar */}
+      {/* Custom thin slider that looks like a color gradient bar */}
       <div className="relative w-full h-6 mb-3">
         {/* Color gradient background */}
         <div 
@@ -62,8 +65,8 @@ export function SpeedometerDifficulty({ className, compact = false }: Speedomete
           min={1}
           max={8}
           step={1}
-          value={sliderValue[0]}
-          onChange={(e) => handleSliderChange([parseInt(e.target.value)])}
+          value={sliderValue}
+          onChange={handleSliderChange}
           className="absolute inset-0 w-full opacity-0 cursor-pointer z-10"
         />
         
@@ -71,7 +74,7 @@ export function SpeedometerDifficulty({ className, compact = false }: Speedomete
         <div 
           className="absolute w-6 h-6 bg-white border-2 border-gray-300 rounded-full shadow-md z-5 -translate-y-1/2"
           style={{ 
-            left: `calc(${((sliderValue[0] - 1) / 7) * 100}% - ${sliderValue[0] === 1 ? '0.75rem' : sliderValue[0] === 8 ? '0.75rem' : '0.75rem'})`,
+            left: `calc(${((sliderValue - 1) / 7) * 100}% - ${sliderValue === 1 ? '0.75rem' : sliderValue === 8 ? '0.75rem' : '0.75rem'})`,
             top: '50%' 
           }}
         ></div>
@@ -86,7 +89,7 @@ export function SpeedometerDifficulty({ className, compact = false }: Speedomete
   );
 }
 
-// Dropdown component with the speedometer
+// Dropdown component with the simplified difficulty selector
 export function DifficultyDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const { difficulty } = useDifficulty();
@@ -99,7 +102,7 @@ export function DifficultyDropdown() {
     setIsGenerating(true);
     try {
       // Get current topic if exists, otherwise use a default
-      const currentTopic = currentContent?.title.split(' ').slice(0, 2).join(' ').toLowerCase() || 'random topics';
+      const currentTopic = currentContent?.title?.split(' ').slice(0, 2).join(' ').toLowerCase() || 'random topics';
       // Convert numeric difficulty to server format
       const serverDifficulty = mapDifficultyToServer(difficulty);
 
@@ -142,12 +145,12 @@ export function DifficultyDropdown() {
       </button>
       
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-50">
+        <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-50">
           <div className="mb-3">
             <h3 className="font-medium">Adjust Difficulty</h3>
           </div>
           
-          <SpeedometerDifficulty />
+          <DifficultySlider />
           
           <div className="mt-2 text-xs text-gray-500">
             Adjust the difficulty level to match your speech needs.

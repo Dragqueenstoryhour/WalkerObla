@@ -1,9 +1,8 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { SpeedometerDifficulty } from './SpeedometerDifficulty';
 import { useDifficulty } from '@/contexts/DifficultyContext';
-import { DifficultySpeedometer } from './DifficultySpeedometer';
+import { DifficultySlider } from './SimplifiedDifficultySelector';
 
 interface DifficultySelectionDialogProps {
   open: boolean;
@@ -32,11 +31,7 @@ export function DifficultySelectionDialog({ open, onClose }: DifficultySelection
         </DialogHeader>
         
         <div className="py-4">
-          <div className="flex flex-col items-center">
-            <DifficultySpeedometer size="lg" className="mb-4" />
-          </div>
-          
-          <SpeedometerDifficulty />
+          <DifficultySlider />
           
           <div className="mt-6 text-sm text-gray-600">
             <p>
@@ -51,8 +46,11 @@ export function DifficultySelectionDialog({ open, onClose }: DifficultySelection
         </div>
         
         <div className="flex justify-end">
-          <Button onClick={handleConfirm}>
-            Confirm Selection
+          <Button 
+            onClick={handleConfirm}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            OK
           </Button>
         </div>
       </DialogContent>

@@ -3,7 +3,7 @@ import { Settings, HelpCircle, Gauge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 // @ts-ignore 
 import speakgudLogo from '../assets/speakgud-logo.jpg';
-import { DifficultyDropdown } from './difficulty/SpeedometerDifficulty';
+import { DifficultyDropdown } from './difficulty/SimplifiedDifficultySelector';
 
 interface HeaderProps {
   onSettingsClick: () => void;
