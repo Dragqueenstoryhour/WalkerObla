@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useDifficulty } from '@/contexts/DifficultyContext';
+import { useDifficulty, mapDifficultyToServer } from '@/contexts/DifficultyContext';
 import { DifficultySlider } from './SimplifiedDifficultySelector';
+import { useReading } from '@/contexts/ReadingContext';
+import { generateReadingContent } from '@/lib/openai';
+import { useToast } from '@/hooks/use-toast';
+import { RotateCw } from 'lucide-react';
 
 interface DifficultySelectionDialogProps {
   open: boolean;
@@ -10,11 +14,52 @@ interface DifficultySelectionDialogProps {
 }
 
 export function DifficultySelectionDialog({ open, onClose }: DifficultySelectionDialogProps) {
-  const { setHasSelectedDifficulty } = useDifficulty();
+  const { difficulty, setHasSelectedDifficulty } = useDifficulty();
+  const { toast } = useToast();
+  const { currentContent, setCurrentContent } = useReading();
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleConfirm = () => {
-    setHasSelectedDifficulty(true);
-    onClose();
+  const handleConfirm = async () => {
+    setIsGenerating(true);
+    try {
+      // Generate content with the selected difficulty level
+      const serverDifficulty = mapDifficultyToServer(difficulty);
+      
+      toast({
+        title: "Setting Difficulty",
+        description: `Generating content for difficulty level ${difficulty}/8...`,
+      });
+      
+      // Use a default topic or the current content topic
+      const topic = currentContent?.title?.split(' ').slice(0, 2).join(' ').toLowerCase() || 'interesting facts';
+      const content = await generateReadingContent(topic, serverDifficulty);
+      
+      // Update content
+      setCurrentContent(content);
+      
+      // Mark as having selected difficulty
+      setHasSelectedDifficulty(true);
+      
+      toast({
+        title: "Difficulty Set",
+        description: `Ready to practice at level ${difficulty}/8`,
+      });
+      
+      // Close dialog
+      onClose();
+    } catch (error) {
+      console.error("Error setting initial difficulty:", error);
+      toast({
+        title: "Error",
+        description: "There was an issue setting up your difficulty level. You can adjust it later from the header.",
+        variant: "destructive",
+      });
+      // Still mark as selected and close dialog
+      setHasSelectedDifficulty(true);
+      onClose();
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -49,8 +94,16 @@ export function DifficultySelectionDialog({ open, onClose }: DifficultySelection
           <Button 
             onClick={handleConfirm}
             className="bg-green-600 hover:bg-green-700 text-white"
+            disabled={isGenerating}
           >
-            OK
+            {isGenerating ? (
+              <>
+                <span className="mr-2">Updating...</span>
+                <RotateCw className="h-4 w-4 animate-spin" />
+              </>
+            ) : (
+              "OK"
+            )}
           </Button>
         </div>
       </DialogContent>
