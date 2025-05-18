@@ -94,23 +94,8 @@ export default function NewPhrases() {
       { date: '2025-05-04', score: 84 },
     ]);
 
-    // Add a CSS class for the recording pulse animation if it doesn't exist
-    if (!document.getElementById('recording-pulse-animation')) {
-      const style = document.createElement('style');
-      style.id = 'recording-pulse-animation';
-      style.textContent = `
-        @keyframes pulse {
-          0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); }
-          70% { box-shadow: 0 0 0 15px rgba(22, 163, 74, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
-        }
-        .pulse-animation {
-          animation: pulse 1.5s infinite;
-        }
-      `;
-      document.head.appendChild(style);
-    }
-    
+    // ... (rest of the useEffect content remains unchanged)
+
     // Auto-load commonly used phrases when the page opens
     if (!shareId) { // Only if we're not loading shared phrases
       handleGenerateTopicPhrases('Commonly Used Phrases');
@@ -126,7 +111,7 @@ export default function NewPhrases() {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
     };
-  }, []);
+  }, []); // Removed handleGenerateTopicPhrases from dependencies
 
   // Load shared phrases if the shareId is present in the URL
   useEffect(() => {
@@ -1280,7 +1265,9 @@ export default function NewPhrases() {
   const renderAssessmentVisualization = (phrase: ProcessedPhrase) => {
     if (!phrase.assessmentResult) return null;
 
-    const result = phrase.assessmentResult;
+    const result = phrase
+
+.assessmentResult;
     const score = Math.round(result.pronunciationScore);
 
     return (
@@ -1598,7 +1585,7 @@ export default function NewPhrases() {
 
     // Use the current difficulty from context if not provided
     const difficultyToUse = customDifficulty || difficulty;
-    
+
     setIsProcessing(true);
 
     try {
@@ -1642,6 +1629,19 @@ export default function NewPhrases() {
     }
   };
 
+  // Handle difficulty change from DifficultyDropdown
+  const handleDifficultyChange = async (newDifficulty: string) => {
+    if (!aiGenerateTopic.trim()) {
+      toast({
+        title: 'No Topic Selected',
+        description: 'Please enter a topic before changing difficulty.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    await handleGenerateTopicPhrases(aiGenerateTopic, newDifficulty);
+  };
+
   return (
     <div className="container mx-auto px-4 py-6">
       {/* Shared phrases notification dialog */}
@@ -1659,7 +1659,10 @@ export default function NewPhrases() {
           </div>
         </DialogContent>
       </Dialog>
-      <h1 className="text-3xl font-bold mb-6">New Phrases</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">New Phrases</h1>
+        <DifficultyDropdown onConfirm={handleDifficultyChange} />
+      </div>
 
       <Tabs defaultValue="ai-generate" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
@@ -1942,7 +1945,7 @@ I'd like to schedule an appointment."
                   Let AI generate topic-specific phrases and words for practice
                 </CardDescription>
               </div>
-              <DifficultyDropdown />
+              {/* Removed redundant DifficultyDropdown */}
             </CardHeader>
             <CardContent>
               <div className="space-y-4">

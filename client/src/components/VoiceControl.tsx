@@ -11,6 +11,7 @@ const VoiceControl = () => {
   const { setCurrentContent } = useReading();
   const [status, setStatus] = useState<'listening' | 'processing' | 'idle'>('idle');
   const [transcribedText, setTranscribedText] = useState<string>('');
+  const [confirmationMessage, setConfirmationMessage] = useState<string>('');
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -29,13 +30,13 @@ const VoiceControl = () => {
       const wordCount = transcribedText.split(/\s+/).length;
       setCurrentContent({
         id: Date.now(),
-        title: "Voice Input",
+        title: 'Voice Input',
         content: transcribedText,
-        source: "Voice Recognition",
+        source: 'Voice Recognition',
         wordCount: wordCount,
         readingTime: wordCount * 3, // Estimate 3 seconds per word
-        difficulty: "medium", 
-        createdAt: new Date().toISOString()
+        difficulty: 'medium',
+        createdAt: new Date().toISOString(),
       });
     }
 
@@ -48,43 +49,52 @@ const VoiceControl = () => {
     audioRef.current.src = url;
     audioRef.current.onplay = () => setIsPlaying(true);
     audioRef.current.onended = () => setIsPlaying(false);
-    audioRef.current.play().catch(err => console.error('Error playing audio:', err));
+    audioRef.current.play().catch((err) => console.error('Error playing audio:', err));
   };
 
   // Handler for voice command results
-  const handleVoiceResult = async (result: { action: string; topic?: string; parameters?: any }) => {
+  const handleVoiceResult = async (result: { action: string; topic?: string; parameters?: { difficulty?: string }; message?: string }) => {
     if (result.action === 'generateContent' && result.topic) {
       try {
-        // Get difficulty parameter from result, or use 'easy' as default
-        const difficulty = result.parameters?.difficulty || 'easy';
-        
-        // Ensure topic and difficulty are passed correctly to the API
-        console.log(`Generating content with topic="${result.topic}" and difficulty="${difficulty}"`);
+        // Validate and sanitize difficulty
+        const difficulty = /^[1-8]$/.test(result.parameters?.difficulty)
+          ? result.parameters.difficulty
+          : '1'; // Default to '1' if invalid or missing
+
+        console.log(`Generating content about "${result.topic}" with difficulty "${difficulty}"`);
+
+        // Set confirmation message
+        setConfirmationMessage(result.message || `I'll find a reading article on ${result.topic} for you.`);
+
+        // Generate content based on the topic and difficulty
         const content = await generateReadingContent(result.topic, difficulty);
-        
-        setCurrentContent(content);
+        setCurrentContent({ ...content, topic: result.topic }); // Preserve topic
         toast({
-          title: "Content Generated",
+          title: 'Content Generated',
           description: `Generated content about "${result.topic}"`,
         });
       } catch (error) {
-        console.error("Error generating content:", error);
+        console.error('Error generating content:', error);
+        setConfirmationMessage('');
         toast({
-          title: "Error",
-          description: "Failed to generate content",
-          variant: "destructive",
+          title: 'Error',
+          description: 'Failed to generate content',
+          variant: 'destructive',
         });
       }
+    } else {
+      // Set confirmation message for non-content actions
+      setConfirmationMessage(result.message || 'I understood your request.');
     }
   };
 
   // Set up enhanced voice recognition with GPT-4o
-  const { 
-    isListening, 
+  const {
+    isListening,
     isProcessing,
-    transcribedText: enhancedTranscript, 
-    startListening, 
-    stopListening 
+    transcribedText: enhancedTranscript,
+    startListening,
+    stopListening,
   } = useEnhancedVoice({
     onVoiceResult: handleVoiceResult,
     onAudioResponse: (audioUrl) => {
@@ -94,15 +104,16 @@ const VoiceControl = () => {
       audioRef.current.src = audioUrl;
       audioRef.current.onplay = () => setIsPlaying(true);
       audioRef.current.onended = () => setIsPlaying(false);
-      audioRef.current.play().catch(err => console.error('Error playing audio:', err));
+      audioRef.current.play().catch((err) => console.error('Error playing audio:', err));
     },
     onTranscript: (text) => setTranscribedText(text),
     onError: (error) => {
       console.error('Voice recognition error:', error);
+      setConfirmationMessage('');
       toast({
-        title: "Voice Recognition Error",
+        title: 'Voice Recognition Error',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
       setStatus('idle');
     },
@@ -135,8 +146,9 @@ const VoiceControl = () => {
 
   const toggleListening = () => {
     if (status === 'idle') {
-      // Clear previous transcript before starting new listening session
+      // Clear previous transcript and confirmation before starting new listening session
       setTranscribedText('');
+      setConfirmationMessage('');
       startListening();
     } else if (status === 'listening') {
       stopListening();
@@ -148,23 +160,37 @@ const VoiceControl = () => {
       <CardContent className="p-4">
         {/* Microphone button, centered and twice as large */}
         <div className="mb-2 flex justify-center">
-          <button 
+          <button
             onClick={toggleListening}
             className={`relative flex items-center justify-center w-20 h-20 rounded-full p-4 cursor-pointer hover:bg-opacity-90 transition-all
-              ${status === 'listening' ? 'bg-red-500' : 'bg-blue-900'} 
+              ${status === 'listening' ? 'bg-red-500' : status === 'processing' ? 'bg-yellow-500' : 'bg-blue-900'}
               ${isPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}
-            aria-label={status === 'listening' ? 'Stop listening' : 'Start listening'}
-            disabled={isPlaying}
+            aria-label={
+              status === 'listening'
+                ? 'Stop listening'
+                : status === 'processing'
+                ? 'Processing'
+                : 'Start listening'
+            }
+            disabled={isPlaying || status === 'processing'}
           >
             <div className="relative w-full h-full">
-              <span className="absolute inset-0 flex items-center justify-center text-4xl text-white animate-[pulse_1.5s_infinite_ease-in-out] [text-shadow:0_0_20px_rgba(59,130,246,0.8)]">
-                🎤
-              </span>
-              {status === 'listening' && (
+              {status === 'processing' ? (
+                <span className="absolute inset-0 flex items-center justify-center text-4xl text-white animate-[flash_1s_infinite_ease-in-out]">
+                  💡
+                </span>
+              ) : (
                 <>
-                  <div className="absolute inset-0 border-4 border-blue-400 rounded-full animate-[wave_2s_infinite_ease-out] opacity-0" />
-                  <div className="absolute inset-0 border-4 border-blue-400 rounded-full animate-[wave_2s_infinite_ease-out] [animation-delay:0.5s] opacity-0" />
-                  <div className="absolute inset-0 border-4 border-blue-400 rounded-full animate-[wave_2s_infinite_ease-out] [animation-delay:1s] opacity-0" />
+                  <span className="absolute inset-0 flex items-center justify-center text-4xl text-white animate-[pulse_1.5s_infinite_ease-in-out] [text-shadow:0_0_20px_rgba(59,130,246,0.8)]">
+                    🎤
+                  </span>
+                  {status === 'listening' && (
+                    <>
+                      <div className="absolute inset-0 border-4 border-blue-400 rounded-full animate-[wave_2s_infinite_ease-out] opacity-0" />
+                      <div className="absolute inset-0 border-4 border-blue-400 rounded-full animate-[wave_2s_infinite_ease-out] [animation-delay:0.5s] opacity-0" />
+                      <div className="absolute inset-0 border-4 border-blue-400 rounded-full animate-[wave_2s_infinite_ease-out] [animation-delay:1s] opacity-0" />
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -181,12 +207,19 @@ const VoiceControl = () => {
           </div>
 
           <div className="flex-1">
-            {transcribedText ? (
-              <div className={isPlaying ? "border-l-4 border-accent pl-3" : ""}>
+            {status === 'processing' ? (
+              <div>
+                <p className="text-sm text-textColor opacity-70 mb-1">Processing:</p>
+                <p className="font-medium">Thinking...</p>
+              </div>
+            ) : transcribedText || confirmationMessage ? (
+              <div className={isPlaying ? 'border-l-4 border-accent pl-3' : ''}>
                 <p className="text-sm text-textColor opacity-70 mb-1">
-                  {isPlaying ? "AI Response:" : "I heard:"}
+                  {isPlaying ? 'AI Response:' : confirmationMessage ? 'ReadAssist:' : 'I heard:'}
                 </p>
-                <p className="font-medium">{transcribedText}</p>
+                <p className="font-medium">
+                  {isPlaying || confirmationMessage ? confirmationMessage : transcribedText}
+                </p>
                 {isPlaying && (
                   <div className="mt-1 pt-1 border-t border-gray-200 text-sm text-textColor opacity-90 italic">
                     <p>ReadAssist is speaking...</p>
@@ -230,6 +263,18 @@ const styles = `
   100% {
     transform: scale(1.5);
     opacity: 0;
+  }
+}
+
+@keyframes flash {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
   }
 }
 `;

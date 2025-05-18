@@ -71,18 +71,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/content/generate', async (req, res) => {
     try {
       const schema = z.object({
-        topic: z.string(),
-        difficulty: z.string(), // Accept any string for difficulty to support new difficulty levels
+        topic: z.string().min(1, "Topic cannot be empty"),
+        difficulty: z.coerce.string() // Allow numeric input but convert to string
+          .regex(/^[1-8]$/, "Difficulty must be a number from 1 to 8")
       });
 
       const { topic, difficulty } = schema.parse(req.body);
-      
-      // Pass difficulty directly since openaiService.generateReadingContent now handles numeric difficulties
+
+      console.log(`Generating content about "${topic}" with difficulty "${difficulty}"`);
+
       const content = await openaiService.generateReadingContent(topic, difficulty);
       res.json(content);
     } catch (error) {
       console.error('Error generating content:', error);
-      res.status(500).json({ error: 'Failed to generate content' });
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ 
+          error: 'Invalid request data',
+          details: error.errors 
+        });
+      } else {
+        res.status(500).json({ error: 'Failed to generate content' });
+      }
     }
   });
   
@@ -151,7 +160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const schema = z.object({
         topic: z.string(),
-        difficulty: z.string()
+        difficulty: z.coerce.string() // Allow numeric input but convert to string
           .regex(/^[1-8]$/, "Difficulty must be a number from 1 to 8")
           .optional(),
         wordTypes: z.array(z.string()).optional(),
@@ -227,7 +236,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/phrases/filter', async (req, res) => {
     try {
       const schema = z.object({
-        difficulty: z.string().regex(/^[1-8]$/, "Difficulty must be a number from 1 to 8").optional(),
+        difficulty: z.coerce.string() // Update this line
+          .regex(/^[1-8]$/, "Difficulty must be a number from 1 to 8")
+          .optional(),
         syllableRange: z.object({
           min: z.number().int().min(1).max(5).optional(),
           max: z.number().int().min(1).max(5).optional()

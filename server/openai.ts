@@ -95,21 +95,21 @@ export const DIFFICULTY_SCALE = {
 export async function transcribeAudio(audioBuffer: Buffer): Promise<string> {
   try {
     console.log(`Transcribing audio with Whisper: buffer size = ${audioBuffer.length} bytes`);
-    
+
     // Determine file extension based on audio content analysis (if possible)
     // Default to .webm which is common for browser recordings
     const fileExtension = '.webm';
     const tempFilePath = `/tmp/voice-command-${Date.now()}${fileExtension}`;
-    
+
     // Write the buffer to a temporary file
     fs.writeFileSync(tempFilePath, audioBuffer);
     console.log(`Audio saved to temporary file: ${tempFilePath}`);
-    
+
     // Create a file stream for the API
     const fileStream = fs.createReadStream(tempFilePath);
-    
+
     console.log('Sending audio to OpenAI Whisper for transcription...');
-    
+
     // Transcribe the audio using Whisper model
     const transcription = await openai.audio.transcriptions.create({
       file: fileStream,
@@ -117,17 +117,17 @@ export async function transcribeAudio(audioBuffer: Buffer): Promise<string> {
       language: "en", // Specify English for better accuracy with stroke patients
       response_format: "text",
     });
-    
+
     // Clean up the temporary file
     fs.unlinkSync(tempFilePath);
-    
+
     // Handle different response formats from OpenAI
     const transcriptionText = typeof transcription === 'string' 
       ? transcription 
       : (transcription as any).text || '';
-    
+
     console.log(`Whisper transcription result: "${transcriptionText}"`);
-    
+
     return transcriptionText;
   } catch (error) {
     console.error("Error transcribing audio with Whisper:", error);
@@ -141,20 +141,27 @@ export async function transcribeAudio(audioBuffer: Buffer): Promise<string> {
  */
 export async function processVoiceCommand(command: string): Promise<any> {
   try {
-    // Using a more concise system prompt to reduce token usage
-    const systemPrompt = `You're ReadAssist, helping patients with speech issues. 
-Return a JSON with: 
+    // Enhanced system prompt to handle topic and difficulty parsing
+    const systemPrompt = `You're ReadAssist, helping stroke recovery patients with speech. 
+Parse the user's voice command to determine their intent. 
+Return a JSON with:
 - 'action': generateContent, startReading, pauseReading, pronunciationHelp, etc.
-- 'topic': For content requests
-- 'word': For pronunciation requests
-- 'message': Short, encouraging response
+- 'topic': The main subject of the request (e.g., "feeding dogs", "animals"). Use the full command as the topic unless it clearly specifies another action.
+- 'parameters': Optional object with 'difficulty' (1-8) if mentioned.
+- 'message': Short, encouraging response.
+
+Rules:
+- If the command is a topic (e.g., "feeding dogs", "animals"), set action to "generateContent" and use the full command as the topic.
+- If a difficulty level (1-8) is mentioned (e.g., "animals level 3"), include it in parameters.difficulty.
+- If no difficulty is specified, default to difficulty "1".
+- For non-content actions (e.g., "start reading"), omit topic and parameters unless relevant.
 
 Examples:
-"Find about gardening" → {"action":"generateContent","topic":"gardening"}
-"Start reading" → {"action":"startReading"}
-"How to say container" → {"action":"pronunciationHelp","word":"container"}`;
-    
-    // Using a cheaper model to save tokens
+"feeding dogs" → {"action":"generateContent","topic":"feeding dogs","parameters":{"difficulty":"1"},"message":"I'll find a reading about feeding dogs."}
+"animals level 3" → {"action":"generateContent","topic":"animals","parameters":{"difficulty":"3"},"message":"I'll find a reading about animals."}
+"start reading" → {"action":"startReading","message":"Starting the reading for you."}
+"how to say dog" → {"action":"pronunciationHelp","word":"dog","message":"I'll help you say 'dog'."}`;
+
     const response = await openai.chat.completions.create({
       model: MODEL, // Using cheaper model defined earlier
       messages: [
@@ -165,15 +172,20 @@ Examples:
       max_tokens: 150, // Limiting token output
       response_format: { type: "json_object" }
     });
-    
+
     const content = response.choices[0].message.content;
     if (!content) {
       throw new Error("Empty response from OpenAI");
     }
-    
+
     const result = JSON.parse(content);
-    
-    // Add default encouragement for stroke patients if none provided
+
+    // Ensure default difficulty if not provided for generateContent
+    if (result.action === 'generateContent' && (!result.parameters || !result.parameters.difficulty)) {
+      result.parameters = { ...result.parameters, difficulty: "1" };
+    }
+
+    // Add default encouragement if none provided
     if (!result.message) {
       if (result.action === 'generateContent') {
         result.message = `I'll find a reading about ${result.topic} for you.`;
@@ -183,7 +195,7 @@ Examples:
         result.message = "I understood your request.";
       }
     }
-    
+
     return result;
   } catch (error) {
     console.error("Error processing voice command:", error);
@@ -199,29 +211,29 @@ Examples:
 function createDefaultContent(topic: string, rawContent: string): any {
   // Extract a title from the content if possible
   let title = `${topic.charAt(0).toUpperCase() + topic.slice(1)} News`;
-  
+
   // Look for potential heading pattern at the beginning
   const titleMatch = rawContent.match(/^(?:##+\s*|\*\*|__)?([^#\n\*_]+)(?:\*\*|__|##+)?/);
   if (titleMatch && titleMatch[1].trim()) {
     title = titleMatch[1].trim();
   }
-  
+
   // Clean up content by removing markdown code blocks and JSON syntax
   let cleanContent = rawContent
     .replace(/```(?:json)?\s*({[\s\S]*?})\s*```/g, '') // Remove code blocks with JSON
     .replace(/```[\s\S]*?```/g, '')  // Remove any other code blocks
     .replace(/^\s*{\s*"title":[^}]*}/g, '') // Remove JSON title object
     .trim();
-    
+
   // If the content is now empty, use the original
   if (!cleanContent) {
     cleanContent = rawContent;
   }
-  
+
   return {
     title: title,
     content: cleanContent,
-    source: "Latest News Summary by ReadAssist"
+    source: "ReadAssist"
   };
 }
 
@@ -234,7 +246,7 @@ export async function generateReadingContent(topic: string, difficulty: string):
     let sentenceCount = 1;
     let syllableCount = "";
     let mappedDifficulty: "easy" | "medium" | "hard" = "easy"; // For backward compatibility
-    
+
     switch(difficulty) {
       case "1":
         mappedDifficulty = "easy";
@@ -318,7 +330,7 @@ export async function generateReadingContent(topic: string, difficulty: string):
     - Return ONLY JSON: {"title": "string", "content": "string", "source": "ReadAssist"}`;
 
     console.log(`Using OpenAI to generate content about "${topic}" with difficulty "${difficulty}"`);
-    
+
     // Using OpenAI with max_tokens to strictly limit response size
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo", // Using a cheaper model to conserve tokens
@@ -336,12 +348,12 @@ IMPORTANT: Keep it engaging, informative, and under ${maxWords} words total.` }
 
     const responseContent = completion.choices[0].message.content;
     console.log("Raw response content:", responseContent);
-    
+
     let content;
     try {
       // Parse the JSON response
       content = JSON.parse(responseContent || "{}");
-      
+
       // Make sure we have all required fields
       if (!content.title || !content.content) {
         console.log("Parsed content missing required fields, using default structure");
@@ -352,7 +364,7 @@ IMPORTANT: Keep it engaging, informative, and under ${maxWords} words total.` }
       // Create a default content as fallback
       content = createDefaultContent(topic, responseContent || "Content unavailable");
     }
-    
+
     // Calculate word count
     const calculatedWordCount = content.content.split(/\s+/).filter(Boolean).length;
 
@@ -367,7 +379,7 @@ IMPORTANT: Keep it engaging, informative, and under ${maxWords} words total.` }
       difficulty: mappedDifficulty, 
       createdAt: new Date().toISOString(), // Store directly as ISO string for compatibility
     };
-    
+
     // Return the content
     return readingContent;
   } catch (error) {
@@ -393,12 +405,12 @@ export async function generateSampleContent(): Promise<ReadingContent> {
     "interesting facts about animals",
     "latest cooking trends"
   ];
-  
+
   // Select a random topic from the array
   const randomTopic = topics[Math.floor(Math.random() * topics.length)];
-  
+
   // Generate content on the random topic
-  return generateReadingContent(randomTopic, "easy");
+  return generateReadingContent(randomTopic, "1"); // Default to difficulty 1
 }
 
 /**
@@ -410,15 +422,15 @@ export async function generateSpeechResponse(text: string, voice: string = "allo
     // If voice is invalid, default to alloy
     const validVoices = ["nova", "shimmer", "echo", "onyx", "fable", "alloy", "ash", "sage", "coral"];
     const safeVoice = validVoices.includes(voice) ? voice : "alloy";
-    
+
     console.log(`Generating speech with voice: ${safeVoice}`);
-    
+
     const mp3 = await openai.audio.speech.create({
       model: "tts-1",
       voice: safeVoice,
       input: text,
     });
-    
+
     // Convert to buffer for sending over HTTP
     const buffer = Buffer.from(await mp3.arrayBuffer());
     return buffer;
@@ -434,7 +446,7 @@ export async function generateSpeechResponse(text: string, voice: string = "allo
 export async function processPhrases(phrases: string[]): Promise<any[]> {
   try {
     console.log(`Processing ${phrases.length} phrases with OpenAI`);
-    
+
     const systemPrompt = `You help language learners practice speech by analyzing phrases, adding phonetic guides, and determining difficulty.
     For each phrase, provide:
     1. The original text
@@ -442,8 +454,6 @@ export async function processPhrases(phrases: string[]): Promise<any[]> {
     3. Difficulty level (beginner/intermediate/advanced)
     Return an array of JSON objects with { text, phonetic, difficulty }`;
 
-    // Using GPT-4o for better phonetic accuracy and language analysis
-    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
     const response = await openai.chat.completions.create({
       model: ADVANCED_MODEL,
       messages: [
@@ -458,10 +468,10 @@ export async function processPhrases(phrases: string[]): Promise<any[]> {
     if (!content) {
       throw new Error("Empty response from OpenAI");
     }
-    
+
     // Parse the response
     const parsed = JSON.parse(content);
-    
+
     // Ensure we have an array of phrases
     if (!Array.isArray(parsed.phrases)) {
       // If the response format is unexpected, create a default structure
@@ -471,7 +481,7 @@ export async function processPhrases(phrases: string[]): Promise<any[]> {
         difficulty: "intermediate"
       }));
     }
-    
+
     return parsed.phrases;
   } catch (error) {
     console.error("Error processing phrases:", error);
@@ -490,7 +500,7 @@ export async function processPhrases(phrases: string[]): Promise<any[]> {
 export async function generateSimilarPhrases(phrase: string): Promise<string[]> {
   try {
     console.log(`Generating similar phrases to: "${phrase}"`);
-    
+
     const systemPrompt = `You help language learners by generating variations of phrases for speaking practice.
     Given a phrase, create 5 similar phrases that:
     1. Maintain the same general meaning
@@ -499,8 +509,6 @@ export async function generateSimilarPhrases(phrase: string): Promise<string[]> 
     4. Vary in structure to provide diverse practice
     Return only a JSON array of strings with the new phrases.`;
 
-    // Using the advanced model for better results with language generation
-    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
     const response = await openai.chat.completions.create({
       model: ADVANCED_MODEL,
       messages: [
@@ -515,10 +523,10 @@ export async function generateSimilarPhrases(phrase: string): Promise<string[]> 
     if (!content) {
       throw new Error("Empty response from OpenAI");
     }
-    
+
     // Parse the response
     const parsed = JSON.parse(content);
-    
+
     // Ensure we have an array of phrases
     if (!Array.isArray(parsed.phrases)) {
       // If the main property isn't "phrases", look for any array in the response
@@ -529,7 +537,7 @@ export async function generateSimilarPhrases(phrase: string): Promise<string[]> 
       // Return a single-item array with the original phrase
       return [phrase];
     }
-    
+
     return parsed.phrases;
   } catch (error) {
     console.error("Error generating similar phrases:", error);
@@ -544,12 +552,11 @@ export async function generateSimilarPhrases(phrase: string): Promise<string[]> 
 export async function extractTextFromImage(fileBuffer: Buffer, fileType: string): Promise<string> {
   try {
     console.log(`Extracting text from file of type: ${fileType}`);
-    
+
     // Convert the buffer to base64
     const base64Image = fileBuffer.toString('base64');
     const dataURI = `data:${fileType};base64,${base64Image}`;
-    
-    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -580,7 +587,7 @@ export async function extractTextFromImage(fileBuffer: Buffer, fileType: string)
     if (!extractedText) {
       throw new Error("Failed to extract text from image");
     }
-    
+
     return extractedText;
   } catch (error) {
     console.error("Error extracting text from image:", error);
@@ -589,15 +596,7 @@ export async function extractTextFromImage(fileBuffer: Buffer, fileType: string)
 }
 
 /**
- * Generate phrases related to a specific topic for pronunciation practice
- */
-/**
  * Generate topic-specific phrases with enhanced difficulty level support
- * 
- * @param topic The topic for which to generate phrases
- * @param difficulty Difficulty level (1-8)
- * @param wordTypes Optional specific word types to include (e.g., ['nouns', 'verbs', 'adjectives'])
- * @param syllableRange Optional specific syllable range to target
  */
 export async function generateTopicPhrases(
   topic: string, 
@@ -607,99 +606,146 @@ export async function generateTopicPhrases(
 ): Promise<string[]> {
   try {
     console.log(`Generating phrases related to topic: "${topic}" with difficulty level: ${difficulty}`);
-    
+
     // Validate difficulty level
     if (!DIFFICULTY_SCALE[difficulty]) {
       console.warn(`Invalid difficulty level ${difficulty}, defaulting to level 4`);
       difficulty = "4";
     }
-    
+
     // Use the standardized difficulty scale
     const difficultyInfo = DIFFICULTY_SCALE[difficulty];
-    
-    // Build enhanced syllable requirements
-    let syllableRequirement = difficultyInfo.syllableRange;
-    if (syllableRange) {
-      if (syllableRange.min && syllableRange.max) {
-        syllableRequirement = `${syllableRange.min}-${syllableRange.max} syllables`;
-      } else if (syllableRange.min) {
-        syllableRequirement = `minimum ${syllableRange.min} syllables`;
-      } else if (syllableRange.max) {
-        syllableRequirement = `maximum ${syllableRange.max} syllables`;
-      }
-    }
-    
+
+    // Define complexity based on difficulty
+    const complexityMapping = {
+      "1": "very short phrases (3-5 words), using extremely simple vocabulary and basic grammar, suitable for absolute beginners",
+      "2": "short phrases (5-7 words) with simple vocabulary and basic sentence structures",
+      "3": "short phrases (6-8 words) with slightly varied vocabulary and simple sentence structures",
+      "4": "medium-length phrases (8-10 words) with general vocabulary and straightforward sentence structures",
+      "5": "medium-length phrases (10-12 words) with varied vocabulary and moderately complex sentence structures",
+      "6": "longer phrases (12-15 words) with diverse vocabulary and moderately complex sentence structures",
+      "7": "complex phrases (12-20 words) with advanced vocabulary and varied sentence structures",
+      "8": "highly complex phrases (15-25 words) with sophisticated vocabulary and intricate sentence structures"
+    };
+
+    const complexity = complexityMapping[difficulty];
+
     // Build word type requirements
     let wordTypeRequirement = difficultyInfo.wordTypes;
     if (wordTypes && wordTypes.length > 0) {
       wordTypeRequirement = wordTypes.join(", ");
     }
-    
+
     // Examples to guide the model
     const examples = difficultyInfo.examples.slice(0, 3).join(", ");
-    
-    // Enhanced phonetic complexity instructions
-    let phoneticInstructions = "";
-    if (parseInt(difficulty) >= 5) {
-      phoneticInstructions = `
-      - Include words with varied stress patterns
-      - For consonants, include ${difficultyInfo.phonetics}
-      - Pay careful attention to syllable count (${syllableRequirement})`;
-    }
-    
-    // Build an enhanced system prompt with strict syllable counting instructions
-    const systemPrompt = `You are a speech rehabilitation assistant generating precisely tailored phrases for stroke survivors.
-    
-    DIFFICULTY LEVEL: ${difficulty}/8 (${difficultyInfo.name})
-    
-    STRICT SYLLABLE RULES:
-    - Generate phrases with EXACTLY ${syllableRequirement}
-    - Count syllables accurately: "cat" (1), "table" (2), "beautiful" (3), "education" (4), "university" (5)
-    - For words ending in "-le" (e.g., "table"), count the final "le" as a separate syllable
-    - For words ending in "-ed", count as a syllable only if preceded by d/t (e.g., "wanted" has 2 syllables)
-    - Double-check all syllable counts
-    
-    WORD REQUIREMENTS:
-    - Use ${wordTypeRequirement}
-    - Focus on words and phrases related to: ${topic}
-    - Example difficulty level: ${examples}
-    - Create meaningful, practical phrases for real-life use
-    ${phoneticInstructions}
-    
-    OUTPUT FORMAT:
-    - Generate exactly 10 items
-    - For each phrase, count the syllables and ensure they match the requirements
-    - Format as a JSON array of strings named 'phrases'`;
 
-    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+    // Build system prompt
+    const systemPrompt = `
+You are a speech rehabilitation assistant generating conversational phrases for stroke survivors to practice pronunciation.
+
+**Task**:
+Generate exactly 10 natural, grammatically correct phrases related to the topic "${topic}" for speech practice.
+
+**Difficulty Level**: ${difficulty}/8 (${difficultyInfo.name})
+
+**Requirements**:
+- **Complexity**: ${complexity}
+- **Word Types**: Use ${wordTypeRequirement} (e.g., ${examples})
+- **Sentence Length**: Phrases should be ${difficultyInfo.maxSentenceLength} words or fewer
+- **Phonetic Considerations**: Include ${difficultyInfo.phonetics} where appropriate
+- **Content**:
+  - Phrases must be meaningful, practical, and usable in everyday conversations
+  - Ensure phrases are complete sentences or standalone expressions
+  - Relate phrases directly to the topic "${topic}"
+- **Exclusions**:
+  - Do NOT include numbers or numerical sequences (e.g., "5, 4, 3")
+  - Do NOT include hyphenated syllabic breakdowns (e.g., "cog-ni-tive ther-a-py")
+  - Avoid overly technical or academic terms unless essential to the topic and difficulty
+  - Do NOT include incomplete sentences, fragments, lists, bullet points, or markdown formatting
+- **Output Format**:
+  - Return a JSON object with a single key "phrases" containing an array of 10 strings
+  - Example: {"phrases": ["phrase 1", "phrase 2", ..., "phrase 10"]}
+
+**Examples for Topic "Commonly Used Phrases"**:
+- Difficulty 1: ["Hi, how are you?", "Good morning!", "Thank you very much."]
+- Difficulty 7: ["Could you please clarify your position?", "I appreciate your thoughtful consideration.", "Would you mind elaborating on the main points?"]`;
+
     const response = await openai.chat.completions.create({
       model: ADVANCED_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Generate 10 phrases related to "${topic}" at difficulty level ${difficulty}/8 with ${syllableRequirement}. Include detailed syllable counting instructions and ensure accurate syllable counts. Return as a JSON array of strings named 'phrases'.` }
+        { role: "user", content: `Generate exactly 10 conversational phrases for the topic "${topic}" at difficulty level ${difficulty}/8. Follow all requirements and return as a JSON object with a "phrases" array.` }
       ],
       temperature: 0.7,
-      response_format: { type: "json_object" },
-      max_tokens: 1000
+      max_tokens: 1000,
+      response_format: { type: "json_object" }
     });
 
     const content = response.choices[0].message.content;
     if (!content) {
       throw new Error("Empty response from OpenAI");
     }
-    
+
+    console.log("Raw response content:", content);
+
     // Parse the response
-    const parsed = JSON.parse(content);
-    
-    // Extract the phrases array
-    if (Array.isArray(parsed.phrases)) {
-      return parsed.phrases;
-    } else {
-      console.warn("OpenAI response did not contain a 'phrases' array:", parsed);
-      return [];
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch (parseError) {
+      console.error("JSON parsing failed:", parseError, "Raw content:", content);
+      // Fallback: attempt to extract phrases manually
+      const lines = content
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line && !line.match(/^{|}|"phrases"|\[|\]|,$/))
+        .map(line => line.replace(/^["']|["']$/g, '')) // Remove quotes
+        .slice(0, 10);
+      parsed = { phrases: lines };
     }
+
+    // Validate the phrases array
+    if (!parsed.phrases || !Array.isArray(parsed.phrases)) {
+      console.warn("OpenAI response did not contain a valid 'phrases' array:", parsed);
+      parsed.phrases = [];
+    }
+
+    // Filter and validate phrases
+    let validPhrases = parsed.phrases
+      .filter(phrase => {
+        // Ensure phrase is a string and non-empty
+        if (typeof phrase !== 'string' || !phrase.trim()) return false;
+        // Exclude numbers and hyphenated terms
+        if (/^\d+(,\s*\d+)*$/.test(phrase)) return false; // e.g., "5, 4, 3"
+        if (phrase.includes('-') && !phrase.match(/^[a-zA-Z]+-[a-zA-Z]+$/)) return false; // e.g., "cog-ni-tive"
+        // Allow phrases up to max sentence length + 20% to account for natural variation
+        const wordCount = phrase.split(/\s+/).length;
+        if (wordCount > difficultyInfo.maxSentenceLength * 1.2) return false;
+        return true;
+      })
+      .slice(0, 10);
+
+    // If we don't have enough valid phrases, retry once
+    if (validPhrases.length < 10) {
+      console.warn(`Only ${validPhrases.length} valid phrases generated, retrying once...`);
+      const additionalPhrases = await generateTopicPhrases(topic, difficulty, wordTypes, syllableRange);
+      validPhrases = [
+        ...validPhrases,
+        ...additionalPhrases.filter(p => !validPhrases.includes(p))
+      ].slice(0, 10);
+    }
+
+    // Ensure exactly 10 phrases
+    while (validPhrases.length < 10) {
+      validPhrases.push(`Sample phrase for ${topic} ${validPhrases.length + 1}`);
+    }
+    while (validPhrases.length > 10) {
+      validPhrases.pop();
+    }
+
+    return validPhrases;
   } catch (error) {
     console.error("Error generating topic phrases:", error);
-    return [];
+    return Array(10).fill(`Sample phrase for ${topic}`);
   }
 }

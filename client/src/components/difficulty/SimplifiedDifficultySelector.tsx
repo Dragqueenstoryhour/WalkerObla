@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useDifficulty, difficultyLevelNames, DifficultyLevel, mapDifficultyToServer } from '@/contexts/DifficultyContext';
+import { useDifficulty, difficultyLevelNames, DifficultyLevel } from '@/contexts/DifficultyContext';
 import { cn } from '@/lib/utils';
 import { Gauge, RotateCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useReading } from '@/contexts/ReadingContext';
-import { generateReadingContent } from '@/lib/openai';
 import { Button } from '@/components/ui/button';
 
 interface DifficultySliderProps {
@@ -26,12 +24,12 @@ export function DifficultySlider({ className, onUpdate }: DifficultySliderProps)
     const value = parseInt(e.target.value);
     setSliderValue(value);
     setDifficulty(String(value) as DifficultyLevel);
-    
+
     if (onUpdate) {
       onUpdate();
     }
   };
-  
+
   // Get background gradient for difficulty bar
   const getBackgroundGradient = () => {
     return `linear-gradient(90deg, 
@@ -58,7 +56,7 @@ export function DifficultySlider({ className, onUpdate }: DifficultySliderProps)
           className="absolute inset-0 h-2 rounded-full top-2"
           style={{ background: getBackgroundGradient() }}
         ></div>
-        
+
         {/* Custom slider using native HTML input range for better control */}
         <input
           type="range"
@@ -69,7 +67,7 @@ export function DifficultySlider({ className, onUpdate }: DifficultySliderProps)
           onChange={handleSliderChange}
           className="absolute inset-0 w-full opacity-0 cursor-pointer z-10"
         />
-        
+
         {/* Sliding circle indicator */}
         <div 
           className="absolute w-6 h-6 bg-white border-2 border-gray-300 rounded-full shadow-md z-5 -translate-y-1/2"
@@ -89,45 +87,49 @@ export function DifficultySlider({ className, onUpdate }: DifficultySliderProps)
   );
 }
 
-// Dropdown component with the simplified difficulty selector
-export function DifficultyDropdown() {
+interface DifficultyDropdownProps {
+  onConfirm?: (difficulty: string) => Promise<void>;
+}
+
+export function DifficultyDropdown({ onConfirm }: DifficultyDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const { difficulty } = useDifficulty();
+  const { difficulty, setDifficulty } = useDifficulty();
   const { toast } = useToast();
-  const { currentContent, setCurrentContent } = useReading();
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Generate new content with the updated difficulty
-  const generateContentWithDifficulty = async () => {
+  // Handle OK button click
+  const handleConfirm = async () => {
     setIsGenerating(true);
     try {
-      // Get current topic if exists, otherwise use a default
-      const currentTopic = currentContent?.title?.split(' ').slice(0, 2).join(' ').toLowerCase() || 'random topics';
-      // Convert numeric difficulty to server format
-      const serverDifficulty = mapDifficultyToServer(difficulty);
+      // Validate difficulty
+      if (!/^[1-8]$/.test(difficulty)) {
+        console.error(`Invalid difficulty: ${difficulty}, defaulting to 1`);
+        toast({
+          title: 'Error',
+          description: 'Invalid difficulty level. Using level 1.',
+          variant: 'destructive',
+        });
+        setDifficulty('1');
+      }
 
-      // Show generating toast
-      toast({
-        title: `Updating Content`,
-        description: `Applying difficulty level ${difficulty}/8...`,
-      });
+      // Call the onConfirm callback if provided
+      if (onConfirm) {
+        await onConfirm(difficulty);
+      }
 
-      const content = await generateReadingContent(currentTopic, serverDifficulty);
-      setCurrentContent(content);
-      
       // Close the dropdown
       setIsOpen(false);
-      
+
       toast({
-        title: "Difficulty Updated",
+        title: 'Difficulty Updated',
         description: `Content now at level ${difficulty}/8`,
       });
     } catch (error) {
-      console.error("Error generating content:", error);
+      console.error('Error updating difficulty:', error);
       toast({
-        title: "Error",
-        description: "Failed to update content with new difficulty.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to update content with new difficulty.',
+        variant: 'destructive',
       });
     } finally {
       setIsGenerating(false);
@@ -143,22 +145,22 @@ export function DifficultyDropdown() {
         <span>Difficulty: {difficulty}/8</span>
         <Gauge className="h-4 w-4" />
       </button>
-      
+
       {isOpen && (
         <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-50">
           <div className="mb-3">
             <h3 className="font-medium">Adjust Difficulty</h3>
           </div>
-          
+
           <DifficultySlider />
-          
+
           <div className="mt-2 text-xs text-gray-500">
             Adjust the difficulty level to match your speech needs.
           </div>
-          
+
           <div className="flex justify-end mt-4">
             <Button 
-              onClick={generateContentWithDifficulty}
+              onClick={handleConfirm}
               disabled={isGenerating}
               className="bg-green-600 hover:bg-green-700 text-white"
             >
@@ -168,7 +170,7 @@ export function DifficultyDropdown() {
                   <RotateCw className="h-4 w-4 animate-spin" />
                 </>
               ) : (
-                "OK"
+                'OK'
               )}
             </Button>
           </div>
