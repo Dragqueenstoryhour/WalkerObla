@@ -24,57 +24,40 @@ import Account from "./pages/Account";
 import { DifficultyProvider, useDifficulty } from "./contexts/DifficultyContext";
 import { DifficultySelectionDialog } from "./components/difficulty/DifficultySelectionDialog";
 import { useEffect, useState } from "react";
+import { Gamepad, Book, Edit, Bookmark } from "lucide-react"; // Ensure your icons are imported
 
 function Navigation() {
   const { isAuthenticated, user } = useAuthContext();
-  
+
   return (
     <div className="bg-primary/5 border-b py-2 px-4 mb-4">
-      <div className="container flex gap-4 items-center">
-        <Link href="/game" className="text-primary hover:underline">
-          SpeakUp
+      <div className="container flex gap-4 items-center justify-center"> {/* Ensure items are centered */}
+        <Link href="/game" className="flex flex-col items-center text-primary hover:underline">
+          <Gamepad className="h-6 w-6" />
+          <span>SpeakUp</span>
         </Link>
-        <Link href="/" className="text-primary hover:underline">
-          ReadAssist
+        <Link href="/" className="flex flex-col items-center text-primary hover:underline">
+          <Book className="h-6 w-6" />
+          <span>ReadAssist</span>
         </Link>
-        <Link href="/new-phrases" className="text-primary hover:underline">
-          New Phrases
+        <Link href="/new-phrases" className="flex flex-col items-center text-primary hover:underline">
+          <Edit className="h-6 w-6" />
+          <span>New Phrases</span>
         </Link>
-        <Link href="/my-words" className="text-primary hover:underline">
-          My Words
+        <Link href="/my-words" className="flex flex-col items-center text-primary hover:underline">
+          <Bookmark className="h-6 w-6" />
+          <span>My Words</span>
         </Link>
-        {/* Animation and Azure Viseme links temporarily hidden
-        <Link href="/animation" className="text-primary hover:underline">
-          Animation
-        </Link>
-        <Link href="/azure-animation" className="text-primary hover:underline">
-          Azure Viseme
-        </Link>
-        */}
-        
-        <div className="ml-auto">
+
+        <div>
           <div className="flex items-center gap-2">
             {isAuthenticated && user ? (
               <Link href="/account" className="flex items-center gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 border-2 border-primary rounded-full flex items-center justify-center bg-primary text-primary-foreground">
-                    {user.username?.charAt(0).toUpperCase() || 'U'}
-                  </div>
-                  <div className="hidden md:flex flex-col">
-                    <span className="text-sm font-medium leading-none">
-                      {user.username || 'User'}
-                    </span>
-                    <span className="text-xs text-muted-foreground leading-none mt-1">
-                      Logged In
-                    </span>
-                  </div>
+                <div className="h-8 w-8 border-2 border-primary rounded-full flex items-center justify-center bg-primary text-primary-foreground">
+                  {user.username?.charAt(0).toUpperCase() || 'U'}
                 </div>
               </Link>
-            ) : (
-              <div className="ml-auto">
-                <AuthButtons showText={true} />
-              </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
