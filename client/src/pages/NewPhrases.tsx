@@ -1935,11 +1935,14 @@ I'd like to schedule an appointment."
 
         <TabsContent value="ai-generate" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Generate Phrases on Topic</CardTitle>
-              <CardDescription>
-                Let AI generate topic-specific phrases and words for practice
-              </CardDescription>
+            <CardHeader className="flex flex-row justify-between items-start space-y-0">
+              <div>
+                <CardTitle>Generate Phrases on Topic</CardTitle>
+                <CardDescription>
+                  Let AI generate topic-specific phrases and words for practice
+                </CardDescription>
+              </div>
+              <DifficultyDropdown />
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
