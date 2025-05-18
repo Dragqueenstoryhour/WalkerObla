@@ -16,8 +16,8 @@ import { useToast } from '@/hooks/use-toast';
 import useAudioRecording from '@/hooks/useAudioRecording';
 import { PronunciationAssessmentResult } from '@/lib/types';
 import { MicIcon, StopCircleIcon, VolumeIcon, RotateCw, Upload, CheckCircle, FileText, Image, AlertTriangle, BarChart2, Share2, Award, Users, Camera, Mic, Star, Volume2, Gauge } from 'lucide-react';
-import { DifficultyContext } from '@/contexts/DifficultyContext';
-import SimplifiedDifficultySelector from '@/components/difficulty/SimplifiedDifficultySelector';
+import { useDifficulty } from '@/contexts/DifficultyContext';
+import { DifficultyDropdown } from '@/components/difficulty/SimplifiedDifficultySelector';
 
 interface ProcessedPhrase {
   id: string;
@@ -35,7 +35,8 @@ export default function NewPhrases() {
   const { user } = useAuth();
   const params = useParams();
   const shareId = params.shareId; // Get the shared link ID from URL
-  const { difficulty, setDifficulty, isGenerating, setIsGenerating } = useContext(DifficultyContext);
+  const { difficulty, setDifficulty } = useDifficulty();
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const [manualEntryText, setManualEntryText] = useState('');
   const [imageUploadText, setImageUploadText] = useState('');
@@ -1585,7 +1586,7 @@ export default function NewPhrases() {
   };
 
   // Generate phrases on a specific topic
-  const handleGenerateTopicPhrases = async (topic: string, difficulty?: string) => {
+  const handleGenerateTopicPhrases = async (topic: string, customDifficulty?: string) => {
     if (!topic.trim()) {
       toast({
         title: 'No Topic Provided',
@@ -1596,7 +1597,7 @@ export default function NewPhrases() {
     }
 
     // Use the current difficulty from context if not provided
-    const difficultyToUse = difficulty || String(currentDifficulty);
+    const difficultyToUse = customDifficulty || difficulty;
     
     setIsProcessing(true);
 
