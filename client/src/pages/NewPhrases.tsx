@@ -2366,10 +2366,10 @@ I'd like to schedule an appointment."
                           <div className="flex items-center gap-2">
                             {renderDifficultyBadge(phrase.difficulty)}
                             <div className="flex gap-1">
-                              <div className="flex rounded-md overflow-hidden border border-green-500">
+                              <div className="flex rounded-md overflow-hidden border border-green-500 shadow-sm hover:shadow transition-all">
                                 <Button
                                   variant="ghost"
-                                  className={`px-3 py-1 flex items-center gap-1 hover:bg-green-50 transition-colors ${!slowPlaybackPhrases[phrase.id] ? "bg-green-50 text-green-700" : "text-green-600"}`}
+                                  className={`px-3 py-1 flex items-center gap-1 hover:bg-green-50 transition-all duration-200 ${!slowPlaybackPhrases[phrase.id] ? "bg-green-100 text-green-700 font-medium scale-105" : "text-green-600"}`}
                                   onClick={() => {
                                     setSlowPlaybackPhrases((prev) => ({
                                       ...prev,
@@ -2377,8 +2377,10 @@ I'd like to schedule an appointment."
                                     }));
                                     handleTextToSpeech(idx);
                                   }}
+                                  title="Play at normal speed"
                                 >
-                                  <VolumeIcon className="h-4 w-4" />
+                                  <VolumeIcon className="h-4 w-4 mr-1" />
+                                  Normal
                                 </Button>
                                 <Separator
                                   orientation="vertical"
@@ -2386,7 +2388,7 @@ I'd like to schedule an appointment."
                                 />
                                 <Button
                                   variant="ghost"
-                                  className={`px-3 py-1 flex items-center gap-1 hover:bg-green-50 transition-colors ${slowPlaybackPhrases[phrase.id] ? "bg-green-50 text-green-700" : "text-green-600"}`}
+                                  className={`px-3 py-1 flex items-center gap-1 hover:bg-green-50 transition-all duration-200 ${slowPlaybackPhrases[phrase.id] ? "bg-green-100 text-green-700 font-medium scale-105" : "text-green-600"}`}
                                   onClick={() => {
                                     setSlowPlaybackPhrases((prev) => ({
                                       ...prev,
@@ -2394,8 +2396,10 @@ I'd like to schedule an appointment."
                                     }));
                                     handleTextToSpeech(idx);
                                   }}
+                                  title="Play at half speed"
                                 >
-                                  <Turtle className="h-4 w-4" />
+                                  <Turtle className="h-4 w-4 mr-1" />
+                                  Slow
                                 </Button>
                               </div>
 
@@ -2687,7 +2691,6 @@ I'd like to schedule an appointment."
                           </div>
                         </div>
                       )}
-                            </div>
 
                             {/* Detailed scores breakdown */}
                             <div className="space-y-2 mb-3">
