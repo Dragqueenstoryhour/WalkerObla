@@ -302,11 +302,11 @@ export async function generateReadingContent(topic: string, difficulty: string):
         break;
       // Backward compatibility for older difficulty labels
       case "easy":
-        return generateReadingContent("1", topic);
+        return generateReadingContent(topic, "1");
       case "medium":
-        return generateReadingContent("4", topic);
+        return generateReadingContent(topic, "4");
       case "hard":
-        return generateReadingContent("7", topic);
+        return generateReadingContent(topic, "7");
     }
 
     const systemPrompt = `You are creating short, ${languageLevel} about "${topic}".
