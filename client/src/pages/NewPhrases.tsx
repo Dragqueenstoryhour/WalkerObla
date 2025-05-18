@@ -1227,19 +1227,14 @@ export default function NewPhrases() {
       return;
     }
 
-    // Show loading toast
     const loadingToast = toast({
       title: "Loading Audio",
       description: "Preparing text-to-speech...",
     });
 
-    // Check if we're already in slow playback mode for this phrase
     const isSlowPlayback = slowPlaybackPhrases[phrase.id] || false;
 
     try {
-      console.log(`Requesting speech synthesis for: "${phrase.text}"`);
-
-      // Call the TTS API
       const response = await fetch("/api/speech/synthesize", {
         method: "POST",
         headers: {
@@ -1249,104 +1244,59 @@ export default function NewPhrases() {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Speech synthesis error response:", errorText);
-        throw new Error(
-          `Failed to synthesize speech: ${response.status} ${response.statusText}`,
-        );
+        throw new Error(`Failed to synthesize speech: ${response.status}`);
       }
 
-      // Get audio blob from response
       const audioBlob = await response.blob();
-
-      // Check if we received valid audio data
       if (audioBlob.size === 0) {
         throw new Error("Received empty audio data");
       }
 
-      console.log(
-        `Received audio blob: ${audioBlob.size} bytes, type: ${audioBlob.type}`,
-      );
-
-      // Create an Object URL from the audio blob
       const audioUrl = URL.createObjectURL(audioBlob);
 
-      // Create a new Audio element if the ref is not set
       if (!audioRef.current) {
         audioRef.current = new Audio();
       }
 
-      // Set up error handling first
-      audioRef.current.onerror = (e) => {
-        console.error("Audio playback error:", e);
+      audioRef.current.onerror = () => {
         toast({
           title: "Playback Error",
           description: "Could not play the audio. Please try again.",
           variant: "destructive",
         });
-
-        // Clean up
         URL.revokeObjectURL(audioUrl);
       };
 
-      // Play when ready
       audioRef.current.oncanplaythrough = () => {
-        // Dismiss the loading toast
         loadingToast.dismiss?.();
-
-        // Set playback rate to 0.5 (half speed) for slow playback
         const audio = audioRef.current;
         if (audio) {
           audio.playbackRate = isSlowPlayback ? 0.5 : 1.0;
         }
-
-        audioRef.current
-          ?.play()
-          .then(() => {
-            // Update status to indicate we're now in slow playback mode for next time
-            setSlowPlaybackPhrases((prev) => ({
-              ...prev,
-              [phrase.id]: true, // Mark this phrase for slow playback next time
-            }));
-
-            toast({
-              title: isSlowPlayback ? "Playing Slowly" : "Playing",
-              description: `Playing: "${phrase.text.substring(0, 20)}${phrase.text.length > 20 ? "..." : ""}"`,
-            });
-          })
-          .catch((error) => {
-            console.error("Error playing TTS audio:", error);
-            toast({
-              title: "Playback Error",
-              description: "Could not play the audio. Please try again.",
-              variant: "destructive",
-            });
-
-            // Clean up
-            URL.revokeObjectURL(audioUrl);
+        audioRef.current?.play().then(() => {
+          toast({
+            title: isSlowPlayback ? "Playing Slowly" : "Playing",
+            description: `Playing: "${phrase.text.substring(0, 20)}${phrase.text.length > 20 ? "..." : ""}"`,
           });
+        }).catch((error) => {
+          toast({
+            title: "Playback Error",
+            description: "Could not play the audio. Please try again.",
+            variant: "destructive",
+          });
+          URL.revokeObjectURL(audioUrl);
+        });
       };
 
-      // Set source after adding event listeners
       audioRef.current.src = audioUrl;
-
-      // Add event listener for when playback ends to clean up resources
       audioRef.current.onended = () => {
-        // Clean up the Object URL to avoid memory leaks
         URL.revokeObjectURL(audioUrl);
       };
     } catch (error) {
-      console.error("TTS Error:", error);
-
-      // Dismiss the loading toast
       loadingToast.dismiss?.();
-
       toast({
         title: "TTS Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Could not generate audio for this phrase.",
+        description: error instanceof Error ? error.message : "Could not generate audio.",
         variant: "destructive",
       });
     }
@@ -1444,7 +1394,7 @@ export default function NewPhrases() {
                           ? "#2a9d8f"
                           : result.pronunciationScore >= 60
                             ? "#e9c46a"
-                            : "#e76f51",
+                            : "#e76f51"
                     }}
                   ></div>
                 </div>
@@ -2689,100 +2639,32 @@ I'd like to schedule an appointment."
                               </div>
                             )}
                           </div>
-                        </div>
-                      )}
 
-                            {/* Detailed scores breakdown */}
-                            <div className="space-y-2 mb-3">
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-sm">
-                                  <span className="font-medium">
-                                    Pronunciation
-                                  </span>
-                                  <span>
-                                    {Math.round(
-                                      phrase.assessmentResult
-                                        .pronunciationScore,
-                                    )}
-                                    %
-                                  </span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                  <div
-                                    className="h-2.5 rounded-full"
-                                    style={{
-                                      width: `${Math.round(phrase.assessmentResult.pronunciationScore)}%`,
-                                      backgroundColor:
-                                        phrase.assessmentResult
-                                          .pronunciationScore >= 80
-                                          ? "#2a9d8f"
-                                          : phrase.assessmentResult
-                                                .pronunciationScore >= 60
-                                            ? "#e9c46a"
-                                            : "#e76f51",
-                                    }}
-                                  ></div>
-                                </div>
-                              </div>
-
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-sm">
-                                  <span className="font-medium">Fluency</span>
-                                  <span>
-                                    {Math.round(
-                                      phrase.assessmentResult.fluencyScore,
-                                    )}
-                                    %
-                                  </span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                  <div
-                                    className="h-2.5 rounded-full"
-                                    style={{
-                                      width: `${Math.round(phrase.assessmentResult.fluencyScore)}%`,
-                                      backgroundColor:
-                                        phrase.assessmentResult.fluencyScore >=
-                                        80
-                                          ? "#2a9d8f"
-                                          : phrase.assessmentResult
-                                                .fluencyScore >= 60
-                                            ? "#e9c46a"
-                                            : "#e76f51",
-                                    }}
-                                  ></div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="flex justify-center gap-2 mt-4">
-                              <Button
-                                variant="outline"
-                                className="border-green-500 text-green-600 hover:bg-green-50"
-                                onClick={() => startPhrasePractice(idx)}
-                              >
-                                Try Again
-                              </Button>
-                              <Button
-                                variant="outline"
-                                onClick={() => setCurrentlyPracticing(null)}
-                              >
-                                Close
-                              </Button>
-                            </div>
+                          <div className="flex justify-center gap-2 mt-4">
+                            <Button
+                              variant="outline"
+                              className="border-green-500 text-green-600 hover:bg-green-50"
+                              onClick={() => startPhrasePractice(idx)}
+                            >
+                              Try Again
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => setCurrentlyPracticing(null)}
+                            >
+                              Close
+                            </Button>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  )}
+                      )}
                   </CardContent>
-                </Card>
-              ))}
-
-              {/* Add new phrase button */}
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => {
+                    </Card>
+                  ))}
+                  {/* Add new phrase button */}
+                  <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
                   setProcessedPhrases([
                     ...processedPhrases,
                     {
