@@ -18,6 +18,7 @@ import { PronunciationAssessmentResult } from '@/lib/types';
 import { MicIcon, StopCircleIcon, VolumeIcon, RotateCw, Upload, CheckCircle, FileText, Image, AlertTriangle, BarChart2, Share2, Award, Users, Camera, Mic, Star, Volume2, Gauge } from 'lucide-react';
 import { useDifficulty } from '@/contexts/DifficultyContext';
 import { DifficultyDropdown } from '@/components/difficulty/SimplifiedDifficultySelector';
+import { Turtle } from 'lucide-react';
 
 interface ProcessedPhrase {
   id: string;
@@ -968,12 +969,12 @@ export default function NewPhrases() {
         description: error instanceof Error ? error.message : 'Failed to generate shareable link. Please try again.',
         variant: 'destructive'
       });
-    } finally {
+    } finally{
       setIsProcessing(false);
     }
   };
 
-  // Save the current phrase to user's saved phrases
+  // Save the current phrase to user'ssaved phrases
   const handleSavePhrase = async () => {
     // Check if the user is authenticated via the API
     try {
@@ -1788,7 +1789,7 @@ I'd like to schedule an appointment."
                         controlContainer.style.bottom = '20px';
                         controlContainer.style.zIndex = '10000';
 
-                        // Add capture button
+                        //                        // Add capture button
                         const captureButton = document.createElement('button');
                         captureButton.textContent = 'Take Photo';
                         captureButton.style.margin = '0 5px';
@@ -1817,7 +1818,7 @@ I'd like to schedule an appointment."
                         closeButton.style.flex = '1';
                         controlContainer.appendChild(closeButton);
 
-                        modal.appendChild(controlContainer);
+                        modal.appendChild(controldiv);
 
                         document.body.appendChild(modal);
 
@@ -2066,16 +2067,29 @@ I'd like to schedule an appointment."
                           <div className="flex items-center gap-2">
                             {renderDifficultyBadge(phrase.difficulty)}
                             <div className="flex gap-1">
-                              <Button 
-                                variant="outline" 
-                                className="border-green-500 text-green-600 hover:bg-green-50 hover:text-green-700 flex items-center gap-1" 
-                                onClick={() => handleTextToSpeech(idx)}
-                              >
-                                <VolumeIcon className="h-4 w-4" />
-                                <span className="text-xs">
-                                  {slowPlaybackPhrases[phrase.id] ? 'Listen Again' : 'Listen'}
-                                </span>
-                              </Button>
+                              <div className="flex rounded-md overflow-hidden border border-green-500">
+                                <Button 
+                                  variant="ghost"
+                                  className={`px-3 py-1 flex items-center gap-1 hover:bg-green-50 transition-colors ${!slowPlaybackPhrases[phrase.id] ? 'bg-green-50 text-green-700' : 'text-green-600'}`}
+                                  onClick={() => {
+                                    setSlowPlaybackPhrases(prev => ({...prev, [phrase.id]: false}));
+                                    handleTextToSpeech(idx);
+                                  }}
+                                >
+                                  <VolumeIcon className="h-4 w-4" />
+                                </Button>
+                                <Separator orientation="vertical" className="bg-green-500" />
+                                <Button 
+                                  variant="ghost"
+                                  className={`px-3 py-1 flex items-center gap-1 hover:bg-green-50 transition-colors ${slowPlaybackPhrases[phrase.id] ? 'bg-green-50 text-green-700' : 'text-green-600'}`}
+                                  onClick={() => {
+                                    setSlowPlaybackPhrases(prev => ({...prev, [phrase.id]: true}));
+                                    handleTextToSpeech(idx);
+                                  }}
+                                >
+                                  <Turtle className="h-4 w-4" />
+                                </Button>
+                              </div>
 
                               <Button 
                                   variant="outline" 
