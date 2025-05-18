@@ -160,12 +160,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const schema = z.object({
         topic: z.string(),
+        difficulty: z.string().optional(),
       });
 
-      const { topic } = schema.parse(req.body);
+      const { topic, difficulty = "4" } = schema.parse(req.body);
       
-      // Use OpenAI to generate phrases related to the topic
-      const response = await openaiService.generateTopicPhrases(topic);
+      // Use OpenAI to generate phrases related to the topic with specified difficulty
+      const response = await openaiService.generateTopicPhrases(topic, difficulty);
       res.json({ phrases: response });
     } catch (error) {
       console.error('Error generating phrases:', error);

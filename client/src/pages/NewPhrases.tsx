@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import { useParams } from 'wouter';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,7 +15,9 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import useAudioRecording from '@/hooks/useAudioRecording';
 import { PronunciationAssessmentResult } from '@/lib/types';
-import { MicIcon, StopCircleIcon, VolumeIcon, RotateCw, Upload, CheckCircle, FileText, Image, AlertTriangle, BarChart2, Share2, Award, Users, Camera, Mic, Star, Volume2 } from 'lucide-react';
+import { MicIcon, StopCircleIcon, VolumeIcon, RotateCw, Upload, CheckCircle, FileText, Image, AlertTriangle, BarChart2, Share2, Award, Users, Camera, Mic, Star, Volume2, Gauge } from 'lucide-react';
+import { DifficultyContext } from '@/contexts/DifficultyContext';
+import SimplifiedDifficultySelector from '@/components/difficulty/SimplifiedDifficultySelector';
 
 interface ProcessedPhrase {
   id: string;
@@ -33,6 +35,7 @@ export default function NewPhrases() {
   const { user } = useAuth();
   const params = useParams();
   const shareId = params.shareId; // Get the shared link ID from URL
+  const { difficulty, setDifficulty, isGenerating, setIsGenerating } = useContext(DifficultyContext);
 
   const [manualEntryText, setManualEntryText] = useState('');
   const [imageUploadText, setImageUploadText] = useState('');
@@ -1582,7 +1585,7 @@ export default function NewPhrases() {
   };
 
   // Generate phrases on a specific topic
-  const handleGenerateTopicPhrases = async (topic: string) => {
+  const handleGenerateTopicPhrases = async (topic: string, difficulty?: string) => {
     if (!topic.trim()) {
       toast({
         title: 'No Topic Provided',
@@ -1592,6 +1595,9 @@ export default function NewPhrases() {
       return;
     }
 
+    // Use the current difficulty from context if not provided
+    const difficultyToUse = difficulty || String(currentDifficulty);
+    
     setIsProcessing(true);
 
     try {
@@ -1600,7 +1606,7 @@ export default function NewPhrases() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ topic }),
+        body: JSON.stringify({ topic, difficulty: difficultyToUse }),
       });
 
       if (!response.ok) {
