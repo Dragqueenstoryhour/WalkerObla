@@ -269,7 +269,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const topicPhrases = await openaiService.generateTopicPhrases(
             topic, 
             difficulty || "4", 
-            wordTypes
+            wordTypes,
+            syllableRange
           );
           phrases = [...phrases, ...topicPhrases.map(phrase => ({
             id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -283,7 +284,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const genericPhrases = await openaiService.generateTopicPhrases(
           "general conversation", 
           difficulty || "4",
-          wordTypes
+          wordTypes,
+          syllableRange
         );
         phrases = genericPhrases.map(phrase => ({
           id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
