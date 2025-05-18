@@ -1,34 +1,66 @@
-import React, { useState, useRef, useEffect, useContext } from 'react';
-import { useParams } from 'wouter';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/hooks/use-toast';
-import useAudioRecording from '@/hooks/useAudioRecording';
-import { PronunciationAssessmentResult } from '@/lib/types';
-import { MicIcon, StopCircleIcon, VolumeIcon, RotateCw, Upload, CheckCircle, FileText, Image, AlertTriangle, BarChart2, Share2, Award, Users, Camera, Mic, Star, Volume2, Gauge } from 'lucide-react';
-import { useDifficulty } from '@/contexts/DifficultyContext';
-import { DifficultyDropdown } from '@/components/difficulty/SimplifiedDifficultySelector';
-import { Turtle } from 'lucide-react';
+import React, { useState, useRef, useEffect, useContext } from "react";
+import { useParams } from "wouter";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import useAudioRecording from "@/hooks/useAudioRecording";
+import { PronunciationAssessmentResult } from "@/lib/types";
+import {
+  MicIcon,
+  StopCircleIcon,
+  VolumeIcon,
+  RotateCw,
+  Upload,
+  CheckCircle,
+  FileText,
+  Image,
+  AlertTriangle,
+  BarChart2,
+  Share2,
+  Award,
+  Users,
+  Camera,
+  Mic,
+  Star,
+  Volume2,
+  Gauge,
+} from "lucide-react";
+import { useDifficulty } from "@/contexts/DifficultyContext";
+import { DifficultyDropdown } from "@/components/difficulty/SimplifiedDifficultySelector";
+import { Turtle } from "lucide-react";
 
 interface ProcessedPhrase {
   id: string;
   text: string;
   phonetic?: string;
-  difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  difficulty?: "beginner" | "intermediate" | "advanced";
   recordingUrl?: string | null; // Allow null here to handle audio URLs
   recordingBlob?: Blob;
   assessmentResult?: PronunciationAssessmentResult;
-  status: 'idle' | 'recording' | 'assessing' | 'complete';
+  status: "idle" | "recording" | "assessing" | "complete";
 }
 
 export default function NewPhrases() {
@@ -39,22 +71,30 @@ export default function NewPhrases() {
   const { difficulty, setDifficulty } = useDifficulty();
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const [manualEntryText, setManualEntryText] = useState('');
-  const [imageUploadText, setImageUploadText] = useState('');
-  const [aiGenerateTopic, setAiGenerateTopic] = useState('Commonly Used Phrases');
-  const [processedPhrases, setProcessedPhrases] = useState<ProcessedPhrase[]>([]);
+  const [manualEntryText, setManualEntryText] = useState("");
+  const [imageUploadText, setImageUploadText] = useState("");
+  const [aiGenerateTopic, setAiGenerateTopic] = useState(
+    "Commonly Used Phrases",
+  );
+  const [processedPhrases, setProcessedPhrases] = useState<ProcessedPhrase[]>(
+    [],
+  );
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(-1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentProgress, setCurrentProgress] = useState(0);
-  const [historyData, setHistoryData] = useState<{date: string, score: number}[]>([]);
+  const [historyData, setHistoryData] = useState<
+    { date: string; score: number }[]
+  >([]);
   const [savedPhraseId, setSavedPhraseId] = useState<string | null>(null);
-  const [shareableLink, setShareableLink] = useState('');
+  const [shareableLink, setShareableLink] = useState("");
   const [showSharedDialog, setShowSharedDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // State for phrase practice
-  const [currentlyPracticing, setCurrentlyPracticing] = useState<string | null>(null);
+  const [currentlyPracticing, setCurrentlyPracticing] = useState<string | null>(
+    null,
+  );
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingRecording, setIsProcessingRecording] = useState(false);
   const [wordAssessmentResult, setWordAssessmentResult] = useState<any>(null);
@@ -65,51 +105,56 @@ export default function NewPhrases() {
   const chunksRef = useRef<Blob[]>([]);
 
   // Use our audio recording hook for the main recording functionality
-  const { 
-    recordingDuration, 
-    audioUrl, 
-    startRecording: startMainRecording, 
+  const {
+    recordingDuration,
+    audioUrl,
+    startRecording: startMainRecording,
     stopRecording: stopMainRecording,
-    audioBlob
+    audioBlob,
   } = useAudioRecording({
     onError: (error) => {
-      console.error('Recording error:', error);
+      console.error("Recording error:", error);
       toast({
-        title: 'Recording Error',
-        description: 'Could not access microphone. Please check your browser permissions.',
-        variant: 'destructive'
+        title: "Recording Error",
+        description:
+          "Could not access microphone. Please check your browser permissions.",
+        variant: "destructive",
       });
-    }
+    },
   });
 
   // Set up history data and load initial phrases for "Commonly Used Phrases"
   useEffect(() => {
     // Set up some sample history data for visualization
     setHistoryData([
-      { date: '2025-04-28', score: 65 },
-      { date: '2025-04-29', score: 68 },
-      { date: '2025-04-30', score: 72 },
-      { date: '2025-05-01', score: 75 },
-      { date: '2025-05-02', score: 81 },
-      { date: '2025-05-03', score: 79 },
-      { date: '2025-05-04', score: 84 },
+      { date: "2025-04-28", score: 65 },
+      { date: "2025-04-29", score: 68 },
+      { date: "2025-04-30", score: 72 },
+      { date: "2025-05-01", score: 75 },
+      { date: "2025-05-02", score: 81 },
+      { date: "2025-05-03", score: 79 },
+      { date: "2025-05-04", score: 84 },
     ]);
 
     // ... (rest of the useEffect content remains unchanged)
 
     // Auto-load commonly used phrases when the page opens
-    if (!shareId) { // Only if we're not loading shared phrases
-      handleGenerateTopicPhrases('Commonly Used Phrases');
+    if (!shareId) {
+      // Only if we're not loading shared phrases
+      handleGenerateTopicPhrases("Commonly Used Phrases");
     }
 
     // Cleanup function to handle any lingering recording sessions
     return () => {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== "inactive"
+      ) {
         mediaRecorderRef.current.stop();
       }
 
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
   }, []); // Removed handleGenerateTopicPhrases from dependencies
@@ -126,58 +171,64 @@ export default function NewPhrases() {
         const response = await fetch(`/api/share/${shareId}`);
 
         if (!response.ok) {
-          throw new Error('Failed to load shared phrases');
+          throw new Error("Failed to load shared phrases");
         }
 
         const data = await response.json();
         if (!data.collection || !data.collection.phrases) {
-          throw new Error('Invalid shared phrases data');
+          throw new Error("Invalid shared phrases data");
         }
 
         // Process the phrases from the database
         let phrasesData;
         try {
           // Attempt to parse if it's a string, or use directly if already an object
-          phrasesData = typeof data.collection.phrases === 'string'
-            ? JSON.parse(data.collection.phrases)
-            : data.collection.phrases;
+          phrasesData =
+            typeof data.collection.phrases === "string"
+              ? JSON.parse(data.collection.phrases)
+              : data.collection.phrases;
 
           if (!Array.isArray(phrasesData)) {
             phrasesData = [phrasesData]; // Convert to array if it's a single object
           }
         } catch (parseError) {
-          console.error('Error parsing phrases data:', parseError);
-          throw new Error('Invalid shared phrases format');
+          console.error("Error parsing phrases data:", parseError);
+          throw new Error("Invalid shared phrases format");
         }
 
         // Format the phrases for use in the component
-        const newPhrases: ProcessedPhrase[] = phrasesData.map((phrase: any, index: number) => ({
-          id: `shared-${Date.now()}-${index}`,
-          text: phrase.text || '',
-          phonetic: phrase.phonetic || undefined,
-          difficulty: phrase.difficulty || undefined,
-          status: 'idle'
-        }));
+        const newPhrases: ProcessedPhrase[] = phrasesData.map(
+          (phrase: any, index: number) => ({
+            id: `shared-${Date.now()}-${index}`,
+            text: phrase.text || "",
+            phonetic: phrase.phonetic || undefined,
+            difficulty: phrase.difficulty || undefined,
+            status: "idle",
+          }),
+        );
 
         if (newPhrases.length > 0) {
-          console.log('Loaded shared phrases:', newPhrases);
+          console.log("Loaded shared phrases:", newPhrases);
           setProcessedPhrases(newPhrases);
           setCurrentPhraseIndex(0); // Select first phrase
           setShowSharedDialog(true); // Show the shared phrases notification
 
           toast({
-            title: 'Shared Phrases Loaded',
+            title: "Shared Phrases Loaded",
             description: `Loaded ${newPhrases.length} shared phrases for practice.`,
           });
         } else {
-          throw new Error('No phrases found in this shared collection');
+          throw new Error("No phrases found in this shared collection");
         }
       } catch (error) {
-        console.error('Error loading shared phrases:', error);
+        console.error("Error loading shared phrases:", error);
         toast({
-          title: 'Error Loading Shared Phrases',
-          description: error instanceof Error ? error.message : 'Failed to load shared phrases',
-          variant: 'destructive'
+          title: "Error Loading Shared Phrases",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Failed to load shared phrases",
+          variant: "destructive",
         });
       } finally {
         setIsProcessing(false);
@@ -191,9 +242,9 @@ export default function NewPhrases() {
   const handleProcessManualText = async () => {
     if (!manualEntryText.trim()) {
       toast({
-        title: 'No Text Provided',
-        description: 'Please enter phrases to process.',
-        variant: 'destructive'
+        title: "No Text Provided",
+        description: "Please enter phrases to process.",
+        variant: "destructive",
       });
       return;
     }
@@ -202,45 +253,49 @@ export default function NewPhrases() {
 
     try {
       // Split text by newlines and filter out empty lines
-      const lines = manualEntryText.split('\n').filter(line => line.trim().length > 0);
+      const lines = manualEntryText
+        .split("\n")
+        .filter((line) => line.trim().length > 0);
 
       // Prepare for OpenAI processing
-      const response = await fetch('/api/content/process-phrases', {
-        method: 'POST',
+      const response = await fetch("/api/content/process-phrases", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ phrases: lines }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to process phrases');
+        throw new Error("Failed to process phrases");
       }
 
       const processedData = await response.json();
 
       // Format the processed phrases
-      const newPhrases: ProcessedPhrase[] = processedData.phrases.map((phrase: any, index: number) => ({
-        id: `phrase-${Date.now()}-${index}`,
-        text: phrase.text,
-        phonetic: phrase.phonetic,
-        difficulty: phrase.difficulty,
-        status: 'idle'
-      }));
+      const newPhrases: ProcessedPhrase[] = processedData.phrases.map(
+        (phrase: any, index: number) => ({
+          id: `phrase-${Date.now()}-${index}`,
+          text: phrase.text,
+          phonetic: phrase.phonetic,
+          difficulty: phrase.difficulty,
+          status: "idle",
+        }),
+      );
 
       setProcessedPhrases(newPhrases);
       setCurrentPhraseIndex(0); // Select first phrase
 
       toast({
-        title: 'Processing Complete',
+        title: "Processing Complete",
         description: `${newPhrases.length} phrases are ready for practice.`,
       });
     } catch (error) {
-      console.error('Error processing phrases:', error);
+      console.error("Error processing phrases:", error);
       toast({
-        title: 'Processing Error',
-        description: 'Failed to process phrases. Please try again.',
-        variant: 'destructive'
+        title: "Processing Error",
+        description: "Failed to process phrases. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
@@ -248,70 +303,81 @@ export default function NewPhrases() {
   };
 
   // Handle file upload (images/PDFs)
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     // Check file type - be more permissive with image formats
     // Accept any image type (including HEIC from iPhone and other formats)
-    const isImage = file.type.startsWith('image/') || 
-                  file.name.toLowerCase().endsWith('.heic') || 
-                  file.name.toLowerCase().endsWith('.heif');
-    const isPdf = file.type === 'application/pdf';
+    const isImage =
+      file.type.startsWith("image/") ||
+      file.name.toLowerCase().endsWith(".heic") ||
+      file.name.toLowerCase().endsWith(".heif");
+    const isPdf = file.type === "application/pdf";
 
     // More detailed logging for debugging file types
     console.log(`Processing file: ${file.name}, type: ${file.type}`);
 
     if (!isImage && !isPdf) {
       toast({
-        title: 'Invalid File Type',
-        description: 'Please upload an image (JPG, PNG, HEIC, etc.) or PDF file.',
-        variant: 'destructive'
+        title: "Invalid File Type",
+        description:
+          "Please upload an image (JPG, PNG, HEIC, etc.) or PDF file.",
+        variant: "destructive",
       });
       return;
     }
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
     setIsProcessing(true);
 
     try {
       // Send the file for OCR processing
-      const response = await fetch('/api/content/ocr', {
-        method: 'POST',
+      const response = await fetch("/api/content/ocr", {
+        method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error('Failed to process file');
+        throw new Error("Failed to process file");
       }
 
       const result = await response.json();
 
       // Check if the response contains an error (like an AI refusal) rather than actual text
-      const lowerCaseText = result.text?.toLowerCase() || '';
-      const containsError = lowerCaseText.includes("i'm sorry") || 
-                         lowerCaseText.includes("i can't") || 
-                         lowerCaseText.includes("unable to");
+      const lowerCaseText = result.text?.toLowerCase() || "";
+      const containsError =
+        lowerCaseText.includes("i'm sorry") ||
+        lowerCaseText.includes("i can't") ||
+        lowerCaseText.includes("unable to");
 
       if (result.text && !containsError) {
         setImageUploadText(result.text);
         toast({
-          title: 'Text Extracted',
-          description: 'Text successfully extracted from file. You can now process it.',
+          title: "Text Extracted",
+          description:
+            "Text successfully extracted from file. You can now process it.",
         });
       } else if (containsError) {
-        throw new Error('The system could not process this image properly. Please try a different image.');
+        throw new Error(
+          "The system could not process this image properly. Please try a different image.",
+        );
       } else {
-        throw new Error('No text found in the file');
+        throw new Error("No text found in the file");
       }
     } catch (error) {
-      console.error('Error processing file:', error);
+      console.error("Error processing file:", error);
       toast({
-        title: 'Processing Error',
-        description: error instanceof Error ? error.message : 'Failed to extract text from file. Please try again.',
-        variant: 'destructive'
+        title: "Processing Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to extract text from file. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
@@ -322,78 +388,87 @@ export default function NewPhrases() {
   const handleFileSelection = (file: File) => {
     // Check file type - be more permissive with image formats
     // Accept any image type (including HEIC from iPhone and other formats)
-    const isImage = file.type.startsWith('image/') || 
-                  file.name.toLowerCase().endsWith('.heic') || 
-                  file.name.toLowerCase().endsWith('.heif');
-    const isPdf = file.type === 'application/pdf';
+    const isImage =
+      file.type.startsWith("image/") ||
+      file.name.toLowerCase().endsWith(".heic") ||
+      file.name.toLowerCase().endsWith(".heif");
+    const isPdf = file.type === "application/pdf";
 
     // More detailed logging for debugging file types
     console.log(`Processing selected file: ${file.name}, type: ${file.type}`);
 
     if (!isImage && !isPdf) {
       toast({
-        title: 'Invalid File Type',
-        description: 'Please upload an image (JPG, PNG, HEIC, etc.) or PDF file.',
-        variant: 'destructive'
+        title: "Invalid File Type",
+        description:
+          "Please upload an image (JPG, PNG, HEIC, etc.) or PDF file.",
+        variant: "destructive",
       });
       return;
     }
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
     setIsProcessing(true);
 
     // Send the file for OCR processing
-    fetch('/api/content/ocr', {
-      method: 'POST',
+    fetch("/api/content/ocr", {
+      method: "POST",
       body: formData,
     })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('Failed to process file');
-      }
-      return response.json();
-    })
-    .then(result => {
-      // Check if the response contains an error (like an AI refusal) rather than actual text
-      const lowerCaseText = result.text?.toLowerCase() || '';
-      const containsError = lowerCaseText.includes("i'm sorry") || 
-                         lowerCaseText.includes("i can't") || 
-                         lowerCaseText.includes("unable to");
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to process file");
+        }
+        return response.json();
+      })
+      .then((result) => {
+        // Check if the response contains an error (like an AI refusal) rather than actual text
+        const lowerCaseText = result.text?.toLowerCase() || "";
+        const containsError =
+          lowerCaseText.includes("i'm sorry") ||
+          lowerCaseText.includes("i can't") ||
+          lowerCaseText.includes("unable to");
 
-      if (result.text && !containsError) {
-        setImageUploadText(result.text);
+        if (result.text && !containsError) {
+          setImageUploadText(result.text);
+          toast({
+            title: "Text Extracted",
+            description:
+              "Text successfully extracted from file. You can now process it.",
+          });
+        } else if (containsError) {
+          throw new Error(
+            "The system could not process this image properly. Please try a different image.",
+          );
+        } else {
+          throw new Error("No text found in the file");
+        }
+      })
+      .catch((error) => {
+        console.error("Error processing file:", error);
         toast({
-          title: 'Text Extracted',
-          description: 'Text successfully extracted from file. You can now process it.',
+          title: "Processing Error",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Failed to extract text from file. Please try again.",
+          variant: "destructive",
         });
-      } else if (containsError) {
-        throw new Error('The system could not process this image properly. Please try a different image.');
-      } else {
-        throw new Error('No text found in the file');
-      }
-    })
-    .catch(error => {
-      console.error('Error processing file:', error);
-      toast({
-        title: 'Processing Error',
-        description: error instanceof Error ? error.message : 'Failed to extract text from file. Please try again.',
-        variant: 'destructive'
+      })
+      .finally(() => {
+        setIsProcessing(false);
       });
-    })
-    .finally(() => {
-      setIsProcessing(false);
-    });
   };
 
   // Process text from OCR results
   const handleProcessImageText = async () => {
     if (!imageUploadText.trim()) {
       toast({
-        title: 'No Text Available',
-        description: 'Please upload an image or PDF first.',
-        variant: 'destructive'
+        title: "No Text Available",
+        description: "Please upload an image or PDF first.",
+        variant: "destructive",
       });
       return;
     }
@@ -402,45 +477,49 @@ export default function NewPhrases() {
 
     try {
       // Split text by newlines and filter out empty lines
-      const lines = imageUploadText.split('\n').filter(line => line.trim().length > 0);
+      const lines = imageUploadText
+        .split("\n")
+        .filter((line) => line.trim().length > 0);
 
       // Prepare for OpenAI processing
-      const response = await fetch('/api/content/process-phrases', {
-        method: 'POST',
+      const response = await fetch("/api/content/process-phrases", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ phrases: lines }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to process phrases');
+        throw new Error("Failed to process phrases");
       }
 
       const processedData = await response.json();
 
       // Format the processed phrases
-      const newPhrases: ProcessedPhrase[] = processedData.phrases.map((phrase: any, index: number) => ({
-        id: `phrase-${Date.now()}-${index}`,
-        text: phrase.text,
-        phonetic: phrase.phonetic,
-        difficulty: phrase.difficulty,
-        status: 'idle'
-      }));
+      const newPhrases: ProcessedPhrase[] = processedData.phrases.map(
+        (phrase: any, index: number) => ({
+          id: `phrase-${Date.now()}-${index}`,
+          text: phrase.text,
+          phonetic: phrase.phonetic,
+          difficulty: phrase.difficulty,
+          status: "idle",
+        }),
+      );
 
       setProcessedPhrases(newPhrases);
       setCurrentPhraseIndex(0); // Select first phrase
 
       toast({
-        title: 'Processing Complete',
+        title: "Processing Complete",
         description: `${newPhrases.length} phrases are ready for practice.`,
       });
     } catch (error) {
-      console.error('Error processing phrases:', error);
+      console.error("Error processing phrases:", error);
       toast({
-        title: 'Processing Error',
-        description: 'Failed to process phrases. Please try again.',
-        variant: 'destructive'
+        title: "Processing Error",
+        description: "Failed to process phrases. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
@@ -459,12 +538,10 @@ export default function NewPhrases() {
       chunksRef.current = [];
 
       // Update the phrase status to recording
-      setProcessedPhrases(phrases => 
-        phrases.map((p, idx) => 
-          idx === phraseIndex 
-            ? { ...p, status: 'recording' } 
-            : p
-        )
+      setProcessedPhrases((phrases) =>
+        phrases.map((p, idx) =>
+          idx === phraseIndex ? { ...p, status: "recording" } : p,
+        ),
       );
 
       // Get microphone access
@@ -487,33 +564,31 @@ export default function NewPhrases() {
         // Clean up the stream properly
         if (streamRef.current) {
           const tracks = streamRef.current.getTracks();
-          tracks.forEach(track => track.stop());
+          tracks.forEach((track) => track.stop());
           streamRef.current = null;
         }
 
         try {
           // Create audio blob
-          const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+          const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
 
           // Process the phrase recording
           await processPhraseRecording(audioBlob, phraseIndex);
         } catch (error) {
-          console.error('Error processing phrase recording:', error);
+          console.error("Error processing phrase recording:", error);
           toast({
-            title: 'Recording Error',
-            description: 'Could not process the recording. Please try again.',
-            variant: 'destructive'
+            title: "Recording Error",
+            description: "Could not process the recording. Please try again.",
+            variant: "destructive",
           });
           setIsRecording(false);
           setIsProcessingRecording(false);
 
           // Reset phrase status
-          setProcessedPhrases(phrases => 
-            phrases.map((p, idx) => 
-              idx === phraseIndex 
-                ? { ...p, status: 'idle' } 
-                : p
-            )
+          setProcessedPhrases((phrases) =>
+            phrases.map((p, idx) =>
+              idx === phraseIndex ? { ...p, status: "idle" } : p,
+            ),
           );
         }
       };
@@ -523,38 +598,40 @@ export default function NewPhrases() {
       setIsRecording(true);
 
       toast({
-        title: 'Recording Started',
+        title: "Recording Started",
         description: `Say the phrase clearly`,
       });
     } catch (error) {
-      console.error('Error starting recording:', error);
+      console.error("Error starting recording:", error);
       toast({
-        title: 'Microphone Error',
-        description: 'Could not access the microphone. Please check permissions.',
-        variant: 'destructive'
+        title: "Microphone Error",
+        description:
+          "Could not access the microphone. Please check permissions.",
+        variant: "destructive",
       });
       setCurrentlyPracticing(null);
 
       // Reset phrase status
-      setProcessedPhrases(phrases => 
-        phrases.map((p, idx) => 
-          idx === phraseIndex 
-            ? { ...p, status: 'idle' } 
-            : p
-        )
+      setProcessedPhrases((phrases) =>
+        phrases.map((p, idx) =>
+          idx === phraseIndex ? { ...p, status: "idle" } : p,
+        ),
       );
     }
   };
 
   // Stop recording the phrase
   const stopPhrasePractice = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
       mediaRecorderRef.current.stop();
     }
 
     // Make sure we clean up streams even if recorder fails
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
 
@@ -562,24 +639,25 @@ export default function NewPhrases() {
   };
 
   // Process phrase recording with Azure
-  const processPhraseRecording = async (audioBlob: Blob, phraseIndex: number) => {
+  const processPhraseRecording = async (
+    audioBlob: Blob,
+    phraseIndex: number,
+  ) => {
     setIsProcessingRecording(true);
 
     try {
       const phrase = processedPhrases[phraseIndex];
 
       // Update status to assessing
-      setProcessedPhrases(phrases => 
-        phrases.map((p, idx) => 
-          idx === phraseIndex 
-            ? { ...p, status: 'assessing' } 
-            : p
-        )
+      setProcessedPhrases((phrases) =>
+        phrases.map((p, idx) =>
+          idx === phraseIndex ? { ...p, status: "assessing" } : p,
+        ),
       );
 
       toast({
-        title: 'Processing Recording',
-        description: 'Analyzing your pronunciation...'
+        title: "Processing Recording",
+        description: "Analyzing your pronunciation...",
       });
 
       // Create a URL for the recording
@@ -587,71 +665,71 @@ export default function NewPhrases() {
 
       // Send to Azure Speech for assessment
       const formData = new FormData();
-      formData.append('audio', audioBlob);
-      formData.append('text', phrase.text);
+      formData.append("audio", audioBlob);
+      formData.append("text", phrase.text);
 
-      const response = await fetch('/api/pronunciation/assess', {
-        method: 'POST',
+      const response = await fetch("/api/pronunciation/assess", {
+        method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error('Failed to assess pronunciation');
+        throw new Error("Failed to assess pronunciation");
       }
 
       const result = await response.json();
-      console.log('Received assessment results:', result);
+      console.log("Received assessment results:", result);
 
       // Validate the result has expected properties
-      if (typeof result.pronunciationScore !== 'number') {
-        throw new Error('Invalid assessment result format');
+      if (typeof result.pronunciationScore !== "number") {
+        throw new Error("Invalid assessment result format");
       }
 
       // Update with results - both in the word assessment state and in the phrases
       setWordAssessmentResult(result);
 
       // Also update in the phrases array
-      setProcessedPhrases(phrases => 
-        phrases.map((p, idx) => 
-          idx === phraseIndex 
-            ? { 
-                ...p, 
-                status: 'complete', 
+      setProcessedPhrases((phrases) =>
+        phrases.map((p, idx) =>
+          idx === phraseIndex
+            ? {
+                ...p,
+                status: "complete",
                 assessmentResult: result,
                 recordingBlob: audioBlob,
-                recordingUrl
-              } 
-            : p
-        )
+                recordingUrl,
+              }
+            : p,
+        ),
       );
 
       // Add to history
       const today = new Date().toLocaleDateString();
-      setHistoryData(prev => [...prev, {
-        date: today,
-        score: result.pronunciationScore
-      }]);
+      setHistoryData((prev) => [
+        ...prev,
+        {
+          date: today,
+          score: result.pronunciationScore,
+        },
+      ]);
 
       toast({
-        title: 'Analysis Complete',
-        description: `Pronunciation: ${result.pronunciationScore.toFixed(1)}%`
+        title: "Analysis Complete",
+        description: `Pronunciation: ${result.pronunciationScore.toFixed(1)}%`,
       });
-
     } catch (error) {
-      console.error('Error assessing word pronunciation:', error);
+      console.error("Error assessing word pronunciation:", error);
       toast({
-        title: 'Assessment Error',
-        description: 'Could not analyze your speech. Please try again.',
-        variant: 'destructive'
+        title: "Assessment Error",
+        description: "Could not analyze your speech. Please try again.",
+        variant: "destructive",
       });
 
       // Reset status to idle
-      setProcessedPhrases(phrases => 
-        phrases.map((p, idx) => 
-          idx === phraseIndex 
-            ? { ...p, status: 'idle' } 
-            : p
-        )
+      setProcessedPhrases((phrases) =>
+        phrases.map((p, idx) =>
+          idx === phraseIndex ? { ...p, status: "idle" } : p,
+        ),
       );
     } finally {
       setIsProcessingRecording(false);
@@ -661,23 +739,24 @@ export default function NewPhrases() {
   // Cancel phrase practice
   const cancelPhrasePractice = (phraseIndex: number) => {
     // Stop any ongoing recording
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
       mediaRecorderRef.current.stop();
     }
 
     // Clean up resources
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
 
     // Reset phrase status
-    setProcessedPhrases(phrases => 
-      phrases.map((p, idx) => 
-        idx === phraseIndex 
-          ? { ...p, status: 'idle' } 
-          : p
-      )
+    setProcessedPhrases((phrases) =>
+      phrases.map((p, idx) =>
+        idx === phraseIndex ? { ...p, status: "idle" } : p,
+      ),
     );
 
     // Reset state
@@ -689,15 +768,16 @@ export default function NewPhrases() {
 
   // Legacy functions for compatibility with old UI references
   const handleStartRecording = () => {
-    if (currentPhraseIndex < 0 || currentPhraseIndex >= processedPhrases.length) return;
+    if (currentPhraseIndex < 0 || currentPhraseIndex >= processedPhrases.length)
+      return;
 
     // Update the current phrase status
-    setProcessedPhrases(phrases => 
-      phrases.map((phrase, idx) => 
-        idx === currentPhraseIndex 
-          ? { ...phrase, status: 'recording' } 
-          : phrase
-      )
+    setProcessedPhrases((phrases) =>
+      phrases.map((phrase, idx) =>
+        idx === currentPhraseIndex
+          ? { ...phrase, status: "recording" }
+          : phrase,
+      ),
     );
 
     startMainRecording();
@@ -705,55 +785,70 @@ export default function NewPhrases() {
 
   // Legacy function for compatibility
   const handleStopRecording = async () => {
-    if (currentPhraseIndex < 0 || currentPhraseIndex >= processedPhrases.length) return;
+    if (currentPhraseIndex < 0 || currentPhraseIndex >= processedPhrases.length)
+      return;
 
     stopMainRecording();
 
     // Wait for audioBlob to be available
     setTimeout(async () => {
       if (!audioBlob) {
-        console.error('No audio blob available after stopping recording');
+        console.error("No audio blob available after stopping recording");
         toast({
-          title: 'Sounds Great!',
-          description: 'Now let\'s get started with your practice. Please try again.',
-          variant: 'default'
+          title: "Sounds Great!",
+          description:
+            "Now let's get started with your practice. Please try again.",
+          variant: "default",
         });
         return;
       }
 
-      console.log('Processing recording with text:', processedPhrases[currentPhraseIndex].text);
-      console.log('Audio URL available:', !!audioUrl, 'Audio blob size:', audioBlob.size);
+      console.log(
+        "Processing recording with text:",
+        processedPhrases[currentPhraseIndex].text,
+      );
+      console.log(
+        "Audio URL available:",
+        !!audioUrl,
+        "Audio blob size:",
+        audioBlob.size,
+      );
 
       // Update status to assessing
-      setProcessedPhrases(phrases => 
-        phrases.map((phrase, idx) => 
-          idx === currentPhraseIndex 
-            ? { ...phrase, status: 'assessing', recordingBlob: audioBlob, recordingUrl: audioUrl } 
-            : phrase
-        )
+      setProcessedPhrases((phrases) =>
+        phrases.map((phrase, idx) =>
+          idx === currentPhraseIndex
+            ? {
+                ...phrase,
+                status: "assessing",
+                recordingBlob: audioBlob,
+                recordingUrl: audioUrl,
+              }
+            : phrase,
+        ),
       );
 
       try {
         // Send the recording for assessment
         const formData = new FormData();
-        formData.append('audio', audioBlob);
-        formData.append('text', processedPhrases[currentPhraseIndex].text);
+        formData.append("audio", audioBlob);
+        formData.append("text", processedPhrases[currentPhraseIndex].text);
 
-        const response = await fetch('/api/pronunciation/assess', {
-          method: 'POST',
+        const response = await fetch("/api/pronunciation/assess", {
+          method: "POST",
           body: formData,
         });
 
         if (!response.ok) {
-          throw new Error('Failed to assess pronunciation');
+          throw new Error("Failed to assess pronunciation");
         }
 
         const result = await response.json();
-        console.log('Received assessment results:', result);
+        console.log("Received assessment results:", result);
 
         // Validate the result has expected properties
-        if (typeof result.pronunciationScore !== 'number') {
-          throw new Error('Invalid assessment result format');
+        if (typeof result.pronunciationScore !== "number") {
+          throw new Error("Invalid assessment result format");
         }
 
         // Update the phrase with assessment results, but set currentlyPracticing
@@ -762,8 +857,8 @@ export default function NewPhrases() {
         if (updatedPhrases[currentPhraseIndex]) {
           updatedPhrases[currentPhraseIndex] = {
             ...updatedPhrases[currentPhraseIndex],
-            status: 'complete',
-            assessmentResult: result
+            status: "complete",
+            assessmentResult: result,
           };
 
           // Set this phrase as currently being practiced to show detailed results
@@ -772,33 +867,37 @@ export default function NewPhrases() {
         }
 
         // Add to history data
-        setHistoryData(prev => [
-          ...prev, 
-          { date: new Date().toISOString().split('T')[0], score: Math.round(result.pronunciationScore) }
+        setHistoryData((prev) => [
+          ...prev,
+          {
+            date: new Date().toISOString().split("T")[0],
+            score: Math.round(result.pronunciationScore),
+          },
         ]);
 
         // If score is really good, show a toast as well
         if (result.pronunciationScore >= 90) {
           toast({
-            title: 'Excellent Pronunciation!',
+            title: "Excellent Pronunciation!",
             description: `You scored ${Math.round(result.pronunciationScore)}%!`,
           });
         }
       } catch (error) {
-        console.error('Error assessing pronunciation:', error);
+        console.error("Error assessing pronunciation:", error);
         toast({
-          title: 'Assessment Error',
-          description: error instanceof Error ? error.message : 'Failed to assess pronunciation. Please try again.',
-          variant: 'destructive'
+          title: "Assessment Error",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Failed to assess pronunciation. Please try again.",
+          variant: "destructive",
         });
 
         // Reset status to idle
-        setProcessedPhrases(phrases => 
-          phrases.map((phrase, idx) => 
-            idx === currentPhraseIndex 
-              ? { ...phrase, status: 'idle' } 
-              : phrase
-          )
+        setProcessedPhrases((phrases) =>
+          phrases.map((phrase, idx) =>
+            idx === currentPhraseIndex ? { ...phrase, status: "idle" } : phrase,
+          ),
         );
       }
     }, 500);
@@ -806,45 +905,50 @@ export default function NewPhrases() {
 
   // Generate similar phrases using LLM
   const handleGenerateSimilar = async () => {
-    if (currentPhraseIndex < 0 || currentPhraseIndex >= processedPhrases.length) return;
+    if (currentPhraseIndex < 0 || currentPhraseIndex >= processedPhrases.length)
+      return;
 
     setIsProcessing(true);
 
     try {
-      const response = await fetch('/api/content/generate-similar', {
-        method: 'POST',
+      const response = await fetch("/api/content/generate-similar", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ phrase: processedPhrases[currentPhraseIndex].text }),
+        body: JSON.stringify({
+          phrase: processedPhrases[currentPhraseIndex].text,
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate similar phrases');
+        throw new Error("Failed to generate similar phrases");
       }
 
       const result = await response.json();
 
       // Add the new phrases to our collection
-      const newPhrases: ProcessedPhrase[] = result.phrases.map((text: string, index: number) => ({
-        id: `phrase-${Date.now()}-similar-${index}`,
-        text,
-        difficulty: processedPhrases[currentPhraseIndex].difficulty,
-        status: 'idle'
-      }));
+      const newPhrases: ProcessedPhrase[] = result.phrases.map(
+        (text: string, index: number) => ({
+          id: `phrase-${Date.now()}-similar-${index}`,
+          text,
+          difficulty: processedPhrases[currentPhraseIndex].difficulty,
+          status: "idle",
+        }),
+      );
 
-      setProcessedPhrases(phrases => [...phrases, ...newPhrases]);
+      setProcessedPhrases((phrases) => [...phrases, ...newPhrases]);
 
       toast({
-        title: 'Phrases Generated',
+        title: "Phrases Generated",
         description: `${newPhrases.length} similar phrases have been added.`,
       });
     } catch (error) {
-      console.error('Error generating similar phrases:', error);
+      console.error("Error generating similar phrases:", error);
       toast({
-        title: 'Generation Error',
-        description: 'Failed to generate similar phrases. Please try again.',
-        variant: 'destructive'
+        title: "Generation Error",
+        description: "Failed to generate similar phrases. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
@@ -855,9 +959,10 @@ export default function NewPhrases() {
   const handleGenerateShareableLink = async () => {
     if (processedPhrases.length === 0) {
       toast({
-        title: 'No Phrases to Share',
-        description: 'Please process some phrases first before generating a shareable link.',
-        variant: 'destructive'
+        title: "No Phrases to Share",
+        description:
+          "Please process some phrases first before generating a shareable link.",
+        variant: "destructive",
       });
       return;
     }
@@ -866,110 +971,119 @@ export default function NewPhrases() {
 
     // Show a toast to indicate we're generating a link
     toast({
-      title: 'Generating Link',
-      description: 'Creating a shareable link for your phrases...',
+      title: "Generating Link",
+      description: "Creating a shareable link for your phrases...",
     });
 
     // Format the phrases for sharing (ensure they have text content)
     const phrasesToShare = processedPhrases
-      .filter(phrase => phrase.text && phrase.text.trim()) // Filter out empty phrases
-      .map(phrase => ({
+      .filter((phrase) => phrase.text && phrase.text.trim()) // Filter out empty phrases
+      .map((phrase) => ({
         text: phrase.text,
         phonetic: phrase.phonetic || null,
-        difficulty: phrase.difficulty || 'medium'
+        difficulty: phrase.difficulty || "medium",
       }));
 
     if (phrasesToShare.length === 0) {
       setIsProcessing(false);
       toast({
-        title: 'No Valid Phrases',
-        description: 'There are no valid phrases to share. Please ensure your phrases have text content.',
-        variant: 'destructive'
+        title: "No Valid Phrases",
+        description:
+          "There are no valid phrases to share. Please ensure your phrases have text content.",
+        variant: "destructive",
       });
       return;
     }
 
     try {
-      console.log('Sending phrases to share:', phrasesToShare);
+      console.log("Sending phrases to share:", phrasesToShare);
 
       // Create the shareable link using the API endpoint
-      const response = await fetch('/api/share', {
-        method: 'POST',
+      const response = await fetch("/api/share", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ phrases: phrasesToShare })
+        body: JSON.stringify({ phrases: phrasesToShare }),
       });
 
       const responseText = await response.text();
-      console.log('Share API response:', response.status, responseText);
+      console.log("Share API response:", response.status, responseText);
 
       if (!response.ok) {
-        throw new Error(`Failed to generate shareable link: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Failed to generate shareable link: ${response.status} ${response.statusText}`,
+        );
       }
 
       // Parse the JSON response
       let data;
       try {
         data = JSON.parse(responseText);
-        console.log('Parsed share data:', data);
+        console.log("Parsed share data:", data);
       } catch (parseError) {
-        console.error('Error parsing JSON response:', parseError);
-        console.error('Raw response text:', responseText);
-        throw new Error('Invalid response from server');
+        console.error("Error parsing JSON response:", parseError);
+        console.error("Raw response text:", responseText);
+        throw new Error("Invalid response from server");
       }
 
       if (!data.shareableUrl) {
-        console.error('Missing shareableUrl in response:', data);
-        throw new Error('Server response did not include a shareableUrl');
+        console.error("Missing shareableUrl in response:", data);
+        throw new Error("Server response did not include a shareableUrl");
       }
 
       // Create the full shareable link with origin
       const fullShareableLink = `${window.location.origin}${data.shareableUrl}`;
-      console.log('Generated shareable link:', fullShareableLink);
+      console.log("Generated shareable link:", fullShareableLink);
       setShareableLink(fullShareableLink);
 
       // Verify that the link works by testing the API endpoint
       try {
         // Extract shareId from the shareableUrl or use it directly from the response
-        const shareId = data.shareId || data.shareableUrl.split('shareId=')[1];
+        const shareId = data.shareId || data.shareableUrl.split("shareId=")[1];
         if (shareId) {
           const verifyResponse = await fetch(`/api/share/${shareId}`);
-          console.log('Verification response:', verifyResponse.status);
+          console.log("Verification response:", verifyResponse.status);
 
           if (!verifyResponse.ok) {
-            console.warn('Shared link may not be accessible:', verifyResponse.status);
+            console.warn(
+              "Shared link may not be accessible:",
+              verifyResponse.status,
+            );
           }
         } else {
-          console.warn('Could not extract shareId for verification');
+          console.warn("Could not extract shareId for verification");
         }
       } catch (verifyError) {
-        console.warn('Could not verify link accessibility:', verifyError);
+        console.warn("Could not verify link accessibility:", verifyError);
       }
 
       // Copy to clipboard
       try {
         await navigator.clipboard.writeText(fullShareableLink);
         toast({
-          title: 'Link Copied!',
-          description: 'Shareable link has been copied to your clipboard.',
+          title: "Link Copied!",
+          description: "Shareable link has been copied to your clipboard.",
         });
       } catch (clipboardError) {
-        console.error('Failed to copy:', clipboardError);
+        console.error("Failed to copy:", clipboardError);
         toast({
-          title: 'Link Generated',
-          description: 'Shareable link created successfully, but could not copy to clipboard automatically.',
+          title: "Link Generated",
+          description:
+            "Shareable link created successfully, but could not copy to clipboard automatically.",
         });
       }
-
     } catch (error) {
-      console.error('Error generating shareable link:', error);
+      console.error("Error generating shareable link:", error);
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to generate shareable link. Please try again.',
-        variant: 'destructive'
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to generate shareable link. Please try again.",
+        variant: "destructive",
       });
-    } finally{
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -978,21 +1092,24 @@ export default function NewPhrases() {
   const handleSavePhrase = async () => {
     // Check if the user is authenticated via the API
     try {
-      const userResponse = await fetch('/api/auth/user');
+      const userResponse = await fetch("/api/auth/user");
       if (!userResponse.ok) {
         toast({
-          title: 'Sign In Required',
-          description: 'Please sign in to save phrases to your collection.',
-          variant: 'default'
+          title: "Sign In Required",
+          description: "Please sign in to save phrases to your collection.",
+          variant: "default",
         });
         return;
       }
 
-      if (currentPhraseIndex < 0 || currentPhraseIndex >= processedPhrases.length) {
+      if (
+        currentPhraseIndex < 0 ||
+        currentPhraseIndex >= processedPhrases.length
+      ) {
         toast({
-          title: 'No Phrase Selected',
-          description: 'Please select a phrase to save.',
-          variant: 'destructive'
+          title: "No Phrase Selected",
+          description: "Please select a phrase to save.",
+          variant: "destructive",
         });
         return;
       }
@@ -1001,28 +1118,30 @@ export default function NewPhrases() {
 
       // Show a loading toast
       const loadingToast = toast({
-        title: 'Saving Phrase',
-        description: 'Adding this phrase to your collection...',
+        title: "Saving Phrase",
+        description: "Adding this phrase to your collection...",
       });
 
       // Use the API to save the phrase (the server will use the user's session for userId)
-      const response = await fetch('/api/phrases/save', {
-        method: 'POST',
+      const response = await fetch("/api/phrases/save", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           phrase: phraseToSave.text,
           phonetic: phraseToSave.phonetic || null,
           difficulty: phraseToSave.difficulty || null,
-          assessmentResults: phraseToSave.assessmentResult ? JSON.stringify(phraseToSave.assessmentResult) : null,
-          source: 'new_phrases',
-          sourceId: shareId || null
-        })
+          assessmentResults: phraseToSave.assessmentResult
+            ? JSON.stringify(phraseToSave.assessmentResult)
+            : null,
+          source: "new_phrases",
+          sourceId: shareId || null,
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save phrase');
+        throw new Error("Failed to save phrase");
       }
 
       // Get the response data to show the saved phrase ID
@@ -1040,19 +1159,19 @@ export default function NewPhrases() {
       loadingToast.dismiss?.();
 
       toast({
-        title: 'Phrase Saved',
-        description: 'This phrase has been saved to your collection.',
+        title: "Phrase Saved",
+        description: "This phrase has been saved to your collection.",
       });
 
       // Removed confetti effect as per user request
       /* Confetti animation removed */
-
     } catch (error) {
-      console.error('Error saving phrase:', error);
+      console.error("Error saving phrase:", error);
       toast({
-        title: 'Error Saving Phrase',
-        description: error instanceof Error ? error.message : 'Failed to save phrase',
-        variant: 'destructive'
+        title: "Error Saving Phrase",
+        description:
+          error instanceof Error ? error.message : "Failed to save phrase",
+        variant: "destructive",
       });
     }
   };
@@ -1061,56 +1180,57 @@ export default function NewPhrases() {
   const handlePlayRecording = (phraseIndex: number) => {
     const phrase = processedPhrases[phraseIndex];
     if (phrase?.recordingUrl && audioRef.current) {
-      console.log('Playing recording with URL:', phrase.recordingUrl);
+      console.log("Playing recording with URL:", phrase.recordingUrl);
       audioRef.current.src = phrase.recordingUrl;
       audioRef.current.oncanplaythrough = () => {
-        audioRef.current?.play()
-          .catch(error => {
-            console.error('Error playing audio:', error);
-            toast({
-              title: 'Playback Error',
-              description: 'Could not play the recording. Please try again.',
-              variant: 'destructive'
-            });
+        audioRef.current?.play().catch((error) => {
+          console.error("Error playing audio:", error);
+          toast({
+            title: "Playback Error",
+            description: "Could not play the recording. Please try again.",
+            variant: "destructive",
           });
+        });
       };
       audioRef.current.onerror = (e) => {
-        console.error('Audio error:', e);
+        console.error("Audio error:", e);
         toast({
-          title: 'Playback Error',
-          description: 'Could not play the recording. Please try again.',
-          variant: 'destructive'
+          title: "Playback Error",
+          description: "Could not play the recording. Please try again.",
+          variant: "destructive",
         });
       };
     } else {
-      console.warn('No recording URL available for phrase', phraseIndex);
+      console.warn("No recording URL available for phrase", phraseIndex);
       toast({
-        title: 'No Recording',
-        description: 'No recording available for this phrase.',
-        variant: 'destructive'
+        title: "No Recording",
+        description: "No recording available for this phrase.",
+        variant: "destructive",
       });
     }
   };
 
   // State to track which phrases are being played with slow speed
-  const [slowPlaybackPhrases, setSlowPlaybackPhrases] = useState<Record<string, boolean>>({});
+  const [slowPlaybackPhrases, setSlowPlaybackPhrases] = useState<
+    Record<string, boolean>
+  >({});
 
   // Play TTS for a phrase (computer speech)
   const handleTextToSpeech = async (phraseIndex: number) => {
     const phrase = processedPhrases[phraseIndex];
     if (!phrase?.text) {
       toast({
-        title: 'No Text',
-        description: 'No text available for this phrase.',
-        variant: 'destructive'
+        title: "No Text",
+        description: "No text available for this phrase.",
+        variant: "destructive",
       });
       return;
     }
 
     // Show loading toast
     const loadingToast = toast({
-      title: 'Loading Audio',
-      description: 'Preparing text-to-speech...',
+      title: "Loading Audio",
+      description: "Preparing text-to-speech...",
     });
 
     // Check if we're already in slow playback mode for this phrase
@@ -1120,18 +1240,20 @@ export default function NewPhrases() {
       console.log(`Requesting speech synthesis for: "${phrase.text}"`);
 
       // Call the TTS API
-      const response = await fetch('/api/speech/synthesize', {
-        method: 'POST',
+      const response = await fetch("/api/speech/synthesize", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ text: phrase.text }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Speech synthesis error response:', errorText);
-        throw new Error(`Failed to synthesize speech: ${response.status} ${response.statusText}`);
+        console.error("Speech synthesis error response:", errorText);
+        throw new Error(
+          `Failed to synthesize speech: ${response.status} ${response.statusText}`,
+        );
       }
 
       // Get audio blob from response
@@ -1139,10 +1261,12 @@ export default function NewPhrases() {
 
       // Check if we received valid audio data
       if (audioBlob.size === 0) {
-        throw new Error('Received empty audio data');
+        throw new Error("Received empty audio data");
       }
 
-      console.log(`Received audio blob: ${audioBlob.size} bytes, type: ${audioBlob.type}`);
+      console.log(
+        `Received audio blob: ${audioBlob.size} bytes, type: ${audioBlob.type}`,
+      );
 
       // Create an Object URL from the audio blob
       const audioUrl = URL.createObjectURL(audioBlob);
@@ -1154,11 +1278,11 @@ export default function NewPhrases() {
 
       // Set up error handling first
       audioRef.current.onerror = (e) => {
-        console.error('Audio playback error:', e);
+        console.error("Audio playback error:", e);
         toast({
-          title: 'Playback Error',
-          description: 'Could not play the audio. Please try again.',
-          variant: 'destructive'
+          title: "Playback Error",
+          description: "Could not play the audio. Please try again.",
+          variant: "destructive",
         });
 
         // Clean up
@@ -1176,25 +1300,26 @@ export default function NewPhrases() {
           audio.playbackRate = isSlowPlayback ? 0.5 : 1.0;
         }
 
-        audioRef.current?.play()
+        audioRef.current
+          ?.play()
           .then(() => {
             // Update status to indicate we're now in slow playback mode for next time
-            setSlowPlaybackPhrases(prev => ({
+            setSlowPlaybackPhrases((prev) => ({
               ...prev,
-              [phrase.id]: true  // Mark this phrase for slow playback next time
+              [phrase.id]: true, // Mark this phrase for slow playback next time
             }));
 
             toast({
-              title: isSlowPlayback ? 'Playing Slowly' : 'Playing',
-              description: `Playing: "${phrase.text.substring(0, 20)}${phrase.text.length > 20 ? '...' : ''}"`,
+              title: isSlowPlayback ? "Playing Slowly" : "Playing",
+              description: `Playing: "${phrase.text.substring(0, 20)}${phrase.text.length > 20 ? "..." : ""}"`,
             });
           })
-          .catch(error => {
-            console.error('Error playing TTS audio:', error);
+          .catch((error) => {
+            console.error("Error playing TTS audio:", error);
             toast({
-              title: 'Playback Error',
-              description: 'Could not play the audio. Please try again.',
-              variant: 'destructive'
+              title: "Playback Error",
+              description: "Could not play the audio. Please try again.",
+              variant: "destructive",
             });
 
             // Clean up
@@ -1211,15 +1336,18 @@ export default function NewPhrases() {
         URL.revokeObjectURL(audioUrl);
       };
     } catch (error) {
-      console.error('TTS Error:', error);
+      console.error("TTS Error:", error);
 
       // Dismiss the loading toast
       loadingToast.dismiss?.();
 
       toast({
-        title: 'TTS Error',
-        description: error instanceof Error ? error.message : 'Could not generate audio for this phrase.',
-        variant: 'destructive'
+        title: "TTS Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Could not generate audio for this phrase.",
+        variant: "destructive",
       });
     }
   };
@@ -1227,7 +1355,9 @@ export default function NewPhrases() {
   // Calculate overall progress
   const calculateProgress = () => {
     if (processedPhrases.length === 0) return 0;
-    const completedCount = processedPhrases.filter(p => p.status === 'complete').length;
+    const completedCount = processedPhrases.filter(
+      (p) => p.status === "complete",
+    ).length;
     return Math.round((completedCount / processedPhrases.length) * 100);
   };
 
@@ -1240,21 +1370,25 @@ export default function NewPhrases() {
   // Confetti effect for high scores
   useEffect(() => {
     // Check if there's a selected phrase with a high score
-    if (currentPhraseIndex >= 0 && 
-        processedPhrases[currentPhraseIndex]?.assessmentResult && 
-        Math.round(processedPhrases[currentPhraseIndex].assessmentResult!.pronunciationScore) >= 95) {
-
+    if (
+      currentPhraseIndex >= 0 &&
+      processedPhrases[currentPhraseIndex]?.assessmentResult &&
+      Math.round(
+        processedPhrases[currentPhraseIndex].assessmentResult!
+          .pronunciationScore,
+      ) >= 95
+    ) {
       // Dynamically import canvas-confetti only when needed
       const celebrateHighScore = async () => {
         try {
-          const confetti = (await import('canvas-confetti')).default;
+          const confetti = (await import("canvas-confetti")).default;
           confetti({
             particleCount: 100,
             spread: 70,
-            origin: { y: 0.6 }
+            origin: { y: 0.6 },
           });
         } catch (error) {
-          console.error('Error loading confetti:', error);
+          console.error("Error loading confetti:", error);
         }
       };
 
@@ -1266,9 +1400,7 @@ export default function NewPhrases() {
   const renderAssessmentVisualization = (phrase: ProcessedPhrase) => {
     if (!phrase.assessmentResult) return null;
 
-    const result = phrase
-
-.assessmentResult;
+    const result = phrase.assessmentResult;
     const score = Math.round(result.pronunciationScore);
 
     return (
@@ -1278,12 +1410,19 @@ export default function NewPhrases() {
           <div className="absolute bottom-0 right-0 w-8 h-8 bg-[#c2f8d7] rounded-tl-xl"></div>
 
           <div className="w-full max-w-md mx-auto bg-white rounded-lg p-6 shadow-lg">
-            <h2 className="text-2xl font-bold text-center text-[#264653] mb-4">Your Performance</h2>
-            <div className="text-6xl font-bold text-center mb-2" style={{ color: result.pronunciationScore >= 80 ? '#2a9d8f' : '#e76f51' }}>
+            <h2 className="text-2xl font-bold text-center text-[#264653] mb-4">
+              Your Performance
+            </h2>
+            <div
+              className="text-6xl font-bold text-center mb-2"
+              style={{
+                color: result.pronunciationScore >= 80 ? "#2a9d8f" : "#e76f51",
+              }}
+            >
               {score}%
             </div>
             <p className="text-center text-gray-600 mb-4">
-              {result.pronunciationScore >= 80 
+              {result.pronunciationScore >= 80
                 ? "Great job! Your pronunciation is very clear."
                 : "Good effort! Try again to improve your score."}
             </p>
@@ -1296,12 +1435,16 @@ export default function NewPhrases() {
                   <span>{Math.round(result.pronunciationScore)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div 
-                    className="h-2.5 rounded-full" 
-                    style={{ 
+                  <div
+                    className="h-2.5 rounded-full"
+                    style={{
                       width: `${Math.round(result.pronunciationScore)}%`,
-                      backgroundColor: result.pronunciationScore >= 80 ? '#2a9d8f' : 
-                                      result.pronunciationScore >= 60 ? '#e9c46a' : '#e76f51' 
+                      backgroundColor:
+                        result.pronunciationScore >= 80
+                          ? "#2a9d8f"
+                          : result.pronunciationScore >= 60
+                            ? "#e9c46a"
+                            : "#e76f51",
                     }}
                   ></div>
                 </div>
@@ -1313,12 +1456,16 @@ export default function NewPhrases() {
                   <span>{Math.round(result.fluencyScore)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div 
-                    className="h-2.5 rounded-full" 
-                    style={{ 
+                  <div
+                    className="h-2.5 rounded-full"
+                    style={{
                       width: `${Math.round(result.fluencyScore)}%`,
-                      backgroundColor: result.fluencyScore >= 80 ? '#2a9d8f' : 
-                                      result.fluencyScore >= 60 ? '#e9c46a' : '#e76f51' 
+                      backgroundColor:
+                        result.fluencyScore >= 80
+                          ? "#2a9d8f"
+                          : result.fluencyScore >= 60
+                            ? "#e9c46a"
+                            : "#e76f51",
                     }}
                   ></div>
                 </div>
@@ -1330,12 +1477,16 @@ export default function NewPhrases() {
                   <span>{Math.round(result.completenessScore)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div 
-                    className="h-2.5 rounded-full" 
-                    style={{ 
+                  <div
+                    className="h-2.5 rounded-full"
+                    style={{
                       width: `${Math.round(result.completenessScore)}%`,
-                      backgroundColor: result.completenessScore >= 80 ? '#2a9d8f' : 
-                                      result.completenessScore >= 60 ? '#e9c46a' : '#e76f51' 
+                      backgroundColor:
+                        result.completenessScore >= 80
+                          ? "#2a9d8f"
+                          : result.completenessScore >= 60
+                            ? "#e9c46a"
+                            : "#e76f51",
                     }}
                   ></div>
                 </div>
@@ -1347,12 +1498,16 @@ export default function NewPhrases() {
                   <span>{Math.round(result.accuracyScore)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div 
-                    className="h-2.5 rounded-full" 
-                    style={{ 
+                  <div
+                    className="h-2.5 rounded-full"
+                    style={{
                       width: `${Math.round(result.accuracyScore)}%`,
-                      backgroundColor: result.accuracyScore >= 80 ? '#2a9d8f' : 
-                                      result.accuracyScore >= 60 ? '#e9c46a' : '#e76f51' 
+                      backgroundColor:
+                        result.accuracyScore >= 80
+                          ? "#2a9d8f"
+                          : result.accuracyScore >= 60
+                            ? "#e9c46a"
+                            : "#e76f51",
                     }}
                   ></div>
                 </div>
@@ -1365,12 +1520,16 @@ export default function NewPhrases() {
                     <span>{Math.round(result.prosodyScore)}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div 
-                      className="h-2.5 rounded-full" 
-                      style={{ 
+                    <div
+                      className="h-2.5 rounded-full"
+                      style={{
                         width: `${Math.round(result.prosodyScore)}%`,
-                        backgroundColor: result.prosodyScore >= 80 ? '#2a9d8f' : 
-                                        result.prosodyScore >= 60 ? '#e9c46a' : '#e76f51' 
+                        backgroundColor:
+                          result.prosodyScore >= 80
+                            ? "#2a9d8f"
+                            : result.prosodyScore >= 60
+                              ? "#e9c46a"
+                              : "#e76f51",
                       }}
                     ></div>
                   </div>
@@ -1381,21 +1540,29 @@ export default function NewPhrases() {
             {/* Word-by-word analysis */}
             {result.wordLevelResults && result.wordLevelResults.length > 0 && (
               <div className="mt-5 pt-5 border-t">
-                <h3 className="text-sm font-semibold mb-3">Word-by-word analysis:</h3>
+                <h3 className="text-sm font-semibold mb-3">
+                  Word-by-word analysis:
+                </h3>
                 <div className="flex flex-wrap gap-2">
                   {result.wordLevelResults.map((word, idx) => {
                     // Calculate color based on score
                     const score = word.accuracyScore;
-                    const bgColor = score > 85 ? 'bg-green-100' : 
-                                  score > 70 ? 'bg-yellow-100' : 
-                                  'bg-red-100';
-                    const textColor = score > 85 ? 'text-green-800' : 
-                                    score > 70 ? 'text-yellow-800' : 
-                                    'text-red-800';
+                    const bgColor =
+                      score > 85
+                        ? "bg-green-100"
+                        : score > 70
+                          ? "bg-yellow-100"
+                          : "bg-red-100";
+                    const textColor =
+                      score > 85
+                        ? "text-green-800"
+                        : score > 70
+                          ? "text-yellow-800"
+                          : "text-red-800";
 
                     return (
-                      <div 
-                        key={`word-${idx}`} 
+                      <div
+                        key={`word-${idx}`}
                         className={`px-2 py-1 rounded text-sm ${bgColor} ${textColor}`}
                       >
                         {word.word} ({Math.round(score)}%)
@@ -1410,7 +1577,9 @@ export default function NewPhrases() {
           {/* Playback recording section */}
           {phrase.recordingUrl && (
             <div className="bg-white/80 border border-[#57cc99] rounded-md p-3 mb-4 mt-4 flex items-center justify-between">
-              <div className="text-sm font-medium text-[#264653]">Listen to your recording:</div>
+              <div className="text-sm font-medium text-[#264653]">
+                Listen to your recording:
+              </div>
               <button
                 className="bg-[#57cc99] text-white rounded-full p-2 flex items-center justify-center shadow-md hover:bg-[#38b37a] transition-colors"
                 onClick={() => {
@@ -1439,8 +1608,12 @@ export default function NewPhrases() {
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg text-slate-800">Progress Over Time</CardTitle>
-              <CardDescription>Your pronunciation improvement journey</CardDescription>
+              <CardTitle className="text-lg text-slate-800">
+                Progress Over Time
+              </CardTitle>
+              <CardDescription>
+                Your pronunciation improvement journey
+              </CardDescription>
             </div>
             {lastTenScores.length > 0 && (
               <div className="bg-primary/10 px-3 py-1 rounded-full">
@@ -1456,8 +1629,13 @@ export default function NewPhrases() {
             {/* Grid lines */}
             <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
               {[0, 25, 50, 75, 100].map((mark) => (
-                <div key={mark} className="w-full border-t border-slate-200 flex items-center h-0">
-                  <span className="text-xs text-slate-400 absolute -left-6">{mark}%</span>
+                <div
+                  key={mark}
+                  className="w-full border-t border-slate-200 flex items-center h-0"
+                >
+                  <span className="text-xs text-slate-400 absolute -left-6">
+                    {mark}%
+                  </span>
                 </div>
               ))}
             </div>
@@ -1468,21 +1646,30 @@ export default function NewPhrases() {
 
               // Color based on score as requested:
               // 85+ in green, 70-84 in orange, 69 and below in red
-              const barColor = item.score >= 85 ? 'bg-green-500' :
-                             item.score >= 70 ? 'bg-amber-500' :
-                             'bg-red-500';
+              const barColor =
+                item.score >= 85
+                  ? "bg-green-500"
+                  : item.score >= 70
+                    ? "bg-amber-500"
+                    : "bg-red-500";
 
               // Generate gradient overlay for 3D effect
-              const gradientClass = item.score >= 85 ? 'from-green-400 to-green-600' :
-                                  item.score >= 70 ? 'from-amber-400 to-amber-600' :
-                                  'from-red-400 to-red-600';
+              const gradientClass =
+                item.score >= 85
+                  ? "from-green-400 to-green-600"
+                  : item.score >= 70
+                    ? "from-amber-400 to-amber-600"
+                    : "from-red-400 to-red-600";
 
               return (
-                <div key={idx} className="flex flex-col items-center flex-1 relative">
+                <div
+                  key={idx}
+                  className="flex flex-col items-center flex-1 relative"
+                >
                   <div className="relative w-full h-full flex items-end">
-                    <div 
-                      className={`w-full ${barColor} rounded-t-md shadow-lg bg-gradient-to-b ${gradientClass}`} 
-                      style={{ height: `${heightPercent}%`, minHeight: '4px' }}
+                    <div
+                      className={`w-full ${barColor} rounded-t-md shadow-lg bg-gradient-to-b ${gradientClass}`}
+                      style={{ height: `${heightPercent}%`, minHeight: "4px" }}
                       title={`Score: ${item.score}%`}
                     >
                       {/* Highlight at top of bar */}
@@ -1490,9 +1677,13 @@ export default function NewPhrases() {
                     </div>
                   </div>
                   <div className="mt-2 text-center">
-                    <p className="text-xs font-medium text-slate-700">{item.score}</p>
+                    <p className="text-xs font-medium text-slate-700">
+                      {item.score}
+                    </p>
                     {/* Only show the day part of the date, not the original indices */}
-                    <p className="text-[10px] text-slate-500">{new Date(item.date).getDate()}</p>
+                    <p className="text-[10px] text-slate-500">
+                      {new Date(item.date).getDate()}
+                    </p>
                   </div>
                 </div>
               );
@@ -1522,23 +1713,37 @@ export default function NewPhrases() {
   // Render social badges
   const renderSocialBadges = () => {
     const badges = [
-      { name: '7-Day Streak', icon: <Award className="h-4 w-4 mr-1" />, earned: true },
-      { name: 'Shared 5+ Exercises', icon: <Share2 className="h-4 w-4 mr-1" />, earned: false },
-      { name: 'Perfect Pronunciation', icon: <CheckCircle className="h-4 w-4 mr-1" />, earned: false },
+      {
+        name: "7-Day Streak",
+        icon: <Award className="h-4 w-4 mr-1" />,
+        earned: true,
+      },
+      {
+        name: "Shared 5+ Exercises",
+        icon: <Share2 className="h-4 w-4 mr-1" />,
+        earned: false,
+      },
+      {
+        name: "Perfect Pronunciation",
+        icon: <CheckCircle className="h-4 w-4 mr-1" />,
+        earned: false,
+      },
     ];
 
     return (
       <Card className="mt-4">
         <CardHeader>
           <CardTitle className="text-lg">Your Badges</CardTitle>
-          <CardDescription>Achievements earned through practice</CardDescription>
+          <CardDescription>
+            Achievements earned through practice
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
             {badges.map((badge, idx) => (
-              <div 
+              <div
                 key={idx}
-                className={`flex items-center rounded-full px-3 py-1 text-sm ${badge.earned ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}
+                className={`flex items-center rounded-full px-3 py-1 text-sm ${badge.earned ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}
               >
                 {badge.icon}
                 {badge.name}
@@ -1552,34 +1757,35 @@ export default function NewPhrases() {
 
   // Add a new phrase to the list
   const handleAddNewPhrase = () => {
-    setProcessedPhrases(phrases => [
+    setProcessedPhrases((phrases) => [
       ...phrases,
       {
         id: `phrase-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        text: '',
-        status: 'idle'
-      }
+        text: "",
+        status: "idle",
+      },
     ]);
   };
 
   // Handle text change for an editable phrase
   const handlePhraseTextChange = (index: number, text: string) => {
-    setProcessedPhrases(phrases => 
-      phrases.map((phrase, idx) => 
-        idx === index 
-          ? { ...phrase, text } 
-          : phrase
-      )
+    setProcessedPhrases((phrases) =>
+      phrases.map((phrase, idx) =>
+        idx === index ? { ...phrase, text } : phrase,
+      ),
     );
   };
 
   // Generate phrases on a specific topic
-  const handleGenerateTopicPhrases = async (topic: string, customDifficulty?: string) => {
+  const handleGenerateTopicPhrases = async (
+    topic: string,
+    customDifficulty?: string,
+  ) => {
     if (!topic.trim()) {
       toast({
-        title: 'No Topic Provided',
-        description: 'Please enter a topic to generate phrases.',
-        variant: 'destructive'
+        title: "No Topic Provided",
+        description: "Please enter a topic to generate phrases.",
+        variant: "destructive",
       });
       return;
     }
@@ -1590,40 +1796,42 @@ export default function NewPhrases() {
     setIsProcessing(true);
 
     try {
-      const response = await fetch('/api/content/generate-topic-phrases', {
-        method: 'POST',
+      const response = await fetch("/api/content/generate-topic-phrases", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ topic, difficulty: difficultyToUse }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate phrases');
+        throw new Error("Failed to generate phrases");
       }
 
       const result = await response.json();
 
       // Add the new phrases to our collection
-      const newPhrases: ProcessedPhrase[] = result.phrases.map((text: string, index: number) => ({
-        id: `phrase-${Date.now()}-topic-${index}`,
-        text,
-        status: 'idle'
-      }));
+      const newPhrases: ProcessedPhrase[] = result.phrases.map(
+        (text: string, index: number) => ({
+          id: `phrase-${Date.now()}-topic-${index}`,
+          text,
+          status: "idle",
+        }),
+      );
 
       setProcessedPhrases(newPhrases);
       setCurrentPhraseIndex(0); // Select first phrase
 
       toast({
-        title: 'Phrases Generated',
+        title: "Phrases Generated",
         description: `${newPhrases.length} phrases related to "${topic}" have been generated.`,
       });
     } catch (error) {
-      console.error('Error generating topic phrases:', error);
+      console.error("Error generating topic phrases:", error);
       toast({
-        title: 'Generation Error',
-        description: 'Failed to generate phrases. Please try again.',
-        variant: 'destructive'
+        title: "Generation Error",
+        description: "Failed to generate phrases. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
@@ -1634,9 +1842,9 @@ export default function NewPhrases() {
   const handleDifficultyChange = async (newDifficulty: string) => {
     if (!aiGenerateTopic.trim()) {
       toast({
-        title: 'No Topic Selected',
-        description: 'Please enter a topic before changing difficulty.',
-        variant: 'destructive'
+        title: "No Topic Selected",
+        description: "Please enter a topic before changing difficulty.",
+        variant: "destructive",
       });
       return;
     }
@@ -1649,14 +1857,19 @@ export default function NewPhrases() {
       <Dialog open={showSharedDialog} onOpenChange={setShowSharedDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>You've been sent these phrases for practice</DialogTitle>
+            <DialogTitle>
+              You've been sent these phrases for practice
+            </DialogTitle>
             <DialogDescription>
-              Someone has shared a set of phrases with you to practice your pronunciation. 
-              These phrases have been loaded and are ready for you to start practicing.
+              Someone has shared a set of phrases with you to practice your
+              pronunciation. These phrases have been loaded and are ready for
+              you to start practicing.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end">
-            <Button onClick={() => setShowSharedDialog(false)}>Get Started</Button>
+            <Button onClick={() => setShowSharedDialog(false)}>
+              Get Started
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -1683,7 +1896,8 @@ export default function NewPhrases() {
             <CardHeader>
               <CardTitle>Add Multiple Phrases</CardTitle>
               <CardDescription>
-                Enter one phrase per line. These will be processed for pronunciation practice.
+                Enter one phrase per line. These will be processed for
+                pronunciation practice.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1700,8 +1914,8 @@ I'd like to schedule an appointment."
               />
             </CardContent>
             <CardFooter>
-              <Button 
-                onClick={handleProcessManualText} 
+              <Button
+                onClick={handleProcessManualText}
                 disabled={isProcessing || !manualEntryText.trim()}
                 className="w-full"
               >
@@ -1711,7 +1925,7 @@ I'd like to schedule an appointment."
                     Processing...
                   </>
                 ) : (
-                  'Process with AI'
+                  "Process with AI"
                 )}
               </Button>
             </CardFooter>
@@ -1730,14 +1944,16 @@ I'd like to schedule an appointment."
               <div className="flex flex-col md:flex-row gap-4 items-start">
                 {/* Upload area - smaller */}
                 <div className="md:w-1/3 space-y-2">
-                  <div 
+                  <div
                     className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/50 transition-colors"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                     <p className="text-base font-medium">Click to upload</p>
-                    <p className="text-xs text-muted-foreground">PNG, JPG, HEIC, GIF, or PDF up to 10MB</p>
-                    <input 
+                    <p className="text-xs text-muted-foreground">
+                      PNG, JPG, HEIC, GIF, or PDF up to 10MB
+                    </p>
+                    <input
                       type="file"
                       accept="image/*,application/pdf"
                       className="hidden"
@@ -1746,76 +1962,81 @@ I'd like to schedule an appointment."
                     />
                   </div>
 
-                  <Button 
-                    variant="outline" 
-                    className="w-full flex items-center justify-center" 
+                  <Button
+                    variant="outline"
+                    className="w-full flex items-center justify-center"
                     onClick={() => {
                       // Access device camera
-                      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                      if (
+                        navigator.mediaDevices &&
+                        navigator.mediaDevices.getUserMedia
+                      ) {
                         // Create a video element to show the camera feed
-                        const videoElement = document.createElement('video');
-                        const canvasElement = document.createElement('canvas');
+                        const videoElement = document.createElement("video");
+                        const canvasElement = document.createElement("canvas");
 
                         // Create and show a modal with the camera feed
-                        const modal = document.createElement('div');
-                        modal.style.position = 'fixed';
-                        modal.style.top = '0';
-                        modal.style.left = '0';
-                        modal.style.width = '100%';
-                        modal.style.height = '100%';
-                        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
-                        modal.style.display = 'flex';
-                        modal.style.flexDirection = 'column';
-                        modal.style.alignItems = 'center';
-                        modal.style.justifyContent = 'flex-end'; // Position buttons at bottom
-                        modal.style.padding = '20px';
-                        modal.style.zIndex = '9999';
+                        const modal = document.createElement("div");
+                        modal.style.position = "fixed";
+                        modal.style.top = "0";
+                        modal.style.left = "0";
+                        modal.style.width = "100%";
+                        modal.style.height = "100%";
+                        modal.style.backgroundColor = "rgba(0, 0, 0, 0.9)";
+                        modal.style.display = "flex";
+                        modal.style.flexDirection = "column";
+                        modal.style.alignItems = "center";
+                        modal.style.justifyContent = "flex-end"; // Position buttons at bottom
+                        modal.style.padding = "20px";
+                        modal.style.zIndex = "9999";
 
                         // Add the video element to the modal - make smaller on mobile
-                        videoElement.style.maxWidth = '90%';
-                        videoElement.style.maxHeight = '50vh'; // Reduced height to leave room for buttons
-                        videoElement.style.borderRadius = '8px';
+                        videoElement.style.maxWidth = "90%";
+                        videoElement.style.maxHeight = "50vh"; // Reduced height to leave room for buttons
+                        videoElement.style.borderRadius = "8px";
                         videoElement.autoplay = true;
                         modal.appendChild(videoElement);
 
                         // Create control container
-                        const controlContainer = document.createElement('div');
-                        controlContainer.style.display = 'flex';
-                        controlContainer.style.flexDirection = 'row';
-                        controlContainer.style.justifyContent = 'space-between';
-                        controlContainer.style.width = '90%';
-                        controlContainer.style.marginBottom = '40px';
-                        controlContainer.style.position = 'fixed';
-                        controlContainer.style.bottom = '20px';
-                        controlContainer.style.zIndex = '10000';
+                        const controlContainer = document.createElement("div");
+                        controlContainer.style.display = "flex";
+                        controlContainer.style.flexDirection = "row";
+                        controlContainer.style.justifyContent = "space-between";
+                        controlContainer.style.width = "90%";
+                        controlContainer.style.marginBottom = "40px";
+                        controlContainer.style.position = "fixed";
+                        controlContainer.style.bottom = "20px";
+                        controlContainer.style.zIndex = "10000";
 
                         //                        // Add capture button
-                        const captureButton = document.createElement('button');
-                        captureButton.textContent = 'Take Photo';
-                        captureButton.style.margin = '0 5px';
-                        captureButton.style.padding = '15px 20px';
-                        captureButton.style.borderRadius = '8px';
-                        captureButton.style.backgroundColor = 'hsl(var(--primary))';
-                        captureButton.style.color = 'white';
-                        captureButton.style.border = 'none';
-                        captureButton.style.cursor = 'pointer';
-                        captureButton.style.fontSize = '16px';
-                        captureButton.style.fontWeight = 'bold';
-                        captureButton.style.flex = '1';
+                        const captureButton = document.createElement("button");
+                        captureButton.textContent = "Take Photo";
+                        captureButton.style.margin = "0 5px";
+                        captureButton.style.padding = "15px 20px";
+                        captureButton.style.borderRadius = "8px";
+                        captureButton.style.backgroundColor =
+                          "hsl(var(--primary))";
+                        captureButton.style.color = "white";
+                        captureButton.style.border = "none";
+                        captureButton.style.cursor = "pointer";
+                        captureButton.style.fontSize = "16px";
+                        captureButton.style.fontWeight = "bold";
+                        captureButton.style.flex = "1";
                         controlContainer.appendChild(captureButton);
 
                         // Add close button
-                        const closeButton = document.createElement('button');
-                        closeButton.textContent = 'Cancel';
-                        closeButton.style.margin = '0 5px';
-                        closeButton.style.padding = '15px 20px';
-                        closeButton.style.borderRadius = '8px';
-                        closeButton.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-                        closeButton.style.border = '1px solid white';
-                        closeButton.style.color = 'white';
-                        closeButton.style.cursor = 'pointer';
-                        closeButton.style.fontSize = '16px';
-                        closeButton.style.flex = '1';
+                        const closeButton = document.createElement("button");
+                        closeButton.textContent = "Cancel";
+                        closeButton.style.margin = "0 5px";
+                        closeButton.style.padding = "15px 20px";
+                        closeButton.style.borderRadius = "8px";
+                        closeButton.style.backgroundColor =
+                          "rgba(255, 255, 255, 0.2)";
+                        closeButton.style.border = "1px solid white";
+                        closeButton.style.color = "white";
+                        closeButton.style.cursor = "pointer";
+                        closeButton.style.fontSize = "16px";
+                        closeButton.style.flex = "1";
                         controlContainer.appendChild(closeButton);
 
                         modal.appendChild(controldiv);
@@ -1825,18 +2046,22 @@ I'd like to schedule an appointment."
                         let stream: MediaStream | null = null;
 
                         // Start the camera
-                        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                        navigator.mediaDevices
+                          .getUserMedia({
+                            video: { facingMode: "environment" },
+                          })
                           .then((mediaStream) => {
                             stream = mediaStream;
                             videoElement.srcObject = mediaStream;
                           })
                           .catch((error) => {
-                            console.error('Camera access error:', error);
+                            console.error("Camera access error:", error);
                             document.body.removeChild(modal);
                             toast({
-                              title: 'Camera Error',
-                              description: 'Could not access your camera. Please check permissions.',
-                              variant: 'destructive'
+                              title: "Camera Error",
+                              description:
+                                "Could not access your camera. Please check permissions.",
+                              variant: "destructive",
                             });
                           });
 
@@ -1845,38 +2070,57 @@ I'd like to schedule an appointment."
                           // Draw the current video frame to canvas
                           canvasElement.width = videoElement.videoWidth;
                           canvasElement.height = videoElement.videoHeight;
-                          canvasElement.getContext('2d')?.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+                          canvasElement
+                            .getContext("2d")
+                            ?.drawImage(
+                              videoElement,
+                              0,
+                              0,
+                              canvasElement.width,
+                              canvasElement.height,
+                            );
 
                           // Convert to blob
-                          canvasElement.toBlob((blob) => {
-                            if (blob) {
-                              // Clean up
-                              if (stream) {
-                                stream.getTracks().forEach(track => track.stop());
+                          canvasElement.toBlob(
+                            (blob) => {
+                              if (blob) {
+                                // Clean up
+                                if (stream) {
+                                  stream
+                                    .getTracks()
+                                    .forEach((track) => track.stop());
+                                }
+                                document.body.removeChild(modal);
+
+                                // Create a File object from the blob
+                                const file = new File(
+                                  [blob],
+                                  `camera-capture-${Date.now()}.jpg`,
+                                  { type: "image/jpeg" },
+                                );
+
+                                // Process the file like a normal upload
+                                handleFileSelection(file);
                               }
-                              document.body.removeChild(modal);
-
-                              // Create a File object from the blob
-                              const file = new File([blob], `camera-capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
-
-                              // Process the file like a normal upload
-                              handleFileSelection(file);
-                            }
-                          }, 'image/jpeg', 0.95);
+                            },
+                            "image/jpeg",
+                            0.95,
+                          );
                         };
 
                         // Close button event
                         closeButton.onclick = () => {
                           if (stream) {
-                            stream.getTracks().forEach(track => track.stop());
+                            stream.getTracks().forEach((track) => track.stop());
                           }
                           document.body.removeChild(modal);
                         };
                       } else {
                         toast({
-                          title: 'Camera Not Available',
-                          description: 'Your device or browser does not support camera access.',
-                          variant: 'destructive'
+                          title: "Camera Not Available",
+                          description:
+                            "Your device or browser does not support camera access.",
+                          variant: "destructive",
                         });
                       }
                     }}
@@ -1891,15 +2135,21 @@ I'd like to schedule an appointment."
                   {isProcessing ? (
                     <div className="flex flex-col items-center justify-center h-full">
                       <Progress value={45} className="w-full mb-4" />
-                      <p className="text-sm text-muted-foreground">Transcribing image content...</p>
+                      <p className="text-sm text-muted-foreground">
+                        Transcribing image content...
+                      </p>
                     </div>
                   ) : imageUploadText ? (
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
                         <CheckCircle className="h-5 w-5 text-green-500" />
-                        <p className="text-sm font-medium">Transcription complete</p>
+                        <p className="text-sm font-medium">
+                          Transcription complete
+                        </p>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-2">Here is the extracted text:</p>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Here is the extracted text:
+                      </p>
                       <Textarea
                         value={imageUploadText}
                         onChange={(e) => setImageUploadText(e.target.value)}
@@ -1911,15 +2161,17 @@ I'd like to schedule an appointment."
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full border rounded-lg p-4">
                       <AlertTriangle className="h-8 w-8 text-muted-foreground mb-2" />
-                      <p className="text-muted-foreground">No image uploaded yet</p>
+                      <p className="text-muted-foreground">
+                        No image uploaded yet
+                      </p>
                     </div>
                   )}
                 </div>
               </div>
 
               {imageUploadText && (
-                <Button 
-                  onClick={handleProcessImageText} 
+                <Button
+                  onClick={handleProcessImageText}
                   disabled={isProcessing || !imageUploadText.trim()}
                   className="w-full"
                 >
@@ -1929,7 +2181,7 @@ I'd like to schedule an appointment."
                       Processing...
                     </>
                   ) : (
-                    'Generate Exercise'
+                    "Generate Exercise"
                   )}
                 </Button>
               )}
@@ -1953,20 +2205,22 @@ I'd like to schedule an appointment."
                 <div>
                   <Label htmlFor="topic">Topic or Category</Label>
                   <div className="flex gap-2 mt-1">
-                    <Input 
-                      id="topic" 
-                      placeholder="Enter a topic (e.g., Golf, Cooking, Shopping)" 
+                    <Input
+                      id="topic"
+                      placeholder="Enter a topic (e.g., Golf, Cooking, Shopping)"
                       value={aiGenerateTopic}
                       onChange={(e) => setAiGenerateTopic(e.target.value)}
                     />
-                    <Button 
-                      onClick={() => handleGenerateTopicPhrases(aiGenerateTopic)}
+                    <Button
+                      onClick={() =>
+                        handleGenerateTopicPhrases(aiGenerateTopic)
+                      }
                       disabled={isProcessing || !aiGenerateTopic.trim()}
                     >
                       {isProcessing ? (
                         <RotateCw className="h-4 w-4 animate-spin" />
                       ) : (
-                        'Generate'
+                        "Generate"
                       )}
                     </Button>
                   </div>
@@ -1976,20 +2230,60 @@ I'd like to schedule an appointment."
                   <p className="text-sm font-medium mb-2">Example topics:</p>
                   <div className="flex flex-wrap gap-2">
                     {[
-                      'Groceries', 'Household Items', 'Clothing', 'Body Parts', 'Doctor Visits',
-                      'Emergencies', 'Restaurants', 'Cooking', 'Beverages', 'Public Transport',
-                      'Directions', 'Air Travel', 'Office Supplies', 'Email Phrases', 'Job Interviews',
-                      'Smartphone Terms', 'Social Media', 'Troubleshooting', 'Retail Shopping', 'Online Shopping',
-                      'Weather', 'Greetings', 'Small Talk', 'Banking Terms', 'Money Phrases',
-                      'School Supplies', 'Classroom Phrases', 'Sports', 'Music', 'Gardening',
-                      'Pets', 'Exercise', 'Holidays', 'Time & Dates', 'Colors',
-                      'Emotions', 'Family Members', 'Home Repairs', 'Cleaning Supplies', 'Cars & Driving',
-                      'Hotels', 'Nature', 'Fruits', 'Vegetables', 'Jobs & Careers',
-                      'Technology', 'Books & Reading', 'Art', 'Travel Destinations', 'Hobbies'
-                    ].map(topic => (
-                      <Badge 
-                        key={topic} 
-                        className="cursor-pointer" 
+                      "Groceries",
+                      "Household Items",
+                      "Clothing",
+                      "Body Parts",
+                      "Doctor Visits",
+                      "Emergencies",
+                      "Restaurants",
+                      "Cooking",
+                      "Beverages",
+                      "Public Transport",
+                      "Directions",
+                      "Air Travel",
+                      "Office Supplies",
+                      "Email Phrases",
+                      "Job Interviews",
+                      "Smartphone Terms",
+                      "Social Media",
+                      "Troubleshooting",
+                      "Retail Shopping",
+                      "Online Shopping",
+                      "Weather",
+                      "Greetings",
+                      "Small Talk",
+                      "Banking Terms",
+                      "Money Phrases",
+                      "School Supplies",
+                      "Classroom Phrases",
+                      "Sports",
+                      "Music",
+                      "Gardening",
+                      "Pets",
+                      "Exercise",
+                      "Holidays",
+                      "Time & Dates",
+                      "Colors",
+                      "Emotions",
+                      "Family Members",
+                      "Home Repairs",
+                      "Cleaning Supplies",
+                      "Cars & Driving",
+                      "Hotels",
+                      "Nature",
+                      "Fruits",
+                      "Vegetables",
+                      "Jobs & Careers",
+                      "Technology",
+                      "Books & Reading",
+                      "Art",
+                      "Travel Destinations",
+                      "Hobbies",
+                    ].map((topic) => (
+                      <Badge
+                        key={topic}
+                        className="cursor-pointer"
                         variant="outline"
                         onClick={() => {
                           setAiGenerateTopic(topic);
@@ -2044,22 +2338,27 @@ I'd like to schedule an appointment."
             {/* Left column: phrases list */}
             <div className="space-y-4">
               {processedPhrases.map((phrase, idx) => (
-                <Card 
-                  key={phrase.id} 
-                  className={`transition-all ${currentPhraseIndex === idx ? 'ring-2 ring-primary' : ''}`}
+                <Card
+                  key={phrase.id}
+                  className={`transition-all ${currentPhraseIndex === idx ? "ring-2 ring-primary" : ""}`}
                 >
                   <CardContent className="p-4">
                     {/* Normal view when not recording or assessing */}
-                    {phrase.status === 'idle' && (
+                    {phrase.status === "idle" && (
                       <div className="flex flex-col">
                         <div className="flex justify-between items-start">
-                          <div className="flex-1 cursor-pointer" onClick={() => setCurrentPhraseIndex(idx)}>
+                          <div
+                            className="flex-1 cursor-pointer"
+                            onClick={() => setCurrentPhraseIndex(idx)}
+                          >
                             {phrase.text ? (
                               <p className="font-medium">{phrase.text}</p>
                             ) : (
-                              <Input 
-                                placeholder="Enter phrase here..." 
-                                onChange={(e) => handlePhraseTextChange(idx, e.target.value)}
+                              <Input
+                                placeholder="Enter phrase here..."
+                                onChange={(e) =>
+                                  handlePhraseTextChange(idx, e.target.value)
+                                }
                                 autoFocus
                               />
                             )}
@@ -2068,22 +2367,31 @@ I'd like to schedule an appointment."
                             {renderDifficultyBadge(phrase.difficulty)}
                             <div className="flex gap-1">
                               <div className="flex rounded-md overflow-hidden border border-green-500">
-                                <Button 
+                                <Button
                                   variant="ghost"
-                                  className={`px-3 py-1 flex items-center gap-1 hover:bg-green-50 transition-colors ${!slowPlaybackPhrases[phrase.id] ? 'bg-green-50 text-green-700' : 'text-green-600'}`}
+                                  className={`px-3 py-1 flex items-center gap-1 hover:bg-green-50 transition-colors ${!slowPlaybackPhrases[phrase.id] ? "bg-green-50 text-green-700" : "text-green-600"}`}
                                   onClick={() => {
-                                    setSlowPlaybackPhrases(prev => ({...prev, [phrase.id]: false}));
+                                    setSlowPlaybackPhrases((prev) => ({
+                                      ...prev,
+                                      [phrase.id]: false,
+                                    }));
                                     handleTextToSpeech(idx);
                                   }}
                                 >
                                   <VolumeIcon className="h-4 w-4" />
                                 </Button>
-                                <Separator orientation="vertical" className="bg-green-500" />
-                                <Button 
+                                <Separator
+                                  orientation="vertical"
+                                  className="bg-green-500"
+                                />
+                                <Button
                                   variant="ghost"
-                                  className={`px-3 py-1 flex items-center gap-1 hover:bg-green-50 transition-colors ${slowPlaybackPhrases[phrase.id] ? 'bg-green-50 text-green-700' : 'text-green-600'}`}
+                                  className={`px-3 py-1 flex items-center gap-1 hover:bg-green-50 transition-colors ${slowPlaybackPhrases[phrase.id] ? "bg-green-50 text-green-700" : "text-green-600"}`}
                                   onClick={() => {
-                                    setSlowPlaybackPhrases(prev => ({...prev, [phrase.id]: true}));
+                                    setSlowPlaybackPhrases((prev) => ({
+                                      ...prev,
+                                      [phrase.id]: true,
+                                    }));
                                     handleTextToSpeech(idx);
                                   }}
                                 >
@@ -2091,35 +2399,38 @@ I'd like to schedule an appointment."
                                 </Button>
                               </div>
 
-                              <Button 
-                                  variant="outline" 
-                                  className={`${savedPhraseId === phrase.id 
-                                    ? 'border-amber-500 bg-amber-50 text-amber-600' 
-                                    : 'border-amber-500 text-amber-600 hover:bg-amber-50 hover:text-amber-700'
-                                  } flex items-center gap-1 transition-all duration-300`}
-                                  onClick={() => {
-                                    setCurrentPhraseIndex(idx);
-                                    handleSavePhrase();
-                                  }}
-                                  title="Save to My Words"
-                                  disabled={savedPhraseId === phrase.id}
-                                >
-                                  <Star 
-                                    className={`h-4 w-4 ${savedPhraseId === phrase.id 
-                                      ? 'fill-amber-500 animate-bounce' 
-                                      : ''}`} 
-                                  />
-                                  {savedPhraseId === phrase.id && (
-                                    <span className="text-xs">Saved!</span>
-                                  )}
-                                </Button>
+                              <Button
+                                variant="outline"
+                                className={`${
+                                  savedPhraseId === phrase.id
+                                    ? "border-amber-500 bg-amber-50 text-amber-600"
+                                    : "border-amber-500 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+                                } flex items-center gap-1 transition-all duration-300`}
+                                onClick={() => {
+                                  setCurrentPhraseIndex(idx);
+                                  handleSavePhrase();
+                                }}
+                                title="Save to My Words"
+                                disabled={savedPhraseId === phrase.id}
+                              >
+                                <Star
+                                  className={`h-4 w-4 ${
+                                    savedPhraseId === phrase.id
+                                      ? "fill-amber-500 animate-bounce"
+                                      : ""
+                                  }`}
+                                />
+                                {savedPhraseId === phrase.id && (
+                                  <span className="text-xs">Saved!</span>
+                                )}
+                              </Button>
                             </div>
                           </div>
                         </div>
 
                         {/* Add Practice button */}
                         <div className="mt-3 flex justify-end">
-                          <Button 
+                          <Button
                             variant="outline"
                             className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1"
                             onClick={() => startPhrasePractice(idx)}
@@ -2132,14 +2443,17 @@ I'd like to schedule an appointment."
                         {/* Score display (if previously completed) */}
                         {phrase.assessmentResult && (
                           <div className="mt-2">
-                            <Progress 
-                              value={phrase.assessmentResult.pronunciationScore} 
+                            <Progress
+                              value={phrase.assessmentResult.pronunciationScore}
                               className="h-2"
                             />
                             <div className="flex justify-between mt-1">
                               <span className="text-xs">Score</span>
                               <span className="text-xs font-medium">
-                                {Math.round(phrase.assessmentResult.pronunciationScore)}%
+                                {Math.round(
+                                  phrase.assessmentResult.pronunciationScore,
+                                )}
+                                %
                               </span>
                             </div>
                           </div>
@@ -2148,23 +2462,25 @@ I'd like to schedule an appointment."
                     )}
 
                     {/* Recording view */}
-                    {phrase.status === 'recording' && (
+                    {phrase.status === "recording" && (
                       <div className="flex flex-col items-center py-3">
-                        <p className="font-medium text-center mb-3">{phrase.text}</p>
+                        <p className="font-medium text-center mb-3">
+                          {phrase.text}
+                        </p>
                         <div className="relative w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4 pulse-animation">
                           <Mic className="h-12 w-12 text-primary animate-pulse" />
                         </div>
                         <p className="text-center text-sm mb-3">Recording</p>
                         <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             className="border-red-500 text-red-600 hover:bg-red-50"
                             onClick={() => cancelPhrasePractice(idx)}
                           >
                             Cancel
                           </Button>
-                          <Button 
-                            className="bg-primary text-primary-foreground" 
+                          <Button
+                            className="bg-primary text-primary-foreground"
                             onClick={() => stopPhrasePractice()}
                           >
                             Stop
@@ -2174,100 +2490,303 @@ I'd like to schedule an appointment."
                     )}
 
                     {/* Assessing view */}
-                    {phrase.status === 'assessing' && (
+                    {phrase.status === "assessing" && (
                       <div className="flex flex-col items-center py-6">
                         <RotateCw className="h-12 w-12 animate-spin text-primary mb-3" />
-                        <p className="text-center">Analyzing pronunciation...</p>
+                        <p className="text-center">
+                          Analyzing pronunciation...
+                        </p>
                       </div>
                     )}
 
                     {/* Complete view with detailed assessment - shown only when actively practicing and viewing results */}
-                    {phrase.status === 'complete' && phrase.assessmentResult && currentlyPracticing === phrase.id && (
-                      <div className="mt-2 space-y-4">
-                        <p className="font-medium text-center">{phrase.text}</p>
+                    {phrase.status === "complete" &&
+                      phrase.assessmentResult &&
+                      currentlyPracticing === phrase.id && (
+                        <div className="mt-2 space-y-4">
+                          <p className="font-medium text-center">{phrase.text}</p>
 
-                        <div className="border-2 border-[#57cc99] rounded-lg bg-[#f5f7fa] p-4 relative overflow-hidden shadow-sm">
-                          <div className="absolute top-0 left-0 w-full h-2 bg-[#57cc99]"></div>
+                          <div className="border-2 border-[#57cc99] rounded-lg bg-[#f5f7fa] p-4 relative overflow-hidden shadow-sm">
+                            <div className="absolute top-0 left-0 w-full h-2 bg-[#57cc99]"></div>
 
-                          <h3 className="text-xl font-bold text-center text-[#264653] mb-2">Your Performance</h3>
-                          <div className="text-5xl font-bold text-center mb-2" 
-                              style={{ 
-                                color: phrase.assessmentResult.pronunciationScore >= 80 
-                                  ? '#2a9d8f' 
-                                  : '#e76f51' 
-                              }}>
-                            {Math.round(phrase.assessmentResult.pronunciationScore)}%
-                          </div>
-
-                          {/* Detailed scores breakdown */}
-                          <div className="space-y-2 mb-3">
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-sm">
-                                <span className="font-medium">Pronunciation</span>
-                                <span>{Math.round(phrase.assessmentResult.pronunciationScore)}%</span>
-                              </div>
-                              <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                <div 
-                                  className="h-2.5 rounded-full" 
-                                  style={{ 
-                                    width: `${Math.round(phrase.assessmentResult.pronunciationScore)}%`,
-                                    backgroundColor: phrase.assessmentResult.pronunciationScore >= 80 ? '#2a9d8f' : 
-                                                  phrase.assessmentResult.pronunciationScore >= 60 ? '#e9c46a' : '#e76f51' 
-                                  }}
-                                ></div>
-                              </div>
+                            <h3 className="text-xl font-bold text-center text-[#264653] mb-2">
+                              Your Performance
+                            </h3>
+                            <div
+                              className="text-5xl font-bold text-center mb-2"
+                              style={{
+                                color:
+                                  phrase.assessmentResult.pronunciationScore >= 80
+                                    ? "#2a9d8f"
+                                    : "#e76f51",
+                              }}
+                            >
+                              {Math.round(phrase.assessmentResult.pronunciationScore)}%
                             </div>
 
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-sm">
-                                <span className="font-medium">Fluency</span>
-                                <span>{Math.round(phrase.assessmentResult.fluencyScore)}%</span>
+                            <div className="space-y-2 mb-3">
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-sm">
+                                  <span className="font-medium">Pronunciation</span>
+                                  <span>{Math.round(phrase.assessmentResult.pronunciationScore)}%</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                  <div
+                                    className="h-2.5 rounded-full"
+                                    style={{
+                                      width: `${Math.round(phrase.assessmentResult.pronunciationScore)}%`,
+                                      backgroundColor:
+                                        phrase.assessmentResult.pronunciationScore >= 80
+                                          ? "#2a9d8f"
+                                          : phrase.assessmentResult.pronunciationScore >= 60
+                                            ? "#e9c46a"
+                                            : "#e76f51",
+                                    }}
+                                  ></div>
+                                </div>
                               </div>
-                              <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                <div 
-                                  className="h-2.5 rounded-full" 
-                                  style={{ 
-                                    width: `${Math.round(phrase.assessmentResult.fluencyScore)}%`,
-                                    backgroundColor: phrase.assessmentResult.fluencyScore >= 80 ? '#2a9d8f' : 
-                                                  phrase.assessmentResult.fluencyScore >= 60 ? '#e9c46a' : '#e76f51' 
-                                  }}
-                                ></div>
-                              </div>
-                            </div>
-                          </div>
 
-                          <div className="flex justify-center gap-2 mt-4">
-                            <Button 
-                              variant="outline" 
-                              className="border-green-500 text-green-600 hover:bg-green-50"
-                              onClick={() => startPhrasePractice(idx)}
-                            >
-                              Try Again
-                            </Button>
-                            <Button 
-                              variant="outline"
-                              onClick={() => setCurrentlyPracticing(null)}
-                            >
-                              Close
-                            </Button>
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-sm">
+                                  <span className="font-medium">Fluency</span>
+                                  <span>{Math.round(phrase.assessmentResult.fluencyScore)}%</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                  <div
+                                    className="h-2.5 rounded-full"
+                                    style={{
+                                      width: `${Math.round(phrase.assessmentResult.fluencyScore)}%`,
+                                      backgroundColor:
+                                        phrase.assessmentResult.fluencyScore >= 80
+                                          ? "#2a9d8f"
+                                          : phrase.assessmentResult.fluencyScore >= 60
+                                            ? "#e9c46a"
+                                            : "#e76f51",
+                                    }}
+                                  ></div>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-sm">
+                                  <span className="font-medium">Completeness</span>
+                                  <span>{Math.round(phrase.assessmentResult.completenessScore)}%</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                  <div
+                                    className="h-2.5 rounded-full"
+                                    style={{
+                                      width: `${Math.round(phrase.assessmentResult.completenessScore)}%`,
+                                      backgroundColor:
+                                        phrase.assessmentResult.completenessScore >= 80
+                                          ? "#2a9d8f"
+                                          : phrase.assessmentResult.completenessScore >= 60
+                                            ? "#e9c46a"
+                                            : "#e76f51",
+                                    }}
+                                  ></div>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-sm">
+                                  <span className="font-medium">Accuracy</span>
+                                  <span>{Math.round(phrase.assessmentResult.accuracyScore)}%</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                  <div
+                                    className="h-2.5 rounded-full"
+                                    style={{
+                                      width: `${Math.round(phrase.assessmentResult.accuracyScore)}%`,
+                                      backgroundColor:
+                                        phrase.assessmentResult.accuracyScore >= 80
+                                          ? "#2a9d8f"
+                                          : phrase.assessmentResult.accuracyScore >= 60
+                                            ? "#e9c46a"
+                                            : "#e76f51",
+                                    }}
+                                  ></div>
+                                </div>
+                              </div>
+
+                              {phrase.assessmentResult.prosodyScore && (
+                                <div className="space-y-1">
+                                  <div className="flex justify-between text-sm">
+                                    <span className="font-medium">Prosody</span>
+                                    <span>{Math.round(phrase.assessmentResult.prosodyScore)}%</span>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                    <div
+                                      className="h-2.5 rounded-full"
+                                      style={{
+                                        width: `${Math.round(phrase.assessmentResult.prosodyScore)}%`,
+                                        backgroundColor:
+                                          phrase.assessmentResult.prosodyScore >= 80
+                                            ? "#2a9d8f"
+                                            : phrase.assessmentResult.prosodyScore >= 60
+                                              ? "#e9c46a"
+                                              : "#e76f51",
+                                      }}
+                                    ></div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {phrase.assessmentResult.wordLevelResults &&
+                              phrase.assessmentResult.wordLevelResults.length > 0 && (
+                                <div className="mt-5 pt-5 border-t">
+                                  <h3 className="text-sm font-semibold mb-3">
+                                    Word-by-word analysis:
+                                  </h3>
+                                  <div className="flex flex-wrap gap-2">
+                                    {phrase.assessmentResult.wordLevelResults.map((word, idx) => {
+                                      const score = word.accuracyScore;
+                                      const bgColor =
+                                        score > 85
+                                          ? "bg-green-100"
+                                          : score > 70
+                                            ? "bg-yellow-100"
+                                            : "bg-red-100";
+                                      const textColor =
+                                        score > 85
+                                          ? "text-green-800"
+                                          : score > 70
+                                            ? "text-yellow-800"
+                                            : "text-red-800";
+
+                                      return (
+                                        <div
+                                          key={`word-${idx}`}
+                                          className={`px-2 py-1 rounded text-sm ${bgColor} ${textColor}`}
+                                        >
+                                          {word.word} ({Math.round(score)}%)
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+
+                            {phrase.recordingUrl && (
+                              <div className="bg-white/80 border border-[#57cc99] rounded-md p-3 mt-4 flex items-center justify-between">
+                                <div className="text-sm font-medium text-[#264653]">
+                                  Listen to your recording:
+                                </div>
+                                <button
+                                  className="bg-[#57cc99] text-white rounded-full p-2 flex items-center justify-center shadow-md hover:bg-[#38b37a] transition-colors"
+                                  onClick={() => {
+                                    const audio = new Audio(phrase.recordingUrl as string);
+                                    audio.play();
+                                  }}
+                                >
+                                  <Volume2 className="h-5 w-5" />
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                              %
+                            </div>
+
+                            {/* Detailed scores breakdown */}
+                            <div className="space-y-2 mb-3">
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-sm">
+                                  <span className="font-medium">
+                                    Pronunciation
+                                  </span>
+                                  <span>
+                                    {Math.round(
+                                      phrase.assessmentResult
+                                        .pronunciationScore,
+                                    )}
+                                    %
+                                  </span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                  <div
+                                    className="h-2.5 rounded-full"
+                                    style={{
+                                      width: `${Math.round(phrase.assessmentResult.pronunciationScore)}%`,
+                                      backgroundColor:
+                                        phrase.assessmentResult
+                                          .pronunciationScore >= 80
+                                          ? "#2a9d8f"
+                                          : phrase.assessmentResult
+                                                .pronunciationScore >= 60
+                                            ? "#e9c46a"
+                                            : "#e76f51",
+                                    }}
+                                  ></div>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-sm">
+                                  <span className="font-medium">Fluency</span>
+                                  <span>
+                                    {Math.round(
+                                      phrase.assessmentResult.fluencyScore,
+                                    )}
+                                    %
+                                  </span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                  <div
+                                    className="h-2.5 rounded-full"
+                                    style={{
+                                      width: `${Math.round(phrase.assessmentResult.fluencyScore)}%`,
+                                      backgroundColor:
+                                        phrase.assessmentResult.fluencyScore >=
+                                        80
+                                          ? "#2a9d8f"
+                                          : phrase.assessmentResult
+                                                .fluencyScore >= 60
+                                            ? "#e9c46a"
+                                            : "#e76f51",
+                                    }}
+                                  ></div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex justify-center gap-2 mt-4">
+                              <Button
+                                variant="outline"
+                                className="border-green-500 text-green-600 hover:bg-green-50"
+                                onClick={() => startPhrasePractice(idx)}
+                              >
+                                Try Again
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => setCurrentlyPracticing(null)}
+                              >
+                                Close
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                   </CardContent>
                 </Card>
               ))}
 
               {/* Add new phrase button */}
-              <Button 
-                variant="outline" 
-                className="w-full" 
+              <Button
+                variant="outline"
+                className="w-full"
                 onClick={() => {
-                  setProcessedPhrases([...processedPhrases, {
-                    id: `phrase-${Date.now()}-new`,
-                    text: '',
-                    status: 'idle'
-                  }]);
+                  setProcessedPhrases([
+                    ...processedPhrases,
+                    {
+                      id: `phrase-${Date.now()}-new`,
+                      text: "",
+                      status: "idle",
+                    },
+                  ]);
                   setCurrentPhraseIndex(processedPhrases.length);
                 }}
               >
@@ -2277,12 +2796,14 @@ I'd like to schedule an appointment."
 
             {/* Right column: selected phrase and features */}
             <div>
-              {currentPhraseIndex >= 0 && currentPhraseIndex < processedPhrases.length ? (
+              {currentPhraseIndex >= 0 &&
+              currentPhraseIndex < processedPhrases.length ? (
                 <Card>
                   <CardHeader>
                     <CardTitle>Record &amp; Assess</CardTitle>
                     <CardDescription>
-                      Practice saying the phrase clearly, then assess your pronunciation
+                      Practice saying the phrase clearly, then assess your
+                      pronunciation
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -2307,7 +2828,8 @@ I'd like to schedule an appointment."
                           <StopCircleIcon className="mr-2 h-4 w-4" />
                           Stop ({recordingDuration}s)
                         </Button>
-                      ) : processedPhrases[currentPhraseIndex].status === 'complete' ? (
+                      ) : processedPhrases[currentPhraseIndex].status ===
+                        "complete" ? (
                         <div className="flex gap-2">
                           <Button
                             onClick={handleStartRecording}
@@ -2323,15 +2845,18 @@ I'd like to schedule an appointment."
                                 // Play from the latest recording
                                 if (audioRef.current) {
                                   audioRef.current.src = audioUrl;
-                                  audioRef.current.play()
-                                    .catch(error => {
-                                      console.error('Error playing audio:', error);
-                                      toast({
-                                        title: 'Playback Error',
-                                        description: 'Could not play the recording.',
-                                        variant: 'destructive'
-                                      });
+                                  audioRef.current.play().catch((error) => {
+                                    console.error(
+                                      "Error playing audio:",
+                                      error,
+                                    );
+                                    toast({
+                                      title: "Playback Error",
+                                      description:
+                                        "Could not play the recording.",
+                                      variant: "destructive",
                                     });
+                                  });
                                 }
                               } else {
                                 // Fall back to the stored recording URL
@@ -2348,7 +2873,10 @@ I'd like to schedule an appointment."
                       ) : (
                         <Button
                           onClick={handleStartRecording}
-                          disabled={processedPhrases[currentPhraseIndex].status === 'assessing'}
+                          disabled={
+                            processedPhrases[currentPhraseIndex].status ===
+                            "assessing"
+                          }
                           className="w-40"
                         >
                           <MicIcon className="mr-2 h-4 w-4" />
@@ -2358,29 +2886,37 @@ I'd like to schedule an appointment."
                     </div>
 
                     {/* Status indicator */}
-                    {processedPhrases[currentPhraseIndex].status === 'assessing' && (
+                    {processedPhrases[currentPhraseIndex].status ===
+                      "assessing" && (
                       <div className="text-center">
                         <RotateCw className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground mt-2">Assessing pronunciation...</p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Assessing pronunciation...
+                        </p>
                       </div>
                     )}
 
                     {/* Assessment visualization */}
-                    {renderAssessmentVisualization(processedPhrases[currentPhraseIndex])}
+                    {renderAssessmentVisualization(
+                      processedPhrases[currentPhraseIndex],
+                    )}
 
                     {/* AI-powered drills */}
-                    {processedPhrases[currentPhraseIndex].status === 'complete' && (
+                    {processedPhrases[currentPhraseIndex].status ===
+                      "complete" && (
                       <div className="mt-4 pt-4 border-t flex flex-col gap-2">
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           onClick={handleGenerateSimilar}
                           disabled={isProcessing}
                         >
-                          <RotateCw className={`mr-2 h-4 w-4 ${isProcessing ? 'animate-spin' : ''}`} />
+                          <RotateCw
+                            className={`mr-2 h-4 w-4 ${isProcessing ? "animate-spin" : ""}`}
+                          />
                           Generate Similar Phrases
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           onClick={handleGenerateShareableLink}
                         >
                           <Share2 className="mr-2 h-4 w-4" />
@@ -2394,7 +2930,9 @@ I'd like to schedule an appointment."
                         <AlertTitle>Shareable Link Created</AlertTitle>
                         <AlertDescription className="break-all">
                           <p className="text-xs">{shareableLink}</p>
-                          <p className="text-sm mt-2">Link copied to clipboard!</p>
+                          <p className="text-sm mt-2">
+                            Link copied to clipboard!
+                          </p>
                         </AlertDescription>
                       </Alert>
                     )}
