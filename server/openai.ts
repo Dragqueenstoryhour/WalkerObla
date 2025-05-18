@@ -151,38 +151,86 @@ function createDefaultContent(topic: string, rawContent: string): any {
 
 export async function generateReadingContent(topic: string, difficulty: string): Promise<ReadingContent> {
   try {
-    // Adjust language complexity based on difficulty level (1, 2, or 3)
+    // Adjust language complexity based on difficulty level (1 through 8)
     let languageLevel = "";
     let maxWords = 150; // Default max words to conserve tokens
     let sentenceLength = "";
     let sentenceCount = 1;
     let syllableCount = "";
+    let mappedDifficulty: "easy" | "medium" | "hard" = "easy"; // For backward compatibility
     
     switch(difficulty) {
       case "1":
-      case "easy":
-        languageLevel = "adult-level, grammatically correct sentences with very simple vocabulary";
+        mappedDifficulty = "easy";
+        languageLevel = "adult-level, grammatically correct sentences with extremely simple vocabulary";
         maxWords = 15;
-        sentenceLength = "5-15 words";
+        sentenceLength = "3-8 words";
         sentenceCount = 1;
-        syllableCount = "primarily one-syllable words (allow minor exceptions like 'the', 'and')";
+        syllableCount = "only one-syllable words (allow minor exceptions like 'the', 'and')";
         break;
       case "2":
-      case "medium":
-        languageLevel = "adult-level, grammatically correct sentences with straightforward vocabulary";
+        mappedDifficulty = "easy";
+        languageLevel = "adult-level, grammatically correct sentences with very simple vocabulary";
+        maxWords = 20;
+        sentenceLength = "5-10 words";
+        sentenceCount = 2;
+        syllableCount = "primarily one-syllable words with a few basic two-syllable words";
+        break;
+      case "3":
+        mappedDifficulty = "easy";
+        languageLevel = "adult-level, grammatically correct sentences with simple vocabulary";
+        maxWords = 25;
+        sentenceLength = "5-12 words";
+        sentenceCount = 2;
+        syllableCount = "mix of one and two-syllable words, mostly common everyday terms";
+        break;
+      case "4":
+        mappedDifficulty = "medium";
+        languageLevel = "adult-level, grammatically correct sentences with basic vocabulary";
         maxWords = 30;
-        sentenceLength = "7-20 words";
+        sentenceLength = "7-15 words";
         sentenceCount = 3;
         syllableCount = "mostly two-syllable words with some one-syllable words";
         break;
-      case "3":
-      case "hard":
-        languageLevel = "adult-level, grammatically correct sentences with varied vocabulary";
-        maxWords = 45;
-        sentenceLength = "10-20 words";
-        sentenceCount = 5;
-        syllableCount = "two to four-syllable words, including some complex terms";
+      case "5":
+        mappedDifficulty = "medium";
+        languageLevel = "adult-level, grammatically correct sentences with straightforward vocabulary";
+        maxWords = 40;
+        sentenceLength = "8-18 words";
+        sentenceCount = 3;
+        syllableCount = "balanced mix of one, two and occasional three-syllable words";
         break;
+      case "6":
+        mappedDifficulty = "hard";
+        languageLevel = "adult-level, grammatically correct sentences with moderately advanced vocabulary";
+        maxWords = 50;
+        sentenceLength = "10-20 words";
+        sentenceCount = 4;
+        syllableCount = "mix of two and three-syllable words with occasional specialized terms";
+        break;
+      case "7":
+        mappedDifficulty = "hard";
+        languageLevel = "adult-level, grammatically correct sentences with advanced vocabulary";
+        maxWords = 60;
+        sentenceLength = "12-25 words";
+        sentenceCount = 5;
+        syllableCount = "mainly three-syllable words with some complex terms and technical vocabulary";
+        break;
+      case "8":
+        mappedDifficulty = "hard";
+        languageLevel = "adult-level, grammatically correct sentences with sophisticated vocabulary";
+        maxWords = 70;
+        sentenceLength = "15-30 words";
+        sentenceCount = 6;
+        syllableCount = "complex multi-syllable words with specialized terminology relevant to the topic";
+        break;
+      // Backward compatibility for older difficulty labels
+      case "easy":
+        return generateReadingContent("1", topic);
+      case "medium":
+        return generateReadingContent("4", topic);
+      case "hard":
+        return generateReadingContent("7", topic);
     }
 
     const systemPrompt = `You are creating short, ${languageLevel} about "${topic}".
@@ -240,7 +288,7 @@ IMPORTANT: Keep it engaging, informative, and under ${maxWords} words total.` }
       source: content.source || "AI-Generated for ReadAssist",
       wordCount: Math.min(calculatedWordCount, maxWords), // Ensure word count doesn't exceed our limit
       readingTime: calculatedWordCount * 3,
-      difficulty: difficulty as "easy" | "medium" | "hard", 
+      difficulty: mappedDifficulty, 
       createdAt: new Date().toISOString(), // Store directly as ISO string for compatibility
     };
     
@@ -467,19 +515,75 @@ export async function extractTextFromImage(fileBuffer: Buffer, fileType: string)
 /**
  * Generate phrases related to a specific topic for pronunciation practice
  */
-export async function generateTopicPhrases(topic: string): Promise<string[]> {
+export async function generateTopicPhrases(topic: string, difficulty: string = "4"): Promise<string[]> {
   try {
-    console.log(`Generating phrases related to topic: "${topic}"`);
+    console.log(`Generating phrases related to topic: "${topic}" with difficulty level: ${difficulty}`);
     
-    const systemPrompt = `You are a speech therapy assistant. Generate a mix of words and phrases related to the specified topic.
-    These should be helpful for pronunciation practice and range from simple to more complex. Include 8-10 items total.`;
+    // Define complexity based on difficulty level (1-8)
+    let complexityGuideline = "";
+    let wordCount = "";
+    let syllableLimit = "";
+    
+    switch(difficulty) {
+      case "1":
+        complexityGuideline = "extremely simple, single-word items or very short phrases";
+        wordCount = "1-2 words each";
+        syllableLimit = "primarily one-syllable words, no complex sounds";
+        break;
+      case "2":
+        complexityGuideline = "very simple, mostly single words with a few basic phrases";
+        wordCount = "1-3 words each";
+        syllableLimit = "mostly one-syllable words with a few basic two-syllable words";
+        break; 
+      case "3":
+        complexityGuideline = "simple, common words and short phrases";
+        wordCount = "1-3 words each";
+        syllableLimit = "mix of one and two-syllable words, everyday vocabulary";
+        break;
+      case "4":
+        complexityGuideline = "straightforward words and phrases";
+        wordCount = "1-4 words each";
+        syllableLimit = "mostly two-syllable words with some one-syllable words";
+        break;
+      case "5":
+        complexityGuideline = "moderately complex words and practical phrases";
+        wordCount = "1-5 words each";
+        syllableLimit = "balanced mix of one, two, and occasional three-syllable words";
+        break;
+      case "6":
+        complexityGuideline = "moderately advanced vocabulary and phrases";
+        wordCount = "1-5 words each";
+        syllableLimit = "mix of two and three-syllable words with occasional specialized terms";
+        break;
+      case "7":
+        complexityGuideline = "advanced vocabulary and longer phrases";
+        wordCount = "2-6 words each";
+        syllableLimit = "mainly multi-syllable words with some technical vocabulary";
+        break;
+      case "8":
+        complexityGuideline = "sophisticated vocabulary and complex phrases relevant to the topic";
+        wordCount = "2-7 words each";
+        syllableLimit = "complex multi-syllable words with specialized terminology";
+        break;
+      default:
+        // Use level 4 (medium) as default
+        return generateTopicPhrases(topic, "4");
+    }
+
+    const systemPrompt = `You are a speech therapy assistant. Generate ${complexityGuideline} related to the specified topic.
+    These should be helpful for pronunciation practice at difficulty level ${difficulty}/8.
+    - Generate exactly 10 items
+    - Each item should be ${wordCount}
+    - Use ${syllableLimit}
+    - Focus entirely on words/phrases related to the topic
+    - For higher difficulty levels (7-8), include some specialized terminology related to the topic`;
 
     // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
     const response = await openai.chat.completions.create({
       model: ADVANCED_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Generate a list of words and phrases related to: ${topic}. Return them as a JSON array of strings named 'phrases'.` }
+        { role: "user", content: `Generate a list of words and phrases related to: ${topic} at difficulty level ${difficulty}/8. Return them as a JSON array of strings named 'phrases'.` }
       ],
       temperature: 0.7,
       response_format: { type: "json_object" }
