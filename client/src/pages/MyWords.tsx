@@ -531,12 +531,14 @@ export default function MyWords() {
           <p className="text-center text-muted-foreground">
             Sign in to save and practice your custom phrases
           </p>
-          <AuthButtons 
+          <Button 
             className="mt-4 bg-green-600 hover:bg-green-700 text-white"
             variant="default"
             size="lg"
-            showText={true}
-          />
+            onClick={() => window.location.href = "/api/login"}
+          >
+            Sign in to View Saved Words
+          </Button>
         </div>
       </div>
     );

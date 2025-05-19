@@ -1095,7 +1095,32 @@ export default function NewPhrases() {
     }
   };
 
-  // Save the current phrase to user'ssaved phrases
+  // Monitor authentication changes to handle saving after login
+  useEffect(() => {
+    if (isAuthenticated && pendingSaveIndex !== null) {
+      const index = pendingSaveIndex;
+      
+      // Clear pending save
+      setPendingSaveIndex(null);
+      setShowSignInDialog(false);
+      
+      // Add a slight delay to ensure authentication is fully processed
+      setTimeout(() => {
+        if (index >= 0 && index < processedPhrases.length) {
+          // Show a welcome back toast
+          toast({
+            title: "Welcome Back!",
+            description: "Now saving your phrase...",
+          });
+          
+          // Call save phrase directly 
+          handleSavePhrase(index);
+        }
+      }, 500);
+    }
+  }, [isAuthenticated, pendingSaveIndex, processedPhrases]);
+
+  // Save the current phrase to user's saved phrases
   const handleSavePhrase = async (phraseIndex: number = currentPhraseIndex) => {
     // Store the index in case we need to save after authentication
     setPendingSaveIndex(phraseIndex);
