@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useDifficulty, difficultyLevelNames, DifficultyLevel } from '@/contexts/DifficultyContext';
+import { useReading } from '@/contexts/ReadingContext';
+import { generateReadingContent } from '@/lib/openai';
 import { cn } from '@/lib/utils';
 import { Gauge, RotateCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 
 interface DifficultySliderProps {
   className?: string;
@@ -113,14 +116,11 @@ export function DifficultyDropdown({ onConfirm }: DifficultyDropdownProps) {
         setDifficulty('1');
       }
 
-      // If no onConfirm callback was provided, we'll implement default behavior
-      // to regenerate content based on the current topic
+      // If onConfirm callback was provided, use it
+      // otherwise generate new content with this difficulty
       if (onConfirm) {
         await onConfirm(difficulty);
       } else {
-        // Get the current content from the reading context
-        const { currentContent, setCurrentContent } = useReading();
-        
         // Default topic is either from current content or a general one
         const topic = currentContent?.title?.split(' ').slice(0, 2).join(' ').toLowerCase() || 'interesting facts';
         
