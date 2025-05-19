@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
+import { AuthButtons } from "@/components/AuthButtons";
 import {
   Card,
   CardContent,
@@ -65,10 +66,12 @@ interface ProcessedPhrase {
 
 export default function NewPhrases() {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const params = useParams();
   const shareId = params.shareId; // Get the shared link ID from URL
   const { difficulty, setDifficulty } = useDifficulty();
+  
+  // We'll add this after our other state variables are defined
   const [isGenerating, setIsGenerating] = useState(false);
 
   const [manualEntryText, setManualEntryText] = useState("");
@@ -2851,6 +2854,41 @@ I'd like to schedule an appointment."
 
       {/* Hidden audio element for playback */}
       <audio ref={audioRef} className="hidden" />
+      
+      {/* Sign in dialog for saving phrases */}
+      <Dialog open={showSignInDialog} onOpenChange={setShowSignInDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Sign in to Save Phrases</DialogTitle>
+            <DialogDescription>
+              Sign in to save this phrase to your collection and practice it later.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-6 flex flex-col items-center space-y-4">
+            <div className="p-4 border rounded-md bg-primary/5 mb-2">
+              {pendingSaveIndex !== null && pendingSaveIndex >= 0 && pendingSaveIndex < processedPhrases.length && (
+                <p className="text-center font-medium">
+                  "{processedPhrases[pendingSaveIndex].text}"
+                </p>
+              )}
+            </div>
+            
+            <Button 
+              className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white"
+              variant="default"
+              size="lg"
+              onClick={() => window.location.href = "/api/login"}
+            >
+              Sign in to Save
+            </Button>
+            
+            <p className="text-sm text-muted-foreground text-center">
+              After signing in, your phrase will be automatically saved to your collection.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
