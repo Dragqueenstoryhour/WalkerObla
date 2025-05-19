@@ -30,8 +30,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from '@/hooks/use-toast';
 import { 
   Mic, X, Share2, BookmarkPlus, AlertCircle, Play, Trash2, Volume2, 
-  FolderPlus, Folder, FolderOpen, MoreVertical, Copy, Edit, FileText, Plus 
+  FolderPlus, Folder, FolderOpen, MoreVertical, Copy, Edit, FileText, Plus,
+  Bookmark
 } from 'lucide-react';
+import { AuthButtons } from '@/components/AuthButtons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import {

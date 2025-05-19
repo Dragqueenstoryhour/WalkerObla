@@ -1089,22 +1089,22 @@ export default function NewPhrases() {
   };
 
   // Save the current phrase to user'ssaved phrases
-  const handleSavePhrase = async () => {
+  const handleSavePhrase = async (phraseIndex: number = currentPhraseIndex) => {
+    // Store the index in case we need to save after authentication
+    setPendingSaveIndex(phraseIndex);
+    
     // Check if the user is authenticated via the API
     try {
       const userResponse = await fetch("/api/auth/user");
       if (!userResponse.ok) {
-        toast({
-          title: "Sign In Required",
-          description: "Please sign in to save phrases to your collection.",
-          variant: "default",
-        });
+        // Show the sign-in dialog instead of just a toast
+        setShowSignInDialog(true);
         return;
       }
 
       if (
-        currentPhraseIndex < 0 ||
-        currentPhraseIndex >= processedPhrases.length
+        phraseIndex < 0 ||
+        phraseIndex >= processedPhrases.length
       ) {
         toast({
           title: "No Phrase Selected",
