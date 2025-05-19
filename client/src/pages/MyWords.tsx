@@ -512,22 +512,32 @@ export default function MyWords() {
     generateShareLinkMutation.mutate(groupId);
   };
 
-  // Redirect if not authenticated
+  // Handle authentication for My Words page
   useEffect(() => {
+    // Only show guidance if not authenticated and not loading
     if (!isAuthenticated && !isLoadingPhrases) {
-      navigate('/');
-      toast({
-        title: 'Authentication Required',
-        description: 'Please log in to view your saved phrases',
-        variant: 'destructive',
-      });
+      // We won't redirect or show errors, just let the component render the login prompt
     }
-  }, [isAuthenticated, isLoadingPhrases, navigate, toast]);
+  }, [isAuthenticated, isLoadingPhrases]);
 
   if (!isAuthenticated) {
-    return <div className="flex items-center justify-center h-screen">
-      <p>Please log in to view your saved phrases.</p>
-    </div>;
+    return (
+      <div className="container max-w-4xl mx-auto p-6">
+        <div className="flex flex-col items-center justify-center space-y-6 p-8 border rounded-lg bg-primary/5">
+          <Bookmark className="h-12 w-12 text-primary" />
+          <h2 className="text-2xl font-semibold text-center">My Saved Words</h2>
+          <p className="text-center text-muted-foreground">
+            Sign in to save and practice your custom phrases
+          </p>
+          <AuthButtons 
+            className="mt-4 bg-green-600 hover:bg-green-700 text-white"
+            variant="default"
+            size="lg"
+            showText={true}
+          />
+        </div>
+      </div>
+    );
   }
 
   // Render pronunciation performance visualization

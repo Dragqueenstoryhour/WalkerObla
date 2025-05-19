@@ -31,34 +31,41 @@ function Navigation() {
 
   return (
     <div className="bg-primary/5 border-b py-2 px-4 mb-4">
-      <div className="container flex gap-4 items-center justify-center"> {/* Ensure items are centered */}
-        <Link href="/game" className="flex flex-col items-center text-primary hover:underline">
-          <Gamepad className="h-6 w-6" />
-          <span>SpeakUp</span>
-        </Link>
-        <Link href="/" className="flex flex-col items-center text-primary hover:underline">
-          <Book className="h-6 w-6" />
-          <span>ReadAssist</span>
-        </Link>
-        <Link href="/new-phrases" className="flex flex-col items-center text-primary hover:underline">
-          <Edit className="h-6 w-6" />
-          <span>New Phrases</span>
-        </Link>
-        <Link href="/my-words" className="flex flex-col items-center text-primary hover:underline">
-          <Bookmark className="h-6 w-6" />
-          <span>My Words</span>
-        </Link>
+      <div className="container flex justify-between">
+        <div className="flex gap-4 items-center"> {/* Navigation items */}
+          <Link href="/game" className="flex flex-col items-center text-primary hover:underline">
+            <Gamepad className="h-6 w-6" />
+            <span>SpeakUp</span>
+          </Link>
+          <Link href="/" className="flex flex-col items-center text-primary hover:underline">
+            <Book className="h-6 w-6" />
+            <span>ReadAssist</span>
+          </Link>
+          <Link href="/new-phrases" className="flex flex-col items-center text-primary hover:underline">
+            <Edit className="h-6 w-6" />
+            <span>New Phrases</span>
+          </Link>
+          <Link href="/my-words" className="flex flex-col items-center text-primary hover:underline">
+            <Bookmark className="h-6 w-6" />
+            <span>My Words</span>
+          </Link>
+        </div>
 
-        <div>
-          <div className="flex items-center gap-2">
-            {isAuthenticated && user ? (
-              <Link href="/account" className="flex items-center gap-2">
-                <div className="h-8 w-8 border-2 border-primary rounded-full flex items-center justify-center bg-primary text-primary-foreground">
-                  {user.username?.charAt(0).toUpperCase() || 'U'}
-                </div>
-              </Link>
-            ) : null}
-          </div>
+        <div className="flex items-center">
+          {isAuthenticated && user ? (
+            <Link href="/account" className="flex items-center gap-2">
+              <div className="h-8 w-8 border-2 border-primary rounded-full flex items-center justify-center bg-primary text-primary-foreground">
+                {user.username?.charAt(0).toUpperCase() || 'U'}
+              </div>
+            </Link>
+          ) : (
+            <AuthButtons
+              variant="default"
+              className="bg-green-600 hover:bg-green-700 text-white border-none"
+              size="sm"
+              showText={true}
+            />
+          )}
         </div>
       </div>
     </div>
