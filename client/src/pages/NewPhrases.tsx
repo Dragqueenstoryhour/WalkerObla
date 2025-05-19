@@ -98,6 +98,10 @@ export default function NewPhrases() {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingRecording, setIsProcessingRecording] = useState(false);
   const [wordAssessmentResult, setWordAssessmentResult] = useState<any>(null);
+  
+  // State for authentication and saving phrases
+  const [showSignInDialog, setShowSignInDialog] = useState(false);
+  const [pendingSaveIndex, setPendingSaveIndex] = useState<number | null>(null);
 
   // Refs for media recording
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
