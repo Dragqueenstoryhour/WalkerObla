@@ -641,10 +641,10 @@ export async function generateTopicPhrases(
 
     // Build system prompt
     const systemPrompt = `
-You are a speech rehabilitation assistant generating conversational phrases for stroke survivors to practice pronunciation.
+You are a speech rehabilitation assistant generating conversational phrases for people with difficulty speaking to practice pronunciation.
 
 **Task**:
-Generate exactly 10 natural, grammatically correct phrases related to the topic "${topic}" for speech practice.
+Generate exactly 8 natural, grammatically correct phrases related to the topic "${topic}" for speech practice.
 
 **Difficulty Level**: ${difficulty}/8 (${difficultyInfo.name})
 
@@ -663,8 +663,8 @@ Generate exactly 10 natural, grammatically correct phrases related to the topic 
   - Avoid overly technical or academic terms unless essential to the topic and difficulty
   - Do NOT include incomplete sentences, fragments, lists, bullet points, or markdown formatting
 - **Output Format**:
-  - Return a JSON object with a single key "phrases" containing an array of 10 strings
-  - Example: {"phrases": ["phrase 1", "phrase 2", ..., "phrase 10"]}
+  - Return a JSON object with a single key "phrases" containing an array of 8 strings
+  - Example: {"phrases": ["phrase 1", "phrase 2", ..., "phrase 8"]}
 
 **Examples for Topic "Commonly Used Phrases"**:
 - Difficulty 1: ["Hi, how are you?", "Good morning!", "Thank you very much."]
@@ -674,7 +674,7 @@ Generate exactly 10 natural, grammatically correct phrases related to the topic 
       model: ADVANCED_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Generate exactly 10 conversational phrases for the topic "${topic}" at difficulty level ${difficulty}/8. Follow all requirements and return as a JSON object with a "phrases" array.` }
+        { role: "user", content: `Generate exactly 8 conversational phrases for the topic "${topic}" at difficulty level ${difficulty}/8. Follow all requirements and return as a JSON object with a "phrases" array.` }
       ],
       temperature: 0.7,
       max_tokens: 1000,
@@ -700,7 +700,7 @@ Generate exactly 10 natural, grammatically correct phrases related to the topic 
         .map(line => line.trim())
         .filter(line => line && !line.match(/^{|}|"phrases"|\[|\]|,$/))
         .map(line => line.replace(/^["']|["']$/g, '')) // Remove quotes
-        .slice(0, 10);
+        .slice(0, 8);
       parsed = { phrases: lines };
     }
 
@@ -723,20 +723,20 @@ Generate exactly 10 natural, grammatically correct phrases related to the topic 
         if (wordCount > difficultyInfo.maxSentenceLength * 1.2) return false;
         return true;
       })
-      .slice(0, 10);
+      .slice(0, 8);
 
     // If we don't have enough valid phrases, retry once
-    if (validPhrases.length < 10) {
+    if (validPhrases.length < 8) {
       console.warn(`Only ${validPhrases.length} valid phrases generated, retrying once...`);
       const additionalPhrases = await generateTopicPhrases(topic, difficulty, wordTypes, syllableRange);
       validPhrases = [
         ...validPhrases,
         ...additionalPhrases.filter(p => !validPhrases.includes(p))
-      ].slice(0, 10);
+      ].slice(0, 8);
     }
 
     // Ensure exactly 10 phrases
-    while (validPhrases.length < 10) {
+    while (validPhrases.length < 8) {
       validPhrases.push(`Sample phrase for ${topic} ${validPhrases.length + 1}`);
     }
     while (validPhrases.length > 10) {
@@ -746,6 +746,6 @@ Generate exactly 10 natural, grammatically correct phrases related to the topic 
     return validPhrases;
   } catch (error) {
     console.error("Error generating topic phrases:", error);
-    return Array(10).fill(`Sample phrase for ${topic}`);
+    return Array(8).fill(`Sample phrase for ${topic}`);
   }
 }
