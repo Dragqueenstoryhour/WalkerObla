@@ -4,16 +4,40 @@ import { ReadingContent } from "./types";
 
 export async function generateReadingContent(topic: string, difficulty: string): Promise<ReadingContent> {
   try {
+    // Convert difficulty string mapping back to numeric if needed
+    // e.g., "easy" to "2", "medium" to "4", etc.
+    let numericDifficulty = difficulty;
+    
+    // If the difficulty is not already a number between 1-8, convert it
+    if (!/^[1-8]$/.test(difficulty)) {
+      // Reverse mapping from text to number
+      switch(difficulty.toLowerCase()) {
+        case 'very-easy': numericDifficulty = '1'; break;
+        case 'easy': numericDifficulty = '2'; break;
+        case 'easy-medium': numericDifficulty = '3'; break;
+        case 'medium': numericDifficulty = '4'; break;
+        case 'medium-hard': numericDifficulty = '5'; break;
+        case 'hard': numericDifficulty = '6'; break;
+        case 'very-hard': numericDifficulty = '7'; break;
+        case 'expert': numericDifficulty = '8'; break;
+        default: numericDifficulty = '4'; // Default to medium
+      }
+    }
+    
+    console.log(`Sending API request for content with topic: "${topic}" and numeric difficulty: "${numericDifficulty}"`);
+
     const response = await fetch('/api/content/generate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ topic, difficulty }),
+      body: JSON.stringify({ topic, difficulty: numericDifficulty }),
       credentials: 'include',
     });
 
     if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      console.error('Error response from server:', errorData);
       throw new Error(`Error generating content: ${response.statusText}`);
     }
 

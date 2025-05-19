@@ -22,8 +22,15 @@ export function DifficultySelectionDialog({ open, onClose }: DifficultySelection
   const handleConfirm = async () => {
     setIsGenerating(true);
     try {
-      // Generate content with the selected difficulty level
-      const serverDifficulty = mapDifficultyToServer(difficulty);
+      // Ensure the difficulty is a valid number 1-8
+      if (!/^[1-8]$/.test(difficulty)) {
+        console.warn(`Invalid difficulty format: ${difficulty}, using 4 (medium) as default`);
+        // Default to medium if invalid
+        toast({
+          title: "Invalid Difficulty",
+          description: "Using medium difficulty (level 4) as default",
+        });
+      }
       
       toast({
         title: "Setting Difficulty",
@@ -32,7 +39,9 @@ export function DifficultySelectionDialog({ open, onClose }: DifficultySelection
       
       // Use a default topic or the current content topic
       const topic = currentContent?.title?.split(' ').slice(0, 2).join(' ').toLowerCase() || 'interesting facts';
-      const content = await generateReadingContent(topic, serverDifficulty);
+      
+      // Send the numeric difficulty directly to ensure API compatibility
+      const content = await generateReadingContent(topic, difficulty);
       
       // Update content
       setCurrentContent(content);

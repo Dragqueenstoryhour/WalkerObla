@@ -95,6 +95,7 @@ export function DifficultyDropdown({ onConfirm }: DifficultyDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { difficulty, setDifficulty } = useDifficulty();
   const { toast } = useToast();
+  const { currentContent, setCurrentContent } = useReading();
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Handle OK button click
@@ -112,9 +113,30 @@ export function DifficultyDropdown({ onConfirm }: DifficultyDropdownProps) {
         setDifficulty('1');
       }
 
-      // Call the onConfirm callback if provided
+      // If no onConfirm callback was provided, we'll implement default behavior
+      // to regenerate content based on the current topic
       if (onConfirm) {
         await onConfirm(difficulty);
+      } else {
+        // Get the current content from the reading context
+        const { currentContent, setCurrentContent } = useReading();
+        
+        // Default topic is either from current content or a general one
+        const topic = currentContent?.title?.split(' ').slice(0, 2).join(' ').toLowerCase() || 'interesting facts';
+        
+        toast({
+          title: 'Generating New Content',
+          description: `Updating with difficulty level ${difficulty}/8...`,
+        });
+        
+        try {
+          // Generate new content with the selected difficulty
+          const content = await generateReadingContent(topic, difficulty);
+          setCurrentContent(content);
+        } catch (contentError) {
+          console.error('Error regenerating content:', contentError);
+          throw contentError;
+        }
       }
 
       // Close the dropdown
