@@ -203,7 +203,7 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
             {!showText && <span>Sign In</span>}
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto"> {/* ADDED max-h-[90vh] and overflow-y-auto */}
           <DialogHeader>
             <DialogTitle>Account</DialogTitle>
             <DialogDescription>
@@ -229,8 +229,6 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
                 <SiGoogle className="mr-2 h-5 w-5 text-[#4285F4]" />
                 {isOAuthLoading ? 'Connecting...' : 'Continue with Google'}
               </Button>
-
-              {/* Facebook button omitted as requested */}
 
             </TabsContent>
 
