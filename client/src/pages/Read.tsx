@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
-import VoiceControl from '@/components/VoiceControl';
+// import VoiceControl from '@/components/VoiceControl'; // Removed VoiceControl import
 import ReadingContent from '@/components/ReadingContent';
 import ReadingControls from '@/components/ReadingControls';
 import FeedbackPanel from '@/components/FeedbackPanel';
@@ -15,6 +15,7 @@ const Read = () => {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const { currentContent, setCurrentContent } = useReading();
+  const readingControlsRef = useRef<HTMLDivElement>(null); // New ref for ReadingControls
 
   // Fetch initial sample content
   const { data: initialContent, isLoading, error } = useQuery({
@@ -33,15 +34,22 @@ const Read = () => {
     }
   }, [currentContent, initialContent, isLoading, setCurrentContent]);
 
+  // Function to scroll to ReadingControls
+  const handleSelectContent = () => { //
+    if (readingControlsRef.current) { //
+      readingControlsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); //
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <Header 
+      <Header
         onSettingsClick={() => setShowSettingsModal(true)}
         onHelpClick={() => setShowHelpModal(true)}
       />
 
       <main className="container flex-1 px-4 py-6 md:py-8">
-        <VoiceControl />
+        {/* <VoiceControl /> Removed VoiceControl component */}
 
         {isLoading ? (
           <div className="flex justify-center items-center h-52">
@@ -55,8 +63,12 @@ const Read = () => {
         ) : (
           <div className="grid gap-8 md:gap-12 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <ReadingContent />
-              <ReadingControls />
+              {/* Pass the new callback function to ReadingContent */}
+              <ReadingContent onSelectContent={handleSelectContent} /> {/* */}
+              {/* Wrap ReadingControls in a div to attach the ref for scrolling */}
+              <div ref={readingControlsRef}> {/* */}
+                <ReadingControls />
+              </div>
             </div>
 
             <div className="lg:col-span-1">

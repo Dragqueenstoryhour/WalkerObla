@@ -1,3 +1,6 @@
+// This file is no longer used in the updated Read.tsx page, but kept for reference.
+
+
 import { useState, useEffect, useRef } from 'react';
 import { FiVolume2 } from 'react-icons/fi';
 import { useToast } from '@/hooks/use-toast';

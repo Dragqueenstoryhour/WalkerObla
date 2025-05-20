@@ -17,16 +17,16 @@ export function SimpleRecorder({
   onAssessmentReceived 
 }: SimpleRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
+  const [recordingTime, setRecordingTime] = useState(0); // This state is unused but kept as per original file structure
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [transcript, setTranscript] = useState('');
+  const [transcript, setTranscript] = useState(''); // This state is unused but kept as per original file structure
   const [isProcessing, setIsProcessing] = useState(false);
   const [assessmentResults, setAssessmentResults] = useState<any>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<number | null>(null);
+  const timerRef = useRef<number | null>(null); // This ref is unused but kept as per original file structure
 
   const { toast } = useToast();
 
@@ -274,12 +274,15 @@ export function SimpleRecorder({
     }
   };
 
-  // Format seconds to MM:SS
+  // Format seconds to MM:SS - unused in this component
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
+
+  // Determine button status for styling
+  const buttonStatus = isRecording ? 'listening' : isProcessing ? 'processing' : 'idle';
 
   return (
     <Card className="mb-4">
@@ -299,24 +302,50 @@ export function SimpleRecorder({
           <p className="text-lg">{referenceText}</p>
         </div>
 
-        <div className="flex space-x-3 mb-4">
+        <div className="flex flex-col items-center space-y-4 mb-4">
           {!isRecording ? (
-            <Button 
-              onClick={startRecording} 
-              className="flex-1"
-              disabled={isProcessing}
-            >
-              <MicIcon className="mr-2 h-4 w-4" />
-              Start Recording
-            </Button>
+             <button
+                onClick={startRecording}
+                className={`relative flex items-center justify-center w-20 h-20 rounded-md p-4 cursor-pointer hover:bg-opacity-90 transition-all
+                  ${buttonStatus === 'listening' ? 'bg-red-500' : buttonStatus === 'processing' ? 'bg-yellow-500' : 'bg-blue-900'}
+                  ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                aria-label={
+                  buttonStatus === 'listening'
+                    ? 'Stop listening'
+                    : buttonStatus === 'processing'
+                    ? 'Processing'
+                    : 'Start listening'
+                }
+                disabled={isProcessing}
+              >
+                <div className="relative w-full h-full">
+                  {buttonStatus === 'processing' ? (
+                    <span className="absolute inset-0 flex items-center justify-center text-4xl text-white animate-[flash_1s_infinite_ease-in-out]">
+                      💡
+                    </span>
+                  ) : (
+                    <>
+                      <span className="absolute inset-0 flex items-center justify-center text-4xl text-white animate-[pulse_1.5s_infinite_ease-in-out] [text-shadow:0_0_20px_rgba(59,130,246,0.8)]">
+                        🎤
+                      </span>
+                      {buttonStatus === 'listening' && (
+                        <>
+                          <div className="absolute inset-0 border-4 border-blue-400 rounded-full animate-[wave_2s_infinite_ease-out] opacity-0" />
+                          <div className="absolute inset-0 border-4 border-blue-400 rounded-full animate-[wave_2s_infinite_ease-out] [animation-delay:0.5s] opacity-0" />
+                          <div className="absolute inset-0 border-4 border-blue-400 rounded-full animate-[wave_2s_infinite_ease-out] [animation-delay:1s] opacity-0" />
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+              </button>
           ) : (
             <Button 
               onClick={stopRecording} 
               variant="destructive"
-              className="flex-1"
+              className="flex-1 w-20 h-20" // Apply consistent size
             >
-              <StopCircleIcon className="mr-2 h-4 w-4" />
-              Stop Recording
+              <StopCircleIcon className="h-8 w-8" /> {/* Larger icon for stop button */}
             </Button>
           )}
 
@@ -345,6 +374,7 @@ export function SimpleRecorder({
                 }
               }}
               disabled={isRecording || isProcessing}
+              className="flex-1 w-full"
             >
               <PlayIcon className="mr-2 h-4 w-4" />
               Play Recording
@@ -363,7 +393,7 @@ export function SimpleRecorder({
                 ? "Great job! Your pronunciation is very clear."
                 : "Good effort! Try again to improve your score."}
             </p>
-            
+
             {/* Detailed scores breakdown with bar charts */}
             <div className="space-y-3 mb-5">
               <div className="space-y-1">
@@ -382,7 +412,7 @@ export function SimpleRecorder({
                   ></div>
                 </div>
               </div>
-              
+
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
                   <span className="font-medium">Fluency</span>
@@ -399,7 +429,7 @@ export function SimpleRecorder({
                   ></div>
                 </div>
               </div>
-              
+
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
                   <span className="font-medium">Completeness</span>
@@ -416,7 +446,7 @@ export function SimpleRecorder({
                   ></div>
                 </div>
               </div>
-              
+
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
                   <span className="font-medium">Accuracy</span>
@@ -468,6 +498,54 @@ export function SimpleRecorder({
       </CardContent>
     </Card>
   );
+}
+
+// Inline CSS keyframes for animations
+const styles = `
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    text-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+  }
+  50% {
+    transform: scale(1.2);
+    text-shadow: 0 0 40px rgba(59, 130, 246, 1);
+  }
+  100% {
+    transform: scale(1);
+    text-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+  }
+}
+
+@keyframes wave {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes flash {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+`;
+
+// Inject styles into the document
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
 }
 
 export default SimpleRecorder;

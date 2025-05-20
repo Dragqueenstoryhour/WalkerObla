@@ -2,24 +2,156 @@ import { useState, useRef, useEffect } from 'react';
 import { useReading } from '@/contexts/ReadingContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, BarChart2 } from 'lucide-react';
+import { RefreshCw, BarChart2, MicIcon, Volume2 } from 'lucide-react';
 import { generateReadingContent } from '@/lib/openai';
 import { useToast } from '@/hooks/use-toast';
 import { useDifficulty, mapDifficultyToServer } from '@/contexts/DifficultyContext';
+import useEnhancedVoice from '@/hooks/useEnhancedVoice';
 
-const ReadingContent = () => {
+// Define the props for ReadingContent component
+interface ReadingContentProps {
+  onSelectContent: () => void;
+}
+
+const ReadingContent = ({ onSelectContent }: ReadingContentProps) => {
   const { currentContent, setCurrentContent, currentHighlightedText, isReading } = useReading();
   const { toast } = useToast();
   const { difficulty, setDifficulty } = useDifficulty();
   const [isGenerating, setIsGenerating] = useState(false);
   const readingContentRef = useRef<HTMLDivElement>(null);
 
+  // --- Voice Control States and Refs ---
+  const [isListeningVoiceCommand, setIsListeningVoiceCommand] = useState(false);
+  const [isProcessingVoiceCommand, setIsProcessingVoiceCommand] = useState(false);
+  const [transcribedVoiceCommandText, setTranscribedVoiceCommandText] = useState<string>('');
+  const [confirmationVoiceCommandMessage, setConfirmationVoiceCommandMessage] = useState<string>('');
+  const [isPlayingVoiceResponse, setIsPlayingVoiceResponse] = useState(false);
+  const audioRefVoiceResponse = useRef<HTMLAudioElement | null>(null);
+
+  // --- Voice Control Handlers ---
+  const handleVoiceResult = async (result: { action: string; topic?: string; parameters?: { difficulty?: string }; message?: string }) => {
+    if (result.action === 'generateContent' && result.topic) {
+      try {
+        const difficultyParam = result.parameters?.difficulty;
+        // Validate and sanitize difficulty (default to current UI difficulty if invalid or missing)
+        const contentDifficulty = difficultyParam && /^[1-8]$/.test(difficultyParam)
+          ? difficultyParam
+          : difficulty; // Use current UI difficulty as fallback
+
+        console.log(`Generating content about "${result.topic}" with difficulty "${contentDifficulty}"`);
+
+        // Set confirmation message
+        setConfirmationVoiceCommandMessage(result.message || `I'll find a reading article on ${result.topic} for you.`);
+
+        // Convert numeric difficulty to server format
+        const serverDifficulty = mapDifficultyToServer(contentDifficulty);
+        const content = await generateReadingContent(result.topic, serverDifficulty);
+        setCurrentContent({ ...content, topic: result.topic }); // Preserve topic if needed
+        toast({
+          title: 'Content Generated',
+          description: `Generated content about "${result.topic}"`,
+        });
+      } catch (error) {
+        console.error('Error generating content from voice command:', error);
+        setConfirmationVoiceCommandMessage('');
+        toast({
+          title: 'Error',
+          description: 'Failed to generate content from voice command',
+          variant: 'destructive',
+        });
+      }
+    } else if (result.message) {
+      // Set confirmation message for non-content actions or general responses
+      setConfirmationVoiceCommandMessage(result.message);
+    } else {
+      setConfirmationVoiceCommandMessage('I understood your request.');
+    }
+  };
+
+  const handleAudioResponse = (audioData: string) => {
+    if (!audioRefVoiceResponse.current) {
+      audioRefVoiceResponse.current = new Audio();
+    }
+
+    // Create a blob URL from the base64 audio data
+    const blob = new Blob([Buffer.from(audioData, 'base64')], { type: 'audio/mp3' });
+    const url = URL.createObjectURL(blob);
+
+    // Clean up old URL if it exists
+    if (audioRefVoiceResponse.current.src) {
+      URL.revokeObjectURL(audioRefVoiceResponse.current.src);
+    }
+
+    // Set the new audio source and play it
+    audioRefVoiceResponse.current.src = url;
+    audioRefVoiceResponse.current.onplay = () => setIsPlayingVoiceResponse(true);
+    audioRefVoiceResponse.current.onended = () => setIsPlayingVoiceResponse(false);
+    audioRefVoiceResponse.current.play().catch((err) => console.error('Error playing audio:', err));
+  };
+
+  // Set up enhanced voice recognition with GPT-4o
+  const {
+    isListening,
+    isProcessing,
+    transcribedText: enhancedTranscript,
+    startListening,
+    stopListening,
+  } = useEnhancedVoice({
+    onVoiceResult: handleVoiceResult,
+    onAudioResponse: handleAudioResponse,
+    onTranscript: (text) => setTranscribedVoiceCommandText(text),
+    onError: (error) => {
+      console.error('Voice recognition error:', error);
+      setConfirmationVoiceCommandMessage('');
+      toast({
+        title: 'Voice Recognition Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+      // Reset voice command states on error
+      setIsListeningVoiceCommand(false);
+      setIsProcessingVoiceCommand(false);
+    },
+  });
+
+  // Sync voice command states from hook
+  useEffect(() => {
+    setIsListeningVoiceCommand(isListening);
+    setIsProcessingVoiceCommand(isProcessing);
+    // Only update if enhancedTranscript is not empty, to avoid clearing on stop if there's no new transcript
+    if (enhancedTranscript) {
+      setTranscribedVoiceCommandText(enhancedTranscript);
+    }
+  }, [isListening, isProcessing, enhancedTranscript]);
+
+  // Clean up audio resources when component unmounts
+  useEffect(() => {
+    return () => {
+      if (audioRefVoiceResponse.current?.src) {
+        URL.revokeObjectURL(audioRefVoiceResponse.current.src);
+      }
+    };
+  }, []);
+
+  const toggleVoiceCommandListening = () => {
+    if (!isListeningVoiceCommand && !isProcessingVoiceCommand) { // Only start if currently idle
+      // Clear previous transcript and confirmation before starting new listening session
+      setTranscribedVoiceCommandText('');
+      setConfirmationVoiceCommandMessage('');
+      startListening();
+    } else { // Stop if listening (or if processing, though usually processing can't be stopped manually)
+      stopListening();
+    }
+  };
+  // --- End Voice Control additions ---
+
+
   const generateNewContent = async () => {
     setIsGenerating(true);
     try {
       // Use a variety of topics for content generation
       const topics = [
-        'gardening', 'cooking', 'travel', 'animals', 'history', 
+        'gardening', 'cooking', 'travel', 'animals', 'history',
         'music', 'technology', 'health', 'science', 'nature'
       ];
       const randomTopic = topics[Math.floor(Math.random() * topics.length)];
@@ -65,8 +197,9 @@ const ReadingContent = () => {
     setTimeout(async () => {
       setIsGenerating(true);
       try {
-        const currentTopic = currentContent?.title.split(' ').slice(0, 2).join(' ').toLowerCase() || 'random';
-        // Convert numeric difficulty to server format 
+        // Attempt to preserve topic if possible, otherwise use random
+        const currentTopic = currentContent?.topic || currentContent?.title.split(' ').slice(0, 2).join(' ').toLowerCase() || 'random';
+        // Convert numeric difficulty to server format
         const serverDifficulty = mapDifficultyToServer(newDifficulty);
         console.log(`Generating content about "${currentTopic}" with difficulty "${serverDifficulty}"`);
 
@@ -89,8 +222,8 @@ const ReadingContent = () => {
     if (readingContentRef.current && currentContent) {
       try {
         // Ensure content is a string before proceeding
-        let contentStr = typeof currentContent.content === 'string' 
-          ? currentContent.content 
+        let contentStr = typeof currentContent.content === 'string'
+          ? currentContent.content
           : JSON.stringify(currentContent.content);
 
         // Remove any URLs in parentheses at the end of paragraphs
@@ -161,42 +294,106 @@ const ReadingContent = () => {
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Reading Material</h2>
-          <div className="flex space-x-2">
-            <Button
-              onClick={generateNewContent}
-              disabled={isGenerating}
-              size="sm"
-              className="text-sm"
-            >
-              <RefreshCw className="w-4 h-4 mr-1" />
-              {isGenerating ? 'Generating...' : 'New Content'}
-            </Button>
-            <Button
-              onClick={toggleDifficulty}
-              variant="outline"
-              size="sm"
-              className="text-sm"
-            >
-              <BarChart2 className="w-4 h-4 mr-1" />
-              Difficulty: {difficulty}/8
-            </Button>
-          </div>
+          {/* Difficulty button with green style */}
+          <Button
+            onClick={toggleDifficulty}
+            size="sm"
+            className="text-sm bg-green-700 hover:bg-green-600" // Applied green style
+          >
+            <BarChart2 className="w-4 h-4 mr-1" />
+            Difficulty: {difficulty}/8
+          </Button>
         </div>
+
+        {/* Voice Command Feedback Section, similar to original VoiceControl.tsx */}
+        {(transcribedVoiceCommandText || confirmationVoiceCommandMessage || isProcessingVoiceCommand) && (
+          <div className="bg-secondary bg-opacity-30 rounded-lg p-3 flex items-center mb-4">
+            <div className="flex items-center mr-3">
+              {isPlayingVoiceResponse && (
+                <div className="rounded-full bg-accent p-2 animate-pulse">
+                  <Volume2 className="w-6 h-6 text-white" />
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1">
+              {isProcessingVoiceCommand ? (
+                <div>
+                  <p className="text-sm text-textColor opacity-70 mb-1">Processing voice command:</p>
+                  <p className="font-medium">Thinking...</p>
+                </div>
+              ) : transcribedVoiceCommandText || confirmationVoiceCommandMessage ? (
+                <div className={isPlayingVoiceResponse ? 'border-l-4 border-accent pl-3' : ''}>
+                  <p className="text-sm text-textColor opacity-70 mb-1">
+                    {isPlayingVoiceResponse ? 'AI Response:' : confirmationVoiceCommandMessage ? 'ReadAssist:' : 'I heard:'}
+                  </p>
+                  <p className="font-medium">
+                    {isPlayingVoiceResponse || confirmationVoiceCommandMessage ? confirmationVoiceCommandMessage : transcribedVoiceCommandText}
+                  </p>
+                  {isPlayingVoiceResponse && (
+                    <div className="mt-1 pt-1 border-t border-gray-200 text-sm text-textColor opacity-90 italic">
+                      <p>ReadAssist is speaking...</p>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        )}
+        {/* End Voice Command Feedback Section */}
 
         <div className="mb-4 border-b border-secondary pb-2">
           <h3 className="font-semibold text-lg mb-2">{currentContent.title}</h3>
           <p className="text-sm text-textColor opacity-70 mb-1">
-            Source: {currentContent.source} • 
-            {' '}{Math.round(currentContent.readingTime / 60)} min read • 
+            Source: {currentContent.source} •
+            {' '}{Math.round(currentContent.readingTime / 60)} min read •
             {' '}{currentContent.wordCount} words
           </p>
         </div>
 
-        <div 
+        <div
           ref={readingContentRef}
           className="prose max-w-none text-lg leading-relaxed"
         >
           {/* Content will be injected via useEffect */}
+        </div>
+
+        {/* New row for action buttons at the bottom right */}
+        <div className="flex justify-end space-x-2 mt-6"> {/* Added mt-6 for separation */}
+          {/* Voice Command Button */}
+          <Button
+            onClick={toggleVoiceCommandListening}
+            disabled={isPlayingVoiceResponse || isProcessingVoiceCommand}
+            size="sm"
+            className={`text-sm ${
+              isListeningVoiceCommand ? 'bg-red-500 hover:bg-red-600' :
+              isProcessingVoiceCommand ? 'bg-yellow-500 hover:bg-yellow-600' :
+              'bg-green-700 hover:bg-green-600' // Applied green style when idle
+            }`}
+          >
+            <MicIcon className="w-4 h-4 mr-1" />
+            {isListeningVoiceCommand ? 'Listening...' : isProcessingVoiceCommand ? 'Thinking...' : 'I want to read about..'}
+          </Button>
+
+          {/* New Content Button */}
+          <Button
+            onClick={generateNewContent}
+            disabled={isGenerating}
+            size="sm"
+            className="text-sm bg-green-700 hover:bg-green-600" // Applied green style
+          >
+            <RefreshCw className="w-4 h-4 mr-1" />
+            {isGenerating ? 'Generating...' : 'New Content'}
+          </Button>
+
+          {/* Select Button */}
+          <Button
+            onClick={onSelectContent}
+            size="sm"
+            className="text-sm bg-green-700 hover:bg-green-600"
+          >
+            Select
+          </Button>
         </div>
       </CardContent>
     </Card>
