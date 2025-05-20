@@ -1,21 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
-// import VoiceControl from '@/components/VoiceControl'; // Removed VoiceControl import
 import ReadingContent from '@/components/ReadingContent';
-import ReadingControls from '@/components/ReadingControls';
 import FeedbackPanel from '@/components/FeedbackPanel';
 import Footer from '@/components/Footer';
 import SettingsModal from '@/components/modals/SettingsModal';
 import HelpModal from '@/components/modals/HelpModal';
 import { useQuery } from '@tanstack/react-query';
 import { useReading } from '@/contexts/ReadingContext';
-import { ReadingContent as ReadingContentType } from '@/lib/types';
+import { ReadingContent as ReadingContentType, PronunciationAssessmentResult } from '@/lib/types';
+import SimpleRecorder from '@/components/SimpleRecorder'; // Import SimpleRecorder directly
+import { Card, CardContent } from '@/components/ui/card'; // Import Card and CardContent for SimpleRecorder's outer box
+import { CheckCircle } from 'lucide-react'; // Import CheckCircle icon
 
 const Read = () => {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const { currentContent, setCurrentContent } = useReading();
-  const readingControlsRef = useRef<HTMLDivElement>(null); // New ref for ReadingControls
+  const { currentContent, setCurrentContent, setPronunciationResults, updateSessionProgress } = useReading();
+  const simpleRecorderRef = useRef<HTMLDivElement>(null); // New ref for SimpleRecorder
 
   // Fetch initial sample content
   const { data: initialContent, isLoading, error } = useQuery({
@@ -26,7 +27,6 @@ const Read = () => {
   // Use useEffect to set the initial content when loaded
   useEffect(() => {
     if (!currentContent && initialContent && !isLoading) {
-      // Make sure we have all required fields before setting the content
       const content = initialContent as any;
       if (content && content.id && content.title && content.content) {
         setCurrentContent(content as ReadingContentType);
@@ -34,11 +34,31 @@ const Read = () => {
     }
   }, [currentContent, initialContent, isLoading, setCurrentContent]);
 
-  // Function to scroll to ReadingControls
-  const handleSelectContent = () => { //
-    if (readingControlsRef.current) { //
-      readingControlsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); //
+  // State for reference text, derived from currentContent
+  const [referenceText, setReferenceText] = useState('');
+
+  // Update the reference text when content changes
+  useEffect(() => {
+    if (currentContent) {
+      setReferenceText(currentContent.content);
     }
+  }, [currentContent]);
+
+  // Function to scroll to SimpleRecorder
+  const handleSelectContent = () => {
+    if (simpleRecorderRef.current) {
+      simpleRecorderRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // Handle assessment results
+  const handleAssessmentReceived = (results: PronunciationAssessmentResult) => {
+    // Store in reading context
+    setPronunciationResults(results);
+
+    // Update progress based on word count
+    const wordsRead = referenceText.split(/\s+/).length || 0;
+    updateSessionProgress(wordsRead);
   };
 
   return (
@@ -49,8 +69,6 @@ const Read = () => {
       />
 
       <main className="container flex-1 px-4 py-6 md:py-8">
-        {/* <VoiceControl /> Removed VoiceControl component */}
-
         {isLoading ? (
           <div className="flex justify-center items-center h-52">
             <div className="loader animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -63,11 +81,20 @@ const Read = () => {
         ) : (
           <div className="grid gap-8 md:gap-12 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              {/* Pass the new callback function to ReadingContent */}
-              <ReadingContent onSelectContent={handleSelectContent} /> {/* */}
-              {/* Wrap ReadingControls in a div to attach the ref for scrolling */}
-              <div ref={readingControlsRef}> {/* */}
-                <ReadingControls />
+              <ReadingContent onSelectContent={handleSelectContent} />
+              {/* SimpleRecorder directly here */}
+              <div ref={simpleRecorderRef}>
+                <Card className="mb-6">
+                  <CardContent className="p-6">
+                    {/* The "Record your speech to receive feedback" for SimpleRecorder is now inside SimpleRecorder.tsx itself */}
+                    {currentContent && (
+                      <SimpleRecorder
+                        referenceText={referenceText}
+                        onAssessmentReceived={handleAssessmentReceived}
+                      />
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             </div>
 

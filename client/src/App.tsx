@@ -1,9 +1,9 @@
-import { Switch, Route, Link } from "wouter";
+import { Switch, Route, Link, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
-import Home from "@/pages/Home";
+// import Home from "@/pages/Home"; // Home is not used in the routes, keeping it commented as in original
 import RecordingTest from "@/pages/RecordingTest";
 import Read from "@/pages/Read";
 import Subscription from "@/pages/Subscription";
@@ -24,59 +24,76 @@ import Account from "./pages/Account";
 import { DifficultyProvider, useDifficulty } from "./contexts/DifficultyContext";
 import { DifficultySelectionDialog } from "./components/difficulty/DifficultySelectionDialog";
 import { useEffect, useState } from "react";
-import { Gamepad, Book, Edit, Bookmark } from "lucide-react"; // Ensure your icons are imported
+import { Book, Edit, Bookmark, UserCircle } from "lucide-react"; // Ensure your icons are imported
 
-function Navigation() {
-  const { isAuthenticated, user } = useAuthContext();
+// A new component for the "Apple-like" Flutter toggle bar
+function TabBar() {
+  const [location] = useLocation();
+
+  const navItems = [
+    { href: "/", label: "Pronounce Pro", icon: Book },
+    { href: "/new-phrases", label: "SpeakUp Cards", icon: Edit },
+    { href: "/my-words", label: "Saved Lingo", icon: Bookmark },
+  ];
 
   return (
-    <div className="bg-primary/5 border-b py-2 px-4 mb-4">
-      <div className="container flex justify-between">
-        <div className="flex gap-4 items-center"> {/* Navigation items */}
-          <Link href="/game" className="flex flex-col items-center text-primary hover:underline">
-            <Gamepad className="h-6 w-6" />
-            <span>SpeakUp</span>
-          </Link>
-          <Link href="/" className="flex flex-col items-center text-primary hover:underline">
-            <Book className="h-6 w-6" />
-            <span>ReadAssist</span>
-          </Link>
-          <Link href="/new-phrases" className="flex flex-col items-center text-primary hover:underline">
-            <Edit className="h-6 w-6" />
-            <span>New Phrases</span>
-          </Link>
-          <Link href="/my-words" className="flex flex-col items-center text-primary hover:underline">
-            <Bookmark className="h-6 w-6" />
-            <span>My Words</span>
-          </Link>
-        </div>
-
-        <div className="flex items-center">
-          {isAuthenticated && user ? (
-            <Link href="/account" className="flex items-center gap-2">
-              <div className="h-8 w-8 border-2 border-primary rounded-full flex items-center justify-center bg-primary text-primary-foreground">
-                {user.username?.charAt(0).toUpperCase() || 'U'}
-              </div>
+    <div className="relative flex items-center justify-center h-16 w-full">
+      <div className="flex bg-blue-50 rounded-full p-1 w-full justify-around mx-auto"> {/* Changed bg to blue-50 and removed max-w-lg */}
+        {navItems.map((item) => {
+          const isActive = location === item.href;
+          const IconComponent = item.icon;
+          return (
+            <Link href={item.href} key={item.href}>
+              <a
+                className={`flex flex-col items-center justify-center py-2 px-3 rounded-full transition-all duration-300 ease-in-out flex-grow
+                            ${isActive ? "bg-blue-500 text-white shadow-md" : "text-blue-400 hover:text-blue-600"}`}
+              >
+                <IconComponent className="h-6 w-6 mb-1" /> {/* Adjusted icon size and margin */}
+                <span className="text-sm font-medium">{item.label}</span> {/* Adjusted font size */}
+              </a>
             </Link>
-          ) : (
-            <AuthButtons
-              variant="default"
-              className="bg-green-600 hover:bg-green-700 text-white border-none"
-              size="sm"
-              showText={true}
-            />
-          )}
-        </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-// Component to handle first-time user difficulty selection
+function Navigation() {
+  const { isAuthenticated, user } = useAuthContext();
+
+  return (
+    <div className="bg-white py-2 px-4 mb-4 flex items-center justify-between"> {/* Removed border-b and shadow-sm */}
+      {/* Integrating the new TabBar component */}
+      <div className="flex-grow flex justify-center">
+        <TabBar />
+      </div>
+
+      <div className="flex items-center ml-auto pl-4"> {/* Adjusted for right alignment and added padding */}
+        {isAuthenticated && user ? (
+          <Link href="/account" className="flex items-center gap-2">
+            <div className="h-10 w-10 border-2 border-blue-500 rounded-full flex items-center justify-center bg-blue-500 text-white font-semibold text-xl"> {/* Slightly larger and more prominent */}
+              {user.username?.charAt(0).toUpperCase() || 'U'}
+            </div>
+          </Link>
+        ) : (
+          <AuthButtons
+            variant="default"
+            className="bg-green-600 hover:bg-green-700 text-white border-none"
+            size="sm"
+            showText={true}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Component to handle first-time user difficulty selection (unchanged)
 function FirstTimeUserDifficultySelection() {
   const { hasSelectedDifficulty, setHasSelectedDifficulty } = useDifficulty();
   const [showDialog, setShowDialog] = useState(false);
-  
+
   // Show dialog when component mounts if user hasn't selected difficulty
   useEffect(() => {
     if (!hasSelectedDifficulty) {
@@ -84,16 +101,16 @@ function FirstTimeUserDifficultySelection() {
       const timer = setTimeout(() => {
         setShowDialog(true);
       }, 1000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [hasSelectedDifficulty]);
-  
+
   const handleDialogClose = () => {
     setShowDialog(false);
     setHasSelectedDifficulty(true);
   };
-  
+
   return (
     <DifficultySelectionDialog 
       open={showDialog} 
