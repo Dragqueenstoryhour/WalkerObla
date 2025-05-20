@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import { useAuthContext } from '../contexts/AuthContext';
-import { supabaseClient } from '../lib/supabaseClient';
+// import { supabaseClient } from '../lib/supabaseClient'; // Not directly used in component logic, but fine to keep
 import { Button } from "@/components/ui/button";
-import { User, LogOut, LogIn, Mail, Github, Twitter, Facebook } from 'lucide-react';
-import { SiGoogle } from 'react-icons/si';
+import { User, LogOut, LogIn, Mail, Github, Twitter, Facebook } from 'lucide-react'; 
+import { SiGoogle } from 'react-icons/si'; 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"; 
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"; 
+import { Input } from "@/components/ui/input"; 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; 
+import { Separator } from "@/components/ui/separator"; 
+import { zodResolver } from "@hookform/resolvers/zod"; 
+import { useForm } from "react-hook-form"; 
+import { z } from "zod"; 
+import { useToast } from "@/hooks/use-toast"; 
 
 interface AuthButtonsProps {
   className?: string;
@@ -52,7 +52,7 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
-  
+
   const handleOAuthLogin = async (provider: string) => {
     try {
       await oauthLogin(provider as any);
@@ -61,8 +61,8 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
       if (error.message && error.message.includes('provider is not enabled')) {
         toast({
           variant: "destructive",
-          title: "Google Sign-in Not Configured",
-          description: "Google sign-in needs to be enabled in Supabase. Please see the ENABLE_GOOGLE_OAUTH.md file for setup instructions."
+          title: `${provider.charAt(0).toUpperCase() + provider.slice(1)} Sign-in Not Configured`,
+          description: `${provider.charAt(0).toUpperCase() + provider.slice(1)} sign-in needs to be enabled in Supabase. Please see the documentation for setup instructions.`
         });
       } else {
         toast({
@@ -73,7 +73,7 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
       }
     }
   };
-  
+
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -81,7 +81,7 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
       password: "",
     },
   });
-  
+
   const signupForm = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -91,7 +91,7 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
       lastName: "",
     },
   });
-  
+
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
     try {
       setIsLoggingIn(true);
@@ -111,7 +111,7 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
       setIsLoggingIn(false);
     }
   };
-  
+
   const onSignupSubmit = async (values: z.infer<typeof signupSchema>) => {
     try {
       setIsSigningUp(true);
@@ -131,7 +131,7 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
       setIsSigningUp(false);
     }
   };
-  
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -207,28 +207,137 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
           <DialogHeader>
             <DialogTitle>Account</DialogTitle>
             <DialogDescription>
-              Sign in to save your progress and access all features.
+              Sign in or create an account to save your progress and access all features.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-8 flex flex-col items-center">
-            <h3 className="text-lg font-medium mb-6">Sign in with Google to get started</h3>
-            
-            <Button 
-              type="button" 
-              className="w-full bg-white text-black border-gray-300 hover:bg-gray-100 hover:text-black" 
-              onClick={() => handleOAuthLogin('google')}
-              disabled={isOAuthLoading}
-              size="lg"
-            >
-              <SiGoogle className="mr-2 h-5 w-5 text-[#4285F4]" />
-              {isOAuthLoading ? 'Connecting...' : 'Continue with Google'}
-            </Button>
-            
-            <p className="mt-6 text-sm text-muted-foreground max-w-md text-center">
-              We recommend using Google sign-in for the best experience. 
-              Your progress and achievements will be saved to your account.
-            </p>
-          </div>
+          <Tabs defaultValue="social" className="w-full pt-4"> 
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="social">Social</TabsTrigger>
+              <TabsTrigger value="email">Email</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="social" className="space-y-4 pt-4">
+              <h3 className="text-lg font-medium text-center">Continue with a social provider</h3>
+
+              <Button 
+                type="button" 
+                className="w-full bg-white text-black border-gray-300 hover:bg-gray-100 hover:text-black" 
+                onClick={() => handleOAuthLogin('google')}
+                disabled={isOAuthLoading}
+                size="lg"
+              >
+                <SiGoogle className="mr-2 h-5 w-5 text-[#4285F4]" />
+                {isOAuthLoading ? 'Connecting...' : 'Continue with Google'}
+              </Button>
+
+              {/* Facebook button omitted as requested */}
+
+            </TabsContent>
+
+            <TabsContent value="email" className="space-y-6 pt-4">
+              <h3 className="text-lg font-medium text-center">Sign in or create an account with email</h3>
+
+              {/* Login Form */}
+              <Form {...loginForm}>
+                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                  <h4 className="text-md font-medium">Existing Account Login</h4>
+                  <FormField
+                    control={loginForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="name@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={loginForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full" disabled={isLoggingIn}>
+                    {isLoggingIn ? 'Signing In...' : 'Sign In'}
+                  </Button>
+                </form>
+              </Form>
+
+              <Separator />
+
+              {/* Signup Form */}
+              <Form {...signupForm}>
+                <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-4">
+                  <h4 className="text-md font-medium">Create New Account</h4>
+                  <FormField
+                    control={signupForm.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>First Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="John" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={signupForm.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Last Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={signupForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="name@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={signupForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full" disabled={isSigningUp}>
+                    {isSigningUp ? 'Creating Account...' : 'Sign Up'}
+                  </Button>
+                </form>
+              </Form>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
     </>
