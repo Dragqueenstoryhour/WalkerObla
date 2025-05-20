@@ -162,7 +162,7 @@ const VoiceControl = () => {
         <div className="mb-2 flex justify-center">
           <button
             onClick={toggleListening}
-            className={`relative flex items-center justify-center w-20 h-20 rounded-full p-4 cursor-pointer hover:bg-opacity-90 transition-all
+            className={`relative flex items-center justify-center w-20 h-20 rounded-md p-4 cursor-pointer hover:bg-opacity-90 transition-all
               ${status === 'listening' ? 'bg-red-500' : status === 'processing' ? 'bg-yellow-500' : 'bg-blue-900'}
               ${isPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}
             aria-label={
@@ -186,6 +186,8 @@ const VoiceControl = () => {
                   </span>
                   {status === 'listening' && (
                     <>
+                      {/* If you want these wave animations to also have slightly rounded corners,
+                          you would add 'rounded-md' to their classNames as well. */}
                       <div className="absolute inset-0 border-4 border-blue-400 rounded-full animate-[wave_2s_infinite_ease-out] opacity-0" />
                       <div className="absolute inset-0 border-4 border-blue-400 rounded-full animate-[wave_2s_infinite_ease-out] [animation-delay:0.5s] opacity-0" />
                       <div className="absolute inset-0 border-4 border-blue-400 rounded-full animate-[wave_2s_infinite_ease-out] [animation-delay:1s] opacity-0" />

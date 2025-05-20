@@ -14,28 +14,28 @@ const ReadingControls = () => {
     setPronunciationResults,
     updateSessionProgress
   } = useReading();
-  
+
   const [referenceText, setReferenceText] = useState('');
-  
+
   // Update the reference text when content changes
   useEffect(() => {
     if (currentContent) {
       setReferenceText(currentContent.content);
     }
   }, [currentContent]);
-  
+
   // Handle assessment results
   const handleAssessmentReceived = (results: PronunciationAssessmentResult) => {
     // Store in reading context
     setPronunciationResults(results);
-    
+
     // Update progress based on word count
     const wordsRead = referenceText.split(/\s+/).length || 0;
     updateSessionProgress(wordsRead);
   };
-  
+
   if (!currentContent) return null;
-  
+
   return (
     <Card className="mb-6">
       <CardContent className="p-6">
@@ -46,7 +46,7 @@ const ReadingControls = () => {
             <span>Record your speech to receive pronunciation feedback</span>
           </div>
         </div>
-        
+
         <div className="bg-secondary bg-opacity-30 rounded-lg p-4 mb-4">
           <p className="font-medium mb-2">Instructions:</p>
           <p className="text-textColor">
@@ -54,7 +54,7 @@ const ReadingControls = () => {
             When finished, click "Stop Recording" to receive detailed pronunciation feedback.
           </p>
         </div>
-        
+
         {/* Simple Recorder component implementation */}
         <SimpleRecorder 
           referenceText={referenceText} 

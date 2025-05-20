@@ -23,11 +23,11 @@ const ReadingContent = () => {
         'music', 'technology', 'health', 'science', 'nature'
       ];
       const randomTopic = topics[Math.floor(Math.random() * topics.length)];
-      
+
       // Convert numeric difficulty to server format (easy, medium, hard)
       const serverDifficulty = mapDifficultyToServer(difficulty);
       console.log(`Generating new content about "${randomTopic}" with difficulty "${serverDifficulty}"`);
-      
+
       const content = await generateReadingContent(randomTopic, serverDifficulty);
       setCurrentContent(content);
       toast({
@@ -52,7 +52,7 @@ const ReadingContent = () => {
     const currentLevel = parseInt(difficulty);
     const newLevel = currentLevel < 8 ? currentLevel + 1 : 1;
     const newDifficulty = String(newLevel) as any;
-    
+
     setDifficulty(newDifficulty);
 
     // Show toast about difficulty change
@@ -69,7 +69,7 @@ const ReadingContent = () => {
         // Convert numeric difficulty to server format 
         const serverDifficulty = mapDifficultyToServer(newDifficulty);
         console.log(`Generating content about "${currentTopic}" with difficulty "${serverDifficulty}"`);
-        
+
         const content = await generateReadingContent(currentTopic, serverDifficulty);
         setCurrentContent(content);
       } catch (error) {
@@ -92,25 +92,25 @@ const ReadingContent = () => {
         let contentStr = typeof currentContent.content === 'string' 
           ? currentContent.content 
           : JSON.stringify(currentContent.content);
-        
+
         // Remove any URLs in parentheses at the end of paragraphs
         contentStr = contentStr.replace(/\(\[?[\w\.]+\]?\(https?:\/\/[^\)]*\)\)/g, '');
-        
+
         // Replace section headers like **Politics** with lead-in phrases
         contentStr = contentStr.replace(/\*\*([\w\s]+)\*\*/g, (match, topic) => {
           return `In ${topic.toLowerCase()},`;
         });
-        
+
         // Create spans for text highlighting
         const paragraphs = contentStr.split('\n\n');
-  
+
         readingContentRef.current.innerHTML = paragraphs
           .map(paragraph => {
             const sentences = paragraph.split('. ');
             const formattedSentences = sentences
               .map(sentence => `<span>${sentence}</span>`)
               .join('. ');
-  
+
             return `<p>${formattedSentences}</p>`;
           })
           .join('');
