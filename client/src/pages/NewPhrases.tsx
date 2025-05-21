@@ -70,7 +70,7 @@ export default function NewPhrases() {
   const params = useParams();
   const shareId = params.shareId; // Get the shared link ID from URL
   const { difficulty, setDifficulty } = useDifficulty();
-  
+
   // We'll add this after our other state variables are defined
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -101,7 +101,7 @@ export default function NewPhrases() {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingRecording, setIsProcessingRecording] = useState(false);
   const [wordAssessmentResult, setWordAssessmentResult] = useState<any>(null);
-  
+
   // State for authentication and saving phrases
   const [showSignInDialog, setShowSignInDialog] = useState(false);
   const [pendingSaveIndex, setPendingSaveIndex] = useState<number | null>(null);
@@ -1099,11 +1099,11 @@ export default function NewPhrases() {
   useEffect(() => {
     if (isAuthenticated && pendingSaveIndex !== null) {
       const index = pendingSaveIndex;
-      
+
       // Clear pending save
       setPendingSaveIndex(null);
       setShowSignInDialog(false);
-      
+
       // Add a slight delay to ensure authentication is fully processed
       setTimeout(() => {
         if (index >= 0 && index < processedPhrases.length) {
@@ -1112,7 +1112,7 @@ export default function NewPhrases() {
             title: "Welcome Back!",
             description: "Now saving your phrase...",
           });
-          
+
           // Call save phrase directly 
           handleSavePhrase(index);
         }
@@ -1124,7 +1124,7 @@ export default function NewPhrases() {
   const handleSavePhrase = async (phraseIndex: number = currentPhraseIndex) => {
     // Store the index in case we need to save after authentication
     setPendingSaveIndex(phraseIndex);
-    
+
     // Check if the user is authenticated via the API
     try {
       const userResponse = await fetch("/api/auth/user");
@@ -2879,7 +2879,7 @@ I'd like to schedule an appointment."
 
       {/* Hidden audio element for playback */}
       <audio ref={audioRef} className="hidden" />
-      
+
       {/* Sign in dialog for saving phrases */}
       <Dialog open={showSignInDialog} onOpenChange={setShowSignInDialog}>
         <DialogContent className="sm:max-w-[425px]">
@@ -2889,7 +2889,7 @@ I'd like to schedule an appointment."
               Sign in to save this phrase to your collection and practice it later.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-6 flex flex-col items-center space-y-4">
             <div className="p-4 border rounded-md bg-primary/5 mb-2">
               {pendingSaveIndex !== null && pendingSaveIndex >= 0 && pendingSaveIndex < processedPhrases.length && (
@@ -2898,7 +2898,7 @@ I'd like to schedule an appointment."
                 </p>
               )}
             </div>
-            
+
             <Button 
               className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white"
               variant="default"
@@ -2907,7 +2907,7 @@ I'd like to schedule an appointment."
             >
               Sign in to Save
             </Button>
-            
+
             <p className="text-sm text-muted-foreground text-center">
               After signing in, your phrase will be automatically saved to your collection.
             </p>

@@ -497,23 +497,28 @@ export async function processPhrases(phrases: string[]): Promise<any[]> {
 /**
  * Generate similar phrases to an existing phrase for practice variations
  */
-export async function generateSimilarPhrases(phrase: string): Promise<string[]> {
+export async function generateSimilarPhrases(
+  phrase: string,
+  type: "words" | "phrases" = "phrases" // Add type parameter with default
+): Promise<string[]> {
   try {
-    console.log(`Generating similar phrases to: "${phrase}"`);
+    console.log(`Generating similar ${type} to: "${phrase}"`);
 
-    const systemPrompt = `You help language learners by generating variations of phrases for speaking practice.
-    Given a phrase, create 5 similar phrases that:
-    1. Maintain the same general meaning
+    const itemType = type === "words" ? "words" : "phrases";
+
+    const systemPrompt = `You help language learners by generating variations of ${itemType} for speaking practice.
+    Given a ${itemType}, create 5 similar ${itemType} that:
+    1. Maintain the same general meaning (if applicable for words)
     2. Use a similar level of complexity
     3. Are natural expressions a native speaker would use
-    4. Vary in structure to provide diverse practice
-    Return only a JSON array of strings with the new phrases.`;
+    4. Vary in structure to provide diverse practice (for phrases) or distinct but related words (for words)
+    Return only a JSON array of strings with the new ${itemType}.`;
 
     const response = await openai.chat.completions.create({
       model: ADVANCED_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Generate 5 similar but varied phrases based on: "${phrase}"` }
+        { role: "user", content: `Generate 5 similar but varied ${itemType} based on: "${phrase}"` }
       ],
       temperature: 0.7,
       response_format: { type: "json_object" }
@@ -540,72 +545,22 @@ export async function generateSimilarPhrases(phrase: string): Promise<string[]> 
 
     return parsed.phrases;
   } catch (error) {
-    console.error("Error generating similar phrases:", error);
+    console.error(`Error generating similar ${type}:`, error);
     // Return a single-item array with the original phrase as fallback
     return [phrase];
   }
 }
 
 /**
- * Extract text from an image or PDF using OpenAI's Vision model
- */
-export async function extractTextFromImage(fileBuffer: Buffer, fileType: string): Promise<string> {
-  try {
-    console.log(`Extracting text from file of type: ${fileType}`);
-
-    // Convert the buffer to base64
-    const base64Image = fileBuffer.toString('base64');
-    const dataURI = `data:${fileType};base64,${base64Image}`;
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You extract text from images and documents accurately. For documents with multiple phrases or sentences, return each one on a new line. Remove any visual artifacts, page numbers, or irrelevant text. Format the output as clean, readable text."
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: "Extract all the readable text from this image. Format each phrase or sentence on its own line."
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: dataURI
-              }
-            }
-          ]
-        }
-      ],
-      max_tokens: 1000
-    });
-
-    const extractedText = response.choices[0].message.content;
-    if (!extractedText) {
-      throw new Error("Failed to extract text from image");
-    }
-
-    return extractedText;
-  } catch (error) {
-    console.error("Error extracting text from image:", error);
-    throw new Error("Failed to extract text from image");
-  }
-}
-
-/**
- * Generate topic-specific phrases with enhanced difficulty level support
+ * Generate topic-specific phrases or words with enhanced difficulty level support
  */
 export async function generateTopicPhrases(
-  topic: string, 
-  difficulty: string = "4", 
-  wordTypes?: string[],
-  syllableRange?: { min?: number, max?: number }
+  topic: string,
+  difficulty: string = "4",
+  type: "words" | "phrases" = "phrases" // New parameter to specify words or phrases
 ): Promise<string[]> {
   try {
-    console.log(`Generating phrases related to topic: "${topic}" with difficulty level: ${difficulty}`);
+    console.log(`Generating ${type} related to topic: "${topic}" with difficulty level: ${difficulty}`);
 
     // Validate difficulty level
     if (!DIFFICULTY_SCALE[difficulty]) {
@@ -613,68 +568,64 @@ export async function generateTopicPhrases(
       difficulty = "4";
     }
 
-    // Use the standardized difficulty scale
     const difficultyInfo = DIFFICULTY_SCALE[difficulty];
+    const numberOfItems = 8; // Always generate 8 items
 
-    // Define complexity based on difficulty
-    const complexityMapping = {
-      "1": "very short phrases (3-5 words), using extremely simple vocabulary and basic grammar, suitable for absolute beginners",
-      "2": "short phrases (5-7 words) with simple vocabulary and basic sentence structures",
-      "3": "short phrases (6-8 words) with slightly varied vocabulary and simple sentence structures",
-      "4": "medium-length phrases (8-10 words) with general vocabulary and straightforward sentence structures",
-      "5": "medium-length phrases (10-12 words) with varied vocabulary and moderately complex sentence structures",
-      "6": "longer phrases (12-15 words) with diverse vocabulary and moderately complex sentence structures",
-      "7": "complex phrases (12-20 words) with advanced vocabulary and varied sentence structures",
-      "8": "highly complex phrases (15-25 words) with sophisticated vocabulary and intricate sentence structures"
-    };
+    let itemTypeDescription;
+    let complexityDescription;
+    let lengthConstraint;
+    let examplesBasedOnType;
 
-    const complexity = complexityMapping[difficulty];
-
-    // Build word type requirements
-    let wordTypeRequirement = difficultyInfo.wordTypes;
-    if (wordTypes && wordTypes.length > 0) {
-      wordTypeRequirement = wordTypes.join(", ");
+    if (type === "words") {
+      itemTypeDescription = "single words";
+      complexityDescription = difficultyInfo.complexity.replace('words with', 'single words with'); // Adjust for words
+      lengthConstraint = `Words should generally be ${difficultyInfo.syllableRange}`;
+      examplesBasedOnType = difficultyInfo.examples.slice(0, 3).join(", ");
+    } else { // type === "phrases"
+      itemTypeDescription = "natural, grammatically correct phrases";
+      complexityDescription = `phrases with ${difficultyInfo.complexity.toLowerCase()}`;
+      lengthConstraint = `Phrases should be ${difficultyInfo.maxSentenceLength} words or fewer`;
+      examplesBasedOnType = `Example phrases: "${difficultyInfo.examples.slice(0, 2).join('", "')}"`;
     }
-
-    // Examples to guide the model
-    const examples = difficultyInfo.examples.slice(0, 3).join(", ");
 
     // Build system prompt
     const systemPrompt = `
-You are a speech rehabilitation assistant generating conversational phrases for people with difficulty speaking to practice pronunciation.
+You are a speech rehabilitation assistant generating conversational ${itemTypeDescription} for people with difficulty speaking to practice pronunciation.
 
 **Task**:
-Generate exactly 8 natural, grammatically correct phrases related to the topic "${topic}" for speech practice.
+Generate exactly ${numberOfItems} ${itemTypeDescription} related to the topic "${topic}" for speech practice.
 
 **Difficulty Level**: ${difficulty}/8 (${difficultyInfo.name})
 
 **Requirements**:
-- **Complexity**: ${complexity}
-- **Word Types**: Use ${wordTypeRequirement} (e.g., ${examples})
-- **Sentence Length**: Phrases should be ${difficultyInfo.maxSentenceLength} words or fewer
+- **Complexity**: ${complexityDescription}
+- **Word Types**: Use ${difficultyInfo.wordTypes} (e.g., ${difficultyInfo.examples.slice(0,3).join(', ')})
+- **Length**: ${lengthConstraint}
 - **Phonetic Considerations**: Include ${difficultyInfo.phonetics} where appropriate
 - **Content**:
-  - Phrases must be meaningful, practical, and usable in everyday conversations
-  - Ensure phrases are complete sentences or standalone expressions
-  - Relate phrases directly to the topic "${topic}"
+  - ${itemTypeDescription} must be meaningful, practical, and usable in everyday conversations
+  - If generating phrases, ensure they are complete sentences or standalone expressions
+  - Relate ${itemTypeDescription} directly to the topic "${topic}"
 - **Exclusions**:
   - Do NOT include numbers or numerical sequences (e.g., "5, 4, 3")
   - Do NOT include hyphenated syllabic breakdowns (e.g., "cog-ni-tive ther-a-py")
   - Avoid overly technical or academic terms unless essential to the topic and difficulty
   - Do NOT include incomplete sentences, fragments, lists, bullet points, or markdown formatting
 - **Output Format**:
-  - Return a JSON object with a single key "phrases" containing an array of 8 strings
-  - Example: {"phrases": ["phrase 1", "phrase 2", ..., "phrase 8"]}
+  - Return a JSON object with a single key "phrases" containing an array of ${numberOfItems} strings
+  - Example: {"phrases": ["item 1", "item 2", ..., "item ${numberOfItems}"]}
 
 **Examples for Topic "Commonly Used Phrases"**:
 - Difficulty 1: ["Hi, how are you?", "Good morning!", "Thank you very much."]
-- Difficulty 7: ["Could you please clarify your position?", "I appreciate your thoughtful consideration.", "Would you mind elaborating on the main points?"]`;
+**Examples for Topic "Common English Words"**:
+- Difficulty 1: ["cat", "dog", "house"]
+`;
 
     const response = await openai.chat.completions.create({
       model: ADVANCED_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Generate exactly 8 conversational phrases for the topic "${topic}" at difficulty level ${difficulty}/8. Follow all requirements and return as a JSON object with a "phrases" array.` }
+        { role: "user", content: `Generate exactly ${numberOfItems} conversational ${itemTypeDescription} for the topic "${topic}" at difficulty level ${difficulty}/8. Follow all requirements and return as a JSON object with a "phrases" array.` }
       ],
       temperature: 0.7,
       max_tokens: 1000,
@@ -700,7 +651,7 @@ Generate exactly 8 natural, grammatically correct phrases related to the topic "
         .map(line => line.trim())
         .filter(line => line && !line.match(/^{|}|"phrases"|\[|\]|,$/))
         .map(line => line.replace(/^["']|["']$/g, '')) // Remove quotes
-        .slice(0, 8);
+        .slice(0, numberOfItems);
       parsed = { phrases: lines };
     }
 
@@ -710,42 +661,49 @@ Generate exactly 8 natural, grammatically correct phrases related to the topic "
       parsed.phrases = [];
     }
 
-    // Filter and validate phrases
-    let validPhrases = parsed.phrases
-      .filter(phrase => {
-        // Ensure phrase is a string and non-empty
-        if (typeof phrase !== 'string' || !phrase.trim()) return false;
-        // Exclude numbers and hyphenated terms
-        if (/^\d+(,\s*\d+)*$/.test(phrase)) return false; // e.g., "5, 4, 3"
-        if (phrase.includes('-') && !phrase.match(/^[a-zA-Z]+-[a-zA-Z]+$/)) return false; // e.g., "cog-ni-tive"
-        // Allow phrases up to max sentence length + 20% to account for natural variation
-        const wordCount = phrase.split(/\s+/).length;
-        if (wordCount > difficultyInfo.maxSentenceLength * 1.2) return false;
+    // Filter and validate phrases/words
+    let validItems = parsed.phrases
+      .filter(item => {
+        // Ensure item is a string and non-empty
+        if (typeof item !== 'string' || !item.trim()) return false;
+        // Exclude numbers and hyphenated terms (unless they are valid compound words)
+        if (/^\d+(,\s*\d+)*$/.test(item)) return false; // e.g., "5, 4, 3"
+        // Adjust hyphenation check for words vs. phrases if needed. For now, keep it general.
+        if (item.includes('-') && !item.match(/^[a-zA-Z]+(-[a-zA-Z]+)*$/)) return false; // e.g., "cog-ni-tive", allow "well-being"
+
+        const wordCount = item.split(/\s+/).length;
+        if (type === "words") {
+            // For words, ensure it's a single word primarily
+            if (wordCount > 1) return false;
+        } else {
+            // For phrases, allow up to max sentence length + 20%
+            if (wordCount > difficultyInfo.maxSentenceLength * 1.2) return false;
+        }
         return true;
       })
-      .slice(0, 8);
+      .slice(0, numberOfItems);
 
-    // If we don't have enough valid phrases, retry once
-    if (validPhrases.length < 8) {
-      console.warn(`Only ${validPhrases.length} valid phrases generated, retrying once...`);
-      const additionalPhrases = await generateTopicPhrases(topic, difficulty, wordTypes, syllableRange);
-      validPhrases = [
-        ...validPhrases,
-        ...additionalPhrases.filter(p => !validPhrases.includes(p))
-      ].slice(0, 8);
+    // If we don't have enough valid items, retry once
+    if (validItems.length < numberOfItems) {
+      console.warn(`Only ${validItems.length} valid ${type} generated, retrying once...`);
+      const additionalItems = await generateTopicPhrases(topic, difficulty, type);
+      validItems = [
+        ...validItems,
+        ...additionalItems.filter(p => !validItems.includes(p))
+      ].slice(0, numberOfItems);
     }
 
-    // Ensure exactly 10 phrases
-    while (validPhrases.length < 8) {
-      validPhrases.push(`Sample phrase for ${topic} ${validPhrases.length + 1}`);
+    // Ensure exactly `numberOfItems` (8)
+    while (validItems.length < numberOfItems) {
+      validItems.push(`Sample ${type === "words" ? "word" : "phrase"} for ${topic} ${validItems.length + 1}`);
     }
-    while (validPhrases.length > 10) {
-      validPhrases.pop();
+    while (validItems.length > numberOfItems) {
+      validItems.pop();
     }
 
-    return validPhrases;
+    return validItems;
   } catch (error) {
-    console.error("Error generating topic phrases:", error);
-    return Array(8).fill(`Sample phrase for ${topic}`);
+    console.error(`Error generating topic ${type}:`, error);
+    return Array(8).fill(`Sample ${type === "words" ? "word" : "phrase"} for ${topic}`);
   }
 }
