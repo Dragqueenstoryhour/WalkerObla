@@ -73,11 +73,12 @@ export default function NewPhrases() {
 
   // We'll add this after our other state variables are defined
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationType, setGenerationType] = useState<"words" | "phrases">("words");
 
   const [manualEntryText, setManualEntryText] = useState("");
   const [imageUploadText, setImageUploadText] = useState("");
   const [aiGenerateTopic, setAiGenerateTopic] = useState(
-    "Commonly Used Phrases",
+    "Commonly Used Words",
   );
   const [processedPhrases, setProcessedPhrases] = useState<ProcessedPhrase[]>(
     [],
@@ -1762,11 +1763,12 @@ export default function NewPhrases() {
   const handleGenerateTopicPhrases = async (
     topic: string,
     customDifficulty?: string,
+    type?: "words" | "phrases",
   ) => {
     if (!topic.trim()) {
       toast({
         title: "No Topic Provided",
-        description: "Please enter a topic to generate phrases.",
+        description: `Please enter a topic to generate ${type || generationType}.`,
         variant: "destructive",
       });
       return;
@@ -1774,6 +1776,8 @@ export default function NewPhrases() {
 
     // Use the current difficulty from context if not provided
     const difficultyToUse = customDifficulty || difficulty;
+    // Use the specified type or fall back to the current state
+    const typeToUse = type || generationType;
 
     setIsProcessing(true);
 
@@ -1783,11 +1787,15 @@ export default function NewPhrases() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ topic, difficulty: difficultyToUse }),
+        body: JSON.stringify({ 
+          topic, 
+          difficulty: difficultyToUse,
+          type: typeToUse
+        }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to generate phrases");
+        throw new Error(`Failed to generate ${typeToUse}`);
       }
 
       const result = await response.json();
@@ -1805,8 +1813,8 @@ export default function NewPhrases() {
       setCurrentPhraseIndex(0); // Select first phrase
 
       toast({
-        title: "Phrases Generated",
-        description: `${newPhrases.length} phrases related to "${topic}" have been generated.`,
+        title: typeToUse === "words" ? "Words Generated" : "Phrases Generated",
+        description: `${newPhrases.length} ${typeToUse} related to "${topic}" have been generated.`,
       });
     } catch (error) {
       console.error("Error generating topic phrases:", error);
@@ -2175,15 +2183,48 @@ I'd like to schedule an appointment."
           <Card>
             <CardHeader className="flex flex-row justify-between items-start space-y-0">
               <div>
-                <CardTitle>Generate Phrases on Topic</CardTitle>
+                <CardTitle>Generate on Topic</CardTitle>
                 <CardDescription>
-                  Let AI generate topic-specific phrases and words for practice
+                  Let AI generate topic-specific {generationType} for practice
                 </CardDescription>
               </div>
               {/* Removed redundant DifficultyDropdown */}
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                <div className="flex items-center justify-start gap-2 mb-4">
+                  <div className="bg-card rounded-lg p-1 flex shadow-sm border">
+                    <Button
+                      variant={generationType === "words" ? "secondary" : "ghost"}
+                      size="sm"
+                      className="rounded-md"
+                      onClick={() => {
+                        setGenerationType("words");
+                        // Regenerate with new type if we already have content
+                        if (processedPhrases.length > 0) {
+                          handleGenerateTopicPhrases(aiGenerateTopic, undefined, "words");
+                        }
+                      }}
+                    >
+                      Words
+                    </Button>
+                    <Button
+                      variant={generationType === "phrases" ? "secondary" : "ghost"}
+                      size="sm"
+                      className="rounded-md"
+                      onClick={() => {
+                        setGenerationType("phrases");
+                        // Regenerate with new type if we already have content
+                        if (processedPhrases.length > 0) {
+                          handleGenerateTopicPhrases(aiGenerateTopic, undefined, "phrases");
+                        }
+                      }}
+                    >
+                      Phrases
+                    </Button>
+                  </div>
+                </div>
+
                 <div>
                   <Label htmlFor="topic">Topic or Category</Label>
                   <div className="flex gap-2 mt-1">

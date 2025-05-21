@@ -163,6 +163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         difficulty: z.coerce.string() // Allow numeric input but convert to string
           .regex(/^[1-8]$/, "Difficulty must be a number from 1 to 8")
           .optional(),
+        type: z.enum(["words", "phrases"]).optional(),
         wordTypes: z.array(z.string()).optional(),
         syllableRange: z.object({
           min: z.number().int().min(1).max(5).optional(),
@@ -179,10 +180,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { topic, difficulty = "4", wordTypes, syllableRange } = validationResult.data;
+      const { topic, difficulty = "4", type = "words", wordTypes, syllableRange } = validationResult.data;
       
-      // Use OpenAI to generate phrases related to the topic with specified difficulty
-      const response = await openaiService.generateTopicPhrases(topic, difficulty, wordTypes, syllableRange);
+      // Use OpenAI to generate phrases/words related to the topic with specified difficulty and type
+      const response = await openaiService.generateTopicPhrases(topic, difficulty, type, wordTypes, syllableRange);
       
       // Include difficulty metadata in response
       res.json({
