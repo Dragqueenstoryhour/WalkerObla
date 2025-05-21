@@ -7,7 +7,7 @@ import { Link, useLocation } from 'wouter';
 import { Star, Trophy, Clock, BarChart2, Flame } from 'lucide-react'; // Added Flame icon
 
 const Account = () => {
-  const { isAuthenticated, user, signOut } = useAuthContext(); // Destructure signOut
+  const { isAuthenticated, user, logout } = useAuthContext(); // Use logout instead of signOut
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [userStats, setUserStats] = useState({
@@ -15,7 +15,8 @@ const Account = () => {
     pronunciationImprovement: 0,
     wordsLearned: 0,
     exercisesCompleted: 0,
-    longestStreak: 0
+    longestStreak: 0,
+    articlesRead: 0 // Added articles read as per requirement
   });
 
   useEffect(() => {
@@ -74,15 +75,19 @@ const Account = () => {
     //   longestStreak: 5
     // });
 
-  }, [isAuthenticated, navigate, toast, signOut]); // Added signOut to dependency array
+  }, [isAuthenticated, navigate, toast, logout]); // Use logout in dependency array
 
-  const handleSignOut = () => {
-    if (signOut) { // Ensure signOut function exists
-      signOut();
-      navigate('/'); // Redirect to home or login page after sign out
+  const handleSignOut = async () => {
+    try {
+      await logout(); // Use the logout function from AuthContext
+      navigate('/'); // Redirect happens after successful logout
+      // Toast is already handled inside the logout function
+    } catch (error) {
+      console.error('Error signing out:', error);
       toast({
-        title: 'Signed Out',
-        description: 'You have successfully signed out.',
+        title: 'Sign out failed',
+        description: 'There was a problem signing out. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -204,7 +209,7 @@ const Account = () => {
                 </div>
               </div>
 
-              {/* Longest Streak - NEWLY ADDED */}
+              {/* Longest Streak */}
               <div className="flex items-center gap-3">
                 <div className="bg-red-100 p-2 rounded-full">
                   <Flame className="h-5 w-5 text-red-600" />
@@ -215,7 +220,25 @@ const Account = () => {
                     <span className="font-medium">{userStats.longestStreak} days</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                    <div className="bg-red-500 h-2 rounded-full" style={{ width: `${Math.min(userStats.longestStreak/10 * 100, 100)}%` }}></div> {/* Example progress bar for streak */}
+                    <div className="bg-red-500 h-2 rounded-full" style={{ width: `${Math.min(userStats.longestStreak/10 * 100, 100)}%` }}></div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Articles Read - NEWLY ADDED */}
+              <div className="flex items-center gap-3">
+                <div className="bg-indigo-100 p-2 rounded-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Articles Read</span>
+                    <span className="font-medium">{userStats.articlesRead}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                    <div className="bg-indigo-500 h-2 rounded-full" style={{ width: `${Math.min(userStats.articlesRead/20 * 100, 100)}%` }}></div>
                   </div>
                 </div>
               </div>
