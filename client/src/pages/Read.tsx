@@ -7,10 +7,12 @@ import SettingsModal from '@/components/modals/SettingsModal';
 import HelpModal from '@/components/modals/HelpModal';
 import { useQuery } from '@tanstack/react-query';
 import { useReading } from '@/contexts/ReadingContext';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { ReadingContent as ReadingContentType, PronunciationAssessmentResult } from '@/lib/types';
 import SimpleRecorder from '@/components/SimpleRecorder'; // Import SimpleRecorder directly
 import { Card, CardContent } from '@/components/ui/card'; // Import Card and CardContent for SimpleRecorder's outer box
-import { CheckCircle } from 'lucide-react'; // Import CheckCircle icon
+import { CheckCircle, BookOpen } from 'lucide-react'; // Import icons
+import { useToast } from '@/hooks/use-toast';
 
 const Read = () => {
   const [showSettingsModal, setShowSettingsModal] = useState(false);

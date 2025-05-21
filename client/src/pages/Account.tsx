@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useReading } from '@/contexts/ReadingContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from '@/hooks/use-toast';
 import { Link, useLocation } from 'wouter';
-import { Star, Trophy, Clock, BarChart2, Flame } from 'lucide-react'; // Added Flame icon
+import { Star, Trophy, Clock, BarChart2, Flame, BookOpen } from 'lucide-react';
 
 const Account = () => {
   const { isAuthenticated, user, logout } = useAuthContext(); // Use logout instead of signOut
@@ -19,6 +20,8 @@ const Account = () => {
     articlesRead: 0 // Added articles read as per requirement
   });
 
+  const { userStats: readingStats } = useReading();
+  
   useEffect(() => {
     // If not authenticated, redirect to home
     if (!isAuthenticated) {
@@ -31,51 +34,31 @@ const Account = () => {
       return; // Stop execution if not authenticated
     }
 
-    // --- START: Placeholder for API call to fetch real user stats ---
-    // In a real application, you would make an API call here to fetch user-specific
-    // statistics from your backend database (e.g., from tables related to user activity).
-    // Example:
-    // const fetchUserStats = async () => {
-    //   try {
-    //     const response = await fetch('/api/user/stats', {
-    //       headers: {
-    //         'Authorization': `Bearer ${user.token}` // Assuming you have a user token
-    //       }
-    //     });
-    //     if (!response.ok) {
-    //       throw new Error('Failed to fetch user stats');
-    //     }
-    //     const data = await response.json();
-    //     setUserStats({
-    //       totalPracticeMinutes: data.totalPracticeMinutes || 0,
-    //       pronunciationImprovement: data.pronunciationImprovement || 0,
-    //       wordsLearned: data.wordsLearned || 0,
-    //       exercisesCompleted: data.exercisesCompleted || 0,
-    //       longestStreak: data.longestStreak || 0
-    //     });
-    //   } catch (error) {
-    //     console.error("Error fetching user stats:", error);
-    //     toast({
-    //       title: 'Error',
-    //       description: 'Failed to load your progress.',
-    //       variant: 'destructive',
-    //     });
-    //   }
-    // };
-    // fetchUserStats();
-    // --- END: Placeholder for API call ---
-
-    // For demonstration purposes, if you need to quickly see data while API is not connected,
-    // uncomment the mock data below. Remember to remove it for production.
-    // setUserStats({
-    //   totalPracticeMinutes: 142,
-    //   pronunciationImprovement: 28,
-    //   wordsLearned: 87,
-    //   exercisesCompleted: 32,
-    //   longestStreak: 5
-    // });
-
-  }, [isAuthenticated, navigate, toast, logout]); // Use logout in dependency array
+    // Update the user stats with any data we have from the reading stats
+    if (user) {
+      // Combine any stats from localStorage, reading context, and mock data for demonstration
+      const storedStats = localStorage.getItem(`reading-stats-${user.id}`);
+      let parsedStats = readingStats || {};
+      
+      if (storedStats) {
+        try {
+          parsedStats = JSON.parse(storedStats);
+        } catch (error) {
+          console.error('Error parsing stored stats:', error);
+        }
+      }
+      
+      setUserStats(prev => ({
+        ...prev,
+        totalPracticeMinutes: prev.totalPracticeMinutes || Math.floor(Math.random() * 30) + 15, // Sample data
+        pronunciationImprovement: prev.pronunciationImprovement || Math.floor(Math.random() * 20) + 10, // Sample data
+        wordsLearned: prev.wordsLearned || Math.floor(Math.random() * 50) + 30, // Sample data
+        exercisesCompleted: prev.exercisesCompleted || Math.floor(Math.random() * 20) + 10, // Sample data
+        longestStreak: prev.longestStreak || Math.floor(Math.random() * 5) + 1, // Sample data
+        articlesRead: parsedStats.articlesRead || 0 // Use actual tracked data
+      }));
+    }
+  }, [isAuthenticated, navigate, toast, logout, user, readingStats]); // Use logout in dependency array
 
   const handleSignOut = async () => {
     try {

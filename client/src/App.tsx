@@ -60,23 +60,33 @@ function TabBar() {
 }
 
 function Navigation() {
-  const { isAuthenticated, user } = useAuthContext();
+  const { isAuthenticated, user, isLoading } = useAuthContext();
 
   return (
-    <div className="bg-white py-2 px-4 mb-4 flex items-center justify-between"> {/* Removed border-b and shadow-sm */}
+    <div className="bg-white py-2 px-4 mb-4 flex items-center justify-between">
       {/* Integrating the new TabBar component */}
       <div className="flex-grow flex justify-center">
         <TabBar />
       </div>
 
-      <div className="flex items-center ml-auto pl-4"> {/* Adjusted for right alignment and added padding */}
-        {isAuthenticated && user ? (
+      <div className="flex items-center ml-auto pl-4">
+        {isLoading ? (
+          // Show a loading spinner when auth state is loading
+          <div className="h-10 w-10 rounded-full flex items-center justify-center border-2 border-blue-300 text-blue-500">
+            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </div>
+        ) : isAuthenticated && user ? (
+          // Show user avatar when authenticated
           <Link href="/account" className="flex items-center gap-2">
-            <div className="h-10 w-10 border-2 border-blue-500 rounded-full flex items-center justify-center bg-blue-500 text-white font-semibold text-xl"> {/* Slightly larger and more prominent */}
+            <div className="h-10 w-10 border-2 border-blue-500 rounded-full flex items-center justify-center bg-blue-500 text-white font-semibold text-xl">
               {user.username?.charAt(0).toUpperCase() || 'U'}
             </div>
           </Link>
         ) : (
+          // Show auth buttons when not authenticated
           <AuthButtons
             variant="default"
             className="bg-green-600 hover:bg-green-700 text-white border-none"
