@@ -17,8 +17,18 @@ import { useToast } from '@/hooks/use-toast';
 const Read = () => {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const { currentContent, setCurrentContent, setPronunciationResults, updateSessionProgress } = useReading();
-  const simpleRecorderRef = useRef<HTMLDivElement>(null); // New ref for SimpleRecorder
+  const { toast } = useToast();
+  const { isAuthenticated } = useAuthContext();
+  const { 
+    currentContent, 
+    setCurrentContent, 
+    setPronunciationResults, 
+    updateSessionProgress,
+    completeArticle,
+    userStats 
+  } = useReading();
+  const [articleCompleted, setArticleCompleted] = useState(false);
+  const simpleRecorderRef = useRef<HTMLDivElement>(null); // Ref for SimpleRecorder
 
   // Fetch initial sample content
   const { data: initialContent, isLoading, error } = useQuery({
@@ -61,7 +71,28 @@ const Read = () => {
     // Update progress based on word count
     const wordsRead = referenceText.split(/\s+/).length || 0;
     updateSessionProgress(wordsRead);
+    
+    // Mark article as completed if authenticated
+    if (isAuthenticated && currentContent && !articleCompleted) {
+      completeArticle(currentContent.id)
+        .then(() => {
+          setArticleCompleted(true);
+          toast({
+            title: "Article Completed",
+            description: "Your progress has been saved",
+            duration: 3000,
+          });
+        })
+        .catch(err => {
+          console.error("Error tracking article completion:", err);
+        });
+    }
   };
+  
+  // Reset articleCompleted state when content changes
+  useEffect(() => {
+    setArticleCompleted(false);
+  }, [currentContent]);
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
