@@ -156,16 +156,16 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <SettingsProvider>
-        <ReadingProvider>
-          <AuthProvider>
-            <DifficultyProvider>
+      <AuthProvider>
+        <SettingsProvider>
+          <DifficultyProvider>
+            <ReadingProvider>
               <Router />
               <Toaster />
-            </DifficultyProvider>
-          </AuthProvider>
-        </ReadingProvider>
-      </SettingsProvider>
+            </ReadingProvider>
+          </DifficultyProvider>
+        </SettingsProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
