@@ -557,9 +557,7 @@ export async function generateSimilarPhrases(
 export async function generateTopicPhrases(
   topic: string,
   difficulty: string = "4",
-  type: "words" | "phrases" = "words", // Default to words as per new requirements
-  wordTypes?: string[],
-  syllableRange?: { min?: number, max?: number }
+  type: "words" | "phrases" = "words" // Default to words as per new requirements
 ): Promise<string[]> {
   try {
     console.log(`Generating ${type} related to topic: "${topic}" with difficulty level: ${difficulty}`);

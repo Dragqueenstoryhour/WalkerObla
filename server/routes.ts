@@ -183,7 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { topic, difficulty = "4", type = "words", wordTypes, syllableRange } = validationResult.data;
       
       // Use OpenAI to generate phrases/words related to the topic with specified difficulty and type
-      const response = await openaiService.generateTopicPhrases(topic, difficulty, type, wordTypes, syllableRange);
+      const response = await openaiService.generateTopicPhrases(topic, difficulty, type);
       
       // Include difficulty metadata in response
       res.json({

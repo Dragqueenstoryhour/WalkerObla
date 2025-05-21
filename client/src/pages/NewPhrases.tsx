@@ -149,7 +149,7 @@ export default function NewPhrases() {
     // Auto-load commonly used phrases when the page opens
     if (!shareId) {
       // Only if we're not loading shared phrases
-      handleGenerateTopicPhrases("Commonly Used Phrases");
+      handleGenerateTopicPhrases("Commonly Used Words");
     }
 
     // Cleanup function to handle any lingering recording sessions
@@ -2029,7 +2029,7 @@ I'd like to schedule an appointment."
                         closeButton.style.flex = "1";
                         controlContainer.appendChild(closeButton);
 
-                        modal.appendChild(controldiv);
+                        modal.appendChild(controlContainer);
 
                         document.body.appendChild(modal);
 
