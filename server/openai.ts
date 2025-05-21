@@ -577,9 +577,9 @@ export async function generateTopicPhrases(
     let examplesBasedOnType;
 
     if (type === "words") {
-      itemTypeDescription = "single individual words (not phrases)";
+      itemTypeDescription = "meaningful single words";
       complexityDescription = difficultyInfo.complexity.replace('words with', 'single words with'); // Adjust for words
-      lengthConstraint = `Words MUST be single words only with ${difficultyInfo.syllableRange}`;
+      lengthConstraint = `Words MUST be single standalone meaningful words (no articles, prepositions, or pronouns) with ${difficultyInfo.syllableRange}`;
       examplesBasedOnType = difficultyInfo.examples.slice(0, 3).join(", ");
     } else { // type === "phrases"
       itemTypeDescription = "natural, grammatically correct phrases";
@@ -594,7 +594,13 @@ You are a speech rehabilitation assistant generating ${itemTypeDescription} for 
 
 **Task**:
 Generate exactly ${numberOfItems} ${itemTypeDescription} related to the topic "${topic}" for speech practice.
-${type === "words" ? "IMPORTANT: Each item MUST be a SINGLE WORD ONLY. No phrases or multiple words allowed." : ""}
+${type === "words" ? `IMPORTANT: 
+- Each item MUST be a SINGLE WORD ONLY (no phrases or sentences)
+- Focus on topic-relevant nouns, verbs, adjectives, and adverbs 
+- Do NOT include articles (a, an, the), prepositions (in, on, at), or pronouns (I, you, he)
+- Ensure each word is directly related to the topic "${topic}"
+- Provide diverse, unique words (no repetition)
+- Words should be substantive and meaningful` : ""}
 
 **Difficulty Level**: ${difficulty}/8 (${difficultyInfo.name})
 
@@ -626,7 +632,7 @@ ${type === "words" ? "IMPORTANT: Each item MUST be a SINGLE WORD ONLY. No phrase
       model: ADVANCED_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Generate exactly ${numberOfItems} conversational ${itemTypeDescription} for the topic "${topic}" at difficulty level ${difficulty}/8. Follow all requirements and return as a JSON object with a "phrases" array.` }
+        { role: "user", content: `Generate exactly ${numberOfItems} ${type === "words" ? "topic-specific individual" : "conversational"} ${itemTypeDescription} for the topic "${topic}" at difficulty level ${difficulty}/8. Follow all requirements and return as a JSON object with a "phrases" array.` }
       ],
       temperature: 0.7,
       max_tokens: 1000,

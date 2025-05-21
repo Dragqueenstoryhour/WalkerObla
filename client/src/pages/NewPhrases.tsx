@@ -1803,12 +1803,31 @@ export default function NewPhrases() {
       // Process results based on the current mode (words or phrases)
       let processedItems = result.phrases;
       
-      // If we're in words mode, ensure we only have single words
+      // If we're in words mode, ensure we only have single words and remove duplicates
       if (typeToUse === "words") {
+        // First, clean up the results to ensure we have only single words
         processedItems = result.phrases.map((item: string) => {
           // Extract just the first word if we got a phrase instead of a single word
           const words = item.trim().split(/\s+/);
           return words[0] || item;
+        });
+        
+        // Filter out any articles, prepositions or very short words that might have slipped through
+        const articlesAndPrepositions = ['a', 'an', 'the', 'in', 'on', 'at', 'by', 'for', 'with', 'to', 'from'];
+        processedItems = processedItems.filter(word => 
+          !articlesAndPrepositions.includes(word.toLowerCase()) && 
+          word.length > 1 // Ensure we don't get single letter words
+        );
+        
+        // Remove any duplicate words
+        const uniqueWords: string[] = [];
+        processedItems = processedItems.filter(word => {
+          const wordLower = word.toLowerCase();
+          if (!uniqueWords.includes(wordLower)) {
+            uniqueWords.push(wordLower);
+            return true;
+          }
+          return false;
         });
       }
 
