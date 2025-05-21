@@ -577,9 +577,9 @@ export async function generateTopicPhrases(
     let examplesBasedOnType;
 
     if (type === "words") {
-      itemTypeDescription = "single words";
+      itemTypeDescription = "single individual words (not phrases)";
       complexityDescription = difficultyInfo.complexity.replace('words with', 'single words with'); // Adjust for words
-      lengthConstraint = `Words should generally be ${difficultyInfo.syllableRange}`;
+      lengthConstraint = `Words MUST be single words only with ${difficultyInfo.syllableRange}`;
       examplesBasedOnType = difficultyInfo.examples.slice(0, 3).join(", ");
     } else { // type === "phrases"
       itemTypeDescription = "natural, grammatically correct phrases";
@@ -590,10 +590,11 @@ export async function generateTopicPhrases(
 
     // Build system prompt
     const systemPrompt = `
-You are a speech rehabilitation assistant generating conversational ${itemTypeDescription} for people with difficulty speaking to practice pronunciation.
+You are a speech rehabilitation assistant generating ${itemTypeDescription} for people with difficulty speaking to practice pronunciation.
 
 **Task**:
 Generate exactly ${numberOfItems} ${itemTypeDescription} related to the topic "${topic}" for speech practice.
+${type === "words" ? "IMPORTANT: Each item MUST be a SINGLE WORD ONLY. No phrases or multiple words allowed." : ""}
 
 **Difficulty Level**: ${difficulty}/8 (${difficultyInfo.name})
 

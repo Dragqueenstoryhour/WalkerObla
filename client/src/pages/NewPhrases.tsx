@@ -1800,8 +1800,20 @@ export default function NewPhrases() {
 
       const result = await response.json();
 
-      // Add the new phrases to our collection
-      const newPhrases: ProcessedPhrase[] = result.phrases.map(
+      // Process results based on the current mode (words or phrases)
+      let processedItems = result.phrases;
+      
+      // If we're in words mode, ensure we only have single words
+      if (typeToUse === "words") {
+        processedItems = result.phrases.map((item: string) => {
+          // Extract just the first word if we got a phrase instead of a single word
+          const words = item.trim().split(/\s+/);
+          return words[0] || item;
+        });
+      }
+
+      // Add the new phrases/words to our collection
+      const newPhrases: ProcessedPhrase[] = processedItems.map(
         (text: string, index: number) => ({
           id: `phrase-${Date.now()}-topic-${index}`,
           text,
