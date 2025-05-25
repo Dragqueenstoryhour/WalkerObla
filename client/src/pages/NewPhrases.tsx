@@ -48,10 +48,16 @@ import {
   Star,
   Volume2,
   Gauge,
+  ChevronRight,
+  ChevronLeft,
+  ArrowRight,
 } from "lucide-react";
 import { useDifficulty } from "@/contexts/DifficultyContext";
 import { DifficultyDropdown } from "@/components/difficulty/SimplifiedDifficultySelector";
 import { Turtle } from "lucide-react";
+import Slider from "react-slick";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
 
 interface ProcessedPhrase {
   id: string;
@@ -107,6 +113,10 @@ export default function NewPhrases() {
   const [showSignInDialog, setShowSignInDialog] = useState(false);
   const [pendingSaveIndex, setPendingSaveIndex] = useState<number | null>(null);
 
+  // Carousel state
+  const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
+  const sliderRef = useRef<Slider>(null);
+
   // Refs for media recording
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -130,6 +140,35 @@ export default function NewPhrases() {
       });
     },
   });
+
+  // Carousel navigation functions
+  const goToNext = () => {
+    if (sliderRef.current && currentCarouselIndex < processedPhrases.length - 1) {
+      sliderRef.current.slickNext();
+    }
+  };
+
+  const goToPrevious = () => {
+    if (sliderRef.current && currentCarouselIndex > 0) {
+      sliderRef.current.slickPrev();
+    }
+  };
+
+  const goToSlide = (index: number) => {
+    if (sliderRef.current) {
+      sliderRef.current.slickGoTo(index);
+    }
+  };
+
+  // Auto-scroll to practice section after phrases are generated
+  const scrollToPracticeSection = () => {
+    setTimeout(() => {
+      const practiceSection = document.getElementById('practice-phrases-section');
+      if (practiceSection) {
+        practiceSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 500);
+  };
 
   // Set up history data and load initial phrases for "Commonly Used Phrases"
   useEffect(() => {
@@ -2425,7 +2464,45 @@ I'd like to schedule an appointment."
                       phrase.assessmentResult &&
                       currentlyPracticing === phrase.id && (
                         <div className="mt-2 space-y-4">
-                          <p className="font-medium text-center">{phrase.text}</p>
+                          <p className="text-2xl font-bold text-center">{phrase.text}</p>
+                          
+                          {/* Audio controls immediately below the practice word/phrase */}
+                          <div className="flex justify-center gap-2 mb-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                              onClick={() => {
+                                const utterance = new SpeechSynthesisUtterance(phrase.text);
+                                utterance.rate = 1;
+                                speechSynthesis.speak(utterance);
+                              }}
+                            >
+                              <Volume2 className="h-4 w-4 mr-1" />
+                              Normal
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                              onClick={() => {
+                                const utterance = new SpeechSynthesisUtterance(phrase.text);
+                                utterance.rate = 0.6;
+                                speechSynthesis.speak(utterance);
+                              }}
+                            >
+                              <Turtle className="h-4 w-4 mr-1" />
+                              Slow
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                              onClick={() => handleSavePhrase(idx)}
+                            >
+                              <Star className="h-4 w-4" />
+                            </Button>
+                          </div>
 
                           <div className="border-2 border-[#57cc99] rounded-lg bg-[#f5f7fa] p-4 relative overflow-hidden shadow-sm">
                             <div className="absolute top-0 left-0 w-full h-2 bg-[#57cc99]"></div>
@@ -2597,8 +2674,13 @@ I'd like to schedule an appointment."
                                 <button
                                   className="bg-[#57cc99] text-white rounded-full p-2 flex items-center justify-center shadow-md hover:bg-[#38b37a] transition-colors"
                                   onClick={() => {
-                                    const audio = new Audio(phrase.recordingUrl as string);
-                                    audio.play();
+                                    if (phrase.recordingBlob) {
+                                      const audio = new Audio(URL.createObjectURL(phrase.recordingBlob));
+                                      audio.play();
+                                    } else if (phrase.recordingUrl) {
+                                      const audio = new Audio(phrase.recordingUrl);
+                                      audio.play();
+                                    }
                                   }}
                                 >
                                   <Volume2 className="h-5 w-5" />
