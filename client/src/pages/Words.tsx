@@ -80,6 +80,10 @@ export default function Words() {
   const [manualEntryText, setManualEntryText] = useState("");
   const [imageUploadText, setImageUploadText] = useState("");
   const [aiGenerateTopic, setAiGenerateTopic] = useState("Commonly Used Words");
+  const [customTopic, setCustomTopic] = useState("");
+  const [isRecordingTopic, setIsRecordingTopic] = useState(false);
+  const [showLetterSelection, setShowLetterSelection] = useState(false);
+  const [selectedLetter, setSelectedLetter] = useState("");
   const [processedWords, setProcessedWords] = useState<ProcessedWord[]>([]);
   const [currentWordIndex, setCurrentWordIndex] = useState(-1);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -200,10 +204,7 @@ export default function Words() {
       setShowFinalProgress(false);
       setLowScoreWords([]);
 
-      toast({
-        title: "Words Generated",
-        description: `${newWords.length} words are ready for practice.`,
-      });
+      // Removed toast notification
 
       scrollToPracticeSection();
     } catch (error) {
@@ -354,10 +355,7 @@ export default function Words() {
       setSavedWordId(word.id);
       setTimeout(() => setSavedWordId(null), 2000);
 
-      toast({
-        title: "Word Saved",
-        description: "This word has been saved to your collection.",
-      });
+      // Removed toast notification
     } catch (error) {
       console.error("Error saving word:", error);
       toast({
@@ -366,6 +364,87 @@ export default function Words() {
         variant: "destructive",
       });
     }
+  };
+
+  // Handle speech-to-text for topic generation
+  const handleTopicSpeechToText = async () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      toast({
+        title: "Not Supported",
+        description: "Speech recognition is not supported in this browser.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsRecordingTopic(true);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        chunks.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+        const formData = new FormData();
+        formData.append('audio', audioBlob);
+
+        try {
+          const response = await fetch('/api/speech/transcribe', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to transcribe audio');
+          }
+
+          const result = await response.json();
+          if (result.text) {
+            setCustomTopic(result.text);
+            setAiGenerateTopic(result.text);
+            await handleGenerateTopicWords(result.text);
+          }
+        } catch (error) {
+          console.error('Error transcribing audio:', error);
+          toast({
+            title: "Transcription Error",
+            description: "Failed to convert speech to text. Please try again.",
+            variant: "destructive",
+          });
+        } finally {
+          stream.getTracks().forEach(track => track.stop());
+        }
+      };
+
+      mediaRecorder.start();
+      setTimeout(() => {
+        if (mediaRecorder.state === 'recording') {
+          mediaRecorder.stop();
+          setIsRecordingTopic(false);
+        }
+      }, 5000); // Stop after 5 seconds
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      toast({
+        title: "Microphone Error",
+        description: "Could not access microphone. Please check your permissions.",
+        variant: "destructive",
+      });
+      setIsRecordingTopic(false);
+    }
+  };
+
+  // Handle letter-based word generation
+  const handleLetterWordGeneration = async (letter: string) => {
+    const topic = `Words that start with ${letter}`;
+    setAiGenerateTopic(topic);
+    setSelectedLetter(letter);
+    setShowLetterSelection(false);
+    await handleGenerateTopicWords(topic);
   };
 
   // Auto-load commonly used words when the page opens
@@ -379,19 +458,65 @@ export default function Words() {
     <div className="container mx-auto px-4 py-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Practice Words</h1>
-        <DifficultyDropdown onConfirm={(newDifficulty) => {
-          setDifficulty(newDifficulty);
-          handleGenerateTopicWords(aiGenerateTopic, newDifficulty);
+        <DifficultyDropdown onConfirm={async (newDifficulty) => {
+          setDifficulty(newDifficulty as any);
+          await handleGenerateTopicWords(aiGenerateTopic, newDifficulty);
         }} />
       </div>
 
       {/* Topic Selection */}
       <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Choose a Topic</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <h2 className="text-xl font-semibold mb-4">Choose a Topic or Enter Your Own</h2>
+        
+        {/* Custom Topic Input */}
+        <div className="mb-6 space-y-4">
+          <div className="flex gap-2">
+            <Input
+              placeholder="Enter a custom topic (e.g., 'cooking terms', 'travel words')"
+              value={customTopic}
+              onChange={(e) => setCustomTopic(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && customTopic.trim()) {
+                  setAiGenerateTopic(customTopic);
+                  handleGenerateTopicWords(customTopic);
+                }
+              }}
+              className="flex-1"
+            />
+            <Button
+              onClick={() => {
+                if (customTopic.trim()) {
+                  setAiGenerateTopic(customTopic);
+                  handleGenerateTopicWords(customTopic);
+                }
+              }}
+              disabled={!customTopic.trim() || isGenerating}
+            >
+              Generate
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleTopicSpeechToText}
+              disabled={isRecordingTopic || isGenerating}
+              className="px-3"
+            >
+              {isRecordingTopic ? (
+                <StopCircleIcon className="h-4 w-4" />
+              ) : (
+                <MicIcon className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          {isRecordingTopic && (
+            <p className="text-sm text-muted-foreground">Recording... Speak your topic now (up to 5 seconds)</p>
+          )}
+        </div>
+
+        <h3 className="text-lg font-medium mb-3">Choose a Topic</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           {[
             "Commonly Used Words",
-            "Family Members",
+            "Family Members", 
             "Colors",
             "Animals",
             "Food",
@@ -415,7 +540,55 @@ export default function Words() {
               {topic}
             </Button>
           ))}
+          
+          {/* Words that Start with... Button */}
+          <Button
+            variant="outline"
+            className="text-left h-auto py-3 bg-blue-50 border-blue-200 hover:bg-blue-100"
+            onClick={() => setShowLetterSelection(true)}
+          >
+            Words that Start with...
+          </Button>
         </div>
+
+        {/* Letter Selection Dialog */}
+        {showLetterSelection && (
+          <Dialog open={showLetterSelection} onOpenChange={setShowLetterSelection}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Choose a Starting Letter</DialogTitle>
+                <DialogDescription>
+                  Select a letter to generate words that start with that letter or sound combination
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid grid-cols-6 gap-3 py-4">
+                {/* A-Z Letters */}
+                {Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)).map((letter) => (
+                  <Button
+                    key={letter}
+                    variant="outline"
+                    className="h-12 text-lg font-semibold"
+                    onClick={() => handleLetterWordGeneration(letter)}
+                  >
+                    {letter}
+                  </Button>
+                ))}
+                
+                {/* Common consonant combinations */}
+                {["Bl", "Br", "Cl", "Cr", "Dr", "Fl", "Fr", "Gl", "Gr", "Pl", "Pr", "Sc", "Sk", "Sl", "Sm", "Sn", "Sp", "St", "Sw", "Th", "Tr", "Tw"].map((combo) => (
+                  <Button
+                    key={combo}
+                    variant="outline"
+                    className="h-12 text-sm font-semibold bg-green-50 border-green-200 hover:bg-green-100"
+                    onClick={() => handleLetterWordGeneration(combo)}
+                  >
+                    {combo}
+                  </Button>
+                ))}
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {/* Progress Indicator */}

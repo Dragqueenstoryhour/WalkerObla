@@ -489,13 +489,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const schema = z.object({
         contentId: z.string().transform(Number).optional(),
-        text: z.string(),
+        text: z.string().optional(),
+        referenceText: z.string().optional(),
       });
 
-      const { contentId, text } = schema.parse(req.body);
+      const { contentId, text, referenceText } = schema.parse(req.body);
+      const finalText = text || referenceText;
+      
+      if (!finalText) {
+        return res.status(400).json({ error: 'No text provided for pronunciation assessment' });
+      }
       const audioBuffer = req.file.buffer;
       
-      const assessmentResult = await azureService.assessPronunciation(audioBuffer, text);
+      const assessmentResult = await azureService.assessPronunciation(audioBuffer, finalText);
       res.json(assessmentResult);
     } catch (error) {
       console.error('Error assessing pronunciation:', error);
