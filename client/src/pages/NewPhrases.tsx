@@ -1723,14 +1723,14 @@ export default function NewPhrases() {
         
         // Filter out any articles, prepositions or very short words that might have slipped through
         const articlesAndPrepositions = ['a', 'an', 'the', 'in', 'on', 'at', 'by', 'for', 'with', 'to', 'from'];
-        processedItems = processedItems.filter(word => 
+        processedItems = processedItems.filter((word: string) => 
           !articlesAndPrepositions.includes(word.toLowerCase()) && 
           word.length > 1 // Ensure we don't get single letter words
         );
         
         // Remove any duplicate words
         const uniqueWords: string[] = [];
-        processedItems = processedItems.filter(word => {
+        processedItems = processedItems.filter((word: string) => {
           const wordLower = word.toLowerCase();
           if (!uniqueWords.includes(wordLower)) {
             uniqueWords.push(wordLower);
