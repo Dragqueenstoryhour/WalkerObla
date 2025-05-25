@@ -55,47 +55,7 @@ import {
 import { useDifficulty } from "@/contexts/DifficultyContext";
 import { DifficultyDropdown } from "@/components/difficulty/SimplifiedDifficultySelector";
 import { Turtle } from "lucide-react";
-import Slider from "react-slick";
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
-
-// Carousel custom styles
-const carouselStyles = `
-  .phrase-carousel .slick-dots {
-    bottom: -50px;
-  }
-  .phrase-carousel .slick-dots li button:before {
-    color: #57cc99;
-    font-size: 12px;
-  }
-  .phrase-carousel .slick-dots li.slick-active button:before {
-    color: #2a9d8f;
-  }
-  .phrase-carousel .slick-prev,
-  .phrase-carousel .slick-next {
-    z-index: 1;
-    width: 40px;
-    height: 40px;
-  }
-  .phrase-carousel .slick-prev {
-    left: -50px;
-  }
-  .phrase-carousel .slick-next {
-    right: -50px;
-  }
-  .phrase-carousel .slick-prev:before,
-  .phrase-carousel .slick-next:before {
-    color: #57cc99;
-    font-size: 30px;
-  }
-  .phrase-carousel .slick-slide {
-    padding: 0 10px;
-  }
-  .phrase-carousel .slick-track {
-    display: flex;
-    align-items: center;
-  }
-`;
+import useEmblaCarousel from 'embla-carousel-react';
 
 interface ProcessedPhrase {
   id: string;
@@ -153,7 +113,7 @@ export default function NewPhrases() {
 
   // Carousel state
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
-  const sliderRef = useRef<Slider>(null);
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false });
 
   // Refs for media recording
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -181,22 +141,31 @@ export default function NewPhrases() {
 
   // Carousel navigation functions
   const goToNext = () => {
-    if (sliderRef.current && currentCarouselIndex < processedPhrases.length - 1) {
-      sliderRef.current.slickNext();
+    if (emblaApi && currentCarouselIndex < processedPhrases.length - 1) {
+      emblaApi.scrollNext();
     }
   };
 
   const goToPrevious = () => {
-    if (sliderRef.current && currentCarouselIndex > 0) {
-      sliderRef.current.slickPrev();
+    if (emblaApi && currentCarouselIndex > 0) {
+      emblaApi.scrollPrev();
     }
   };
 
   const goToSlide = (index: number) => {
-    if (sliderRef.current) {
-      sliderRef.current.slickGoTo(index);
+    if (emblaApi) {
+      emblaApi.scrollTo(index);
     }
   };
+
+  // Update carousel index when slide changes
+  useEffect(() => {
+    if (emblaApi) {
+      emblaApi.on('select', () => {
+        setCurrentCarouselIndex(emblaApi.selectedScrollSnap());
+      });
+    }
+  }, [emblaApi]);
 
   // Auto-scroll to practice section after phrases are generated
   const scrollToPracticeSection = () => {
@@ -2334,21 +2303,32 @@ I'd like to schedule an appointment."
             
             {processedPhrases.length > 0 && (
               <div className="relative">
-                <style>{carouselStyles}</style>
-                <Slider
-                  ref={sliderRef}
-                  dots={true}
-                  infinite={false}
-                  speed={500}
-                  slidesToShow={1}
-                  slidesToScroll={1}
-                  beforeChange={(current, next) => setCurrentCarouselIndex(next)}
-                  className="phrase-carousel"
-                >
-                  {processedPhrases.map((phrase, idx) => (
-                    <div key={phrase.id}>
-                      <Card className="mx-4 transition-all">
-                        <CardContent className="p-4">
+                <div className="overflow-hidden" ref={emblaRef}>
+                  <div className="flex">
+                    {processedPhrases.map((phrase, idx) => (
+                      <div key={phrase.id} className="flex-[0_0_100%] min-w-0">
+                        <Card className="mx-4 transition-all">
+                          <CardContent className="p-4">
+                            {/* Add Next button before recording for idle phrases */}
+                            {phrase.status === "idle" && (
+                              <div className="flex justify-between items-center mb-4">
+                                <Button
+                                  variant="outline"
+                                  className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                                  onClick={goToNext}
+                                  disabled={currentCarouselIndex >= processedPhrases.length - 1}
+                                >
+                                  Next <ArrowRight className="h-4 w-4 ml-1" />
+                                </Button>
+                                <Button
+                                  className="bg-primary text-primary-foreground"
+                                  onClick={() => startPhrasePractice(idx)}
+                                >
+                                  <Mic className="h-4 w-4 mr-1" />
+                                  Practice
+                                </Button>
+                              </div>
+                            )}
                     {/* Normal view when not recording or assessing */}
                     {phrase.status === "idle" && (
                       <div className="flex flex-col">
@@ -2752,9 +2732,7 @@ I'd like to schedule an appointment."
                               className="border-blue-500 text-blue-600 hover:bg-blue-50"
                               onClick={() => {
                                 setCurrentlyPracticing(null);
-                                if (sliderRef.current && currentCarouselIndex < processedPhrases.length - 1) {
-                                  sliderRef.current.slickNext();
-                                }
+                                goToNext();
                               }}
                             >
                               Next <ArrowRight className="h-4 w-4 ml-1" />
@@ -2762,10 +2740,12 @@ I'd like to schedule an appointment."
                           </div>
                         </div>
                       )}
-                  </CardContent>
-                    </Card>
-                  ))}
-                </Slider>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 
                 {/* Navigation buttons */}
                 <div className="flex justify-center gap-4 mt-8">
@@ -2787,6 +2767,19 @@ I'd like to schedule an appointment."
                     Next
                     <ChevronRight className="h-4 w-4 ml-1" />
                   </Button>
+                </div>
+                
+                {/* Carousel dots indicator */}
+                <div className="flex justify-center gap-2 mt-4">
+                  {processedPhrases.map((_, index) => (
+                    <button
+                      key={index}
+                      className={`w-3 h-3 rounded-full transition-colors ${
+                        index === currentCarouselIndex ? 'bg-primary' : 'bg-gray-300'
+                      }`}
+                      onClick={() => goToSlide(index)}
+                    />
+                  ))}
                 </div>
               </div>
             )}
