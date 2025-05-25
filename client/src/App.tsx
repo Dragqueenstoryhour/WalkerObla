@@ -11,6 +11,8 @@ import Checkout from "@/pages/Checkout";
 import SubscriptionSuccess from "@/pages/SubscriptionSuccess";
 import AzureTest from "@/pages/AzureTest";
 import NewPhrases from "@/pages/NewPhrases";
+import Words from "@/pages/Words";
+import Phrases from "@/pages/Phrases";
 import MyWords from "@/pages/MyWords";
 import Animation from "@/pages/Animation";
 import AzureAnimation from "@/pages/AzureAnimation";
@@ -31,8 +33,9 @@ function TabBar() {
   const [location] = useLocation();
 
   const navItems = [
-    { href: "/", label: "Pronounce Pro", icon: Book },
-    { href: "/new-phrases", label: "SpeakUp Cards", icon: Edit },
+    { href: "/words", label: "Words", icon: Edit },
+    { href: "/phrases", label: "Phrases", icon: Edit },
+    { href: "/", label: "Easy Reader", icon: Book },
     { href: "/my-words", label: "Saved Lingo", icon: Bookmark },
   ];
 
@@ -136,6 +139,8 @@ function Router() {
       <FirstTimeUserDifficultySelection />
       <Switch>
         <Route path="/" component={Read} />
+        <Route path="/words" component={Words} />
+        <Route path="/phrases" component={Phrases} />
         <Route path="/game" component={() => <GameProvider initialUsername="player1"><RecordingTest /></GameProvider>} />
         <Route path="/subscription" component={Subscription} />
         <Route path="/checkout" component={Checkout} />
