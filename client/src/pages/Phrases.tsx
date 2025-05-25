@@ -542,9 +542,9 @@ export default function Phrases() {
     <div className="container mx-auto px-4 py-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Practice Phrases</h1>
-        <DifficultyDropdown onConfirm={(newDifficulty) => {
-          setDifficulty(newDifficulty);
-          handleGenerateTopicPhrases(aiGenerateTopic, newDifficulty);
+        <DifficultyDropdown onConfirm={async (newDifficulty) => {
+          setDifficulty(newDifficulty as any);
+          await handleGenerateTopicPhrases(aiGenerateTopic, newDifficulty);
         }} />
       </div>
 
@@ -565,21 +565,44 @@ export default function Phrases() {
             <div className="flex gap-2 mt-2">
               <Input
                 id="topic-input"
-                value={aiGenerateTopic}
-                onChange={(e) => setAiGenerateTopic(e.target.value)}
+                value={customTopic || aiGenerateTopic}
+                onChange={(e) => {
+                  setCustomTopic(e.target.value);
+                  setAiGenerateTopic(e.target.value);
+                }}
                 placeholder="Enter a topic..."
                 className="flex-1"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && (customTopic || aiGenerateTopic).trim()) {
+                    handleGenerateTopicPhrases(customTopic || aiGenerateTopic);
+                  }
+                }}
               />
               <Button
-                onClick={() => handleGenerateTopicPhrases(aiGenerateTopic)}
-                disabled={isGenerating || !aiGenerateTopic.trim()}
+                onClick={() => handleGenerateTopicPhrases(customTopic || aiGenerateTopic)}
+                disabled={isGenerating || !(customTopic || aiGenerateTopic).trim()}
               >
                 {isGenerating ? (
                   <RotateCw className="h-4 w-4 animate-spin mr-2" />
                 ) : null}
                 Generate
               </Button>
+              <Button
+                variant="outline"
+                onClick={handleTopicSpeechToText}
+                disabled={isRecordingTopic || isGenerating}
+                className="px-3"
+              >
+                {isRecordingTopic ? (
+                  <StopCircleIcon className="h-4 w-4" />
+                ) : (
+                  <MicIcon className="h-4 w-4" />
+                )}
+              </Button>
             </div>
+            {isRecordingTopic && (
+              <p className="text-sm text-muted-foreground mt-2">Recording... Speak your topic now (up to 5 seconds)</p>
+            )}
           </div>
 
           <div>
