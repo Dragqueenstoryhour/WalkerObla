@@ -1,0 +1,64 @@
+To update /new-phrases to show one card at a time with a carousel functionality, you will primarily work on the file client/src/pages/NewPhrases.tsx. Here's a step-by-step outline on how you can achieve this along with the necessary code changes.
+
+Steps:
+Install a Carousel Library: You can use a library like react-slick or any other carousel library that suits your needs. Make sure to install it via the terminal.
+
+npm install react-slick slick-carousel
+Update the NewPhrases Component: Modify the UI in NewPhrases.tsx to use the carousel instead of rendering all the cards at once. Below is an example implementation using react-slick.
+
+Add CSS for Carousel: Make sure to import the slick-carousel CSS for default styling.
+
+Updated NewPhrases.tsx
+Here is how you could implement the carousel:
+
+import React, { useState, useEffect } from 'react';
+import Slider from 'react-slick';
+import { Button, Card, CardContent, CardHeader } from '../components';  // Adjust path according to your components
+import 'slick-carousel/slick/slick.css'; 
+import 'slick-carousel/slick/slick-theme.css'; 
+const NewPhrases = () => {
+  const [processedPhrases, setProcessedPhrases] = useState([]); // Make sure this holds the phrases you've processed
+  // Sample phrases for demonstration, replace this with your data fetching logic
+  useEffect(() => {
+    // Fetch or process your phrases
+  }, []);
+  const settings = {
+    dots: true,
+    infinite: true,
+    speed: 500,
+    slidesToShow: 1,
+    slidesToScroll: 1,
+  };
+  return (
+    <div className="container mx-auto px-4 py-6">
+      <h1 className="text-3xl font-bold">New Phrases</h1>
+      <Slider {...settings}>
+        {processedPhrases.map((phrase, index) => (
+          <div key={phrase.id}>
+            <Card className="rounded-md">
+              <CardHeader>
+                <h2>{phrase.text}</h2>
+              </CardHeader>
+              <CardContent>
+                {/* Add any additional content for the card here */}
+              </CardContent>
+            </Card>
+          </div>
+        ))}
+      </Slider>
+      <div className="flex justify-center gap-2 mt-4">
+        <Button variant="outline" onClick={() => {/* Logic to handle 'Try Again' */}}>Try Again</Button>
+        <Button variant="outline" onClick={() => {/* Logic to handle 'Close' */}}>Close</Button>
+      </div>
+    </div>
+  );
+};
+export default NewPhrases;
+Explanation of Changes:
+Import Statements: Ensure you import the required Carousel component and any necessary CSS from slick-carousel.
+Slider Component: Wrap the phrases to display them individually as slides in the react-slick slider.
+Settings Object: Customize carousel settings based on your requirements (like dots for navigation, speed of sliding, etc.).
+Final Notes
+Make sure to replace the placeholder area where I’ve added comments with your existing logic for displaying phrases.
+Adjust any imports and component usage as needed based on your existing codebase.
+This will effectively transition your phrase display from all at once to one card at a time in a carousel format.
