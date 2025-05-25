@@ -59,6 +59,44 @@ import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 
+// Carousel custom styles
+const carouselStyles = `
+  .phrase-carousel .slick-dots {
+    bottom: -50px;
+  }
+  .phrase-carousel .slick-dots li button:before {
+    color: #57cc99;
+    font-size: 12px;
+  }
+  .phrase-carousel .slick-dots li.slick-active button:before {
+    color: #2a9d8f;
+  }
+  .phrase-carousel .slick-prev,
+  .phrase-carousel .slick-next {
+    z-index: 1;
+    width: 40px;
+    height: 40px;
+  }
+  .phrase-carousel .slick-prev {
+    left: -50px;
+  }
+  .phrase-carousel .slick-next {
+    right: -50px;
+  }
+  .phrase-carousel .slick-prev:before,
+  .phrase-carousel .slick-next:before {
+    color: #57cc99;
+    font-size: 30px;
+  }
+  .phrase-carousel .slick-slide {
+    padding: 0 10px;
+  }
+  .phrase-carousel .slick-track {
+    display: flex;
+    align-items: center;
+  }
+`;
+
 interface ProcessedPhrase {
   id: string;
   text: string;
@@ -2290,15 +2328,27 @@ I'd like to schedule an appointment."
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Left column: phrases list */}
-            <div className="space-y-4">
-              {processedPhrases.map((phrase, idx) => (
-                <Card
-                  key={phrase.id}
-                  className={`transition-all ${currentPhraseIndex === idx ? "ring-2 ring-primary" : ""}`}
+          {/* Practice Phrases Section with Carousel */}
+          <div id="practice-phrases-section" className="w-full max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold text-center mb-6">Practice Phrases</h2>
+            
+            {processedPhrases.length > 0 && (
+              <div className="relative">
+                <style>{carouselStyles}</style>
+                <Slider
+                  ref={sliderRef}
+                  dots={true}
+                  infinite={false}
+                  speed={500}
+                  slidesToShow={1}
+                  slidesToScroll={1}
+                  beforeChange={(current, next) => setCurrentCarouselIndex(next)}
+                  className="phrase-carousel"
                 >
-                  <CardContent className="p-4">
+                  {processedPhrases.map((phrase, idx) => (
+                    <div key={phrase.id}>
+                      <Card className="mx-4 transition-all">
+                        <CardContent className="p-4">
                     {/* Normal view when not recording or assessing */}
                     {phrase.status === "idle" && (
                       <div className="flex flex-col">
@@ -2699,9 +2749,15 @@ I'd like to schedule an appointment."
                             </Button>
                             <Button
                               variant="outline"
-                              onClick={() => setCurrentlyPracticing(null)}
+                              className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                              onClick={() => {
+                                setCurrentlyPracticing(null);
+                                if (sliderRef.current && currentCarouselIndex < processedPhrases.length - 1) {
+                                  sliderRef.current.slickNext();
+                                }
+                              }}
                             >
-                              Close
+                              Next <ArrowRight className="h-4 w-4 ml-1" />
                             </Button>
                           </div>
                         </div>
@@ -2709,11 +2765,38 @@ I'd like to schedule an appointment."
                   </CardContent>
                     </Card>
                   ))}
-                  {/* Add new phrase button */}
+                </Slider>
+                
+                {/* Navigation buttons */}
+                <div className="flex justify-center gap-4 mt-8">
                   <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
+                    variant="outline"
+                    onClick={goToPrevious}
+                    disabled={currentCarouselIndex === 0}
+                    className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={goToNext}
+                    disabled={currentCarouselIndex >= processedPhrases.length - 1}
+                    className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Add new phrase button */}
+            <div className="text-center mt-8">
+              <Button
+                variant="outline"
+                className="w-full max-w-md"
+                onClick={() => {
                   setProcessedPhrases([
                     ...processedPhrases,
                     {
@@ -2729,28 +2812,8 @@ I'd like to schedule an appointment."
               </Button>
             </div>
 
-            {/* Right column: selected phrase and features */}
-            <div>
-              {currentPhraseIndex >= 0 &&
-                currentPhraseIndex < processedPhrases.length ? (
-                  null // This line fixes the syntax error
-                ) : (
-                  <Card> {/* "No Phrase Selected" card */}
-                  <CardContent className="p-8 text-center">
-                    <AlertTriangle className="mx-auto h-8 w-8 text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium">No Phrase Selected</p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Select a phrase from the list or add new phrases to begin
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Progress history */}
-              {renderHistoryChart()}
-
-              {/* Badges section hidden as requested */}
-            </div>
+            {/* Progress history */}
+            {renderHistoryChart()}
           </div>
         </div>
       )}
