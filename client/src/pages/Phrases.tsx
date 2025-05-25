@@ -68,6 +68,8 @@ export default function Phrases() {
   const [manualEntryText, setManualEntryText] = useState("");
   const [imageUploadText, setImageUploadText] = useState("");
   const [aiGenerateTopic, setAiGenerateTopic] = useState("Common Phrases");
+  const [customTopic, setCustomTopic] = useState("");
+  const [isRecordingTopic, setIsRecordingTopic] = useState(false);
   const [processedPhrases, setProcessedPhrases] = useState<ProcessedPhrase[]>([]);
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(-1);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -186,10 +188,7 @@ export default function Phrases() {
       setShowFinalProgress(false);
       setLowScorePhrases([]);
 
-      toast({
-        title: "Phrases Generated",
-        description: `${newPhrases.length} phrases are ready for practice.`,
-      });
+      // Removed toast notification
 
       scrollToPracticeSection();
     } catch (error) {
@@ -521,10 +520,7 @@ export default function Phrases() {
       setSavedPhraseId(phrase.id);
       setTimeout(() => setSavedPhraseId(null), 2000);
 
-      toast({
-        title: "Phrase Saved",
-        description: "This phrase has been saved to your collection.",
-      });
+      // Removed toast notification
     } catch (error) {
       console.error("Error saving phrase:", error);
       toast({

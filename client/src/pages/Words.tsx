@@ -617,15 +617,7 @@ export default function Words() {
                         {/* Idle state - show word and practice button */}
                         {word.status === "idle" && (
                           <div className="text-center space-y-6">
-                            <div className="flex justify-between items-center mb-4">
-                              <Button
-                                variant="outline"
-                                className="border-blue-500 text-blue-600 hover:bg-blue-50"
-                                onClick={goToNext}
-                                disabled={currentCarouselIndex >= processedWords.length - 1}
-                              >
-                                Next <ArrowRight className="h-4 w-4 ml-1" />
-                              </Button>
+                            <div className="flex justify-center mb-4">
                               <Button
                                 className="bg-primary text-primary-foreground px-8 py-3"
                                 onClick={() => startWordPractice(idx)}
@@ -709,17 +701,18 @@ export default function Words() {
                         )}
 
                         {/* Complete state with results */}
-                        {word.status === "complete" && word.assessmentResult && currentlyPracticing === word.id && (
+                        {word.status === "complete" && word.assessmentResult && (
                           <div className="space-y-6">
                             <h3 className="text-4xl font-bold text-center">{word.text}</h3>
                             
                             {/* Audio controls */}
-                            <div className="flex justify-center gap-2">
+                            <div className="flex justify-center gap-2 mb-4">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="border-blue-500 text-blue-600 hover:bg-blue-50"
                                 onClick={() => {
+                                  setSlowPlaybackWords(prev => ({ ...prev, [word.id]: false }));
                                   const utterance = new SpeechSynthesisUtterance(word.text);
                                   utterance.rate = 1;
                                   speechSynthesis.speak(utterance);
@@ -733,6 +726,7 @@ export default function Words() {
                                 size="sm"
                                 className="border-blue-500 text-blue-600 hover:bg-blue-50"
                                 onClick={() => {
+                                  setSlowPlaybackWords(prev => ({ ...prev, [word.id]: true }));
                                   const utterance = new SpeechSynthesisUtterance(word.text);
                                   utterance.rate = 0.6;
                                   speechSynthesis.speak(utterance);
@@ -744,11 +738,32 @@ export default function Words() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                                className={`border-yellow-500 text-yellow-600 hover:bg-yellow-50 ${
+                                  savedWordId === word.id ? 'bg-yellow-100' : ''
+                                }`}
                                 onClick={() => handleSaveWord(idx)}
                               >
                                 <Star className="h-4 w-4" />
                               </Button>
+                              {word.recordingUrl && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-green-500 text-green-600 hover:bg-green-50"
+                                  onClick={() => {
+                                    if (audioRef.current) {
+                                      audioRef.current.src = word.recordingUrl!;
+                                      audioRef.current.play();
+                                    } else {
+                                      const audio = new Audio(word.recordingUrl);
+                                      audio.play();
+                                    }
+                                  }}
+                                >
+                                  <VolumeIcon className="h-4 w-4 mr-1" />
+                                  Playback
+                                </Button>
+                              )}
                             </div>
 
                             {/* Assessment Results */}
