@@ -115,70 +115,15 @@ export default function Words() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Audio recording hook
-  const {
-    recordingDuration,
-    audioUrl,
-    startRecording: startMainRecording,
-    stopRecording: stopMainRecording,
-    audioBlob,
-  } = useAudioRecording({
-    onRecordingComplete: (blob) => {
-      // Handle recording completion and assessment
-      handleRecordingComplete(blob);
-    },
-    onError: (error) => {
-      console.error("Recording error:", error);
-      toast({
-        title: "Recording Error",
-        description: "Could not access microphone. Please check your browser permissions.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Carousel navigation functions
-  const goToNext = () => {
-    if (emblaApi && currentCarouselIndex < processedWords.length - 1) {
-      emblaApi.scrollNext();
-    }
-  };
-
-  const goToPrevious = () => {
-    if (emblaApi && currentCarouselIndex > 0) {
-      emblaApi.scrollPrev();
-    }
-  };
-
-  const goToSlide = (index: number) => {
-    if (emblaApi) {
-      emblaApi.scrollTo(index);
-    }
-  };
-
-  // Update carousel index when slide changes
-  useEffect(() => {
-    if (emblaApi) {
-      emblaApi.on('select', () => {
-        setCurrentCarouselIndex(emblaApi.selectedScrollSnap());
-      });
-    }
-  }, [emblaApi]);
-
-  // Auto-scroll to practice section after words are generated
-  const scrollToPracticeSection = () => {
-    setTimeout(() => {
-      const practiceSection = document.getElementById('practice-words-section');
-      if (practiceSection) {
-        practiceSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 500);
-  };
-
   // Handle recording completion and assessment
   const handleRecordingComplete = async (audioBlob: Blob) => {
     const currentWord = processedWords.find(w => w.status === "recording");
-    if (!currentWord) return;
+    if (!currentWord) {
+      console.log("No current word found for assessment");
+      return;
+    }
+
+    console.log("Processing assessment for word:", currentWord.text);
 
     try {
       setProcessedWords(prev => prev.map(w => 
@@ -189,6 +134,7 @@ export default function Words() {
       formData.append("audio", audioBlob);
       formData.append("referenceText", currentWord.text);
 
+      console.log("Sending audio for assessment...");
       const response = await fetch("/api/pronunciation/assess", {
         method: "POST",
         body: formData,
@@ -244,6 +190,44 @@ export default function Words() {
         variant: "destructive",
       });
     }
+  };
+
+  // Carousel navigation functions
+  const goToNext = () => {
+    if (emblaApi && currentCarouselIndex < processedWords.length - 1) {
+      emblaApi.scrollNext();
+    }
+  };
+
+  const goToPrevious = () => {
+    if (emblaApi && currentCarouselIndex > 0) {
+      emblaApi.scrollPrev();
+    }
+  };
+
+  const goToSlide = (index: number) => {
+    if (emblaApi) {
+      emblaApi.scrollTo(index);
+    }
+  };
+
+  // Update carousel index when slide changes
+  useEffect(() => {
+    if (emblaApi) {
+      emblaApi.on('select', () => {
+        setCurrentCarouselIndex(emblaApi.selectedScrollSnap());
+      });
+    }
+  }, [emblaApi]);
+
+  // Auto-scroll to practice section after words are generated
+  const scrollToPracticeSection = () => {
+    setTimeout(() => {
+      const practiceSection = document.getElementById('practice-words-section');
+      if (practiceSection) {
+        practiceSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 500);
   };
 
   // Generate topic-based words
@@ -302,14 +286,19 @@ export default function Words() {
     const word = processedWords[wordIndex];
     setCurrentlyPracticing(word.id);
 
+    // Set status to recording BEFORE starting the recording
+    setProcessedWords(prev => prev.map((w, idx) => 
+      idx === wordIndex ? { ...w, status: "recording" } : w
+    ));
+
     try {
       await startMainRecording();
-      
-      setProcessedWords(prev => prev.map((w, idx) => 
-        idx === wordIndex ? { ...w, status: "recording" } : w
-      ));
     } catch (error) {
       console.error("Error starting recording:", error);
+      // Reset status on error
+      setProcessedWords(prev => prev.map((w, idx) => 
+        idx === wordIndex ? { ...w, status: "idle" } : w
+      ));
       toast({
         title: "Recording Error",
         description: "Failed to start recording. Please try again.",
