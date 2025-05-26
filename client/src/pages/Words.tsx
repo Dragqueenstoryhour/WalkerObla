@@ -123,6 +123,10 @@ export default function Words() {
     stopRecording: stopMainRecording,
     audioBlob,
   } = useAudioRecording({
+    onRecordingComplete: (blob) => {
+      // Handle recording completion and assessment
+      handleRecordingComplete(blob);
+    },
     onError: (error) => {
       console.error("Recording error:", error);
       toast({
@@ -169,6 +173,77 @@ export default function Words() {
         practiceSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, 500);
+  };
+
+  // Handle recording completion and assessment
+  const handleRecordingComplete = async (audioBlob: Blob) => {
+    const currentWord = processedWords.find(w => w.status === "recording");
+    if (!currentWord) return;
+
+    try {
+      setProcessedWords(prev => prev.map(w => 
+        w.id === currentWord.id ? { ...w, status: "assessing" } : w
+      ));
+
+      const formData = new FormData();
+      formData.append("audio", audioBlob);
+      formData.append("referenceText", currentWord.text);
+
+      const response = await fetch("/api/pronunciation/assess", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to assess pronunciation");
+      }
+
+      const assessmentResult = await response.json();
+      console.log("Received assessment results:", assessmentResult);
+
+      setProcessedWords(prev => prev.map(w => 
+        w.id === currentWord.id 
+          ? { 
+              ...w, 
+              status: "complete", 
+              assessmentResult,
+              recordingBlob: audioBlob,
+              recordingUrl: URL.createObjectURL(audioBlob)
+            } 
+          : w
+      ));
+
+      // Track completed words and low scores
+      setCompletedWordsCount(prev => {
+        const newCount = prev + 1;
+        if (newCount === 8) {
+          setShowFinalProgress(true);
+        }
+        return newCount;
+      });
+
+      if (assessmentResult.pronunciationScore < 80) {
+        setLowScoreWords(prev => [...prev, {
+          ...currentWord,
+          assessmentResult,
+          recordingBlob: audioBlob,
+          recordingUrl: URL.createObjectURL(audioBlob)
+        }]);
+      }
+    } catch (error) {
+      console.error("Error processing recording:", error);
+      
+      // Reset the word status on error
+      setProcessedWords(prev => prev.map(w => 
+        w.id === currentWord.id ? { ...w, status: "idle" } : w
+      ));
+      
+      toast({
+        title: "Assessment Error",
+        description: "Failed to assess pronunciation. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Generate topic-based words
@@ -255,59 +330,87 @@ export default function Words() {
         w.id === currentWord.id ? { ...w, status: "assessing" } : w
       ));
 
-      // Process the recording
-      if (audioBlob) {
-        const formData = new FormData();
-        formData.append("audio", audioBlob);
-        formData.append("referenceText", currentWord.text);
+      // Wait a moment for the audio blob to be available and process
+      setTimeout(async () => {
+        try {
+          if (audioBlob) {
+            const formData = new FormData();
+            formData.append("audio", audioBlob);
+            formData.append("referenceText", currentWord.text);
 
-        const response = await fetch("/api/pronunciation/assess", {
-          method: "POST",
-          body: formData,
-        });
+            const response = await fetch("/api/pronunciation/assess", {
+              method: "POST",
+              body: formData,
+            });
 
-        if (!response.ok) {
-          throw new Error("Failed to assess pronunciation");
-        }
+            if (!response.ok) {
+              throw new Error("Failed to assess pronunciation");
+            }
 
-        const assessmentResult = await response.json();
-        console.log("Received assessment results:", assessmentResult);
+            const assessmentResult = await response.json();
+            console.log("Received assessment results:", assessmentResult);
 
-        setProcessedWords(prev => prev.map(w => 
-          w.id === currentWord.id 
-            ? { 
-                ...w, 
-                status: "complete", 
+            setProcessedWords(prev => prev.map(w => 
+              w.id === currentWord.id 
+                ? { 
+                    ...w, 
+                    status: "complete", 
+                    assessmentResult,
+                    recordingBlob: audioBlob,
+                    recordingUrl: URL.createObjectURL(audioBlob)
+                  } 
+                : w
+            ));
+
+            // Track completed words and low scores
+            setCompletedWordsCount(prev => {
+              const newCount = prev + 1;
+              if (newCount === 8) {
+                setShowFinalProgress(true);
+              }
+              return newCount;
+            });
+
+            if (assessmentResult.pronunciationScore < 80) {
+              setLowScoreWords(prev => [...prev, {
+                ...currentWord,
                 assessmentResult,
                 recordingBlob: audioBlob,
                 recordingUrl: URL.createObjectURL(audioBlob)
-              } 
-            : w
-        ));
-
-        // Track completed words and low scores
-        setCompletedWordsCount(prev => {
-          const newCount = prev + 1;
-          if (newCount === 8) {
-            setShowFinalProgress(true);
+              }]);
+            }
+          } else {
+            // If no audio blob available, reset the word status
+            setProcessedWords(prev => prev.map(w => 
+              w.id === currentWord.id ? { ...w, status: "idle" } : w
+            ));
+            
+            toast({
+              title: "Recording Error",
+              description: "No audio was recorded. Please try again.",
+              variant: "destructive",
+            });
           }
-          return newCount;
-        });
-
-        if (assessmentResult.pronunciationScore < 80) {
-          setLowScoreWords(prev => [...prev, {
-            ...currentWord,
-            assessmentResult,
-            recordingBlob: audioBlob,
-            recordingUrl: URL.createObjectURL(audioBlob)
-          }]);
+        } catch (error) {
+          console.error("Error processing recording:", error);
+          
+          // Reset the word status on error
+          setProcessedWords(prev => prev.map(w => 
+            w.id === currentWord.id ? { ...w, status: "idle" } : w
+          ));
+          
+          toast({
+            title: "Assessment Error",
+            description: "Failed to assess pronunciation. Please try again.",
+            variant: "destructive",
+          });
         }
-      }
+      }, 500); // Wait 500ms for audio blob to be ready
     } catch (error) {
-      console.error("Error processing recording:", error);
+      console.error("Error stopping recording:", error);
       toast({
-        title: "Assessment Error",
-        description: "Failed to assess pronunciation. Please try again.",
+        title: "Recording Error",
+        description: "Failed to stop recording. Please try again.",
         variant: "destructive",
       });
     }
