@@ -117,9 +117,12 @@ export default function Words() {
 
   // Handle recording completion and assessment
   const handleRecordingComplete = async (audioBlob: Blob) => {
-    const currentWord = processedWords.find(w => w.status === "recording");
+    // Find the word that's currently being practiced (could be recording or assessing)
+    const currentWord = processedWords.find(w => w.status === "recording" || w.status === "assessing") || 
+                       processedWords.find(w => w.id === currentlyPracticing);
+    
     if (!currentWord) {
-      console.log("No current word found for assessment");
+      console.log("No current word found for assessment, currentlyPracticing:", currentlyPracticing);
       return;
     }
 
