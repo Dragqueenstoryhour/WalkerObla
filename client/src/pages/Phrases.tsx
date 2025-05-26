@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import { useParams } from "wouter";
 import {
   Dialog,
@@ -77,8 +77,8 @@ export default function Phrases() {
   const [pendingSaveIndex, setPendingSaveIndex] = useState<number | null>(null);
   const [showSharedDialog, setShowSharedDialog] = useState(false);
   const [currentlyPracticing, setCurrentlyPracticing] = useState<string | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isProcessingRecording, setIsProcessingRecording] = useState(false);
+  // Removed [isRecording, setIsRecording] and [isProcessingRecording, setIsProcessingRecording] states
+  const [currentRecordingPhrase, setCurrentRecordingPhrase] = useState<ProcessedPhrase | null>(null);
   const [slowPlaybackPhrases, setSlowPlaybackPhrases] = useState<{ [key: string]: boolean }>({});
   const [shareableLink, setShareableLink] = useState("");
   const [savedPhraseId, setSavedPhraseId] = useState<string | null>(null);
@@ -99,14 +99,101 @@ export default function Phrases() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Audio recording hook
+  // Handle recording completion and assessment
+  const handleRecordingComplete = async (audioBlob: Blob) => {
+    // Use the stored reference to the currently recording phrase
+    const currentPhrase = currentRecordingPhrase;
+    
+    if (!currentPhrase) {
+      console.log("No current recording phrase found for assessment");
+      return;
+    }
+
+    console.log("Processing assessment for phrase:", currentPhrase.text);
+
+    try {
+      setProcessedPhrases(prev => prev.map(p => 
+        p.id === currentPhrase.id ? { ...p, status: "assessing" } : p
+      ));
+
+      const formData = new FormData();
+      formData.append("audio", audioBlob);
+      formData.append("referenceText", currentPhrase.text);
+
+      const response = await fetch("/api/pronunciation/assess", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to assess pronunciation");
+      }
+
+      const assessmentResult = await response.json();
+      console.log("Received assessment results:", assessmentResult);
+
+      setProcessedPhrases(prev => prev.map(p => 
+        p.id === currentPhrase.id 
+          ? { 
+              ...p, 
+              status: "complete", 
+              assessmentResult,
+              recordingBlob: audioBlob,
+              recordingUrl: URL.createObjectURL(audioBlob)
+            } 
+          : p
+      ));
+
+      // Clear the recording reference
+      setCurrentRecordingPhrase(null);
+
+      // Track completed phrases and low scores
+      setCompletedPhrasesCount(prev => {
+        const newCount = prev + 1;
+        if (newCount === 8) {
+          setShowFinalProgress(true);
+        }
+        return newCount;
+      });
+
+      if (assessmentResult.pronunciationScore < 80) {
+        setLowScorePhrases(prev => [...prev, {
+          ...currentPhrase,
+          assessmentResult,
+          recordingBlob: audioBlob,
+          recordingUrl: URL.createObjectURL(audioBlob)
+        }]);
+      }
+    } catch (error) {
+      console.error("Error processing recording:", error);
+      
+      // Reset the phrase status on error
+      setProcessedPhrases(prev => prev.map(p => 
+        p.id === currentPhrase.id ? { ...p, status: "idle" } : p
+      ));
+      setCurrentRecordingPhrase(null);
+      
+      toast({
+        title: "Assessment Error",
+        description: "Failed to assess pronunciation. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Audio recording hook - Modified to include isRecording
   const {
     recordingDuration,
     audioUrl,
     startRecording: startMainRecording,
     stopRecording: stopMainRecording,
     audioBlob,
+    isRecording: isMicRecording, // Renamed to avoid conflict
   } = useAudioRecording({
+    onRecordingComplete: (blob) => {
+      console.log("Recording completed, processing assessment...");
+      handleRecordingComplete(blob);
+    },
     onError: (error) => {
       console.error("Recording error:", error);
       toast({
@@ -391,15 +478,22 @@ export default function Phrases() {
 
     const phrase = processedPhrases[phraseIndex];
     setCurrentlyPracticing(phrase.id);
+    setCurrentRecordingPhrase(phrase); // Store reference to the phrase being recorded
+
+    // Set status to recording BEFORE starting the recording
+    setProcessedPhrases(prev => prev.map((p, idx) => 
+      idx === phraseIndex ? { ...p, status: "recording" } : p
+    ));
 
     try {
       await startMainRecording();
-
-      setProcessedPhrases(prev => prev.map((p, idx) => 
-        idx === phraseIndex ? { ...p, status: "recording" } : p
-      ));
     } catch (error) {
       console.error("Error starting recording:", error);
+      // Reset status on error
+      setProcessedPhrases(prev => prev.map((p, idx) => 
+        idx === phraseIndex ? { ...p, status: "idle" } : p
+      ));
+      setCurrentRecordingPhrase(null); // Clear the recording reference
       toast({
         title: "Recording Error",
         description: "Failed to start recording. Please try again.",
@@ -412,79 +506,23 @@ export default function Phrases() {
   const stopPhrasePractice = async () => {
     try {
       await stopMainRecording();
-
-      const currentPhrase = processedPhrases.find(p => p.status === "recording");
-      if (!currentPhrase) return;
-
-      setProcessedPhrases(prev => prev.map(p => 
-        p.id === currentPhrase.id ? { ...p, status: "assessing" } : p
-      ));
-
-      // Process the recording
-      if (audioBlob) {
-        const formData = new FormData();
-        formData.append("audio", audioBlob);
-        formData.append("referenceText", currentPhrase.text);
-
-        const response = await fetch("/api/pronunciation/assess", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to assess pronunciation");
-        }
-
-        const assessmentResult = await response.json();
-        console.log("Received assessment results:", assessmentResult);
-
-        setProcessedPhrases(prev => prev.map(p => 
-          p.id === currentPhrase.id 
-            ? { 
-                ...p, 
-                status: "complete", 
-                assessmentResult,
-                recordingBlob: audioBlob,
-                recordingUrl: URL.createObjectURL(audioBlob)
-              } 
-            : p
-        ));
-
-        // Track completed phrases and low scores
-        setCompletedPhrasesCount(prev => {
-          const newCount = prev + 1;
-          if (newCount === 8) {
-            setShowFinalProgress(true);
-          }
-          return newCount;
-        });
-
-        if (assessmentResult.pronunciationScore < 80) {
-          setLowScorePhrases(prev => [...prev, {
-            ...currentPhrase,
-            assessmentResult,
-            recordingBlob: audioBlob,
-            recordingUrl: URL.createObjectURL(audioBlob)
-          }]);
-        }
-      }
     } catch (error) {
-      console.error("Error processing recording:", error);
+      console.error("Error stopping recording:", error);
       toast({
-        title: "Assessment Error",
-        description: "Failed to assess pronunciation. Please try again.",
+        title: "Recording Error",
+        description: "Failed to stop recording. Please try again.",
         variant: "destructive",
       });
     }
   };
 
-  // Handle text-to-speech
-  const handleTextToSpeech = (phraseIndex: number) => {
+  // Handle text-to-speech - MODIFIED
+  const handleTextToSpeech = (phraseIndex: number, rate: number = 1) => {
     const phrase = processedPhrases[phraseIndex];
     if (!phrase) return;
 
     const utterance = new SpeechSynthesisUtterance(phrase.text);
-    utterance.rate = slowPlaybackPhrases[phrase.id] ? 0.6 : 1;
+    utterance.rate = rate; // Use the passed rate
     speechSynthesis.speak(utterance);
   };
 
@@ -528,6 +566,117 @@ export default function Phrases() {
         description: "Failed to save phrase. Please try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  // New state and ref for topic recording
+  const [topicAudioBlob, setTopicAudioBlob] = useState<Blob | null>(null);
+  const topicMediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const topicStreamRef = useRef<MediaStream | null>(null);
+  const topicChunksRef = useRef<Blob[]>([]);
+
+  // Function to start topic speech-to-text recording
+  const startTopicRecording = async () => {
+    setIsRecordingTopic(true);
+    topicChunksRef.current = [];
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      topicStreamRef.current = stream;
+      const mediaRecorder = new MediaRecorder(stream);
+      topicMediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        topicChunksRef.current.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(topicChunksRef.current, { type: 'audio/webm' });
+        setTopicAudioBlob(audioBlob);
+        setIsRecordingTopic(false);
+        // Automatically process after stopping
+        if (audioBlob) {
+          await processTopicAudio(audioBlob);
+        }
+      };
+
+      mediaRecorder.start();
+      // Stop recording after 5 seconds
+      setTimeout(() => {
+        if (mediaRecorder.state === "recording") {
+          mediaRecorder.stop();
+        }
+      }, 5000);
+
+    } catch (error) {
+      console.error("Error starting topic recording:", error);
+      toast({
+        title: "Microphone Access Error",
+        description: "Please grant microphone access to record your topic.",
+        variant: "destructive",
+      });
+      setIsRecordingTopic(false);
+    }
+  };
+
+  // Function to stop topic speech-to-text recording
+  const stopTopicRecording = () => {
+    if (topicMediaRecorderRef.current && topicMediaRecorderRef.current.state === "recording") {
+      topicMediaRecorderRef.current.stop();
+    }
+    if (topicStreamRef.current) {
+      topicStreamRef.current.getTracks().forEach(track => track.stop());
+    }
+    setIsRecordingTopic(false);
+  };
+
+  // Function to process topic audio
+  const processTopicAudio = async (audioBlob: Blob) => {
+    setIsProcessing(true);
+    try {
+      const formData = new FormData();
+      formData.append("audio", audioBlob);
+
+      const response = await fetch("/api/speech-to-text", { // Assuming this API endpoint exists
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to transcribe topic");
+      }
+
+      const result = await response.json();
+      if (result.text) {
+        setCustomTopic(result.text);
+        setAiGenerateTopic(result.text);
+        toast({
+          title: "Topic Transcribed",
+          description: "Your spoken topic has been converted to text.",
+        });
+        // Optionally generate phrases immediately after transcription
+        handleGenerateTopicPhrases(result.text);
+      } else {
+        throw new Error("No text found in topic audio");
+      }
+    } catch (error) {
+      console.error("Error processing topic audio:", error);
+      toast({
+        title: "Transcription Error",
+        description: "Failed to transcribe your topic. Please try again.",
+        variant: "destructive",
+      });
+      setIsProcessing(false); // Ensure processing state is reset on error
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Centralized function for topic speech-to-text, toggling between start and stop
+  const handleTopicSpeechToText = () => {
+    if (isRecordingTopic) {
+      stopTopicRecording();
+    } else {
+      startTopicRecording();
     }
   };
 
@@ -589,7 +738,7 @@ export default function Phrases() {
               </Button>
               <Button
                 variant="outline"
-                onClick={handleTopicSpeechToText}
+                onClick={handleTopicSpeechToText} // This is where the function is called
                 disabled={isRecordingTopic || isGenerating}
                 className="px-3"
               >
@@ -749,6 +898,7 @@ export default function Phrases() {
                               <Button
                                 className="bg-primary text-primary-foreground px-8 py-3"
                                 onClick={() => startPhrasePractice(idx)}
+                                disabled={isMicRecording} // Disable if recording is active
                               >
                                 <Mic className="h-5 w-5 mr-2" />
                                 Practice
@@ -758,7 +908,7 @@ export default function Phrases() {
                             <div className="space-y-4">
                               <h3 className="text-3xl font-bold text-center">{phrase.text}</h3>
 
-                              {/* Audio controls */}
+                              {/* Audio controls - MODIFIED */}
                               <div className="flex justify-center gap-2">
                                 <Button
                                   variant="outline"
@@ -766,7 +916,7 @@ export default function Phrases() {
                                   className="border-blue-500 text-blue-600 hover:bg-blue-50"
                                   onClick={() => {
                                     setSlowPlaybackPhrases(prev => ({ ...prev, [phrase.id]: false }));
-                                    handleTextToSpeech(idx);
+                                    handleTextToSpeech(idx, 1); // Pass 1 for normal speed
                                   }}
                                 >
                                   <Volume2 className="h-4 w-4 mr-1" />
@@ -778,7 +928,7 @@ export default function Phrases() {
                                   className="border-blue-500 text-blue-600 hover:bg-blue-50"
                                   onClick={() => {
                                     setSlowPlaybackPhrases(prev => ({ ...prev, [phrase.id]: true }));
-                                    handleTextToSpeech(idx);
+                                    handleTextToSpeech(idx, 0.6); // Pass 0.6 for 60% speed
                                   }}
                                 >
                                   <Turtle className="h-4 w-4 mr-1" />
@@ -810,6 +960,7 @@ export default function Phrases() {
                             <Button
                               className="bg-red-500 text-white hover:bg-red-600"
                               onClick={stopPhrasePractice}
+                              disabled={!isMicRecording} // Disable if microphone is not actively recording
                             >
                               <StopCircleIcon className="h-5 w-5 mr-2" />
                               Stop Recording
@@ -833,16 +984,14 @@ export default function Phrases() {
                           <div className="space-y-6">
                             <h3 className="text-4xl font-bold text-center">{phrase.text}</h3>
 
-                            {/* Audio controls */}
+                            {/* Audio controls - MODIFIED */}
                             <div className="flex justify-center gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="border-blue-500 text-blue-600 hover:bg-blue-50"
                                 onClick={() => {
-                                  const utterance = new SpeechSynthesisUtterance(phrase.text);
-                                  utterance.rate = 1;
-                                  speechSynthesis.speak(utterance);
+                                  handleTextToSpeech(idx, 1); // Pass 1 for normal speed
                                 }}
                               >
                                 <Volume2 className="h-4 w-4 mr-1" />
@@ -853,9 +1002,7 @@ export default function Phrases() {
                                 size="sm"
                                 className="border-blue-500 text-blue-600 hover:bg-blue-50"
                                 onClick={() => {
-                                  const utterance = new SpeechSynthesisUtterance(phrase.text);
-                                  utterance.rate = 0.6;
-                                  speechSynthesis.speak(utterance);
+                                  handleTextToSpeech(idx, 0.6); // Pass 0.6 for slow speed
                                 }}
                               >
                                 <Turtle className="h-4 w-4 mr-1" />
