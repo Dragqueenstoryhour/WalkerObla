@@ -99,6 +99,88 @@ export default function Phrases() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Handle recording completion and assessment
+  const handleRecordingComplete = async (audioBlob: Blob) => {
+    // Use the stored reference to the currently recording phrase
+    const currentPhrase = currentRecordingPhrase;
+    
+    if (!currentPhrase) {
+      console.log("No current recording phrase found for assessment");
+      return;
+    }
+
+    console.log("Processing assessment for phrase:", currentPhrase.text);
+
+    try {
+      setProcessedPhrases(prev => prev.map(p => 
+        p.id === currentPhrase.id ? { ...p, status: "assessing" } : p
+      ));
+
+      const formData = new FormData();
+      formData.append("audio", audioBlob);
+      formData.append("referenceText", currentPhrase.text);
+
+      const response = await fetch("/api/pronunciation/assess", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to assess pronunciation");
+      }
+
+      const assessmentResult = await response.json();
+      console.log("Received assessment results:", assessmentResult);
+
+      setProcessedPhrases(prev => prev.map(p => 
+        p.id === currentPhrase.id 
+          ? { 
+              ...p, 
+              status: "complete", 
+              assessmentResult,
+              recordingBlob: audioBlob,
+              recordingUrl: URL.createObjectURL(audioBlob)
+            } 
+          : p
+      ));
+
+      // Clear the recording reference
+      setCurrentRecordingPhrase(null);
+
+      // Track completed phrases and low scores
+      setCompletedPhrasesCount(prev => {
+        const newCount = prev + 1;
+        if (newCount === 8) {
+          setShowFinalProgress(true);
+        }
+        return newCount;
+      });
+
+      if (assessmentResult.pronunciationScore < 80) {
+        setLowScorePhrases(prev => [...prev, {
+          ...currentPhrase,
+          assessmentResult,
+          recordingBlob: audioBlob,
+          recordingUrl: URL.createObjectURL(audioBlob)
+        }]);
+      }
+    } catch (error) {
+      console.error("Error processing recording:", error);
+      
+      // Reset the phrase status on error
+      setProcessedPhrases(prev => prev.map(p => 
+        p.id === currentPhrase.id ? { ...p, status: "idle" } : p
+      ));
+      setCurrentRecordingPhrase(null);
+      
+      toast({
+        title: "Assessment Error",
+        description: "Failed to assess pronunciation. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Audio recording hook - Modified to include isRecording
   const {
     recordingDuration,
@@ -396,15 +478,22 @@ export default function Phrases() {
 
     const phrase = processedPhrases[phraseIndex];
     setCurrentlyPracticing(phrase.id);
+    setCurrentRecordingPhrase(phrase); // Store reference to the phrase being recorded
+
+    // Set status to recording BEFORE starting the recording
+    setProcessedPhrases(prev => prev.map((p, idx) => 
+      idx === phraseIndex ? { ...p, status: "recording" } : p
+    ));
 
     try {
       await startMainRecording();
-
-      setProcessedPhrases(prev => prev.map((p, idx) => 
-        idx === phraseIndex ? { ...p, status: "recording" } : p
-      ));
     } catch (error) {
       console.error("Error starting recording:", error);
+      // Reset status on error
+      setProcessedPhrases(prev => prev.map((p, idx) => 
+        idx === phraseIndex ? { ...p, status: "idle" } : p
+      ));
+      setCurrentRecordingPhrase(null); // Clear the recording reference
       toast({
         title: "Recording Error",
         description: "Failed to start recording. Please try again.",
@@ -417,86 +506,13 @@ export default function Phrases() {
   const stopPhrasePractice = async () => {
     try {
       await stopMainRecording();
-
-      const currentPhrase = processedPhrases.find(p => p.status === "recording");
-      if (!currentPhrase) return;
-
-      setProcessedPhrases(prev => prev.map(p => 
-        p.id === currentPhrase.id ? { ...p, status: "assessing" } : p
-      ));
-
-      // Process the recording
-      if (audioBlob) {
-        const formData = new FormData();
-        formData.append("audio", audioBlob);
-        formData.append("referenceText", currentPhrase.text);
-
-        const response = await fetch("/api/pronunciation/assess", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to assess pronunciation");
-        }
-
-        const assessmentResult = await response.json();
-        console.log("Received assessment results:", assessmentResult);
-
-        setProcessedPhrases(prev => prev.map(p => 
-          p.id === currentPhrase.id 
-            ? { 
-                ...p, 
-                status: "complete", 
-                assessmentResult,
-                recordingBlob: audioBlob,
-                recordingUrl: URL.createObjectURL(audioBlob)
-              } 
-            : p
-        ));
-
-        // Track completed phrases and low scores
-        setCompletedPhrasesCount(prev => {
-          const newCount = prev + 1;
-          if (newCount === 8) {
-            setShowFinalProgress(true);
-          }
-          return newCount;
-        });
-
-        if (assessmentResult.pronunciationScore < 80) {
-          setLowScorePhrases(prev => [...prev, {
-            ...currentPhrase,
-            assessmentResult,
-            recordingBlob: audioBlob,
-            recordingUrl: URL.createObjectURL(audioBlob)
-          }]);
-        }
-      } else {
-        // If audioBlob is null, it means recording failed to produce audio
-        toast({
-          title: "Recording Failed",
-          description: "No audio was captured. Please try again.",
-          variant: "destructive",
-        });
-        setProcessedPhrases(prev => prev.map(p => 
-          p.id === currentPhrase.id ? { ...p, status: "idle" } : p // Reset to idle
-        ));
-      }
     } catch (error) {
-      console.error("Error processing recording:", error);
+      console.error("Error stopping recording:", error);
       toast({
-        title: "Assessment Error",
-        description: "Failed to assess pronunciation. Please try again.",
+        title: "Recording Error",
+        description: "Failed to stop recording. Please try again.",
         variant: "destructive",
       });
-      // Ensure status is reset on error
-      const currentPhrase = processedPhrases.find(p => p.status === "assessing");
-      if (currentPhrase) {
-        setProcessedPhrases(prev => prev.map(p => 
-          p.id === currentPhrase.id ? { ...p, status: "idle" } : p
-        ));
-      }
     }
   };
 
