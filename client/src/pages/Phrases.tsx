@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import { useParams } from "wouter";
 import {
   Dialog,
@@ -77,6 +77,7 @@ export default function Phrases() {
   const [pendingSaveIndex, setPendingSaveIndex] = useState<number | null>(null);
   const [showSharedDialog, setShowSharedDialog] = useState(false);
   const [currentlyPracticing, setCurrentlyPracticing] = useState<string | null>(null);
+  // Removed [isRecording, setIsRecording] and [isProcessingRecording, setIsProcessingRecording] states
   const [slowPlaybackPhrases, setSlowPlaybackPhrases] = useState<{ [key: string]: boolean }>({});
   const [shareableLink, setShareableLink] = useState("");
   const [savedPhraseId, setSavedPhraseId] = useState<string | null>(null);
@@ -91,22 +92,26 @@ export default function Phrases() {
   const [lowScorePhrases, setLowScorePhrases] = useState<ProcessedPhrase[]>([]);
 
   // Refs for media recording
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Audio recording hook
+  // Audio recording hook - Modified to include isRecording
   const {
     recordingDuration,
-    audioUrl, // This audioUrl might be from the hook's internal state
+    audioUrl,
     startRecording: startMainRecording,
     stopRecording: stopMainRecording,
     audioBlob,
-    isRecording: isMicRecording,
+    isRecording: isMicRecording, // Renamed to avoid conflict
   } = useAudioRecording({
     onError: (error) => {
       console.error("Recording error:", error);
       toast({
         title: "Recording Error",
-        description: "Could not access microphone. Please check your browser permissions. If this persists, try refreshing the page.",
+        description: "Could not access microphone. Please check your browser permissions.",
         variant: "destructive",
       });
     },
@@ -116,54 +121,29 @@ export default function Phrases() {
   const goToNext = () => {
     if (emblaApi && currentCarouselIndex < processedPhrases.length - 1) {
       emblaApi.scrollNext();
-      setCurrentPhraseIndex(emblaApi.selectedScrollSnap() + 1); // Update current phrase index after carousel moves
     }
   };
 
   const goToPrevious = () => {
     if (emblaApi && currentCarouselIndex > 0) {
       emblaApi.scrollPrev();
-      setCurrentPhraseIndex(emblaApi.selectedScrollSnap() - 1); // Update current phrase index after carousel moves
     }
   };
 
   const goToSlide = (index: number) => {
     if (emblaApi) {
       emblaApi.scrollTo(index);
-      setCurrentPhraseIndex(index); // Update current phrase index
     }
   };
 
-  // Update carousel index and current phrase index when slide changes
+  // Update carousel index when slide changes
   useEffect(() => {
     if (emblaApi) {
-      const onSelect = () => {
-        const newIndex = emblaApi.selectedScrollSnap();
-        setCurrentCarouselIndex(newIndex);
-        setCurrentPhraseIndex(newIndex); // Keep currentPhraseIndex in sync with carousel
-      };
-      emblaApi.on('select', onSelect);
-      // Initial sync
-      onSelect(); 
-      return () => {
-        emblaApi.off('select', onSelect);
-      };
+      emblaApi.on('select', () => {
+        setCurrentCarouselIndex(emblaApi.selectedScrollSnap());
+      });
     }
   }, [emblaApi]);
-
-  // Effect to manage audioRef.current.src for playback
-  useEffect(() => {
-    if (audioRef.current && currentPhraseIndex !== -1 && processedPhrases[currentPhraseIndex]) {
-      const currentPhrase = processedPhrases[currentPhraseIndex];
-      if (currentPhrase.recordingUrl && audioRef.current.src !== currentPhrase.recordingUrl) {
-        audioRef.current.src = currentPhrase.recordingUrl;
-        console.log(`Audio source set to: ${currentPhrase.recordingUrl}`);
-      } else if (!currentPhrase.recordingUrl && audioRef.current.src !== "") {
-        audioRef.current.src = ""; // Clear source if no recording for current phrase
-        console.log("Audio source cleared (no recording for current phrase).");
-      }
-    }
-  }, [currentPhraseIndex, processedPhrases]);
 
   // Auto-scroll to practice section after phrases are generated
   const scrollToPracticeSection = () => {
@@ -208,10 +188,7 @@ export default function Phrases() {
       setShowFinalProgress(false);
       setLowScorePhrases([]);
 
-      // Ensure carousel is reset to the first slide
-      if (emblaApi) {
-        emblaApi.scrollTo(0);
-      }
+      // Removed toast notification
 
       scrollToPracticeSection();
     } catch (error) {
@@ -276,10 +253,6 @@ export default function Phrases() {
         title: "Processing Complete",
         description: `${newPhrases.length} phrases are ready for practice.`,
       });
-
-      if (emblaApi) {
-        emblaApi.scrollTo(0);
-      }
 
       scrollToPracticeSection();
     } catch (error) {
@@ -399,10 +372,6 @@ export default function Phrases() {
         description: `${newPhrases.length} phrases are ready for practice.`,
       });
 
-      if (emblaApi) {
-        emblaApi.scrollTo(0);
-      }
-
       scrollToPracticeSection();
     } catch (error) {
       console.error("Error processing phrases:", error);
@@ -424,12 +393,6 @@ export default function Phrases() {
     setCurrentlyPracticing(phrase.id);
 
     try {
-      // Clear the audioRef source before starting a new recording
-      if (audioRef.current) {
-        audioRef.current.src = "";
-        audioRef.current.load(); // Reload the audio element to clear any old buffers
-      }
-
       await startMainRecording();
 
       setProcessedPhrases(prev => prev.map((p, idx) => 
@@ -439,7 +402,7 @@ export default function Phrases() {
       console.error("Error starting recording:", error);
       toast({
         title: "Recording Error",
-        description: "Failed to start recording. Please check your browser permissions.",
+        description: "Failed to start recording. Please try again.",
         variant: "destructive",
       });
     }
@@ -451,10 +414,7 @@ export default function Phrases() {
       await stopMainRecording();
 
       const currentPhrase = processedPhrases.find(p => p.status === "recording");
-      if (!currentPhrase) {
-        console.warn("No phrase found with status 'recording' when stopPhrasePractice was called.");
-        return;
-      }
+      if (!currentPhrase) return;
 
       setProcessedPhrases(prev => prev.map(p => 
         p.id === currentPhrase.id ? { ...p, status: "assessing" } : p
@@ -478,14 +438,6 @@ export default function Phrases() {
         const assessmentResult = await response.json();
         console.log("Received assessment results:", assessmentResult);
 
-        // Revoke the old URL if it exists to free up memory
-        const oldRecordingUrl = currentPhrase.recordingUrl;
-        if (oldRecordingUrl) {
-          URL.revokeObjectURL(oldRecordingUrl);
-        }
-
-        const newRecordingUrl = URL.createObjectURL(audioBlob);
-
         setProcessedPhrases(prev => prev.map(p => 
           p.id === currentPhrase.id 
             ? { 
@@ -493,7 +445,7 @@ export default function Phrases() {
                 status: "complete", 
                 assessmentResult,
                 recordingBlob: audioBlob,
-                recordingUrl: newRecordingUrl // Use the newly created URL
+                recordingUrl: URL.createObjectURL(audioBlob)
               } 
             : p
         ));
@@ -501,23 +453,30 @@ export default function Phrases() {
         // Track completed phrases and low scores
         setCompletedPhrasesCount(prev => {
           const newCount = prev + 1;
-          if (newCount === processedPhrases.length) { // Check against total phrases
+          if (newCount === 8) {
             setShowFinalProgress(true);
           }
           return newCount;
         });
 
         if (assessmentResult.pronunciationScore < 80) {
-          setLowScorePhrases(prev => [...prev, { ...currentPhrase, assessmentResult, recordingBlob: audioBlob, recordingUrl: newRecordingUrl }]);
+          setLowScorePhrases(prev => [...prev, {
+            ...currentPhrase,
+            assessmentResult,
+            recordingBlob: audioBlob,
+            recordingUrl: URL.createObjectURL(audioBlob)
+          }]);
         }
       } else {
         // If audioBlob is null, it means recording failed to produce audio
         toast({
           title: "Recording Failed",
-          description: "No audio was captured. Please try again. Ensure microphone permissions are granted.",
+          description: "No audio was captured. Please try again.",
           variant: "destructive",
         });
-        setProcessedPhrases(prev => prev.map(p => p.id === currentPhrase.id ? { ...p, status: "idle" } : p ));
+        setProcessedPhrases(prev => prev.map(p => 
+          p.id === currentPhrase.id ? { ...p, status: "idle" } : p // Reset to idle
+        ));
       }
     } catch (error) {
       console.error("Error processing recording:", error);
@@ -526,38 +485,21 @@ export default function Phrases() {
         description: "Failed to assess pronunciation. Please try again.",
         variant: "destructive",
       });
+      // Ensure status is reset on error
       const currentPhrase = processedPhrases.find(p => p.status === "assessing");
       if (currentPhrase) {
-        setProcessedPhrases(prev => prev.map(p => p.id === currentPhrase.id ? { ...p, status: "idle" } : p ));
+        setProcessedPhrases(prev => prev.map(p => 
+          p.id === currentPhrase.id ? { ...p, status: "idle" } : p
+        ));
       }
     }
   };
 
-  // Handle recorded audio playback
-  const handlePlayRecording = useCallback((phraseIndex: number) => {
-    const phrase = processedPhrases[phraseIndex];
-    if (phrase && phrase.recordingUrl && audioRef.current) {
-      // Set the audio source and play
-      audioRef.current.src = phrase.recordingUrl;
-      audioRef.current.play();
-    } else {
-      toast({
-        title: "No Recording Available",
-        description: "No recording found for this phrase. Please record it first.",
-        variant: "info",
-      });
-    }
-  }, [processedPhrases]); // Depend on processedPhrases so it re-renders when recordings are updated
-
-  // Handle text-to-speech
+  // Handle text-to-speech - MODIFIED
   const handleTextToSpeech = (phraseIndex: number, rate: number = 1) => {
     const phrase = processedPhrases[phraseIndex];
     if (!phrase) return;
-    // Stop any ongoing recorded audio playback before TTS
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
+
     const utterance = new SpeechSynthesisUtterance(phrase.text);
     utterance.rate = rate; // Use the passed rate
     speechSynthesis.speak(utterance);
@@ -570,8 +512,10 @@ export default function Phrases() {
       setShowSignInDialog(true);
       return;
     }
+
     const phrase = processedPhrases[phraseIndex];
     if (!phrase) return;
+
     try {
       const response = await fetch("/api/phrases/save", {
         method: "POST",
@@ -585,11 +529,15 @@ export default function Phrases() {
           sourceId: shareId || null,
         }),
       });
+
       if (!response.ok) {
         throw new Error("Failed to save phrase");
       }
+
       setSavedPhraseId(phrase.id);
       setTimeout(() => setSavedPhraseId(null), 2000);
+
+      // Removed toast notification
     } catch (error) {
       console.error("Error saving phrase:", error);
       toast({
@@ -615,26 +563,34 @@ export default function Phrases() {
       topicStreamRef.current = stream;
       const mediaRecorder = new MediaRecorder(stream);
       topicMediaRecorderRef.current = mediaRecorder;
+
       mediaRecorder.ondataavailable = (event) => {
         topicChunksRef.current.push(event.data);
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(topicChunksRef.current, { type: "audio/webm" });
+        const audioBlob = new Blob(topicChunksRef.current, { type: 'audio/webm' });
         setTopicAudioBlob(audioBlob);
         setIsRecordingTopic(false);
-        if (topicStreamRef.current) {
-          topicStreamRef.current.getTracks().forEach(track => track.stop());
+        // Automatically process after stopping
+        if (audioBlob) {
+          await processTopicAudio(audioBlob);
         }
-        await processTopicAudio(audioBlob);
       };
 
       mediaRecorder.start();
+      // Stop recording after 5 seconds
+      setTimeout(() => {
+        if (mediaRecorder.state === "recording") {
+          mediaRecorder.stop();
+        }
+      }, 5000);
+
     } catch (error) {
       console.error("Error starting topic recording:", error);
       toast({
-        title: "Recording Error",
-        description: "Could not access microphone for topic recording. Please check your browser permissions.",
+        title: "Microphone Access Error",
+        description: "Please grant microphone access to record your topic.",
         variant: "destructive",
       });
       setIsRecordingTopic(false);
@@ -646,409 +602,603 @@ export default function Phrases() {
     if (topicMediaRecorderRef.current && topicMediaRecorderRef.current.state === "recording") {
       topicMediaRecorderRef.current.stop();
     }
+    if (topicStreamRef.current) {
+      topicStreamRef.current.getTracks().forEach(track => track.stop());
+    }
+    setIsRecordingTopic(false);
   };
 
   // Function to process topic audio
   const processTopicAudio = async (audioBlob: Blob) => {
-    if (!audioBlob) {
-      toast({
-        title: "No Audio Captured",
-        description: "Could not capture audio for topic recognition.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("audio", audioBlob);
-
+    setIsProcessing(true);
     try {
-      const response = await fetch("/api/speech-to-text", {
+      const formData = new FormData();
+      formData.append("audio", audioBlob);
+
+      const response = await fetch("/api/speech-to-text", { // Assuming this API endpoint exists
         method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error("Failed to recognize speech");
+        throw new Error("Failed to transcribe topic");
       }
 
       const result = await response.json();
       if (result.text) {
         setCustomTopic(result.text);
+        setAiGenerateTopic(result.text);
         toast({
-          title: "Topic Recognized",
-          description: `Recognized topic: "${result.text}"`,
+          title: "Topic Transcribed",
+          description: "Your spoken topic has been converted to text.",
         });
+        // Optionally generate phrases immediately after transcription
+        handleGenerateTopicPhrases(result.text);
       } else {
-        toast({
-          title: "No Speech Recognized",
-          description: "Could not recognize any speech. Please try again.",
-          variant: "info",
-        });
+        throw new Error("No text found in topic audio");
       }
     } catch (error) {
       console.error("Error processing topic audio:", error);
       toast({
-        title: "Speech Recognition Error",
-        description: "Failed to recognize speech for topic. Please try again.",
+        title: "Transcription Error",
+        description: "Failed to transcribe your topic. Please try again.",
         variant: "destructive",
       });
+      setIsProcessing(false); // Ensure processing state is reset on error
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  // Render a single phrase card
-  const renderPhraseCard = (phrase: ProcessedPhrase, index: number) => {
-    const isCurrent = index === currentCarouselIndex;
-    const showScore = phrase.status === "complete" && phrase.assessmentResult;
-    const isLowScore = showScore && phrase.assessmentResult!.pronunciationScore < 80;
-
-    return (
-      <Card
-        key={phrase.id}
-        className={`embla__slide p-6 border-2 transition-all duration-300 ${
-          isCurrent ? "border-blue-500 shadow-lg" : "border-gray-200"
-        }`}
-      >
-        <CardContent className="flex flex-col items-center justify-center space-y-4">
-          <p className="text-3xl font-bold text-center mb-4">
-            {phrase.text}
-          </p>
-          {phrase.phonetic && (
-            <p className="text-lg text-gray-500 font-mono">
-              {phrase.phonetic}
-            </p>
-          )}
-
-          {showScore && (
-            <div className="flex flex-col items-center space-y-2">
-              <Badge
-                variant={isLowScore ? "destructive" : "default"}
-                className="text-lg p-2"
-              >
-                Score: {phrase.assessmentResult!.pronunciationScore.toFixed(1)}%
-              </Badge>
-              {isLowScore && (
-                <div className="text-red-500 text-sm flex items-center">
-                  <AlertTriangle className="h-4 w-4 mr-1" /> Needs practice
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="flex items-center space-x-2 mt-4">
-            {/* Play button for TTS */}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => handleTextToSpeech(index)}
-              disabled={isProcessing || isGenerating || isMicRecording}
-            >
-              <Volume2 className="h-5 w-5" />
-            </Button>
-            {/* Play button for recorded audio */}
-            {phrase.recordingUrl && (
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => handlePlayRecording(index)}
-                disabled={isProcessing || isGenerating || isMicRecording}
-              >
-                <VolumeIcon className="h-5 w-5 text-purple-600" />
-              </Button>
-            )}
-
-            {phrase.status === "idle" && (
-              <Button
-                size="lg"
-                onClick={() => startPhrasePractice(index)}
-                disabled={isProcessing || isGenerating || isMicRecording}
-              >
-                <MicIcon className="mr-2 h-5 w-5" /> Record
-              </Button>
-            )}
-
-            {phrase.status === "recording" && (
-              <Button
-                size="lg"
-                variant="destructive"
-                onClick={stopPhrasePractice}
-                disabled={!isMicRecording}
-              >
-                <StopCircleIcon className="mr-2 h-5 w-5" /> Stop
-              </Button>
-            )}
-
-            {phrase.status === "assessing" && (
-              <Button size="lg" disabled>
-                <RotateCw className="mr-2 h-5 w-5 animate-spin" /> Assessing...
-              </Button>
-            )}
-
-            {phrase.status === "complete" && (
-              <>
-                <Button
-                  size="lg"
-                  onClick={() => startPhrasePractice(index)}
-                  disabled={isProcessing || isGenerating || isMicRecording}
-                >
-                  <RotateCw className="mr-2 h-5 w-5" /> Re-record
-                </Button>
-                <Button
-                  size="lg"
-                  variant={savedPhraseId === phrase.id ? "success" : "default"}
-                  onClick={() => handleSavePhrase(index)}
-                  disabled={!isAuthenticated || savedPhraseId === phrase.id}
-                >
-                  <Star className="mr-2 h-5 w-5" />{" "}
-                  {savedPhraseId === phrase.id ? "Saved!" : "Save"}
-                </Button>
-              </>
-            )}
-          </div>
-          {/* Hidden audio element for playback */}
-          <audio ref={audioRef} controls className="hidden"></audio>
-        </CardContent>
-      </Card>
-    );
+  // Centralized function for topic speech-to-text, toggling between start and stop
+  const handleTopicSpeechToText = () => {
+    if (isRecordingTopic) {
+      stopTopicRecording();
+    } else {
+      startTopicRecording();
+    }
   };
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Auto-load common phrases when the page opens
+  useEffect(() => {
+    if (!shareId) {
+      handleGenerateTopicPhrases("Common Phrases");
+    }
+  }, []);
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-      <h1 className="text-4xl font-extrabold text-center text-gray-900 dark:text-gray-100 mb-6">
-        Practice Phrases
-      </h1>
-
-      {shareId && (
-        <Dialog open={showSharedDialog} onOpenChange={setShowSharedDialog}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Shared Phrases</DialogTitle>
-              <DialogDescription>
-                You're practicing phrases shared with you!
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-6 flex flex-col items-center space-y-4">
-              <Button
-                variant="default"
-                size="lg"
-                onClick={() => setShowSharedDialog(false)}
-              >
-                Start Practicing
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+    <div className="container mx-auto px-4 py-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Practice Phrases</h1>
+        <DifficultyDropdown onConfirm={async (newDifficulty) => {
+          setDifficulty(newDifficulty as any);
+          await handleGenerateTopicPhrases(aiGenerateTopic, newDifficulty);
+        }} />
+      </div>
 
       {/* Input Methods */}
-      <Tabs defaultValue="ai-generate" className="w-full mb-8">
+      <Tabs defaultValue="topic" className="mb-8">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="ai-generate">AI Generate</TabsTrigger>
-          <TabsTrigger value="manual-entry">Manual Entry</TabsTrigger>
-          <TabsTrigger value="upload-file">Upload File</TabsTrigger>
+          <TabsTrigger value="topic">Example Topics</TabsTrigger>
+          <TabsTrigger value="manual">Enter Text</TabsTrigger>
+          <TabsTrigger value="upload">Upload File</TabsTrigger>
         </TabsList>
 
-        {/* AI Generate Tab */}
-        <TabsContent value="ai-generate" className="mt-4">
-          <Card>
-            <CardContent className="p-6 space-y-4">
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <div className="flex-grow w-full">
-                  <Label htmlFor="ai-topic">Topic</Label>
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      id="ai-topic"
-                      placeholder="e.g., Common Phrases, Travel, Food"
-                      value={customTopic || aiGenerateTopic}
-                      onChange={(e) => setCustomTopic(e.target.value)}
-                      disabled={isRecordingTopic}
-                    />
-                    <Button
-                      type="button"
-                      onClick={isRecordingTopic ? stopTopicRecording : startTopicRecording}
-                      variant="outline"
-                      size="icon"
-                      className="shrink-0"
-                      disabled={isProcessing || isGenerating}
-                    >
-                      {isRecordingTopic ? <StopCircleIcon className="h-5 w-5 text-red-500" /> : <Mic className="h-5 w-5" />}
-                    </Button>
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="difficulty">Difficulty</Label>
-                  <DifficultyDropdown />
-                </div>
-              </div>
-              <Button
-                className="w-full"
-                onClick={() => handleGenerateTopicPhrases(customTopic || aiGenerateTopic)}
-                disabled={isGenerating || isProcessing}
-              >
-                {isGenerating ? "Generating..." : "Generate Phrases"}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Manual Entry Tab */}
-        <TabsContent value="manual-entry" className="mt-4">
-          <Card>
-            <CardContent className="p-6 space-y-4">
-              <Textarea
-                placeholder="Enter phrases, one per line (e.g., 'Hello world', 'How are you?')"
-                value={manualEntryText}
-                onChange={(e) => setManualEntryText(e.target.value)}
-                rows={6}
-                disabled={isProcessing}
+        {/* Topic Selection */}
+        <TabsContent value="topic" className="space-y-4">
+          <div>
+            <Label htmlFor="topic-input" className="text-base font-medium">
+              Choose a topic or enter your own:
+            </Label>
+            <div className="flex gap-2 mt-2">
+              <Input
+                id="topic-input"
+                value={customTopic || aiGenerateTopic}
+                onChange={(e) => {
+                  setCustomTopic(e.target.value);
+                  setAiGenerateTopic(e.target.value);
+                }}
+                placeholder="Enter a topic..."
+                className="flex-1"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && (customTopic || aiGenerateTopic).trim()) {
+                    handleGenerateTopicPhrases(customTopic || aiGenerateTopic);
+                  }
+                }}
               />
               <Button
-                className="w-full"
-                onClick={handleProcessManualText}
-                disabled={isProcessing || !manualEntryText.trim()}
+                onClick={() => handleGenerateTopicPhrases(customTopic || aiGenerateTopic)}
+                disabled={isGenerating || !(customTopic || aiGenerateTopic).trim()}
               >
-                {isProcessing ? "Processing..." : "Process Phrases"}
+                {isGenerating ? (
+                  <RotateCw className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                Generate
               </Button>
-            </CardContent>
-          </Card>
+              <Button
+                variant="outline"
+                onClick={handleTopicSpeechToText} // This is where the function is called
+                disabled={isRecordingTopic || isGenerating}
+                className="px-3"
+              >
+                {isRecordingTopic ? (
+                  <StopCircleIcon className="h-4 w-4" />
+                ) : (
+                  <MicIcon className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            {isRecordingTopic && (
+              <p className="text-sm text-muted-foreground mt-2">Recording... Speak your topic now (up to 5 seconds)</p>
+            )}
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium text-gray-600">Example Topics:</Label>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {[
+                "Common Phrases",
+                "Restaurant Phrases",
+                "Travel Phrases",
+                "Business Phrases",
+                "Medical Phrases",
+                "Shopping Phrases",
+                "Greeting Phrases",
+                "Emergency Phrases",
+                "School Phrases",
+                "Technology Phrases",
+                "Weather Phrases",
+                "Time Expressions"
+              ].map((topic) => (
+                <Badge
+                  key={topic}
+                  className="cursor-pointer"
+                  variant="outline"
+                  onClick={() => {
+                    setAiGenerateTopic(topic);
+                    handleGenerateTopicPhrases(topic);
+                  }}
+                >
+                  {topic}
+                </Badge>
+              ))}
+            </div>
+          </div>
         </TabsContent>
 
-        {/* Upload File Tab */}
-        <TabsContent value="upload-file" className="mt-4">
-          <Card>
-            <CardContent className="p-6 space-y-4">
-              <Label htmlFor="file-upload" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Upload Image or PDF
-              </Label>
-              <div className="flex items-center space-x-2">
-                <Input
-                  id="file-upload"
-                  type="file"
-                  accept="image/*, application/pdf"
-                  ref={fileInputRef}
-                  onChange={handleFileUpload}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  disabled={isProcessing}
-                />
+        {/* Manual Text Entry */}
+        <TabsContent value="manual" className="space-y-4">
+          <div>
+            <Label htmlFor="manual-text" className="text-base font-medium">
+              Enter phrases (one per line):
+            </Label>
+            <Textarea
+              id="manual-text"
+              value={manualEntryText}
+              onChange={(e) => setManualEntryText(e.target.value)}
+              placeholder="Enter phrases here, one per line..."
+              className="mt-2 min-h-[120px]"
+            />
+            <Button
+              onClick={handleProcessManualText}
+              disabled={isProcessing || !manualEntryText.trim()}
+              className="mt-2"
+            >
+              {isProcessing ? (
+                <RotateCw className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Process Phrases
+            </Button>
+          </div>
+        </TabsContent>
+
+        {/* File Upload */}
+        <TabsContent value="upload" className="space-y-4">
+          <div>
+            <Label className="text-base font-medium">Upload Image or PDF:</Label>
+            <div className="mt-2 space-y-4">
+              <div className="flex items-center gap-4">
                 <Button
                   variant="outline"
-                  size="icon"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isProcessing}
                 >
-                  <Upload className="h-5 w-5" />
+                  <Upload className="h-4 w-4 mr-2" />
+                  Choose File
                 </Button>
-              </div>
-              {imageUploadText && (
-                <Textarea
-                  placeholder="Extracted text will appear here..."
-                  value={imageUploadText}
-                  onChange={(e) => setImageUploadText(e.target.value)}
-                  rows={6}
-                  readOnly
-                  className="mt-4 bg-gray-50 dark:bg-gray-800"
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={handleFileUpload}
+                  className="hidden"
                 />
+              </div>
+
+              {imageUploadText && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Extracted Text:</Label>
+                  <Textarea
+                    value={imageUploadText}
+                    onChange={(e) => setImageUploadText(e.target.value)}
+                    className="min-h-[120px]"
+                  />
+                  <Button
+                    onClick={handleProcessImageText}
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? (
+                      <RotateCw className="h-4 w-4 animate-spin mr-2" />
+                    ) : null}
+                    Process Extracted Text
+                  </Button>
+                </div>
               )}
-              <Button
-                className="w-full"
-                onClick={handleProcessImageText}
-                disabled={isProcessing || !imageUploadText.trim()}
-              >
-                {isProcessing ? "Processing..." : "Process Extracted Text"}
-              </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
 
-      {/* Practice Section */}
-      {processedPhrases.length > 0 && (
-        <div id="practice-phrases-section" className="mt-8">
-          <h2 className="text-3xl font-bold text-center mb-6">
-            Practice Your Phrases
-          </h2>
+      {/* Progress Indicator */}
+      {processedPhrases.length > 0 && !showFinalProgress && (
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm font-medium">Progress</span>
+            <span className="text-sm">{completedPhrasesCount}/8 phrases completed</span>
+          </div>
+          <Progress value={(completedPhrasesCount / 8) * 100} className="h-3" />
+        </div>
+      )}
+
+      {/* Practice Phrases Section with Carousel */}
+      {processedPhrases.length > 0 && !showFinalProgress && (
+        <div id="practice-phrases-section" className="w-full max-w-4xl mx-auto">
+          <h2 className="text-2xl font-bold text-center mb-6">Practice Phrases</h2>
 
           <div className="relative">
-            <div className="embla" ref={emblaRef}>
-              <div className="embla__container">
-                {processedPhrases.map(renderPhraseCard)}
+            <div className="overflow-hidden" ref={emblaRef}>
+              <div className="flex">
+                {processedPhrases.map((phrase, idx) => (
+                  <div key={phrase.id} className="flex-[0_0_100%] min-w-0">
+                    <Card className="mx-4 transition-all">
+                      <CardContent className="p-6">
+                        {/* Idle state - show phrase and practice button */}
+                        {phrase.status === "idle" && (
+                          <div className="text-center space-y-6">
+                            <div className="flex justify-between items-center mb-4">
+                              <Button
+                                variant="outline"
+                                className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                                onClick={goToNext}
+                                disabled={currentCarouselIndex >= processedPhrases.length - 1}
+                              >
+                                Next <ArrowRight className="h-4 w-4 ml-1" />
+                              </Button>
+                              <Button
+                                className="bg-primary text-primary-foreground px-8 py-3"
+                                onClick={() => startPhrasePractice(idx)}
+                                disabled={isMicRecording} // Disable if recording is active
+                              >
+                                <Mic className="h-5 w-5 mr-2" />
+                                Practice
+                              </Button>
+                            </div>
+
+                            <div className="space-y-4">
+                              <h3 className="text-3xl font-bold text-center">{phrase.text}</h3>
+
+                              {/* Audio controls - MODIFIED */}
+                              <div className="flex justify-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                                  onClick={() => {
+                                    setSlowPlaybackPhrases(prev => ({ ...prev, [phrase.id]: false }));
+                                    handleTextToSpeech(idx, 1); // Pass 1 for normal speed
+                                  }}
+                                >
+                                  <Volume2 className="h-4 w-4 mr-1" />
+                                  Normal
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                                  onClick={() => {
+                                    setSlowPlaybackPhrases(prev => ({ ...prev, [phrase.id]: true }));
+                                    handleTextToSpeech(idx, 0.6); // Pass 0.6 for 60% speed
+                                  }}
+                                >
+                                  <Turtle className="h-4 w-4 mr-1" />
+                                  Slow
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className={`border-yellow-500 text-yellow-600 hover:bg-yellow-50 ${
+                                    savedPhraseId === phrase.id ? 'bg-yellow-100' : ''
+                                  }`}
+                                  onClick={() => handleSavePhrase(idx)}
+                                >
+                                  <Star className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Recording state */}
+                        {phrase.status === "recording" && (
+                          <div className="text-center space-y-6">
+                            <h3 className="text-3xl font-bold">{phrase.text}</h3>
+                            <div className="relative w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto animate-pulse">
+                              <Mic className="h-12 w-12 text-red-500" />
+                            </div>
+                            <p className="text-lg">Recording...</p>
+                            <Button
+                              className="bg-red-500 text-white hover:bg-red-600"
+                              onClick={stopPhrasePractice}
+                              disabled={!isMicRecording} // Disable if microphone is not actively recording
+                            >
+                              <StopCircleIcon className="h-5 w-5 mr-2" />
+                              Stop Recording
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Assessing state */}
+                        {phrase.status === "assessing" && (
+                          <div className="text-center space-y-6">
+                            <h3 className="text-3xl font-bold">{phrase.text}</h3>
+                            <div className="relative w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+                              <RotateCw className="h-12 w-12 text-blue-500 animate-spin" />
+                            </div>
+                            <p className="text-lg">Analyzing your pronunciation...</p>
+                          </div>
+                        )}
+
+                        {/* Complete state with results */}
+                        {phrase.status === "complete" && phrase.assessmentResult && currentlyPracticing === phrase.id && (
+                          <div className="space-y-6">
+                            <h3 className="text-4xl font-bold text-center">{phrase.text}</h3>
+
+                            {/* Audio controls - MODIFIED */}
+                            <div className="flex justify-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                                onClick={() => {
+                                  handleTextToSpeech(idx, 1); // Pass 1 for normal speed
+                                }}
+                              >
+                                <Volume2 className="h-4 w-4 mr-1" />
+                                Normal
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                                onClick={() => {
+                                  handleTextToSpeech(idx, 0.6); // Pass 0.6 for slow speed
+                                }}
+                              >
+                                <Turtle className="h-4 w-4 mr-1" />
+                                Slow
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                                onClick={() => handleSavePhrase(idx)}
+                              >
+                                <Star className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            {/* Assessment Results */}
+                            <div className="border-2 border-[#57cc99] rounded-lg bg-[#f5f7fa] p-6">
+                              <h4 className="text-xl font-bold text-center text-[#264653] mb-4">
+                                Your Performance
+                              </h4>
+                              <div
+                                className="text-6xl font-bold text-center mb-4"
+                                style={{
+                                  color: phrase.assessmentResult.pronunciationScore >= 80 ? "#2a9d8f" : "#e76f51",
+                                }}
+                              >
+                                {Math.round(phrase.assessmentResult.pronunciationScore)}%
+                              </div>
+
+                              {/* Detailed scores */}
+                              <div className="space-y-3">
+                                {[
+                                  { label: "Pronunciation", score: phrase.assessmentResult.pronunciationScore },
+                                  { label: "Fluency", score: phrase.assessmentResult.fluencyScore },
+                                  { label: "Completeness", score: phrase.assessmentResult.completenessScore },
+                                  { label: "Accuracy", score: phrase.assessmentResult.accuracyScore },
+                                ].map(({ label, score }) => (
+                                  <div key={label} className="space-y-1">
+                                    <div className="flex justify-between text-sm">
+                                      <span className="font-medium">{label}</span>
+                                      <span>{Math.round(score)}%</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                      <div
+                                        className="h-2.5 rounded-full"
+                                        style={{
+                                          width: `${Math.round(score)}%`,
+                                          backgroundColor: score >= 80 ? "#2a9d8f" : score >= 60 ? "#e9c46a" : "#e76f51",
+                                        }}
+                                      ></div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Recording playback */}
+                              {phrase.recordingBlob && (
+                                <div className="bg-white/80 border border-[#57cc99] rounded-md p-3 mt-4 flex items-center justify-between">
+                                  <div className="text-sm font-medium text-[#264653]">
+                                    Listen to your recording:
+                                  </div>
+                                  <button
+                                    className="bg-[#57cc99] text-white rounded-full p-2 flex items-center justify-center shadow-md hover:bg-[#38b37a] transition-colors"
+                                    onClick={() => {
+                                      if (phrase.recordingBlob) {
+                                        const audio = new Audio(URL.createObjectURL(phrase.recordingBlob));
+                                        audio.play();
+                                      }
+                                    }}
+                                  >
+                                    <Volume2 className="h-5 w-5" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Action buttons */}
+                            <div className="flex justify-center gap-3">
+                              <Button
+                                variant="outline"
+                                className="border-green-500 text-green-600 hover:bg-green-50"
+                                onClick={() => startPhrasePractice(idx)}
+                              >
+                                Try Again
+                              </Button>
+                              <Button
+                                variant="outline"
+                                className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                                onClick={() => {
+                                  setCurrentlyPracticing(null);
+                                  goToNext();
+                                }}
+                              >
+                                Next <ArrowRight className="h-4 w-4 ml-1" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                ))}
               </div>
             </div>
-            {processedPhrases.length > 1 && (
-              <>
-                <Button
-                  onClick={goToPrevious}
-                  disabled={!emblaApi || currentCarouselIndex === 0 || isProcessing || isGenerating || isMicRecording}
-                  className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full shadow-lg"
-                  variant="outline"
-                  size="icon"
-                >
-                  <ChevronLeft className="h-6 w-6" />
-                </Button>
-                <Button
-                  onClick={goToNext}
-                  disabled={!emblaApi || currentCarouselIndex === processedPhrases.length - 1 || isProcessing || isGenerating || isMicRecording}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full shadow-lg"
-                  variant="outline"
-                  size="icon"
-                >
-                  <ChevronRight className="h-6 w-6" />
-                </Button>
-              </>
-            )}
-          </div>
 
-          <div className="flex justify-center items-center mt-4 space-x-2">
-            {processedPhrases.map((_, index) => (
+            {/* Navigation buttons */}
+            <div className="flex justify-center gap-4 mt-8">
               <Button
-                key={index}
-                variant={index === currentCarouselIndex ? "default" : "outline"}
-                size="icon"
-                onClick={() => goToSlide(index)}
-                className="w-8 h-8 rounded-full"
-                disabled={isProcessing || isGenerating || isMicRecording}
+                variant="outline"
+                onClick={goToPrevious}
+                disabled={currentCarouselIndex === 0}
+                className="border-blue-500 text-blue-600 hover:bg-blue-50"
               >
-                {index + 1}
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
               </Button>
-            ))}
+              <Button
+                variant="outline"
+                onClick={goToNext}
+                disabled={currentCarouselIndex >= processedPhrases.length - 1}
+                className="border-blue-500 text-blue-600 hover:bg-blue-50"
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+
+            {/* Carousel dots indicator */}
+            <div className="flex justify-center gap-2 mt-4">
+              {processedPhrases.map((_, index) => (
+                <button
+                  key={index}
+                  className={`w-3 h-3 rounded-full transition-colors ${
+                    index === currentCarouselIndex ? 'bg-primary' : 'bg-gray-300'
+                  }`}
+                  onClick={() => goToSlide(index)}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Final Progress Summary */}
+      {showFinalProgress && (
+        <div className="w-full max-w-4xl mx-auto space-y-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold mb-2">🎉 Fantastic Work!</h2>
+            <p className="text-lg text-gray-600">You've completed all 8 practice phrases!</p>
           </div>
 
-          <div className="mt-8 text-center">
-            <Progress value={(completedPhrasesCount / processedPhrases.length) * 100} className="w-full" />
-            <p className="text-sm text-gray-500 mt-2">
-              {completedPhrasesCount} of {processedPhrases.length} phrases completed
-            </p>
-          </div>
+          {/* Progress Chart */}
+          <Card className="p-6">
+            <h3 className="text-xl font-bold mb-4 text-center">Your Progress</h3>
+            <div className="space-y-4">
+              {processedPhrases
+                .filter(phrase => phrase.assessmentResult)
+                .map((phrase, index) => (
+                  <div key={phrase.id} className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium">{phrase.text}</span>
+                      <span>{Math.round(phrase.assessmentResult!.pronunciationScore)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div
+                        className="h-3 rounded-full transition-all"
+                        style={{
+                          width: `${Math.round(phrase.assessmentResult!.pronunciationScore)}%`,
+                          backgroundColor: phrase.assessmentResult!.pronunciationScore >= 80 ? "#2a9d8f" : "#e76f51",
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </Card>
 
-          {showFinalProgress && lowScorePhrases.length > 0 && (
-            <Card className="mt-8 p-6">
-              <h3 className="text-2xl font-bold text-center mb-4">
-                Phrases to Re-practice
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {lowScorePhrases.map((phrase) => (
-                  <div
-                    key={phrase.id}
-                    className="flex items-center justify-between p-4 border rounded-lg shadow-sm"
-                  >
-                    <span className="font-medium">{phrase.text}</span>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant="destructive" className="text-md">
-                        Score: {phrase.assessmentResult!.pronunciationScore.toFixed(1)}%
-                      </Badge>
+          {/* Phrases needing more practice */}
+          {lowScorePhrases.length > 0 && (
+            <Card className="p-6">
+              <h3 className="text-xl font-bold mb-4 text-center">Phrases to Practice More</h3>
+              <p className="text-center text-gray-600 mb-4">
+                These phrases scored less than 80% - give them another try!
+              </p>
+              <div className="grid grid-cols-1 gap-4">
+                {lowScorePhrases.map((phrase, index) => (
+                  <div key={`low-${index}`} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-lg font-semibold">{phrase.text}</h4>
+                      <span className="text-red-600 font-bold">
+                        {Math.round(phrase.assessmentResult!.pronunciationScore)}%
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
                       <Button
-                        size="icon"
+                        size="sm"
+                        className="bg-primary text-primary-foreground"
                         onClick={() => {
-                          const originalIndex = processedPhrases.findIndex(p => p.id === phrase.id);
-                          if (originalIndex !== -1) {
-                            goToSlide(originalIndex);
+                          const phraseIndex = processedPhrases.findIndex(p => p.text === phrase.text);
+                          if (phraseIndex !== -1) {
+                            goToSlide(phraseIndex);
+                            setShowFinalProgress(false);
+                            startPhrasePractice(phraseIndex);
                           }
                         }}
-                        disabled={isProcessing || isGenerating || isMicRecording}
                       >
-                        <ArrowRight className="h-5 w-5" />
+                        <Mic className="h-4 w-4 mr-1" />
+                        Practice
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                        onClick={() => handleSavePhrase(processedPhrases.findIndex(p => p.text === phrase.text))}
+                      >
+                        <Star className="h-4 w-4" />
+                        Save
                       </Button>
                     </div>
                   </div>
@@ -1058,7 +1208,7 @@ export default function Phrases() {
           )}
 
           {/* Try new topic button */}
-          <div className="text-center mt-8">
+          <div className="text-center">
             <Button
               size="lg"
               onClick={() => {
@@ -1067,7 +1217,6 @@ export default function Phrases() {
                 setLowScorePhrases([]);
                 handleGenerateTopicPhrases("Common Phrases");
               }}
-              disabled={isProcessing || isGenerating || isMicRecording}
             >
               Practice New Phrases
             </Button>
