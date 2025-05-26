@@ -322,90 +322,6 @@ export default function Words() {
   const stopWordPractice = async () => {
     try {
       await stopMainRecording();
-      
-      const currentWord = processedWords.find(w => w.status === "recording");
-      if (!currentWord) return;
-
-      setProcessedWords(prev => prev.map(w => 
-        w.id === currentWord.id ? { ...w, status: "assessing" } : w
-      ));
-
-      // Wait a moment for the audio blob to be available and process
-      setTimeout(async () => {
-        try {
-          if (audioBlob) {
-            const formData = new FormData();
-            formData.append("audio", audioBlob);
-            formData.append("referenceText", currentWord.text);
-
-            const response = await fetch("/api/pronunciation/assess", {
-              method: "POST",
-              body: formData,
-            });
-
-            if (!response.ok) {
-              throw new Error("Failed to assess pronunciation");
-            }
-
-            const assessmentResult = await response.json();
-            console.log("Received assessment results:", assessmentResult);
-
-            setProcessedWords(prev => prev.map(w => 
-              w.id === currentWord.id 
-                ? { 
-                    ...w, 
-                    status: "complete", 
-                    assessmentResult,
-                    recordingBlob: audioBlob,
-                    recordingUrl: URL.createObjectURL(audioBlob)
-                  } 
-                : w
-            ));
-
-            // Track completed words and low scores
-            setCompletedWordsCount(prev => {
-              const newCount = prev + 1;
-              if (newCount === 8) {
-                setShowFinalProgress(true);
-              }
-              return newCount;
-            });
-
-            if (assessmentResult.pronunciationScore < 80) {
-              setLowScoreWords(prev => [...prev, {
-                ...currentWord,
-                assessmentResult,
-                recordingBlob: audioBlob,
-                recordingUrl: URL.createObjectURL(audioBlob)
-              }]);
-            }
-          } else {
-            // If no audio blob available, reset the word status
-            setProcessedWords(prev => prev.map(w => 
-              w.id === currentWord.id ? { ...w, status: "idle" } : w
-            ));
-            
-            toast({
-              title: "Recording Error",
-              description: "No audio was recorded. Please try again.",
-              variant: "destructive",
-            });
-          }
-        } catch (error) {
-          console.error("Error processing recording:", error);
-          
-          // Reset the word status on error
-          setProcessedWords(prev => prev.map(w => 
-            w.id === currentWord.id ? { ...w, status: "idle" } : w
-          ));
-          
-          toast({
-            title: "Assessment Error",
-            description: "Failed to assess pronunciation. Please try again.",
-            variant: "destructive",
-          });
-        }
-      }, 500); // Wait 500ms for audio blob to be ready
     } catch (error) {
       console.error("Error stopping recording:", error);
       toast({
@@ -854,12 +770,14 @@ export default function Words() {
                                   size="sm"
                                   className="border-green-500 text-green-600 hover:bg-green-50"
                                   onClick={() => {
-                                    if (audioRef.current) {
-                                      audioRef.current.src = word.recordingUrl!;
-                                      audioRef.current.play();
-                                    } else {
-                                      const audio = new Audio(word.recordingUrl);
-                                      audio.play();
+                                    if (word.recordingUrl) {
+                                      if (audioRef.current) {
+                                        audioRef.current.src = word.recordingUrl;
+                                        audioRef.current.play();
+                                      } else {
+                                        const audio = new Audio(word.recordingUrl);
+                                        audio.play();
+                                      }
                                     }
                                   }}
                                 >
