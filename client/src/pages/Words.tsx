@@ -95,6 +95,7 @@ export default function Words() {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingRecording, setIsProcessingRecording] = useState(false);
   const [wordAssessmentResult, setWordAssessmentResult] = useState<any>(null);
+  const [currentRecordingWord, setCurrentRecordingWord] = useState<ProcessedWord | null>(null);
   const [slowPlaybackWords, setSlowPlaybackWords] = useState<{ [key: string]: boolean }>({});
   const [shareableLink, setShareableLink] = useState("");
   const [savedWordId, setSavedWordId] = useState<string | null>(null);
@@ -117,12 +118,11 @@ export default function Words() {
 
   // Handle recording completion and assessment
   const handleRecordingComplete = async (audioBlob: Blob) => {
-    // Find the word that's currently being practiced (could be recording or assessing)
-    const currentWord = processedWords.find(w => w.status === "recording" || w.status === "assessing") || 
-                       processedWords.find(w => w.id === currentlyPracticing);
+    // Use the stored reference to the currently recording word
+    const currentWord = currentRecordingWord;
     
     if (!currentWord) {
-      console.log("No current word found for assessment, currentlyPracticing:", currentlyPracticing);
+      console.log("No current recording word found for assessment");
       return;
     }
 
@@ -161,6 +161,9 @@ export default function Words() {
             } 
           : w
       ));
+
+      // Clear the recording reference
+      setCurrentRecordingWord(null);
 
       // Track completed words and low scores
       setCompletedWordsCount(prev => {
@@ -310,6 +313,7 @@ export default function Words() {
 
     const word = processedWords[wordIndex];
     setCurrentlyPracticing(word.id);
+    setCurrentRecordingWord(word); // Store reference to the word being recorded
 
     // Set status to recording BEFORE starting the recording
     setProcessedWords(prev => prev.map((w, idx) => 
@@ -324,6 +328,7 @@ export default function Words() {
       setProcessedWords(prev => prev.map((w, idx) => 
         idx === wordIndex ? { ...w, status: "idle" } : w
       ));
+      setCurrentRecordingWord(null); // Clear the recording reference
       toast({
         title: "Recording Error",
         description: "Failed to start recording. Please try again.",

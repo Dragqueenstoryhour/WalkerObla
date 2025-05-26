@@ -78,6 +78,7 @@ export default function Phrases() {
   const [showSharedDialog, setShowSharedDialog] = useState(false);
   const [currentlyPracticing, setCurrentlyPracticing] = useState<string | null>(null);
   // Removed [isRecording, setIsRecording] and [isProcessingRecording, setIsProcessingRecording] states
+  const [currentRecordingPhrase, setCurrentRecordingPhrase] = useState<ProcessedPhrase | null>(null);
   const [slowPlaybackPhrases, setSlowPlaybackPhrases] = useState<{ [key: string]: boolean }>({});
   const [shareableLink, setShareableLink] = useState("");
   const [savedPhraseId, setSavedPhraseId] = useState<string | null>(null);
@@ -107,6 +108,10 @@ export default function Phrases() {
     audioBlob,
     isRecording: isMicRecording, // Renamed to avoid conflict
   } = useAudioRecording({
+    onRecordingComplete: (blob) => {
+      console.log("Recording completed, processing assessment...");
+      handleRecordingComplete(blob);
+    },
     onError: (error) => {
       console.error("Recording error:", error);
       toast({
