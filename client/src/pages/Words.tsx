@@ -192,6 +192,28 @@ export default function Words() {
     }
   };
 
+  // Audio recording hook
+  const {
+    recordingDuration,
+    audioUrl,
+    startRecording: startMainRecording,
+    stopRecording: stopMainRecording,
+    audioBlob,
+  } = useAudioRecording({
+    onRecordingComplete: (blob) => {
+      console.log("Recording completed, processing assessment...");
+      handleRecordingComplete(blob);
+    },
+    onError: (error) => {
+      console.error("Recording error:", error);
+      toast({
+        title: "Recording Error",
+        description: "Could not access microphone. Please check your browser permissions.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Carousel navigation functions
   const goToNext = () => {
     if (emblaApi && currentCarouselIndex < processedWords.length - 1) {
