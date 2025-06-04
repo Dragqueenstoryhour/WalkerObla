@@ -660,7 +660,7 @@ export default function Words() {
       </Dialog>
 
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Practice Words</h1>
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">Practice Words</h1>
         <DifficultyDropdown onConfirm={async (newDifficulty) => {
           setDifficulty(newDifficulty as any);
           await handleGenerateTopicWords(aiGenerateTopic, newDifficulty);
@@ -669,21 +669,23 @@ export default function Words() {
 
       {/* Topic Selection */}
       <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Choose a Topic</h2>
+        <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Choose a Topic</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {topicOptions.map((topic) => (
             <Card
               key={topic}
-              className={`cursor-pointer transition-all hover:shadow-md ${
-                aiGenerateTopic === topic ? 'ring-2 ring-primary' : ''
+              className={`cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 ${
+                aiGenerateTopic === topic 
+                  ? 'ring-2 ring-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-md' 
+                  : 'hover:bg-gradient-to-br hover:from-gray-50 hover:to-blue-50'
               } ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
               onClick={() => {
                 setAiGenerateTopic(topic);
                 handleGenerateTopicWords(topic);
               }}
             >
-              <CardContent className="p-4 text-center">
-                <p className="font-medium">{topic}</p>
+              <CardContent className="p-6 text-center">
+                <p className="font-semibold text-gray-800">{topic}</p>
               </CardContent>
             </Card>
           ))}
@@ -706,6 +708,7 @@ export default function Words() {
             <Button
               onClick={() => handleGenerateTopicWords(aiGenerateTopic)}
               disabled={isProcessing || !aiGenerateTopic.trim()}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-6 py-2 transition-all duration-300 hover:scale-105"
             >
               {isProcessing ? (
                 <RotateCw className="h-4 w-4 animate-spin" />
@@ -720,13 +723,13 @@ export default function Words() {
       {/* Practice Section */}
       {processedWords.length > 0 && (
         <div id="practice-words-section" className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Practice Words</h2>
+          <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Practice Words</h2>
           
           {/* Carousel for words */}
-          <div className="embla" ref={emblaRef}>
+          <div className="embla overflow-hidden" ref={emblaRef}>
             <div className="embla__container flex">
               {processedWords.map((word, idx) => (
-                <div key={word.id} className="embla__slide flex-none w-full md:w-1/2 lg:w-1/3 px-2">
+                <div key={word.id} className="embla__slide flex-none w-full max-w-md mx-auto px-4">
                   <Card className="h-full">
                     <CardHeader className="text-center">
                       <CardTitle className="text-2xl font-bold">{word.text}</CardTitle>
@@ -854,17 +857,21 @@ export default function Words() {
                 onClick={goToPrevious}
                 variant="outline"
                 disabled={currentCarouselIndex === 0}
+                className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 transition-all duration-300 hover:scale-105"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Previous
               </Button>
-              <span className="flex items-center gap-2">
-                {currentCarouselIndex + 1} of {processedWords.length}
+              <span className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 rounded-lg">
+                <span className="font-semibold text-gray-700">{currentCarouselIndex + 1}</span>
+                <span className="text-gray-500">of</span>
+                <span className="font-semibold text-gray-700">{processedWords.length}</span>
               </span>
               <Button
                 onClick={goToNext}
                 variant="outline"
                 disabled={currentCarouselIndex === processedWords.length - 1}
+                className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 transition-all duration-300 hover:scale-105"
               >
                 Next
                 <ChevronRight className="h-4 w-4" />
