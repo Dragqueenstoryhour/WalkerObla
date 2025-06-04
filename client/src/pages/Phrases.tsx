@@ -83,7 +83,12 @@ export default function Phrases() {
 
   // Carousel state
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false });
+  const [emblaRef, emblaApi] = useEmblaCarousel({ 
+    loop: false,
+    align: 'center',
+    containScroll: 'trimSnaps',
+    slidesToScroll: 1
+  });
 
   // Refs for media recording
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -702,10 +707,10 @@ export default function Phrases() {
           <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Practice Phrases</h2>
           
           {/* Carousel for phrases */}
-          <div className="embla overflow-hidden" ref={emblaRef}>
+          <div className="embla overflow-hidden w-full" ref={emblaRef}>
             <div className="embla__container flex">
               {processedPhrases.map((phrase, idx) => (
-                <div key={phrase.id} className="embla__slide flex-none w-full max-w-md mx-auto px-4">
+                <div key={phrase.id} className="embla__slide flex-shrink-0 w-80 md:w-96 mx-2">
                   <Card className="h-full">
                     <CardHeader className="text-center">
                       <CardTitle className="text-xl font-bold">{phrase.text}</CardTitle>
