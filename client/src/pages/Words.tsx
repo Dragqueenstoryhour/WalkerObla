@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { useDifficulty } from "@/contexts/DifficultyContext";
 import { DifficultyDropdown } from "@/components/difficulty/SimplifiedDifficultySelector";
+import { SaveWordButton } from "@/components/SaveWordButton";
 import useEmblaCarousel from 'embla-carousel-react';
 
 interface ProcessedWord {
@@ -820,7 +821,7 @@ export default function Words() {
                         )}
                       </div>
 
-                      {/* Text-to-Speech */}
+                      {/* Text-to-Speech and Save */}
                       <div className="flex justify-center gap-2">
                         <Button
                           onClick={() => handleTextToSpeech(idx)}
@@ -838,6 +839,11 @@ export default function Words() {
                           <Turtle className="h-4 w-4" />
                           Slow
                         </Button>
+                        <SaveWordButton 
+                          word={word.text}
+                          variant="outline"
+                          size="default"
+                        />
                       </div>
 
                       {/* Assessment Results */}

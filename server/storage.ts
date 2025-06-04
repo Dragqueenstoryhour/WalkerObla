@@ -9,6 +9,8 @@ import {
   userSavedPhrases,
   practiceGroups,
   practiceGroupPhrases,
+  savedWords,
+  wordFolders,
   type User, 
   type InsertUser, 
   type UpsertUser,
@@ -29,7 +31,11 @@ import {
   type PracticeGroup,
   type InsertPracticeGroup,
   type PracticeGroupPhrase,
-  type InsertPracticeGroupPhrase
+  type InsertPracticeGroupPhrase,
+  type SavedWord,
+  type InsertSavedWord,
+  type WordFolder,
+  type InsertWordFolder
 } from "@shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { type Json } from "drizzle-orm/pg-core";
@@ -98,6 +104,18 @@ export interface IStorage {
   addPhraseToPracticeGroup(groupId: number, phraseId: number): Promise<PracticeGroupPhrase>;
   getPhrasesByGroupId(groupId: number): Promise<UserSavedPhrase[]>;
   removePhraseFromGroup(groupId: number, phraseId: number): Promise<void>;
+
+  // Saved words methods
+  getSavedWords(userId: string): Promise<SavedWord[]>;
+  createSavedWord(word: InsertSavedWord): Promise<SavedWord>;
+  deleteSavedWord(userId: string, word: string): Promise<void>;
+  updateSavedWord(id: number, updates: Partial<SavedWord>): Promise<SavedWord | undefined>;
+
+  // Word folders methods
+  getWordFolders(userId: string): Promise<WordFolder[]>;
+  createWordFolder(folder: InsertWordFolder): Promise<WordFolder>;
+  updateWordFolder(id: number, userId: string, updates: Partial<WordFolder>): Promise<WordFolder | undefined>;
+  deleteWordFolder(id: number, userId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -1329,6 +1347,103 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(practiceGroupPhrases.groupId, groupId),
         eq(practiceGroupPhrases.phraseId, phraseId)
+      ));
+
+    // Update the group's updatedAt timestamp
+    await db
+      .update(practiceGroups)
+      .set({
+        updatedAt: new Date()
+      })
+      .where(eq(practiceGroups.id, groupId));
+  }
+
+  // Saved words methods
+  async getSavedWords(userId: string): Promise<SavedWord[]> {
+    return db
+      .select()
+      .from(savedWords)
+      .where(eq(savedWords.userId, userId))
+      .orderBy(savedWords.createdAt);
+  }
+
+  async createSavedWord(word: InsertSavedWord): Promise<SavedWord> {
+    const [newWord] = await db
+      .insert(savedWords)
+      .values(word)
+      .returning();
+    return newWord;
+  }
+
+  async deleteSavedWord(userId: string, word: string): Promise<void> {
+    await db
+      .delete(savedWords)
+      .where(and(
+        eq(savedWords.userId, userId),
+        eq(savedWords.word, word)
+      ));
+  }
+
+  async updateSavedWord(id: number, updates: Partial<SavedWord>): Promise<SavedWord | undefined> {
+    const [updatedWord] = await db
+      .update(savedWords)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(savedWords.id, id))
+      .returning();
+    return updatedWord || undefined;
+  }
+
+  // Word folders methods
+  async getWordFolders(userId: string): Promise<WordFolder[]> {
+    return db
+      .select()
+      .from(wordFolders)
+      .where(eq(wordFolders.userId, userId))
+      .orderBy(wordFolders.createdAt);
+  }
+
+  async createWordFolder(folder: InsertWordFolder): Promise<WordFolder> {
+    const [newFolder] = await db
+      .insert(wordFolders)
+      .values(folder)
+      .returning();
+    return newFolder;
+  }
+
+  async updateWordFolder(id: number, userId: string, updates: Partial<WordFolder>): Promise<WordFolder | undefined> {
+    const [updatedFolder] = await db
+      .update(wordFolders)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(and(
+        eq(wordFolders.id, id),
+        eq(wordFolders.userId, userId)
+      ))
+      .returning();
+    return updatedFolder || undefined;
+  }
+
+  async deleteWordFolder(id: number, userId: string): Promise<void> {
+    // First remove folder reference from saved words
+    await db
+      .update(savedWords)
+      .set({ folderId: null })
+      .where(and(
+        eq(savedWords.folderId, id),
+        eq(savedWords.userId, userId)
+      ));
+
+    // Then delete the folder
+    await db
+      .delete(wordFolders)
+      .where(and(
+        eq(wordFolders.id, id),
+        eq(wordFolders.userId, userId)
       ));
 
     // Update the group's updatedAt timestamp
