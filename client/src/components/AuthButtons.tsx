@@ -291,7 +291,7 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
 
               {/* Signup Form */}
               <Form {...signupForm}>
-                <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-4">
+                <form id="signup-form" onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-4">
                   <h4 className="text-md font-medium">Create New Account</h4>
                   <FormField
                     control={signupForm.control}

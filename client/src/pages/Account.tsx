@@ -99,7 +99,7 @@ const Account = () => {
     return null;
   }
 
-  const joinDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recently';
+  const joinDate = (user as any).createdAt ? new Date((user as any).createdAt).toLocaleDateString() : 'Recently';
 
   return (
     <div className="container max-w-4xl mx-auto p-6 space-y-8">

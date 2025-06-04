@@ -12,6 +12,9 @@ import { z } from "zod";
 import { insertReadingContentSchema, insertReadingSessionSchema, insertSharedPhraseCollectionSchema, insertUserSavedPhraseSchema, insertPracticeGroupSchema, insertPracticeGroupPhraseSchema } from "@shared/schema";
 import WebSocket from "ws";
 import { setupAuth, isAuthenticated } from "./supabaseAuth";
+import session from 'express-session';
+import ConnectPgSimple from 'connect-pg-simple';
+import { pool } from './db';
 import Stripe from "stripe";
 import fs from 'fs';
 import { join } from 'path';
@@ -35,6 +38,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   if (!process.env.OPENAI_API_KEY) {
     console.warn("WARNING: OPENAI_API_KEY is not set. AI features will not work properly.");
   }
+
+  // Set up PostgreSQL session store
+  const PgSession = ConnectPgSimple(session);
+  
+  app.use(session({
+    store: new PgSession({
+      pool: pool,
+      tableName: 'sessions'
+    }),
+    secret: process.env.SESSION_SECRET || 'your-secret-key-here',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    }
+  }));
   
   // Set up authentication with Supabase
   await setupAuth(app);
