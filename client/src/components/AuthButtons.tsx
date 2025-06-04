@@ -55,7 +55,7 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
 
   const handleOAuthLogin = async (provider: string) => {
     try {
-      await oauthLogin(provider as any);
+      await oauthLoginAsync(provider as any);
     } catch (error: any) {
       // Check for provider not enabled error
       if (error.message && error.message.includes('provider is not enabled')) {
@@ -95,7 +95,7 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
     try {
       setIsLoggingIn(true);
-      await login(values);
+      await loginAsync(values);
       setIsDialogOpen(false);
       toast({
         title: "Login successful",
@@ -115,7 +115,7 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
   const onSignupSubmit = async (values: z.infer<typeof signupSchema>) => {
     try {
       setIsSigningUp(true);
-      await signup(values);
+      await signupAsync(values);
       setIsDialogOpen(false);
       toast({
         title: "Account created",
@@ -134,7 +134,7 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
 
   const handleLogout = async () => {
     try {
-      await logout();
+      await logoutAsync();
       toast({
         title: "Logged out",
         description: "You have been logged out successfully",
@@ -223,11 +223,11 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
                 type="button" 
                 className="w-full bg-white text-black border-gray-300 hover:bg-gray-100 hover:text-black" 
                 onClick={() => handleOAuthLogin('google')}
-                disabled={isOAuthLoading}
+                disabled={isOAuthLoggingIn}
                 size="lg"
               >
                 <SiGoogle className="mr-2 h-5 w-5 text-[#4285F4]" />
-                {isOAuthLoading ? 'Connecting...' : 'Continue with Google'}
+                {isOAuthLoggingIn ? 'Connecting...' : 'Continue with Google'}
               </Button>
 
             </TabsContent>
