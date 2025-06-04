@@ -33,26 +33,29 @@ function TabBar() {
   const [location] = useLocation();
 
   const navItems = [
-    { href: "/words", label: "Words", icon: Edit },
-    { href: "/phrases", label: "Phrases", icon: Edit },
-    { href: "/", label: "Easy Reader", icon: Book },
-    { href: "/my-words", label: "Saved Lingo", icon: Bookmark },
+    { href: "/", label: "Words", icon: Edit, color: "from-blue-500 to-indigo-500" },
+    { href: "/phrases", label: "Phrases", icon: Edit, color: "from-purple-500 to-pink-500" },
+    { href: "/reader", label: "Reading", icon: Book, color: "from-emerald-500 to-teal-500" },
+    { href: "/my-words", label: "Saved Lingo", icon: Bookmark, color: "from-orange-500 to-red-500" },
   ];
 
   return (
-    <div className="relative flex items-center justify-center h-16 w-full">
-      <div className="flex bg-blue-50 rounded-full p-1 w-full justify-around mx-auto"> {/* Changed bg to blue-50 and removed max-w-lg */}
+    <div className="relative flex items-center justify-center h-18 w-full">
+      <div className="flex bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl p-2 w-full justify-around mx-auto shadow-lg border border-gray-300">
         {navItems.map((item) => {
           const isActive = location === item.href;
           const IconComponent = item.icon;
           return (
             <Link href={item.href} key={item.href}>
               <a
-                className={`flex flex-col items-center justify-center py-2 px-3 rounded-full transition-all duration-300 ease-in-out flex-grow
-                            ${isActive ? "bg-blue-500 text-white shadow-md" : "text-blue-400 hover:text-blue-600"}`}
+                className={`flex flex-col items-center justify-center py-3 px-4 rounded-xl transition-all duration-300 ease-in-out flex-grow transform hover:scale-105 ${
+                  isActive 
+                    ? `bg-gradient-to-r ${item.color} text-white shadow-lg scale-105` 
+                    : "text-gray-600 hover:text-gray-800 hover:bg-white hover:shadow-md"
+                }`}
               >
-                <IconComponent className="h-6 w-6 mb-1" /> {/* Adjusted icon size and margin */}
-                <span className="text-sm font-medium">{item.label}</span> {/* Adjusted font size */}
+                <IconComponent className={`h-7 w-7 mb-1 ${isActive ? 'animate-pulse' : ''}`} />
+                <span className="text-sm font-bold">{item.label}</span>
               </a>
             </Link>
           );
@@ -138,7 +141,8 @@ function Router() {
       <Navigation />
       <FirstTimeUserDifficultySelection />
       <Switch>
-        <Route path="/" component={Read} />
+        <Route path="/" component={Words} />
+        <Route path="/reader" component={Read} />
         <Route path="/words" component={Words} />
         <Route path="/phrases" component={Phrases} />
         <Route path="/game" component={() => <GameProvider initialUsername="player1"><RecordingTest /></GameProvider>} />

@@ -452,6 +452,27 @@ export default function Words() {
     speechSynthesis.speak(utterance);
   };
 
+  // Play back user's recording
+  const playUserRecording = (wordIndex: number) => {
+    const word = processedWords[wordIndex];
+    if (!word?.recordingUrl) return;
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+
+    audioRef.current = new Audio(word.recordingUrl);
+    audioRef.current.play().catch(error => {
+      console.error("Error playing recording:", error);
+      toast({
+        title: "Playback Error",
+        description: "Could not play your recording.",
+        variant: "destructive",
+      });
+    });
+  };
+
   // Toggle slow playback
   const toggleSlowPlayback = (wordId: string) => {
     setSlowPlaybackWords(prev => ({
@@ -778,14 +799,24 @@ export default function Words() {
                         )}
                         
                         {word.status === "complete" && (
-                          <Button
-                            onClick={() => startWordPractice(idx)}
-                            variant="outline"
-                            className="flex items-center gap-2"
-                          >
-                            <RotateCw className="h-4 w-4" />
-                            Try Again
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => startWordPractice(idx)}
+                              variant="outline"
+                              className="flex items-center gap-2"
+                            >
+                              <RotateCw className="h-4 w-4" />
+                              Try Again
+                            </Button>
+                            <Button
+                              onClick={() => playUserRecording(idx)}
+                              variant="outline"
+                              className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0"
+                            >
+                              <VolumeIcon className="h-4 w-4" />
+                              Hear me
+                            </Button>
+                          </div>
                         )}
                       </div>
 
