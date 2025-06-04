@@ -100,6 +100,51 @@ export const insertReadingContentSchema = createInsertSchema(readingContent).omi
 export type InsertReadingContent = z.infer<typeof insertReadingContentSchema>;
 export type ReadingContent = typeof readingContent.$inferSelect;
 
+// Word folders for organization
+export const wordFolders = pgTable("word_folders", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  color: text("color").default("#3b82f6"), // Default blue color
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertWordFolderSchema = createInsertSchema(wordFolders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertWordFolder = z.infer<typeof insertWordFolderSchema>;
+export type WordFolder = typeof wordFolders.$inferSelect;
+
+// Saved words with folder organization
+export const savedWords = pgTable("saved_words", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  word: text("word").notNull(),
+  definition: text("definition"),
+  pronunciation: text("pronunciation"),
+  folderId: integer("folder_id"),
+  difficultyLevel: integer("difficulty_level").default(1),
+  practiceCount: integer("practice_count").default(0),
+  lastPracticedAt: timestamp("last_practiced_at"),
+  masteryLevel: integer("mastery_level").default(0), // 0-100 scale
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertSavedWordSchema = createInsertSchema(savedWords).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSavedWord = z.infer<typeof insertSavedWordSchema>;
+export type SavedWord = typeof savedWords.$inferSelect;
+
 // Reading session
 export const readingSession = pgTable("reading_session", {
   id: serial("id").primaryKey(),

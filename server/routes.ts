@@ -9,7 +9,7 @@ import * as realtimeService from "./realtime";
 import * as stripeService from "./stripe";
 import multer from 'multer';
 import { z } from "zod";
-import { insertReadingContentSchema, insertReadingSessionSchema, insertSharedPhraseCollectionSchema, insertUserSavedPhraseSchema, insertPracticeGroupSchema, insertPracticeGroupPhraseSchema } from "@shared/schema";
+import { insertReadingContentSchema, insertReadingSessionSchema, insertSharedPhraseCollectionSchema, insertUserSavedPhraseSchema, insertPracticeGroupSchema, insertPracticeGroupPhraseSchema, insertSavedWordSchema, insertWordFolderSchema } from "@shared/schema";
 import WebSocket from "ws";
 import { setupAuth, isAuthenticated } from "./supabaseAuth";
 import session from 'express-session';
@@ -1393,6 +1393,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error saving test recording:', error);
       return res.status(500).json({ error: 'Failed to save test recording' });
+    }
+  });
+
+  // Saved words API endpoints
+  app.get('/api/saved-words', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.user.id;
+      const savedWords = await storage.getSavedWords(userId);
+      res.json(savedWords);
+    } catch (error) {
+      console.error('Error fetching saved words:', error);
+      res.status(500).json({ error: 'Failed to fetch saved words' });
+    }
+  });
+
+  app.post('/api/saved-words', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.user.id;
+      const wordData = insertSavedWordSchema.parse({
+        ...req.body,
+        userId
+      });
+      
+      const savedWord = await storage.createSavedWord(wordData);
+      res.json(savedWord);
+    } catch (error) {
+      console.error('Error saving word:', error);
+      res.status(500).json({ error: 'Failed to save word' });
+    }
+  });
+
+  app.delete('/api/saved-words/:word', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.user.id;
+      const word = decodeURIComponent(req.params.word);
+      
+      await storage.deleteSavedWord(userId, word);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting saved word:', error);
+      res.status(500).json({ error: 'Failed to delete word' });
+    }
+  });
+
+  // Word folders API endpoints
+  app.get('/api/word-folders', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.user.id;
+      const folders = await storage.getWordFolders(userId);
+      res.json(folders);
+    } catch (error) {
+      console.error('Error fetching word folders:', error);
+      res.status(500).json({ error: 'Failed to fetch folders' });
+    }
+  });
+
+  app.post('/api/word-folders', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.user.id;
+      const folderData = insertWordFolderSchema.parse({
+        ...req.body,
+        userId
+      });
+      
+      const folder = await storage.createWordFolder(folderData);
+      res.json(folder);
+    } catch (error) {
+      console.error('Error creating word folder:', error);
+      res.status(500).json({ error: 'Failed to create folder' });
+    }
+  });
+
+  app.put('/api/word-folders/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.user.id;
+      const folderId = parseInt(req.params.id);
+      const updateData = req.body;
+      
+      const folder = await storage.updateWordFolder(folderId, userId, updateData);
+      res.json(folder);
+    } catch (error) {
+      console.error('Error updating word folder:', error);
+      res.status(500).json({ error: 'Failed to update folder' });
+    }
+  });
+
+  app.delete('/api/word-folders/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.user.id;
+      const folderId = parseInt(req.params.id);
+      
+      await storage.deleteWordFolder(folderId, userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting word folder:', error);
+      res.status(500).json({ error: 'Failed to delete folder' });
     }
   });
 

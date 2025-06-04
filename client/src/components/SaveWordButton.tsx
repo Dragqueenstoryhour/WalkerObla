@@ -26,15 +26,22 @@ export function SaveWordButton({ word, className, variant = "outline", size = "s
     enabled: isAuthenticated,
   });
 
-  const isSaved = savedWords.some((savedWord: any) => savedWord.word === word);
+  const savedWordsArray = Array.isArray(savedWords) ? savedWords : [];
+  const isSaved = savedWordsArray.some((savedWord: any) => savedWord.word === word);
 
   // Save word mutation
   const saveWordMutation = useMutation({
-    mutationFn: (wordData: { word: string; folderId?: string }) => 
-      apiRequest('/api/saved-words', {
+    mutationFn: async (wordData: { word: string; folderId?: string }) => {
+      const response = await fetch('/api/saved-words', {
         method: 'POST',
-        body: wordData,
-      }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(wordData),
+      });
+      if (!response.ok) throw new Error('Failed to save word');
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/saved-words'] });
       toast({
@@ -53,10 +60,13 @@ export function SaveWordButton({ word, className, variant = "outline", size = "s
 
   // Remove word mutation
   const removeWordMutation = useMutation({
-    mutationFn: (wordToRemove: string) => 
-      apiRequest(`/api/saved-words/${encodeURIComponent(wordToRemove)}`, {
+    mutationFn: async (wordToRemove: string) => {
+      const response = await fetch(`/api/saved-words/${encodeURIComponent(wordToRemove)}`, {
         method: 'DELETE',
-      }),
+      });
+      if (!response.ok) throw new Error('Failed to remove word');
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/saved-words'] });
       toast({
