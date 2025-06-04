@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuthContext } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 // import { supabaseClient } from '../lib/supabaseClient'; // Not directly used in component logic, but fine to keep
 import { Button } from "@/components/ui/button";
 import { User, LogOut, LogIn, Mail, Github, Twitter, Facebook } from 'lucide-react'; 
@@ -42,12 +42,12 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
     user, 
     isLoading, 
     isAuthenticated, 
-    login, 
-    logout, 
-    signup, 
-    oauthLogin,
-    isOAuthLoading 
-  } = useAuthContext();
+    loginAsync, 
+    logoutAsync, 
+    signupAsync, 
+    oauthLoginAsync,
+    isOAuthLoggingIn 
+  } = useAuth();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);

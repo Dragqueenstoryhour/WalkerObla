@@ -20,7 +20,7 @@ import { SettingsProvider } from "./contexts/SettingsContext";
 import { ReadingProvider } from "./contexts/ReadingContext";
 import { GameProvider } from "./contexts/GameContext";
 import { AuthProvider } from "./contexts/AuthContext";
-import { useAuthContext } from "./contexts/AuthContext";
+import { useAuth } from "./hooks/useAuth";
 import { AuthButtons } from "./components/AuthButtons";
 import Account from "./pages/Account";
 import { DifficultyProvider, useDifficulty } from "./contexts/DifficultyContext";
@@ -66,7 +66,7 @@ function TabBar() {
 }
 
 function Navigation() {
-  const { isAuthenticated, user, isLoading } = useAuthContext();
+  const { isAuthenticated, user, isLoading } = useAuth();
 
   return (
     <div className="bg-white py-2 px-4 mb-4 flex items-center justify-between">
@@ -88,7 +88,7 @@ function Navigation() {
           // Show user avatar when authenticated
           <Link href="/account" className="flex items-center gap-2">
             <div className="h-10 w-10 border-2 border-blue-500 rounded-full flex items-center justify-center bg-blue-500 text-white font-semibold text-xl">
-              {user.username?.charAt(0).toUpperCase() || 'U'}
+              {user.username?.charAt(0).toUpperCase() || user.firstName?.charAt(0).toUpperCase() || 'U'}
             </div>
           </Link>
         ) : (
