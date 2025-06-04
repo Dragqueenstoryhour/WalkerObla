@@ -159,36 +159,58 @@ export function useAuth() {
     };
   }, [queryClient]);
   
-  // Email/password login
+  // Email/password login with API integration
   const loginWithEmail = async (credentials: LoginCredentials) => {
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
-      email: credentials.email,
-      password: credentials.password
+    const response = await fetch('/api/auth/signin', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(credentials),
     });
-    
-    if (error) throw error;
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Login failed');
+    }
+
+    const data = await response.json();
     return data;
   };
   
-  // Email/password signup
+  // Email/password signup with API integration
   const signupWithEmail = async (credentials: SignupCredentials) => {
-    const { data, error } = await supabaseClient.auth.signUp({
-      email: credentials.email,
-      password: credentials.password,
-      options: {
-        data: {
-          first_name: credentials.firstName,
-          last_name: credentials.lastName
-        }
-      }
+    const response = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(credentials),
     });
-    
-    if (error) throw error;
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Signup failed');
+    }
+
+    const data = await response.json();
     return data;
   };
   
-  // Logout
+  // Logout with API integration
   const logout = async () => {
+    const response = await fetch('/api/auth/signout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Logout failed');
+    }
+
     const { error } = await supabaseClient.auth.signOut();
     if (error) throw error;
   };

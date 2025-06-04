@@ -42,9 +42,16 @@ function extractToken(req: Request): string | null {
 }
 
 /**
- * JWT authentication middleware
+ * Session-based authentication middleware with JWT fallback
  */
 export const authMiddleware: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+  // First check for session-based auth
+  if ((req as any).session?.user) {
+    (req as any).user = { id: (req as any).session.user.id };
+    return next();
+  }
+  
+  // Fallback to JWT token auth
   const token = extractToken(req);
   
   if (!token) {
@@ -74,6 +81,126 @@ export async function setupAuth(app: Express) {
       redirectUrl: '/auth-callback.html',
     });
   });
+
+  // Sign up endpoint
+  app.post('/api/auth/signup', async (req: any, res) => {
+    try {
+      const { email, password, firstName, lastName } = req.body;
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName
+          }
+        }
+      });
+      
+      if (error) {
+        return res.status(400).json({ error: error.message });
+      }
+      
+      if (data.user) {
+        // Create user in our database
+        await storage.upsertUser({
+          id: data.user.id,
+          username: email.split('@')[0],
+          email,
+          firstName: firstName || null,
+          lastName: lastName || null
+        });
+        
+        // Create session
+        (req as any).session.user = { id: data.user.id };
+      }
+      
+      res.json({ user: data.user, session: data.session });
+    } catch (error: any) {
+      console.error('Sign up error:', error);
+      res.status(500).json({ error: 'Failed to create account' });
+    }
+  });
+
+  // Sign in endpoint
+  app.post('/api/auth/signin', async (req: any, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) {
+        return res.status(400).json({ error: error.message });
+      }
+      
+      if (data.user) {
+        // Ensure user exists in our database
+        await storage.upsertUser({
+          id: data.user.id,
+          username: data.user.email?.split('@')[0] || `user_${data.user.id.substring(0, 8)}`,
+          email: data.user.email || null,
+          firstName: data.user.user_metadata?.first_name || null,
+          lastName: data.user.user_metadata?.last_name || null
+        });
+        
+        // Create session
+        (req as any).session.user = { id: data.user.id };
+      }
+      
+      res.json({ user: data.user, session: data.session });
+    } catch (error: any) {
+      console.error('Sign in error:', error);
+      res.status(500).json({ error: 'Failed to sign in' });
+    }
+  });
+
+  // Sign out endpoint
+  app.post('/api/auth/signout', async (req: any, res) => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        return res.status(400).json({ error: error.message });
+      }
+      
+      // Destroy session
+      if ((req as any).session) {
+        (req as any).session.destroy();
+      }
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Sign out error:', error);
+      res.status(500).json({ error: 'Failed to sign out' });
+    }
+  });
+
+  // OAuth login endpoint
+  app.post('/api/auth/oauth', async (req: any, res) => {
+    try {
+      const { provider } = req.body;
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: provider as Provider,
+        options: {
+          redirectTo: `${req.get('origin')}/auth-callback.html`
+        }
+      });
+      
+      if (error) {
+        return res.status(400).json({ error: error.message });
+      }
+      
+      res.json({ url: data.url });
+    } catch (error: any) {
+      console.error('OAuth error:', error);
+      res.status(500).json({ error: 'Failed to start OAuth flow' });
+    }
+  });
   
   // User data endpoint (requires authentication)
   app.get('/api/auth/user', authMiddleware, async (req: any, res) => {
@@ -95,8 +222,20 @@ export async function setupAuth(app: Express) {
         });
       }
       
-      // Return user data
-      res.json(user);
+      // Return user data with progress statistics
+      const savedPhrases = await storage.getUserSavedPhrases(userId);
+      const practiceGroups = await storage.getPracticeGroups(userId);
+      
+      const userWithProgress = {
+        ...user,
+        progressStats: {
+          savedWordsCount: savedPhrases.length,
+          practiceGroupsCount: practiceGroups.length,
+          joinedDate: user.createdAt
+        }
+      };
+      
+      res.json(userWithProgress);
     } catch (error: any) {
       console.error('Error fetching user data:', error);
       res.status(500).json({ error: 'Failed to fetch user data' });
