@@ -233,7 +233,23 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
             </TabsContent>
 
             <TabsContent value="email" className="space-y-6 pt-4">
-              <h3 className="text-lg font-medium text-center">Sign in or create an account with email</h3>
+              <h3 className="text-lg font-medium text-center">
+                Sign in or{' '}
+                <button 
+                  type="button"
+                  className="text-blue-600 hover:text-blue-800 underline"
+                  onClick={() => {
+                    // Scroll to the signup form
+                    const signupForm = document.getElementById('signup-form');
+                    if (signupForm) {
+                      signupForm.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
+                >
+                  create an account
+                </button>
+                {' '}with email
+              </h3>
 
               {/* Login Form */}
               <Form {...loginForm}>

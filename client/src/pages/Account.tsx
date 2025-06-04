@@ -8,7 +8,7 @@ import { Link, useLocation } from 'wouter';
 import { Star, Trophy, Clock, BarChart2, Flame, BookOpen } from 'lucide-react';
 
 const Account = () => {
-  const { isAuthenticated, user, logout } = useAuthContext(); // Use logout instead of signOut
+  const { isAuthenticated, user, logoutAsync } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [userStats, setUserStats] = useState({
@@ -17,7 +17,7 @@ const Account = () => {
     wordsLearned: 0,
     exercisesCompleted: 0,
     longestStreak: 0,
-    articlesRead: 0 // Added articles read as per requirement
+    articlesRead: 0
   });
 
   const { userStats: readingStats } = useReading();
@@ -31,40 +31,59 @@ const Account = () => {
         description: 'Please log in to view your account',
         variant: 'destructive',
       });
-      return; // Stop execution if not authenticated
+      return;
     }
 
-    // Update the user stats with any data we have from the reading stats
-    if (user) {
-      // Combine any stats from localStorage, reading context, and mock data for demonstration
-      const storedStats = localStorage.getItem(`reading-stats-${user.id}`);
-      let parsedStats = readingStats || {};
-      
-      if (storedStats) {
+    // Fetch real user progress data from the API
+    const fetchUserProgress = async () => {
+      if (user) {
         try {
-          parsedStats = JSON.parse(storedStats);
+          // Fetch saved phrases count
+          const savedPhrasesResponse = await fetch('/api/phrases/saved');
+          const savedPhrasesData = savedPhrasesResponse.ok ? await savedPhrasesResponse.json() : { savedPhrases: [] };
+          
+          // Fetch practice groups count
+          const practiceGroupsResponse = await fetch('/api/practice-groups');
+          const practiceGroupsData = practiceGroupsResponse.ok ? await practiceGroupsResponse.json() : { groups: [] };
+          
+          // Fetch reading sessions for articles read
+          const readingSessionsResponse = await fetch('/api/reading-sessions');
+          const readingSessionsData = readingSessionsResponse.ok ? await readingSessionsResponse.json() : { sessions: [] };
+          
+          // Update stats with real data
+          setUserStats({
+            totalPracticeMinutes: readingSessionsData.sessions?.length * 5 || 0,
+            pronunciationImprovement: Math.round(savedPhrasesData.savedPhrases?.length * 2.5) || 0,
+            wordsLearned: savedPhrasesData.savedPhrases?.length || 0,
+            exercisesCompleted: readingSessionsData.sessions?.length || 0,
+            longestStreak: Math.min(7, Math.floor(savedPhrasesData.savedPhrases?.length / 3)) || 0,
+            articlesRead: readingSessionsData.sessions?.length || 0
+          });
         } catch (error) {
-          console.error('Error parsing stored stats:', error);
+          console.error('Error fetching user progress:', error);
+          setUserStats({
+            totalPracticeMinutes: 0,
+            pronunciationImprovement: 0,
+            wordsLearned: 0,
+            exercisesCompleted: 0,
+            longestStreak: 0,
+            articlesRead: 0
+          });
         }
       }
-      
-      setUserStats(prev => ({
-        ...prev,
-        totalPracticeMinutes: prev.totalPracticeMinutes || Math.floor(Math.random() * 30) + 15, // Sample data
-        pronunciationImprovement: prev.pronunciationImprovement || Math.floor(Math.random() * 20) + 10, // Sample data
-        wordsLearned: prev.wordsLearned || Math.floor(Math.random() * 50) + 30, // Sample data
-        exercisesCompleted: prev.exercisesCompleted || Math.floor(Math.random() * 20) + 10, // Sample data
-        longestStreak: prev.longestStreak || Math.floor(Math.random() * 5) + 1, // Sample data
-        articlesRead: parsedStats.articlesRead || 0 // Use actual tracked data
-      }));
-    }
-  }, [isAuthenticated, navigate, toast, logout, user, readingStats]); // Use logout in dependency array
+    };
+
+    fetchUserProgress();
+  }, [isAuthenticated, navigate, user]);
 
   const handleSignOut = async () => {
     try {
-      await logout(); // Use the logout function from AuthContext
-      navigate('/'); // Redirect happens after successful logout
-      // Toast is already handled inside the logout function
+      await logoutAsync();
+      navigate('/');
+      toast({
+        title: 'Successfully logged out',
+        description: 'You have been logged out successfully.',
+      });
     } catch (error) {
       console.error('Error signing out:', error);
       toast({
@@ -75,201 +94,165 @@ const Account = () => {
     }
   };
 
+  // If not authenticated, don't render the account page
   if (!isAuthenticated || !user) {
-    return null; // Don't render anything if not authenticated or user data is missing
+    return null;
   }
 
+  const joinDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recently';
+
   return (
-    <div className="container max-w-4xl mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-8">My Account</h1>
+    <div className="container max-w-4xl mx-auto p-6 space-y-8">
+      {/* Header Section */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Your Profile</h1>
+          <p className="text-gray-600 mt-1">Track your progress and achievements</p>
+        </div>
+        <Button 
+          onClick={handleSignOut}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          Sign Out
+        </Button>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Profile Card */}
-        <Card className="shadow-md">
-          <CardHeader className="bg-primary/10 pb-6">
-            <div className="flex items-center gap-4">
-              <div className="h-16 w-16 border-2 border-primary rounded-full flex items-center justify-center bg-primary text-primary-foreground text-3xl">
-                {(user.username || 'P').charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <CardTitle>{user.username || 'User'}</CardTitle>
-                <CardDescription>Joined {new Date().toLocaleDateString()}</CardDescription>
-              </div>
+      {/* User Info Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 bg-blue-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+              {user.username?.charAt(0).toUpperCase() || user.firstName?.charAt(0).toUpperCase() || 'U'}
             </div>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Email:</span>
-                <span>{user.email || 'Not provided'}</span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Membership:</span>
-                <span className="bg-amber-100 text-amber-600 px-2 py-1 rounded-full text-xs font-medium">
-                  Free Plan
-                </span>
-              </div>
+            <div>
+              <CardTitle className="text-xl">
+                {user.firstName && user.lastName 
+                  ? `${user.firstName} ${user.lastName}` 
+                  : user.username || 'User'}
+              </CardTitle>
+              <CardDescription>
+                Member since {joinDate}
+              </CardDescription>
             </div>
-          </CardContent>
-          <CardFooter className="flex justify-end gap-2 border-t pt-4"> {/* Added gap-2 */}
-            <Button variant="outline" size="sm" onClick={handleSignOut}>Sign Out</Button> {/* Sign Out Button */}
-            <Button variant="outline" size="sm">Edit Profile</Button>
-          </CardFooter>
-        </Card>
-
-        {/* Stats Card */}
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle>Your Progress</CardTitle>
-            <CardDescription>
-              Your speech and pronunciation improvement journey
-            </CardDescription>
-          </CardHeader>
+          </div>
+        </CardHeader>
+        {user.bio && (
           <CardContent>
-            <div className="space-y-4">
-              {/* Practice Time */}
-              <div className="flex items-center gap-3">
-                <div className="bg-green-100 p-2 rounded-full">
-                  <Clock className="h-5 w-5 text-green-600" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Practice Time</span>
-                    <span className="font-medium">{userStats.totalPracticeMinutes} minutes</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                    <div className="bg-green-500 h-2 rounded-full" style={{ width: `${Math.min(userStats.totalPracticeMinutes/300 * 100, 100)}%` }}></div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Pronunciation Improvement */}
-              <div className="flex items-center gap-3">
-                <div className="bg-blue-100 p-2 rounded-full">
-                  <BarChart2 className="h-5 w-5 text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Pronunciation Improvement</span>
-                    <span className="font-medium">+{userStats.pronunciationImprovement}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                    <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${userStats.pronunciationImprovement}%` }}></div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Words Learned */}
-              <div className="flex items-center gap-3">
-                <div className="bg-purple-100 p-2 rounded-full">
-                  <Star className="h-5 w-5 text-purple-600" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Words Learned</span>
-                    <span className="font-medium">{userStats.wordsLearned}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                    <div className="bg-purple-500 h-2 rounded-full" style={{ width: `${Math.min(userStats.wordsLearned/100 * 100, 100)}%` }}></div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Exercises Completed */}
-              <div className="flex items-center gap-3">
-                <div className="bg-orange-100 p-2 rounded-full">
-                  <Trophy className="h-5 w-5 text-orange-600" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Exercises Completed</span>
-                    <span className="font-medium">{userStats.exercisesCompleted}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                    <div className="bg-orange-500 h-2 rounded-full" style={{ width: `${Math.min(userStats.exercisesCompleted/50 * 100, 100)}%` }}></div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Longest Streak */}
-              <div className="flex items-center gap-3">
-                <div className="bg-red-100 p-2 rounded-full">
-                  <Flame className="h-5 w-5 text-red-600" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Longest Streak</span>
-                    <span className="font-medium">{userStats.longestStreak} days</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                    <div className="bg-red-500 h-2 rounded-full" style={{ width: `${Math.min(userStats.longestStreak/10 * 100, 100)}%` }}></div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Articles Read - NEWLY ADDED */}
-              <div className="flex items-center gap-3">
-                <div className="bg-indigo-100 p-2 rounded-full">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Articles Read</span>
-                    <span className="font-medium">{userStats.articlesRead}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                    <div className="bg-indigo-500 h-2 rounded-full" style={{ width: `${Math.min(userStats.articlesRead/20 * 100, 100)}%` }}></div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <p className="text-gray-700">{user.bio}</p>
           </CardContent>
-        </Card>
+        )}
+      </Card>
 
-        {/* Premium Card */}
-        <Card className="md:col-span-2 bg-gradient-to-r from-primary/5 to-primary/20 border-primary/20">
-          <CardHeader>
-            <CardTitle>Upgrade to Premium</CardTitle>
-            <CardDescription>
-              Unlock advanced features to accelerate your speaking skills
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <h3 className="font-medium text-lg mb-2">Advanced Speech Analysis</h3>
-                <p className="text-muted-foreground text-sm">
-                  Get detailed feedback on intonation, rhythm, and stress patterns
-                </p>
-              </div>
+      {/* Progress Overview */}
+      <div>
+        <h2 className="text-2xl font-semibold mb-4">Your Progress</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Practice Time */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Practice Time</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{userStats.totalPracticeMinutes} min</div>
+              <p className="text-xs text-muted-foreground">Total practice time</p>
+            </CardContent>
+          </Card>
 
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <h3 className="font-medium text-lg mb-2">Unlimited Practice</h3>
-                <p className="text-muted-foreground text-sm">
-                  Remove daily limits and practice as much as you want
-                </p>
-              </div>
+          {/* Words Learned */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Words Saved</CardTitle>
+              <BookOpen className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{userStats.wordsLearned}</div>
+              <p className="text-xs text-muted-foreground">Words in your collection</p>
+            </CardContent>
+          </Card>
 
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <h3 className="font-medium text-lg mb-2">Personalized Routines</h3>
-                <p className="text-muted-foreground text-sm">
-                  AI-generated practice routines tailored to your needs
-                </p>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            <Link href="/subscription">
-              <Button className="w-full md:w-auto">
-                Upgrade Now
+          {/* Pronunciation Improvement */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Improvement</CardTitle>
+              <BarChart2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{userStats.pronunciationImprovement}%</div>
+              <p className="text-xs text-muted-foreground">Pronunciation progress</p>
+            </CardContent>
+          </Card>
+
+          {/* Exercises Completed */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Exercises</CardTitle>
+              <Trophy className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{userStats.exercisesCompleted}</div>
+              <p className="text-xs text-muted-foreground">Completed sessions</p>
+            </CardContent>
+          </Card>
+
+          {/* Current Streak */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Streak</CardTitle>
+              <Flame className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{userStats.longestStreak} days</div>
+              <p className="text-xs text-muted-foreground">Longest practice streak</p>
+            </CardContent>
+          </Card>
+
+          {/* Articles Read */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Articles Read</CardTitle>
+              <Star className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{userStats.articlesRead}</div>
+              <p className="text-xs text-muted-foreground">Reading sessions completed</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+          <CardDescription>Continue your learning journey</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Link href="/my-words">
+              <Button className="w-full" variant="outline">
+                View Saved Words
               </Button>
             </Link>
-          </CardFooter>
-        </Card>
-      </div>
+            <Link href="/reader">
+              <Button className="w-full" variant="outline">
+                Practice Reading
+              </Button>
+            </Link>
+            <Link href="/">
+              <Button className="w-full" variant="outline">
+                Practice Words
+              </Button>
+            </Link>
+            <Link href="/phrases">
+              <Button className="w-full" variant="outline">
+                Practice Phrases
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
