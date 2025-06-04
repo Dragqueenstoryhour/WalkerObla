@@ -13,8 +13,7 @@ import {
   Trash2, 
   Edit3, 
   MoreVertical,
-  Volume2,
-  DragHandleDots2
+  Volume2
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -53,12 +52,12 @@ export function SavedWordsWithFolders() {
   const [newFolderColor, setNewFolderColor] = useState('#3b82f6');
 
   // Fetch saved words
-  const { data: savedWords = [] } = useQuery({
+  const { data: savedWords = [] } = useQuery<SavedWord[]>({
     queryKey: ['/api/saved-words'],
   });
 
   // Fetch folders
-  const { data: folders = [] } = useQuery({
+  const { data: folders = [] } = useQuery<WordFolder[]>({
     queryKey: ['/api/word-folders'],
   });
 
