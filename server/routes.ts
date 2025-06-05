@@ -11,7 +11,7 @@ import multer from 'multer';
 import { z } from "zod";
 import { insertReadingContentSchema, insertReadingSessionSchema, insertSharedPhraseCollectionSchema, insertUserSavedPhraseSchema, insertPracticeGroupSchema, insertPracticeGroupPhraseSchema, insertSavedWordSchema, insertWordFolderSchema } from "@shared/schema";
 import WebSocket from "ws";
-import { setupAuth, isAuthenticated } from "./supabaseAuth";
+import { setupAuth, isAuthenticated, authMiddleware } from "./supabaseAuth";
 import session from 'express-session';
 import ConnectPgSimple from 'connect-pg-simple';
 import { pool } from './db';
@@ -1397,9 +1397,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Saved words API endpoints
-  app.get('/api/saved-words', isAuthenticated, async (req: any, res) => {
+  app.get('/api/saved-words', authMiddleware, async (req: any, res) => {
     try {
-      const userId = req.session.user.id;
+      const userId = req.user.id;
       const savedWords = await storage.getSavedWords(userId);
       res.json(savedWords);
     } catch (error) {
@@ -1408,9 +1408,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/saved-words', isAuthenticated, async (req: any, res) => {
+  app.post('/api/saved-words', authMiddleware, async (req: any, res) => {
     try {
-      const userId = req.session.user.id;
+      const userId = req.user.id;
       const wordData = insertSavedWordSchema.parse({
         ...req.body,
         userId

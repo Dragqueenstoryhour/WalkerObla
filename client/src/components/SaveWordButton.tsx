@@ -32,15 +32,7 @@ export function SaveWordButton({ word, className, variant = "outline", size = "s
   // Save word mutation
   const saveWordMutation = useMutation({
     mutationFn: async (wordData: { word: string; folderId?: string }) => {
-      const response = await fetch('/api/saved-words', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(wordData),
-      });
-      if (!response.ok) throw new Error('Failed to save word');
-      return response.json();
+      return await apiRequest('/api/saved-words', 'POST', wordData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/saved-words'] });
@@ -61,11 +53,7 @@ export function SaveWordButton({ word, className, variant = "outline", size = "s
   // Remove word mutation
   const removeWordMutation = useMutation({
     mutationFn: async (wordToRemove: string) => {
-      const response = await fetch(`/api/saved-words/${encodeURIComponent(wordToRemove)}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to remove word');
-      return response.json();
+      return await apiRequest(`/api/saved-words/${encodeURIComponent(wordToRemove)}`, 'DELETE');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/saved-words'] });
