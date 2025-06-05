@@ -9,9 +9,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useReading } from '@/contexts/ReadingContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { ReadingContent as ReadingContentType, PronunciationAssessmentResult } from '@/lib/types';
-import SimpleRecorder from '@/components/SimpleRecorder'; // Import SimpleRecorder directly
-import { Card, CardContent } from '@/components/ui/card'; // Import Card and CardContent for SimpleRecorder's outer box
-import { CheckCircle, BookOpen } from 'lucide-react'; // Import icons
+import PracticeSpeakingCard from '@/components/PracticeSpeakingCard';
+import { CheckCircle, BookOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const Read = () => {
@@ -114,19 +113,15 @@ const Read = () => {
           <div className="grid gap-8 md:gap-12 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <ReadingContent onSelectContent={handleSelectContent} />
-              {/* SimpleRecorder directly here */}
-              <div ref={simpleRecorderRef}>
-                <Card className="mb-6">
-                  <CardContent className="p-6">
-                    {/* The "Record your speech to receive feedback" for SimpleRecorder is now inside SimpleRecorder.tsx itself */}
-                    {currentContent && (
-                      <SimpleRecorder
-                        referenceText={referenceText}
-                        onAssessmentReceived={handleAssessmentReceived}
-                      />
-                    )}
-                  </CardContent>
-                </Card>
+              {/* Practice Speaking Card */}
+              <div ref={simpleRecorderRef} className="mb-6">
+                <h3 className="text-lg font-medium mb-4">Practice Speaking</h3>
+                {currentContent && (
+                  <PracticeSpeakingCard
+                    text={referenceText}
+                    onAssessmentReceived={handleAssessmentReceived}
+                  />
+                )}
               </div>
             </div>
 

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { assessPronunciation, synthesizeSpeech } from "./azure";
+import { assessPronunciation, synthesizeSpeech, getWordPronunciation } from "./azure";
 import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases, generateSampleContent } from "./openai";
 import multer from "multer";
 import { z } from "zod";
@@ -74,12 +74,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User saved phrases (My Words) endpoints
+  // User saved phrases (My Words) endpoints - now includes both phrases and words
   app.get('/api/user/saved-phrases', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      
+      // Get both saved phrases and saved words
       const phrases = await storage.getUserSavedPhrases(userId);
-      res.json(phrases);
+      const words = await storage.getSavedWords(userId);
+      
+      // Convert saved words to phrase format for unified display
+      const convertedWords = words.map(word => ({
+        id: `word_${word.id}`,
+        userId: word.userId,
+        phrase: word.word,
+        phonetic: word.pronunciation,
+        difficulty: word.difficultyLevel ? word.difficultyLevel.toString() : null,
+        assessmentResults: null,
+        source: 'words',
+        sourceId: null,
+        createdAt: word.createdAt
+      }));
+      
+      // Combine and sort by creation date
+      const combinedItems = [...phrases, ...convertedWords]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      res.json(combinedItems);
     } catch (error) {
       console.error("Error fetching saved phrases:", error);
       res.status(500).json({ message: "Failed to fetch saved phrases" });
@@ -240,8 +261,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const assessment = await assessPronunciation(audioBuffer, text);
 
       // If user is authenticated, record the activity
-      if (req.user?.claims?.sub) {
-        const userId = req.user.claims.sub;
+      if (req.user && (req.user as any).claims?.sub) {
+        const userId = (req.user as any).claims.sub;
         await storage.recordActivity({
           userId,
           activityType: 'reading_practice',
@@ -330,9 +351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Word parameter is required' });
       }
 
-      // For now, return a simple phonetic representation
-      // This could be enhanced with actual phonetic dictionary lookup
-      const phonetic = `/${word.toLowerCase()}/`;
+      const phonetic = await getWordPronunciation(word);
       
       res.json({ phonetic });
     } catch (error) {

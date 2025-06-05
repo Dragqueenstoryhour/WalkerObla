@@ -59,12 +59,13 @@ async function convertAudioToWav(audioBuffer: Buffer, tempDir: string = "/tmp", 
     fs.writeFileSync(inputPath, audioBuffer);
     console.log(`✅ Created temporary input file at ${inputPath} (${audioBuffer.length} bytes)`);
     
-    // Convert audio format using ffmpeg with detailed settings for Azure's requirements
-    // Configure for 16kHz, mono, 16-bit PCM format as required by Azure Speech SDK
+    // Convert audio format using ffmpeg with optimized settings for Azure pronunciation assessment
+    // Configure for 16kHz, mono, 16-bit PCM format with audio normalization
     const ffmpegCommand = `"${ffmpegPath}" -i "${inputPath}" \
       -ac 1 \
       -ar 16000 \
       -acodec pcm_s16le \
+      -af "highpass=f=200,lowpass=f=4000,loudnorm=I=-16:TP=-1.5:LRA=11" \
       -f wav \
       -y \
       "${outputPath}"`;
@@ -333,6 +334,20 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
       // Important: Set the recognition language to English US
       speechConfig.speechRecognitionLanguage = "en-US";
       
+      // Configure speech recognition for pronunciation assessment
+      speechConfig.setProperty("Speech.SegmentationStrategy", "Manual");
+      speechConfig.setProperty("Speech.SegmentationSilenceTimeoutMs", "2000");
+      speechConfig.setProperty("Speech.InitialSilenceTimeoutMs", "2000");
+      speechConfig.setProperty("Speech.EndSilenceTimeoutMs", "1000");
+      
+      // Disable dictation mode for better pronunciation assessment
+      // speechConfig.enableDictation(); // Removed - this can interfere with pronunciation assessment
+      
+      // Configure for single-shot recognition optimized for pronunciation assessment
+      speechConfig.setProperty("Speech.Recognition.Mode", "Interactive");
+      speechConfig.setProperty("Speech.Context.PhraseList.Enabled", "true");
+      speechConfig.setProperty("Speech.Context.Verification", "true");
+      
       // Read the WAV file into a buffer
       const wavFileData = fs.readFileSync(wavFilePath);
       
@@ -390,11 +405,11 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
       speechConfig.setProperty("Speech.LogFilename", `/tmp/azure-speech-${Date.now()}.log`);
       speechConfig.setProperty("Speech.LogLevel", "3"); // Detailed logging
       
-      // Create pronunciation assessment configuration according to Microsoft docs
+      // Create pronunciation assessment configuration with proper settings
       const pronunciationAssessmentConfig = new sdk.PronunciationAssessmentConfig(
         cleanedText,
         sdk.PronunciationAssessmentGradingSystem.HundredMark,
-        sdk.PronunciationAssessmentGranularity.Phoneme,
+        sdk.PronunciationAssessmentGranularity.Word, // Use Word granularity for better results
         true // Enable miscue calculation
       );
       
@@ -595,6 +610,36 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
                   console.error("Error extracting pronunciation results:", resultError);
                   reject(new Error(`Failed to extract pronunciation results: ${resultError?.message || "Unknown error"}`));
                 }
+              } else if (result.reason === sdk.ResultReason.NoMatch) {
+                console.log(`⚠️ No speech could be recognized from audio`);
+                
+                // Still try to get pronunciation assessment data even if no speech was recognized
+                const jsonResponse = result.properties.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult);
+                if (jsonResponse) {
+                  console.log("Raw JSON Response (NoMatch):", jsonResponse);
+                  const jsonResult = JSON.parse(jsonResponse);
+                  
+                  // Return assessment indicating no clear speech was detected
+                  resolve({
+                    pronunciationScore: 20,
+                    fluencyScore: 20,
+                    completenessScore: 10,
+                    accuracyScore: 20,
+                    prosodyScore: 20,
+                    wordLevelResults: cleanedText.split(/\s+/).map(word => ({
+                      word: word,
+                      accuracyScore: 10,
+                      errorType: "Omission",
+                      offset: 0,
+                      duration: 1000,
+                      phonemes: []
+                    })),
+                    sdkVersion,
+                    rawJson: jsonResult
+                  });
+                } else {
+                  reject(new Error("No speech detected in audio"));
+                }
               } else {
                 console.warn(`Recognition didn't complete successfully: ${result.reason}`);
                 reject(new Error(`Speech recognition failed: ${result.reason}`));
@@ -654,33 +699,108 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
  * Get phonetic pronunciation for a word
  */
 export async function getWordPronunciation(word: string): Promise<string> {
-  // This would typically use a dictionary API or Azure's lexical services
-  // For simplicity, we'll use a basic implementation
-
-  // Convert word to a simplified phonetic form
-  const phonetics: Record<string, string> = {
-    // General news words
-    "headlines": "hed-lahynz",
-    "today": "tuh-dey",
-    "news": "nooz",
-    "latest": "ley-tist",
-    "breaking": "brey-king",
-    "report": "ri-pawrt",
-    "election": "ih-lek-shuhn",
-    "president": "prez-i-duhnt",
-    "government": "guhv-ern-muhnt",
-    "economy": "ih-kon-uh-mee",
-    "technology": "tek-nol-uh-jee",
-
-    // Original gardening words
-    "container": "kun-tey-ner",
-    "gardening": "gar-den-ing",
-    "advantage": "uhd-van-tij",
-    "apartment": "uh-part-ment",
-    "balcony": "bal-kuh-nee",
+  // Enhanced pronunciation guide with syllable patterns
+  const syllableMap: Record<string, string> = {
+    // Common problematic words with syllable emphasis
+    'brings': 'BRINGS (1 syllable: br-ings)',
+    'important': 'im-POR-tant (3 syllables)',
+    'restaurant': 'RES-tau-rant (3 syllables)',
+    'beautiful': 'BEAU-ti-ful (3 syllables)',
+    'yesterday': 'YES-ter-day (3 syllables)',
+    'understand': 'un-der-STAND (3 syllables)',
+    'telephone': 'TEL-e-phone (3 syllables)',
+    'anything': 'AN-y-thing (3 syllables)',
+    'afternoon': 'af-ter-NOON (3 syllables)',
+    'different': 'DIF-fer-ent (3 syllables)',
+    'question': 'QUES-tion (2 syllables)',
+    'because': 'be-CAUSE (2 syllables)',
+    'morning': 'MOR-ning (2 syllables)',
+    'dinner': 'DIN-ner (2 syllables)',
+    'friend': 'FRIEND (1 syllable)',
+    'water': 'WA-ter (2 syllables)',
+    'happy': 'HAP-py (2 syllables)',
+    'music': 'MU-sic (2 syllables)',
+    'smile': 'SMILE (1 syllable)',
+    'phone': 'PHONE (1 syllable)',
+    'chair': 'CHAIR (1 syllable)',
+    'apple': 'AP-ple (2 syllables)',
+    'bread': 'BREAD (1 syllable)',
+    'quick': 'QUICK (1 syllable)',
+    'laugh': 'LAUGH (1 syllable)',
+    'book': 'BOOK (1 syllable)',
+    'space': 'SPACE (1 syllable)',
+    'missions': 'MIS-sions (2 syllables)',
+    'reveal': 're-VEAL (2 syllables)',
+    'secrets': 'SE-crets (2 syllables)',
+    'planets': 'PLAN-ets (2 syllables)',
+    'found': 'FOUND (1 syllable)',
+    'earth': 'EARTH (1 syllable)',
+    'birds': 'BIRDS (1 syllable)',
+    'sing': 'SING (1 syllable)',
+    'trees': 'TREES (1 syllable)',
+    'sway': 'SWAY (1 syllable)',
+    'nature': 'NA-ture (2 syllables)',
+    'peace': 'PEACE (1 syllable)',
+    'warms': 'WARMS (1 syllable)',
+    'art': 'ART (1 syllable)',
+    'joy': 'JOY (1 syllable)',
+    'all': 'ALL (1 syllable)'
   };
 
-  return phonetics[word.toLowerCase()] || word.split('').join('-');
+  // Check for predefined pronunciation
+  const lowerWord = word.toLowerCase();
+  if (syllableMap[lowerWord]) {
+    return syllableMap[lowerWord];
+  }
+
+  // Basic syllable counting for unknown words
+  const syllableCount = countSyllables(word);
+  if (syllableCount === 1) {
+    return `${word.toUpperCase()} (1 syllable)`;
+  }
+
+  // Simple syllable breakdown
+  const breakdown = breakIntoSyllables(word);
+  return `${breakdown} (${syllableCount} syllables)`;
+}
+
+function countSyllables(word: string): number {
+  word = word.toLowerCase();
+  if (word.length <= 3) return 1;
+  
+  word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
+  word = word.replace(/^y/, '');
+  
+  const matches = word.match(/[aeiouy]{1,2}/g);
+  return matches ? matches.length : 1;
+}
+
+function breakIntoSyllables(word: string): string {
+  // Simple syllable breaking rules
+  const vowels = 'aeiouAEIOU';
+  const syllables: string[] = [];
+  let currentSyllable = '';
+  
+  for (let i = 0; i < word.length; i++) {
+    currentSyllable += word[i];
+    
+    if (vowels.includes(word[i])) {
+      // If next character is consonant followed by vowel, break here
+      if (i + 2 < word.length && 
+          !vowels.includes(word[i + 1]) && 
+          vowels.includes(word[i + 2])) {
+        syllables.push(currentSyllable + word[i + 1]);
+        currentSyllable = '';
+        i++; // Skip the consonant we just added
+      }
+    }
+  }
+  
+  if (currentSyllable) {
+    syllables.push(currentSyllable);
+  }
+  
+  return syllables.length > 1 ? syllables.join('-').toUpperCase() : word.toUpperCase();
 }
 
 /**

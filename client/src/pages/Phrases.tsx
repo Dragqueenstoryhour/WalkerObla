@@ -341,7 +341,7 @@ export default function Phrases() {
       // Send to Azure Speech for assessment
       const formData = new FormData();
       formData.append("audio", audioBlob);
-      formData.append("referenceText", phrase.text);
+      formData.append("text", phrase.text);
 
       const response = await fetch("/api/pronunciation/assess", {
         method: "POST",

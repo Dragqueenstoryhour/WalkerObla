@@ -366,7 +366,7 @@ export default function Words() {
       // Send to Azure Speech for assessment
       const formData = new FormData();
       formData.append("audio", audioBlob);
-      formData.append("referenceText", word.text);
+      formData.append("text", word.text);
 
       const response = await fetch("/api/pronunciation/assess", {
         method: "POST",
@@ -855,7 +855,7 @@ export default function Words() {
                         )}
                       </div>
 
-                      {/* Text-to-Speech and Save */}
+                      {/* Text-to-Speech and Slow Switch */}
                       <div className="flex justify-center gap-2">
                         <Button
                           onClick={() => handleTextToSpeech(idx)}
@@ -881,6 +881,10 @@ export default function Words() {
                             <Turtle className="w-3 h-3 text-gray-600" />
                           </span>
                         </button>
+                      </div>
+
+                      {/* Save Button Row */}
+                      <div className="flex justify-center">
                         <SaveWordButton 
                           word={word.text}
                           variant="outline"
