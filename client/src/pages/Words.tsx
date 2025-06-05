@@ -843,14 +843,23 @@ export default function Words() {
                           <Volume2 className="h-4 w-4" />
                           Listen
                         </Button>
-                        <Button
+                        <button
                           onClick={() => toggleSlowPlayback(word.id)}
-                          variant={slowPlaybackWords[word.id] ? "default" : "outline"}
-                          className="flex items-center gap-2"
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                            slowPlaybackWords[word.id] ? 'bg-green-500' : 'bg-gray-300'
+                          }`}
+                          role="switch"
+                          aria-checked={slowPlaybackWords[word.id]}
+                          aria-label="Toggle slow playback"
                         >
-                          <Turtle className="h-4 w-4" />
-                          Slow
-                        </Button>
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out ${
+                              slowPlaybackWords[word.id] ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          >
+                            <Turtle className="h-3 w-3 text-gray-600 mt-0.5 ml-0.5" />
+                          </span>
+                        </button>
                         <SaveWordButton 
                           word={word.text}
                           variant="outline"
@@ -882,22 +891,6 @@ export default function Words() {
                         </div>
                       )}
                     </CardContent>
-
-                    <CardFooter className="flex justify-center">
-                      <Button
-                        onClick={() => handleSaveWord(idx)}
-                        variant="outline"
-                        className="flex items-center gap-2"
-                        disabled={savedWordId === word.id}
-                      >
-                        {savedWordId === word.id ? (
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Star className="h-4 w-4" />
-                        )}
-                        {savedWordId === word.id ? "Saved!" : "Save Word"}
-                      </Button>
-                    </CardFooter>
                   </Card>
                 </div>
               ))}
