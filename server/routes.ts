@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { assessPronunciation, synthesizeSpeech } from "./azure";
-import { transcribeAudio, generateReadingContent, processVoiceCommand } from "./openai";
+import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases } from "./openai";
 import multer from "multer";
 import { z } from "zod";
 import { insertUserSavedPhraseSchema, insertPracticeGroupSchema, insertUserActivitySchema } from "@shared/schema";
@@ -284,6 +284,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Content generation error:', error);
       res.status(500).json({ 
         error: 'Content generation failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Topic phrases/words generation endpoint (no auth required for content generation)
+  app.post('/api/content/generate-topic-phrases', async (req, res) => {
+    try {
+      const { topic, difficulty, type } = req.body;
+      
+      if (!topic) {
+        return res.status(400).json({ error: 'Topic is required' });
+      }
+
+      console.log(`Generating ${type || 'phrases'} for topic: "${topic}" with difficulty: ${difficulty || 'easy'}`);
+
+      const phrases = await generateTopicPhrases(
+        topic, 
+        difficulty || '4', 
+        type || 'phrases'
+      );
+      
+      console.log(`Generated ${phrases.length} items:`, phrases);
+      res.json({ phrases });
+    } catch (error) {
+      console.error('Topic phrases generation error:', error);
+      res.status(500).json({ 
+        error: 'Topic phrases generation failed',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
