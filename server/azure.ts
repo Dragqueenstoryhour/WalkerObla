@@ -59,12 +59,13 @@ async function convertAudioToWav(audioBuffer: Buffer, tempDir: string = "/tmp", 
     fs.writeFileSync(inputPath, audioBuffer);
     console.log(`✅ Created temporary input file at ${inputPath} (${audioBuffer.length} bytes)`);
     
-    // Convert audio format using ffmpeg with detailed settings for Azure's requirements
-    // Configure for 16kHz, mono, 16-bit PCM format as required by Azure Speech SDK
+    // Convert audio format using ffmpeg with optimized settings for Azure pronunciation assessment
+    // Configure for 16kHz, mono, 16-bit PCM format with audio enhancement
     const ffmpegCommand = `"${ffmpegPath}" -i "${inputPath}" \
       -ac 1 \
       -ar 16000 \
       -acodec pcm_s16le \
+      -af "highpass=f=300,lowpass=f=3400,volume=2.0" \
       -f wav \
       -y \
       "${outputPath}"`;
@@ -333,6 +334,20 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
       // Important: Set the recognition language to English US
       speechConfig.speechRecognitionLanguage = "en-US";
       
+      // Configure speech recognition for pronunciation assessment
+      speechConfig.setProperty("Speech.SegmentationStrategy", "Manual");
+      speechConfig.setProperty("Speech.SegmentationSilenceTimeoutMs", "2000");
+      speechConfig.setProperty("Speech.InitialSilenceTimeoutMs", "2000");
+      speechConfig.setProperty("Speech.EndSilenceTimeoutMs", "1000");
+      
+      // Disable dictation mode for better pronunciation assessment
+      // speechConfig.enableDictation(); // Removed - this can interfere with pronunciation assessment
+      
+      // Configure for single-shot recognition optimized for pronunciation assessment
+      speechConfig.setProperty("Speech.Recognition.Mode", "Interactive");
+      speechConfig.setProperty("Speech.Context.PhraseList.Enabled", "true");
+      speechConfig.setProperty("Speech.Context.Verification", "true");
+      
       // Read the WAV file into a buffer
       const wavFileData = fs.readFileSync(wavFilePath);
       
@@ -390,11 +405,11 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
       speechConfig.setProperty("Speech.LogFilename", `/tmp/azure-speech-${Date.now()}.log`);
       speechConfig.setProperty("Speech.LogLevel", "3"); // Detailed logging
       
-      // Create pronunciation assessment configuration according to Microsoft docs
+      // Create pronunciation assessment configuration with proper settings
       const pronunciationAssessmentConfig = new sdk.PronunciationAssessmentConfig(
         cleanedText,
         sdk.PronunciationAssessmentGradingSystem.HundredMark,
-        sdk.PronunciationAssessmentGranularity.Phoneme,
+        sdk.PronunciationAssessmentGranularity.Word, // Use Word granularity for better results
         true // Enable miscue calculation
       );
       
