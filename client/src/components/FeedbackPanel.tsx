@@ -317,9 +317,65 @@ const FeedbackPanel = () => {
           </p>
         </div>
 
-        {/* Pronunciation Help - Horizontal layout for better space usage */}
-        <div className="bg-secondary bg-opacity-30 rounded-lg p-3 mb-4">
-          <h3 className="font-medium mb-2 text-sm">Word Pronunciation Help</h3>
+        {/* Word Pronunciation Help - Carousel style like Practice Words */}
+        <div className="mb-6">
+          <h3 className="font-medium mb-4 text-lg">Word Pronunciation Help</h3>
+          
+          {/* Problem words carousel */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            {pronunciationIssues.map((issue, index) => (
+              <Card 
+                key={`${issue.word}-${index}`} 
+                className={`cursor-pointer transition-all duration-200 border-2 ${
+                  currentlyPracticing === issue.word 
+                    ? 'border-primary bg-primary/5' 
+                    : 'border-gray-200 hover:border-primary/50 hover:shadow-md'
+                }`}
+                onClick={() => setCurrentlyPracticing(issue.word)}
+              >
+                <CardContent className="p-4">
+                  <div className="text-center">
+                    <h4 className="text-lg font-semibold mb-2">{issue.word}</h4>
+                    <p className="text-sm text-muted-foreground mb-3">/{issue.phonetic}/</p>
+                    
+                    {/* Score display */}
+                    <div className="mb-3">
+                      <div className="text-sm text-muted-foreground mb-1">Accuracy Score</div>
+                      <div className="text-xl font-bold" style={{ 
+                        color: issue.score >= 80 ? '#10b981' : issue.score >= 60 ? '#f59e0b' : '#ef4444' 
+                      }}>
+                        {Math.round(issue.score)}%
+                      </div>
+                    </div>
+                    
+                    {/* Controls */}
+                    <div className="flex items-center justify-center gap-2">
+                      <Button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playWordPronunciation(issue.word);
+                        }}
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-3 bg-green-700 hover:bg-green-600 text-white border-green-700"
+                      >
+                        Listen
+                      </Button>
+
+                      <div className="flex items-center gap-1">
+                        <Turtle className="w-3 h-3" />
+                        <Switch
+                          checked={isSlowMode}
+                          onCheckedChange={setIsSlowMode}
+                          className="h-8 w-10"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
           {currentlyPracticing ? (
             <div className="p-4 bg-white rounded-lg shadow-sm mb-3">

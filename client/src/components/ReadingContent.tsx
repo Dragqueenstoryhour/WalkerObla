@@ -299,16 +299,7 @@ const ReadingContent = ({ onSelectContent }: ReadingContentProps) => {
     <Card className="mb-6">
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Select Your Topic</h2>
-          {/* Difficulty button with green style */}
-          <Button
-            onClick={toggleDifficulty}
-            size="sm"
-            className="text-sm bg-green-700 hover:bg-green-600" // Applied green style
-          >
-            <BarChart2 className="w-4 h-4 mr-1" />
-            Difficulty: {difficulty}/8
-          </Button>
+          <h2 className="text-lg font-medium">Select Your Topic</h2>
         </div>
 
         {/* Voice Command Feedback Section, similar to original VoiceControl.tsx */}

@@ -234,7 +234,7 @@ export function SimpleRecorder({
   return (
       <CardContent className="p-6 pt-0"> {/* Removed top padding here to let content align */}
         {/* Title and "Record your speech..." line, aligned left at the top */}
-        <h3 className="text-lg font-semibold text-left mt-6 -ml-6 mb-2">Practice Speaking</h3> {/* Added negative left margin and margin-bottom */}
+        <h3 className="text-lg font-medium text-left mt-6 -ml-6 mb-2">Practice Speaking</h3> {/* Added negative left margin and margin-bottom */}
         <div className="flex items-center text-success text-left -ml-6 mb-4"> {/* Added negative left margin */}
           <CheckCircle className="w-5 h-5 mr-1" />
           <span>Record your speech to receive feedback</span>
