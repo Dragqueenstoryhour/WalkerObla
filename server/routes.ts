@@ -179,7 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Assessment endpoint
+  // Assessment endpoints
   app.post('/api/assess', isAuthenticated, upload.single('audio'), async (req: any, res) => {
     try {
       if (!req.file) {
@@ -223,7 +223,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Text-to-speech endpoint
+  // Pronunciation assessment endpoint (for reading content)
+  app.post('/api/pronunciation/assess', upload.single('audio'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No audio file provided' });
+      }
+
+      const { text, contentId } = req.body;
+
+      if (!text) {
+        return res.status(400).json({ error: 'Reference text is required' });
+      }
+
+      const audioBuffer = req.file.buffer;
+      const assessment = await assessPronunciation(audioBuffer, text);
+
+      // If user is authenticated, record the activity
+      if (req.user?.claims?.sub) {
+        const userId = req.user.claims.sub;
+        await storage.recordActivity({
+          userId,
+          activityType: 'reading_practice',
+          itemPracticed: text,
+          score: assessment.pronunciationScore,
+          accuracy: assessment.accuracyScore,
+          fluency: assessment.fluencyScore,
+          completeness: assessment.completenessScore,
+          difficulty: 'medium',
+          source: 'reading',
+          metadata: { 
+            contentId: contentId,
+            wordLevelResults: assessment.wordLevelResults,
+            sdkVersion: assessment.sdkVersion 
+          }
+        });
+      }
+
+      res.json(assessment);
+    } catch (error) {
+      console.error('Pronunciation assessment error:', error);
+      res.status(500).json({ 
+        error: 'Pronunciation assessment failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Speech synthesis endpoints
   app.post('/api/synthesize', async (req, res) => {
     try {
       const { text, voice } = req.body;
@@ -244,6 +291,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Speech synthesis error:', error);
       res.status(500).json({ 
         error: 'Speech synthesis failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post('/api/speech/synthesize', async (req, res) => {
+    try {
+      const { text, voice } = req.body;
+      
+      if (!text) {
+        return res.status(400).json({ error: 'Text is required' });
+      }
+
+      const audioBuffer = await synthesizeSpeech(text, voice);
+      
+      res.set({
+        'Content-Type': 'audio/wav',
+        'Content-Length': audioBuffer.length.toString(),
+      });
+      
+      res.send(audioBuffer);
+    } catch (error) {
+      console.error('Speech synthesis error:', error);
+      res.status(500).json({ 
+        error: 'Speech synthesis failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Word pronunciation endpoint
+  app.get('/api/pronunciation/word', async (req, res) => {
+    try {
+      const { word } = req.query;
+      
+      if (!word || typeof word !== 'string') {
+        return res.status(400).json({ error: 'Word parameter is required' });
+      }
+
+      // For now, return a simple phonetic representation
+      // This could be enhanced with actual phonetic dictionary lookup
+      const phonetic = `/${word.toLowerCase()}/`;
+      
+      res.json({ phonetic });
+    } catch (error) {
+      console.error('Word pronunciation error:', error);
+      res.status(500).json({ 
+        error: 'Word pronunciation failed',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
@@ -351,7 +446,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Voice command processing endpoint
+  // Voice command processing endpoints
   app.post('/api/voice-command', upload.single('audio'), async (req, res) => {
     try {
       if (!req.file) {
@@ -375,6 +470,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         error: 'Voice command processing failed',
         details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Enhanced voice processing endpoint
+  app.post('/api/voice/enhanced', upload.single('audio'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No audio file provided' });
+      }
+
+      const audioBuffer = req.file.buffer;
+      
+      // First transcribe the audio
+      const transcription = await transcribeAudio(audioBuffer);
+      
+      // Then process the command with enhanced AI
+      const result = await processVoiceCommand(transcription);
+      
+      res.json({
+        transcription,
+        result,
+        success: true
+      });
+    } catch (error) {
+      console.error('Enhanced voice processing error:', error);
+      res.status(500).json({ 
+        error: 'Enhanced voice processing failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        success: false
       });
     }
   });

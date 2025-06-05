@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Volume2, Share2, Mic, StopCircle } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Volume2, Share2, Mic, StopCircle, Star, Turtle } from 'lucide-react';
 import { useReading } from '@/contexts/ReadingContext';
 import { PronunciationIssue, SuggestedExercise } from '@/lib/types';
 import { synthesizeSpeech } from '@/lib/azure';
@@ -23,6 +24,7 @@ const FeedbackPanel = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [wordAssessmentResult, setWordAssessmentResult] = useState<any>(null);
   const [isProcessingWord, setIsProcessingWord] = useState(false);
+  const [isSlowMode, setIsSlowMode] = useState(false);
 
   // Refs for media recording
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -349,33 +351,44 @@ const FeedbackPanel = () => {
                     )}
                   </div>
 
-                  <div className="flex space-x-2">
+                  <div className="flex items-center justify-center gap-3">
                     <Button 
                       onClick={() => playWordPronunciation(currentlyPracticing)}
                       size="sm"
                       variant="outline"
-                      className="w-12 h-12 flex justify-center items-center" // Ensure fixed size and centering
+                      className="h-10 px-4 bg-green-700 hover:bg-green-600 text-white border-green-700"
                     >
-                      <Volume2 className="w-6 h-6" /> {/* Larger icon */}
+                      Listen
                     </Button>
+
+                    <div className="flex items-center gap-2">
+                      <Turtle className="w-4 h-4" />
+                      <Switch
+                        checked={isSlowMode}
+                        onCheckedChange={setIsSlowMode}
+                        className="h-10 w-12"
+                      />
+                    </div>
 
                     {!isRecording ? (
                       <Button 
                         onClick={() => startWordPractice(currentlyPracticing)}
                         size="sm"
                         disabled={isProcessingWord}
-                        className="w-12 h-12 flex justify-center items-center" // Ensure fixed size and centering
+                        className="h-10 px-4"
                       >
-                        <Mic className="w-6 h-6" /> {/* Larger icon */}
+                        <Mic className="w-4 h-4 mr-1" />
+                        Record
                       </Button>
                     ) : (
                       <Button 
                         onClick={stopWordPractice}
                         size="sm"
                         variant="destructive"
-                        className="w-12 h-12 flex justify-center items-center" // Ensure fixed size and centering
+                        className="h-10 px-4"
                       >
-                        <StopCircle className="w-6 h-6" /> {/* Larger icon */}
+                        <StopCircle className="w-4 h-4 mr-1" />
+                        Stop
                       </Button>
                     )}
                   </div>
