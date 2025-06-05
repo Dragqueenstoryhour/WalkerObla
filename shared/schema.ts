@@ -305,3 +305,53 @@ export const insertPracticeGroupPhraseSchema = createInsertSchema(practiceGroupP
 
 export type InsertPracticeGroupPhrase = z.infer<typeof insertPracticeGroupPhraseSchema>;
 export type PracticeGroupPhrase = typeof practiceGroupPhrases.$inferSelect;
+
+// User activity tracking for comprehensive statistics
+export const userActivity = pgTable("user_activity", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  activityType: text("activity_type").notNull(), // 'word_practice', 'phrase_practice', 'reading_session', 'assessment'
+  itemPracticed: text("item_practiced").notNull(), // The word/phrase/content practiced
+  score: integer("score"), // 0-100 pronunciation score
+  accuracy: integer("accuracy"), // 0-100 accuracy score  
+  fluency: integer("fluency"), // 0-100 fluency score
+  completeness: integer("completeness"), // 0-100 completeness score
+  duration: integer("duration"), // Practice duration in seconds
+  difficulty: text("difficulty"), // easy, medium, hard
+  source: text("source"), // Where the practice came from (e.g., "my-words", "topic-practice", "shared")
+  metadata: jsonb("metadata"), // Additional context like topic, group name, etc.
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertUserActivitySchema = createInsertSchema(userActivity).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertUserActivity = z.infer<typeof insertUserActivitySchema>;
+export type UserActivity = typeof userActivity.$inferSelect;
+
+// User statistics aggregation table for quick dashboard loading
+export const userStats = pgTable("user_stats", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().unique(),
+  totalWordsPracticed: integer("total_words_practiced").notNull().default(0),
+  totalPhrasesPracticed: integer("total_phrases_practiced").notNull().default(0),
+  totalReadingSessions: integer("total_reading_sessions").notNull().default(0),
+  totalPracticeTime: integer("total_practice_time").notNull().default(0), // in seconds
+  averagePronunciationScore: integer("average_pronunciation_score"), // 0-100
+  averageAccuracyScore: integer("average_accuracy_score"), // 0-100
+  averageFluencyScore: integer("average_fluency_score"), // 0-100
+  currentStreak: integer("current_streak").notNull().default(0), // consecutive practice days
+  longestStreak: integer("longest_streak").notNull().default(0),
+  lastPracticeDate: timestamp("last_practice_date"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertUserStatsSchema = createInsertSchema(userStats).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type InsertUserStats = z.infer<typeof insertUserStatsSchema>;
+export type UserStats = typeof userStats.$inferSelect;
