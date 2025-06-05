@@ -2,28 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Volume2, Share2, BookmarkIcon } from 'lucide-react';
+import { Volume2, Share2, Mic, StopCircle, Star, Turtle } from 'lucide-react';
 import { useReading } from '@/contexts/ReadingContext';
 import { PronunciationIssue, SuggestedExercise } from '@/lib/types';
 import { synthesizeSpeech } from '@/lib/azure';
 import { useToast } from '@/hooks/use-toast';
 import { submitReadingRecording } from '@/lib/azure';
-
-// Helper function to get phonetic display from API
-async function getPhoneticDisplay(word: string): Promise<string> {
-  try {
-    const response = await fetch(`/api/pronunciation/word?word=${encodeURIComponent(word)}`);
-    if (!response.ok) {
-      throw new Error('Failed to get pronunciation');
-    }
-    const data = await response.json();
-    return data.phonetic;
-  } catch (error) {
-    console.error('Error getting phonetic display:', error);
-    // Fallback to simple display
-    return word.toUpperCase();
-  }
-}
 
 const FeedbackPanel = () => {
   const { pronunciationResults } = useReading();
@@ -43,41 +27,34 @@ const FeedbackPanel = () => {
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
+  // Removed suggestedExercises state as per request.
+
   // Update feedback when pronunciation results change
   useEffect(() => {
     if (pronunciationResults) {
       // Extract word-level issues for words scoring under 75%
-      const processIssues = async () => {
-        const issues: PronunciationIssue[] = await Promise.all(
-          pronunciationResults.wordLevelResults
-            .filter(result => result.accuracyScore < 75) // Filter for words with accuracy less than 75%
-            .slice(0, 6) // Limit to maximum 6 words
-            .map(async result => ({
-              word: result.word,
-              phonetic: await getPhoneticDisplay(result.word), // Get proper syllable breakdown
-              score: result.accuracyScore
-            }))
-        );
-        setPronunciationIssues(issues);
-      };
+      const issues: PronunciationIssue[] = 
+        pronunciationResults.wordLevelResults
+          .filter(result => result.accuracyScore < 75) // Filter for words with accuracy less than 75%
+          .slice(0, 6) // Limit to maximum 6 words
+          .map(result => ({
+            word: result.word,
+            phonetic: result.word.split('').join('-'), // Simplified phonetic representation
+            score: result.accuracyScore
+          }));
 
-      processIssues();
-    } else {
-      setPronunciationIssues([]);
-    }
+      setPronunciationIssues(issues);
 
-    // Generate enhanced general feedback based on results
-    if (pronunciationResults) {
+      // Generate enhanced general feedback based on results
       const overallPronunciationScore = pronunciationResults.pronunciationScore;
       const fluencyScore = pronunciationResults.fluencyScore;
       const prosodyScore = pronunciationResults.prosodyScore; // Can be null/undefined
-      const problemWordCount = pronunciationResults.wordLevelResults.filter(result => result.accuracyScore < 75).length;
 
       if (overallPronunciationScore >= 90 && fluencyScore >= 90 && (prosodyScore === undefined || prosodyScore >= 90)) {
         setGeneralFeedback("Excellent job! Your reading was clear, fluent, and natural. Keep up the great work!");
       } else if (overallPronunciationScore >= 80 && fluencyScore >= 80) {
         setGeneralFeedback("Well done! Your pronunciation is solid, and you're reading fluently. Focus on subtle improvements in intonation.");
-      } else if (overallPronunciationScore < 70 && problemWordCount > 0) {
+      } else if (overallPronunciationScore < 70 && issues.length > 0) {
         setGeneralFeedback("Focus on individual word sounds and clear articulation, especially for words you're struggling with.");
       } else if (fluencyScore < 75) {
         setGeneralFeedback("Try to maintain a consistent pace while reading. Avoid stopping frequently between words to improve fluency.");
@@ -88,8 +65,10 @@ const FeedbackPanel = () => {
       } else {
         setGeneralFeedback("Good progress! Continue practicing regularly to build your confidence and refine your speech.");
       }
+
+      // Removed suggested exercises logic as per request.
     }
-  }, [pronunciationResults]);
+  }, [pronunciationResults]); // Dependency on pronunciationResults ensures feedback updates.
 
   // Play word pronunciation
   const playWordPronunciation = async (word: string) => {
@@ -240,23 +219,10 @@ const FeedbackPanel = () => {
         description: 'Analyzing your pronunciation...'
       });
 
-      // Send to Azure Speech for assessment using the same pattern as the main reader
-      const formData = new FormData();
-      formData.append("audio", audioBlob);
-      formData.append("text", word);
+      // Send to Azure Speech for assessment
+      const results = await submitReadingRecording(audioBlob, Date.now(), word);
 
-      const response = await fetch("/api/pronunciation/assess", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to assess pronunciation");
-      }
-
-      const results = await response.json();
-
-      if (!results || typeof results.pronunciationScore !== "number") {
+      if (!results) {
         throw new Error('No results received from speech assessment');
       }
 
@@ -352,91 +318,237 @@ const FeedbackPanel = () => {
           <div className="mb-6">
             <h3 className="font-medium mb-4 text-lg">Word Pronunciation Help</h3>
           
-            {/* Problem words carousel */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-              {pronunciationIssues.map((issue, index) => (
-                <Card 
-                  key={`${issue.word}-${index}`} 
-                  className={`cursor-pointer transition-all duration-200 border-2 ${
-                    currentlyPracticing === issue.word 
-                      ? 'border-primary bg-primary/5' 
-                      : 'border-gray-200 hover:border-primary/50 hover:shadow-md'
-                  }`}
-                  onClick={() => setCurrentlyPracticing(issue.word)}
-                >
-                  <CardContent className="p-4">
-                    <div className="text-center">
-                      <h4 className="text-lg font-semibold mb-2">{issue.word}</h4>
-                      <p className="text-sm text-muted-foreground mb-3">{issue.phonetic}</p>
-                      
-                      {/* Score display */}
-                      <div className="mb-3">
-                        <div className="text-sm text-muted-foreground mb-1">Accuracy Score</div>
-                        <div className="text-xl font-bold" style={{ 
-                          color: issue.score >= 80 ? '#10b981' : issue.score >= 60 ? '#f59e0b' : '#ef4444' 
-                        }}>
-                          {Math.round(issue.score)}%
-                        </div>
-                      </div>
-                      
-                      {/* Controls */}
-                      <div className="flex items-center justify-center gap-2">
-                        <Button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            playWordPronunciation(issue.word);
-                          }}
-                          size="sm"
-                          variant="outline"
-                          className="h-8 px-3 bg-green-700 hover:bg-green-600 text-white border-green-700"
-                        >
-                          Listen
-                        </Button>
-
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsSlowMode(!isSlowMode);
-                          }}
-                          className={`relative inline-flex h-8 w-12 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                            isSlowMode ? 'bg-green-500' : 'bg-gray-300'
-                          }`}
-                          role="switch"
-                          aria-checked={isSlowMode}
-                          aria-label="Toggle slow playback"
-                        >
-                          <span
-                            className={`inline-flex h-6 w-6 transform rounded-full bg-white transition-transform duration-200 ease-in-out items-center justify-center ${
-                              isSlowMode ? 'translate-x-6' : 'translate-x-1'
-                            }`}
-                          >
-                            <Turtle className="w-2 h-2 text-gray-600" />
-                          </span>
-                        </button>
-                        
-
+          {/* Problem words carousel */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            {pronunciationIssues.map((issue, index) => (
+              <Card 
+                key={`${issue.word}-${index}`} 
+                className={`cursor-pointer transition-all duration-200 border-2 ${
+                  currentlyPracticing === issue.word 
+                    ? 'border-primary bg-primary/5' 
+                    : 'border-gray-200 hover:border-primary/50 hover:shadow-md'
+                }`}
+                onClick={() => setCurrentlyPracticing(issue.word)}
+              >
+                <CardContent className="p-4">
+                  <div className="text-center">
+                    <h4 className="text-lg font-semibold mb-2">{issue.word}</h4>
+                    <p className="text-sm text-muted-foreground mb-3">/{issue.phonetic}/</p>
+                    
+                    {/* Score display */}
+                    <div className="mb-3">
+                      <div className="text-sm text-muted-foreground mb-1">Accuracy Score</div>
+                      <div className="text-xl font-bold" style={{ 
+                        color: issue.score >= 80 ? '#10b981' : issue.score >= 60 ? '#f59e0b' : '#ef4444' 
+                      }}>
+                        {Math.round(issue.score)}%
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    
+                    {/* Controls */}
+                    <div className="flex items-center justify-center gap-2">
+                      <Button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playWordPronunciation(issue.word);
+                        }}
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-3 bg-green-700 hover:bg-green-600 text-white border-green-700"
+                      >
+                        Listen
+                      </Button>
 
-            {/* Save Words Button */}
-            {pronunciationIssues.length > 0 && (
-              <div className="mt-4 flex justify-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsSlowMode(!isSlowMode);
+                        }}
+                        className={`relative inline-flex h-8 w-12 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                          isSlowMode ? 'bg-green-500' : 'bg-gray-300'
+                        }`}
+                        role="switch"
+                        aria-checked={isSlowMode}
+                        aria-label="Toggle slow playback"
+                      >
+                        <span
+                          className={`inline-flex h-6 w-6 transform rounded-full bg-white transition-transform duration-200 ease-in-out items-center justify-center ${
+                            isSlowMode ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        >
+                          <Turtle className="w-2 h-2 text-gray-600" />
+                        </span>
+                      </button>
+                      
+                      <Button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startWordPractice(issue.word);
+                        }}
+                        size="sm"
+                        className="h-8 px-3"
+                      >
+                        Start Recording
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {currentlyPracticing ? (
+            <div className="p-4 bg-white rounded-lg shadow-sm mb-3">
+              <div className="flex justify-between items-center mb-3">
+                <h4 className="font-medium">Practicing: <span className="text-primary">{currentlyPracticing}</span></h4>
                 <Button 
-                  onClick={saveWordsToMyWords}
-                  size="sm"
-                  className="h-10 px-6"
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={cancelWordPractice}
                 >
-                  <BookmarkIcon className="w-4 h-4 mr-2" />
-                  Save Words
+                  Close
                 </Button>
               </div>
-            )}
+
+              {!wordAssessmentResult ? (
+                <div className="flex flex-col items-center">
+                  <div className="mb-4 text-center">
+                    <p className="text-sm mb-2">
+                      {isRecording 
+                        ? "Say the word clearly..." 
+                        : "Click the button to start recording"}
+                    </p>
+
+                    {isRecording && (
+                      <div className="inline-flex items-center px-3 py-1 bg-red-100 text-red-800 rounded-full">
+                        <span className="w-2 h-2 bg-red-600 rounded-full mr-2 animate-pulse"></span>
+                        <span className="text-xs font-medium">Recording in Progress</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Start Recording Button - First Row */}
+                  <div className="flex justify-center mb-3">
+                    {!isRecording ? (
+                      <Button 
+                        onClick={() => startWordPractice(currentlyPracticing)}
+                        size="sm"
+                        disabled={isProcessingWord}
+                        className="h-10 px-6"
+                      >
+                        <Mic className="w-4 h-4 mr-2" />
+                        Start Recording
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={stopWordPractice}
+                        size="sm"
+                        variant="destructive"
+                        className="h-10 px-6"
+                      >
+                        <StopCircle className="w-4 h-4 mr-2" />
+                        Stop Recording
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Listen Button and Slow Switch - Second Row */}
+                  <div className="flex items-center justify-center gap-4 mb-3">
+                    <Button 
+                      onClick={() => playWordPronunciation(currentlyPracticing)}
+                      size="sm"
+                      variant="outline"
+                      className="h-10 px-4 bg-green-700 hover:bg-green-600 text-white border-green-700"
+                    >
+                      <Volume2 className="w-4 h-4 mr-2" />
+                      Listen
+                    </Button>
+
+                    <div className="flex items-center gap-2">
+                      <Turtle className="w-4 h-4" />
+                      <Switch
+                        checked={isSlowMode}
+                        onCheckedChange={setIsSlowMode}
+                        className="h-6 w-11"
+                      />
+                      <span className="text-sm text-muted-foreground">Slow</span>
+                    </div>
+                  </div>
+
+                  {/* Save Button - Third Row (placeholder for now) */}
+                  <div className="flex justify-center">
+                    <Button 
+                      size="sm"
+                      variant="outline"
+                      className="h-10 px-6"
+                    >
+                      Save Progress
+                    </Button>
+                  </div>
+
+                  {isProcessingWord && (
+                    <div className="mt-4 flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary mr-2"></div>
+                      <span className="text-sm">Processing...</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  {/* Star Rating Display */}
+                  <div className="text-center mb-4">
+                    <div className="flex justify-center items-center mb-2">
+                      {[1, 2, 3, 4, 5].map((star) => {
+                        const scoreThreshold = star * 20;
+                        const isFilled = wordAssessmentResult.pronunciationScore >= scoreThreshold;
+                        return (
+                          <Star
+                            key={star}
+                            className={`w-6 h-6 mx-1 ${
+                              isFilled 
+                                ? 'text-yellow-400 fill-yellow-400' 
+                                : 'text-gray-300'
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+                    <div className="text-2xl font-bold text-primary mb-1">
+                      {Math.round(wordAssessmentResult.pronunciationScore)}%
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {wordAssessmentResult.pronunciationScore >= 80 
+                        ? "Excellent pronunciation!" 
+                        : wordAssessmentResult.pronunciationScore >= 60 
+                          ? "Good effort, keep practicing." 
+                          : "Try again focusing on each sound."}
+                    </p>
+                  </div>
+
+                  <div className="flex justify-center space-x-2">
+                    <Button 
+                      onClick={() => startWordPractice(currentlyPracticing)}
+                      size="sm"
+                    >
+                      <Mic className="w-4 h-4 mr-1" />
+                      Try Again
+                    </Button>
+                    <Button 
+                      onClick={cancelWordPractice}
+                      size="sm" 
+                      variant="outline"
+                    >
+                      Done
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
           </div>
         )}
+
+        {/* Removed Suggested Exercises section as per request. */}
       </CardContent>
     </Card>
   );
