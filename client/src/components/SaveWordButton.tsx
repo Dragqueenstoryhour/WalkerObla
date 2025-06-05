@@ -36,7 +36,10 @@ export function SaveWordButton({ word, className, variant = "outline", size = "s
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/saved-words'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/user/saved-phrases'] });
+      toast({
+        title: "Word saved!",
+        description: `"${word}" has been added to your collection.`,
+      });
     },
     onError: () => {
       toast({
@@ -54,7 +57,10 @@ export function SaveWordButton({ word, className, variant = "outline", size = "s
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/saved-words'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/user/saved-phrases'] });
+      toast({
+        title: "Word removed",
+        description: `"${word}" has been removed from your collection.`,
+      });
     },
     onError: () => {
       toast({

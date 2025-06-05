@@ -74,33 +74,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User saved phrases (My Words) endpoints - now includes both phrases and words
+  // User saved phrases (My Words) endpoints
   app.get('/api/user/saved-phrases', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
-      // Get both saved phrases and saved words
       const phrases = await storage.getUserSavedPhrases(userId);
-      const words = await storage.getSavedWords(userId);
-      
-      // Convert saved words to phrase format for unified display
-      const convertedWords = words.map(word => ({
-        id: `word_${word.id}`,
-        userId: word.userId,
-        phrase: word.word,
-        phonetic: word.pronunciation,
-        difficulty: word.difficultyLevel ? word.difficultyLevel.toString() : null,
-        assessmentResults: null,
-        source: 'words',
-        sourceId: null,
-        createdAt: word.createdAt
-      }));
-      
-      // Combine and sort by creation date
-      const combinedItems = [...phrases, ...convertedWords]
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      
-      res.json(combinedItems);
+      res.json(phrases);
     } catch (error) {
       console.error("Error fetching saved phrases:", error);
       res.status(500).json({ message: "Failed to fetch saved phrases" });
