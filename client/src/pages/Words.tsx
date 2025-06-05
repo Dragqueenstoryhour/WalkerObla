@@ -912,6 +912,17 @@ export default function Words() {
                   </Card>
                 </div>
               ))}
+              
+              {/* Summary Card */}
+              {showSummary && (
+                <div className="embla__slide flex-shrink-0 w-full mx-2 flex justify-center">
+                  <SummaryCard
+                    assessmentResults={processedWords.map(word => word.assessmentResult).filter(Boolean)}
+                    type="words"
+                    onRestart={handleRestartPractice}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -928,19 +939,34 @@ export default function Words() {
                 Previous
               </Button>
               <span className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 rounded-lg">
-                <span className="font-semibold text-gray-700">{currentCarouselIndex + 1}</span>
+                <span className="font-semibold text-gray-700">{showSummary ? processedWords.length + 1 : currentCarouselIndex + 1}</span>
                 <span className="text-gray-500">of</span>
-                <span className="font-semibold text-gray-700">{processedWords.length}</span>
+                <span className="font-semibold text-gray-700">{showSummary ? processedWords.length + 1 : processedWords.length}</span>
               </span>
-              <Button
-                onClick={goToNext}
-                variant="outline"
-                disabled={currentCarouselIndex === processedWords.length - 1}
-                className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 transition-all duration-300 hover:scale-105"
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+              {/* Show Finish button on 8th card, Next button otherwise */}
+              {currentCarouselIndex === processedWords.length - 1 && processedWords.length === 8 && !showSummary ? (
+                <Button
+                  onClick={handleFinishPractice}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 transition-all duration-300 hover:scale-105 font-semibold"
+                >
+                  <Flag className="h-4 w-4" />
+                  Finish
+                </Button>
+              ) : (
+                <Button
+                  onClick={goToNext}
+                  variant="outline"
+                  disabled={currentCarouselIndex === processedWords.length - 1 || showSummary}
+                  className={`transition-all duration-300 hover:scale-105 ${
+                    currentCarouselIndex === processedWords.length - 1 || showSummary
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0'
+                  }`}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           )}
         </div>

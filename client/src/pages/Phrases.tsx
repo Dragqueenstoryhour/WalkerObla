@@ -43,9 +43,11 @@ import {
   ChevronLeft,
   ArrowRight,
   Turtle,
+  Flag,
 } from "lucide-react";
 import { useDifficulty } from "@/contexts/DifficultyContext";
 import { DifficultyDropdown } from "@/components/difficulty/SimplifiedDifficultySelector";
+import { SummaryCard } from "@/components/SummaryCard";
 import useEmblaCarousel from 'embla-carousel-react';
 
 interface ProcessedPhrase {
@@ -80,6 +82,7 @@ export default function Phrases() {
   const [showSignInDialog, setShowSignInDialog] = useState(false);
   const [pendingSaveIndex, setPendingSaveIndex] = useState<number | null>(null);
   const [slowPlaybackPhrases, setSlowPlaybackPhrases] = useState<{ [key: string]: boolean }>({});
+  const [showSummary, setShowSummary] = useState(false);
 
   // Carousel state
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
@@ -113,6 +116,26 @@ export default function Phrases() {
     if (emblaApi) {
       emblaApi.scrollTo(index);
     }
+  };
+
+  // Handle finishing practice and showing summary
+  const handleFinishPractice = () => {
+    setShowSummary(true);
+    // Add summary card to the carousel by scrolling to the last position
+    setTimeout(() => {
+      if (emblaApi) {
+        emblaApi.scrollTo(processedPhrases.length);
+      }
+    }, 100);
+  };
+
+  // Reset practice session
+  const handleRestartPractice = () => {
+    setShowSummary(false);
+    setProcessedPhrases([]);
+    setCurrentCarouselIndex(0);
+    setCurrentlyPracticing(null);
+    setPhraseAssessmentResult(null);
   };
 
   // Update carousel index when slide changes
@@ -859,6 +882,17 @@ export default function Phrases() {
                   </Card>
                 </div>
               ))}
+              
+              {/* Summary Card */}
+              {showSummary && (
+                <div className="embla__slide flex-shrink-0 w-full mx-2 flex justify-center">
+                  <SummaryCard
+                    assessmentResults={processedPhrases.map(phrase => phrase.assessmentResult).filter(Boolean)}
+                    type="phrases"
+                    onRestart={handleRestartPractice}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -875,19 +909,34 @@ export default function Phrases() {
                 Previous
               </Button>
               <span className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 rounded-lg">
-                <span className="font-semibold text-gray-700">{currentCarouselIndex + 1}</span>
+                <span className="font-semibold text-gray-700">{showSummary ? processedPhrases.length + 1 : currentCarouselIndex + 1}</span>
                 <span className="text-gray-500">of</span>
-                <span className="font-semibold text-gray-700">{processedPhrases.length}</span>
+                <span className="font-semibold text-gray-700">{showSummary ? processedPhrases.length + 1 : processedPhrases.length}</span>
               </span>
-              <Button
-                onClick={goToNext}
-                variant="outline"
-                disabled={currentCarouselIndex === processedPhrases.length - 1}
-                className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 transition-all duration-300 hover:scale-105"
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+              {/* Show Finish button on 8th card, Next button otherwise */}
+              {currentCarouselIndex === processedPhrases.length - 1 && processedPhrases.length === 8 && !showSummary ? (
+                <Button
+                  onClick={handleFinishPractice}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 transition-all duration-300 hover:scale-105 font-semibold"
+                >
+                  <Flag className="h-4 w-4" />
+                  Finish
+                </Button>
+              ) : (
+                <Button
+                  onClick={goToNext}
+                  variant="outline"
+                  disabled={currentCarouselIndex === processedPhrases.length - 1 || showSummary}
+                  className={`transition-all duration-300 hover:scale-105 ${
+                    currentCarouselIndex === processedPhrases.length - 1 || showSummary
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0'
+                  }`}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           )}
         </div>

@@ -132,7 +132,7 @@ export function SummaryCard({ assessmentResults, type, onRestart }: SummaryCardP
         <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
           Practice Complete!
         </CardTitle>
-        <div className="text-6xl font-bold my-4 ${getScoreColor(overallScore)}">
+        <div className={`text-6xl font-bold my-4 ${getScoreColor(overallScore)}`}>
           {overallScore}%
         </div>
         <Badge variant={getScoreBadgeVariant(overallScore)} className="text-lg px-4 py-2">
