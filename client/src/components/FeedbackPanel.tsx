@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Volume2, Share2, Mic, StopCircle, Star, Turtle } from 'lucide-react';
+import { Volume2, Share2, BookmarkIcon } from 'lucide-react';
 import { useReading } from '@/contexts/ReadingContext';
 import { PronunciationIssue, SuggestedExercise } from '@/lib/types';
 import { synthesizeSpeech } from '@/lib/azure';
@@ -414,16 +414,7 @@ const FeedbackPanel = () => {
                           </span>
                         </button>
                         
-                        <Button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            startWordPractice(issue.word);
-                          }}
-                          size="sm"
-                          className="h-8 px-3"
-                        >
-                          Start Recording
-                        </Button>
+
                       </div>
                     </div>
                   </CardContent>
@@ -431,154 +422,19 @@ const FeedbackPanel = () => {
               ))}
             </div>
 
-            {currentlyPracticing ? (
-              <div className="p-4 bg-white rounded-lg shadow-sm mb-3">
-                <div className="flex justify-between items-center mb-3">
-                  <h4 className="font-medium">Practicing: <span className="text-primary">{currentlyPracticing}</span></h4>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={cancelWordPractice}
-                  >
-                    Close
-                  </Button>
-                </div>
-
-                {!wordAssessmentResult ? (
-                  <div className="flex flex-col items-center">
-                    <div className="mb-4 text-center">
-                      <p className="text-sm mb-2">
-                        {isRecording 
-                          ? "Say the word clearly..." 
-                          : "Click the button to start recording"}
-                      </p>
-
-                      {isRecording && (
-                        <div className="inline-flex items-center px-3 py-1 bg-red-100 text-red-800 rounded-full">
-                          <span className="w-2 h-2 bg-red-600 rounded-full mr-2 animate-pulse"></span>
-                          <span className="text-xs font-medium">Recording in Progress</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Start Recording Button - First Row */}
-                    <div className="flex justify-center mb-3">
-                      {!isRecording ? (
-                        <Button 
-                          onClick={() => startWordPractice(currentlyPracticing)}
-                          size="sm"
-                          disabled={isProcessingWord}
-                          className="h-10 px-6"
-                        >
-                          <Mic className="w-4 h-4 mr-2" />
-                          Start Recording
-                        </Button>
-                      ) : (
-                        <Button 
-                          onClick={stopWordPractice}
-                          size="sm"
-                          variant="destructive"
-                          className="h-10 px-6"
-                        >
-                          <StopCircle className="w-4 h-4 mr-2" />
-                          Stop Recording
-                        </Button>
-                      )}
-                    </div>
-
-                    {/* Listen Button and Slow Switch - Second Row */}
-                    <div className="flex items-center justify-center gap-4 mb-3">
-                      <Button 
-                        onClick={() => playWordPronunciation(currentlyPracticing)}
-                        size="sm"
-                        variant="outline"
-                        className="h-10 px-4 bg-green-700 hover:bg-green-600 text-white border-green-700"
-                      >
-                        <Volume2 className="w-4 h-4 mr-2" />
-                        Listen
-                      </Button>
-
-                      <div className="flex items-center gap-2">
-                        <Turtle className="w-4 h-4" />
-                        <Switch
-                          checked={isSlowMode}
-                          onCheckedChange={setIsSlowMode}
-                          className="h-6 w-11"
-                        />
-                        <span className="text-sm text-muted-foreground">Slow</span>
-                      </div>
-                    </div>
-
-                    {/* Save Button - Third Row */}
-                    <div className="flex justify-center">
-                      <Button 
-                        size="sm"
-                        variant="outline"
-                        className="h-10 px-6"
-                      >
-                        Save Progress
-                      </Button>
-                    </div>
-
-                    {isProcessingWord && (
-                      <div className="mt-4 flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary mr-2"></div>
-                        <span className="text-sm">Processing...</span>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div>
-                    {/* Star Rating Display */}
-                    <div className="text-center mb-4">
-                      <div className="flex justify-center items-center mb-2">
-                        {[1, 2, 3, 4, 5].map((star) => {
-                          const scoreThreshold = star * 20;
-                          const isFilled = wordAssessmentResult.pronunciationScore >= scoreThreshold;
-                          return (
-                            <Star
-                              key={star}
-                              className={`w-6 h-6 mx-1 ${
-                                isFilled 
-                                  ? 'text-yellow-400 fill-yellow-400' 
-                                  : 'text-gray-300'
-                              }`}
-                            />
-                          );
-                        })}
-                      </div>
-                      <div className="text-2xl font-bold text-primary mb-1">
-                        {Math.round(wordAssessmentResult.pronunciationScore)}%
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {wordAssessmentResult.pronunciationScore >= 80 
-                          ? "Excellent pronunciation!" 
-                          : wordAssessmentResult.pronunciationScore >= 60 
-                            ? "Good effort, keep practicing." 
-                            : "Try again focusing on each sound."}
-                      </p>
-                    </div>
-
-                    <div className="flex justify-center space-x-2">
-                      <Button 
-                        onClick={() => startWordPractice(currentlyPracticing)}
-                        size="sm"
-                      >
-                        <Mic className="w-4 h-4 mr-1" />
-                        Try Again
-                      </Button>
-                      <Button 
-                        onClick={cancelWordPractice}
-                        size="sm" 
-                        variant="outline"
-                      >
-                        Done
-                      </Button>
-                    </div>
-                  </div>
-                )}
+            {/* Save Words Button */}
+            {pronunciationIssues.length > 0 && (
+              <div className="mt-4 flex justify-center">
+                <Button 
+                  onClick={saveWordsToMyWords}
+                  size="sm"
+                  className="h-10 px-6"
+                >
+                  <BookmarkIcon className="w-4 h-4 mr-2" />
+                  Save Words
+                </Button>
               </div>
-            ) : null}
+            )}
           </div>
         )}
       </CardContent>
