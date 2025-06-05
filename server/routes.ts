@@ -1424,9 +1424,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/saved-words/:word', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/saved-words/:word', authMiddleware, async (req: any, res) => {
     try {
-      const userId = req.session.user.id;
+      const userId = req.user.id;
       const word = decodeURIComponent(req.params.word);
       
       await storage.deleteSavedWord(userId, word);
@@ -1438,9 +1438,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Word folders API endpoints
-  app.get('/api/word-folders', isAuthenticated, async (req: any, res) => {
+  app.get('/api/word-folders', authMiddleware, async (req: any, res) => {
     try {
-      const userId = req.session.user.id;
+      const userId = req.user.id;
       const folders = await storage.getWordFolders(userId);
       res.json(folders);
     } catch (error) {
@@ -1449,9 +1449,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/word-folders', isAuthenticated, async (req: any, res) => {
+  app.post('/api/word-folders', authMiddleware, async (req: any, res) => {
     try {
-      const userId = req.session.user.id;
+      const userId = req.user.id;
       const folderData = insertWordFolderSchema.parse({
         ...req.body,
         userId
@@ -1465,9 +1465,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/word-folders/:id', isAuthenticated, async (req: any, res) => {
+  app.put('/api/word-folders/:id', authMiddleware, async (req: any, res) => {
     try {
-      const userId = req.session.user.id;
+      const userId = req.user.id;
       const folderId = parseInt(req.params.id);
       const updateData = req.body;
       
@@ -1479,9 +1479,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/word-folders/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/word-folders/:id', authMiddleware, async (req: any, res) => {
     try {
-      const userId = req.session.user.id;
+      const userId = req.user.id;
       const folderId = parseInt(req.params.id);
       
       await storage.deleteWordFolder(folderId, userId);
