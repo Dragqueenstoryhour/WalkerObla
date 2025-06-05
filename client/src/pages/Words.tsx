@@ -43,10 +43,12 @@ import {
   ChevronLeft,
   ArrowRight,
   Turtle,
+  Flag,
 } from "lucide-react";
 import { useDifficulty } from "@/contexts/DifficultyContext";
 import { DifficultyDropdown } from "@/components/difficulty/SimplifiedDifficultySelector";
 import { SaveWordButton } from "@/components/SaveWordButton";
+import { SummaryCard } from "@/components/SummaryCard";
 import useEmblaCarousel from 'embla-carousel-react';
 
 interface ProcessedWord {
@@ -81,6 +83,7 @@ export default function Words() {
   const [showSignInDialog, setShowSignInDialog] = useState(false);
   const [pendingSaveIndex, setPendingSaveIndex] = useState<number | null>(null);
   const [slowPlaybackWords, setSlowPlaybackWords] = useState<{ [key: string]: boolean }>({});
+  const [showSummary, setShowSummary] = useState(false);
 
   // Carousel state
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
@@ -114,6 +117,26 @@ export default function Words() {
     if (emblaApi) {
       emblaApi.scrollTo(index);
     }
+  };
+
+  // Handle finishing practice and showing summary
+  const handleFinishPractice = () => {
+    setShowSummary(true);
+    // Add summary card to the carousel by scrolling to the last position
+    setTimeout(() => {
+      if (emblaApi) {
+        emblaApi.scrollTo(processedWords.length);
+      }
+    }, 100);
+  };
+
+  // Reset practice session
+  const handleRestartPractice = () => {
+    setShowSummary(false);
+    setProcessedWords([]);
+    setCurrentCarouselIndex(0);
+    setCurrentlyPracticing(null);
+    setWordAssessmentResult(null);
   };
 
   // Update carousel index when slide changes

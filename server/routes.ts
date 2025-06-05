@@ -470,6 +470,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return currentDifficulty;
   }
 
+  // Generate personalized tips based on assessment results
+  app.post('/api/content/generate-tips', async (req, res) => {
+    try {
+      const schema = z.object({
+        assessmentResults: z.array(z.any()),
+        troubleWords: z.array(z.string()).optional(),
+        type: z.enum(['words', 'phrases']).default('words')
+      });
+
+      const { assessmentResults, troubleWords = [], type } = schema.parse(req.body);
+
+      // Analyze the assessment results to generate personalized tips
+      const allWordResults = assessmentResults.flatMap(result => 
+        result?.wordLevelResults || []
+      );
+
+      // Find common error patterns
+      const errorPatterns = allWordResults
+        .filter(word => word.accuracyScore < 75)
+        .map(word => ({
+          word: word.word,
+          score: word.accuracyScore,
+          errorType: word.errorType,
+          phonemes: word.phonemes || []
+        }));
+
+      // Generate tips using OpenAI
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        messages: [
+          {
+            role: "system",
+            content: `You are a speech therapist helping stroke recovery patients improve their pronunciation. 
+            Provide 1-2 short, encouraging sentences of constructive feedback based on the pronunciation assessment data.
+            Focus on specific patterns you notice (like similar sounds, consonants, or vowels that need work).
+            Be positive and supportive while offering practical advice.`
+          },
+          {
+            role: "user",
+            content: `Based on these pronunciation results for ${type}:
+            
+            Error patterns found: ${JSON.stringify(errorPatterns)}
+            Trouble words: ${troubleWords.join(', ')}
+            
+            Please provide personalized tips to help improve pronunciation.`
+          }
+        ],
+        max_tokens: 150,
+        temperature: 0.7,
+      });
+
+      const tips = response.choices[0].message.content || 
+        "Great work on your practice session! Keep practicing regularly to improve your pronunciation skills.";
+
+      res.json({ tips });
+    } catch (error) {
+      console.error('Error generating tips:', error);
+      res.status(500).json({ 
+        error: 'Failed to generate tips',
+        tips: "Great work on your practice session! Keep practicing regularly to improve your pronunciation skills."
+      });
+    }
+  });
+
   // Voice command endpoints
   app.post('/api/voice/command', upload.single('audio'), async (req, res) => {
     try {
