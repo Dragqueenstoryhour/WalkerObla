@@ -402,14 +402,28 @@ const FeedbackPanel = () => {
                 </div>
               ) : (
                 <div>
+                  {/* Star Rating Display */}
                   <div className="text-center mb-4">
-                    <div className="text-3xl font-bold" style={{ 
-                      color: wordAssessmentResult.pronunciationScore >= 80 ? '#10b981' : 
-                             wordAssessmentResult.pronunciationScore >= 60 ? '#f59e0b' : '#ef4444' 
-                    }}>
+                    <div className="flex justify-center items-center mb-2">
+                      {[1, 2, 3, 4, 5].map((star) => {
+                        const scoreThreshold = star * 20;
+                        const isFilled = wordAssessmentResult.pronunciationScore >= scoreThreshold;
+                        return (
+                          <Star
+                            key={star}
+                            className={`w-6 h-6 mx-1 ${
+                              isFilled 
+                                ? 'text-yellow-400 fill-yellow-400' 
+                                : 'text-gray-300'
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+                    <div className="text-2xl font-bold text-primary mb-1">
                       {Math.round(wordAssessmentResult.pronunciationScore)}%
                     </div>
-                    <p className="text-sm mt-1">
+                    <p className="text-sm text-muted-foreground">
                       {wordAssessmentResult.pronunciationScore >= 80 
                         ? "Excellent pronunciation!" 
                         : wordAssessmentResult.pronunciationScore >= 60 
