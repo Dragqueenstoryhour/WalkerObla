@@ -33,18 +33,17 @@ const Read = () => {
   // Fetch initial sample content
   const { data: initialContent, isLoading, error } = useQuery({
     queryKey: ['/api/content/sample'],
-    enabled: !currentContent,
   });
 
   // Use useEffect to set the initial content when loaded
   useEffect(() => {
-    if (!currentContent && initialContent && !isLoading) {
+    if (initialContent && !currentContent) {
       const content = initialContent as any;
       if (content && content.id && content.title && content.content) {
         setCurrentContent(content as ReadingContentType);
       }
     }
-  }, [currentContent, initialContent, isLoading, setCurrentContent]);
+  }, [initialContent, currentContent, setCurrentContent]);
 
   // State for reference text, derived from currentContent
   const [referenceText, setReferenceText] = useState('');
@@ -102,7 +101,7 @@ const Read = () => {
       />
 
       <main className="container flex-1 px-4 py-6 md:py-8">
-        {isLoading && !currentContent ? (
+        {isLoading ? (
           <div className="flex justify-center items-center h-52">
             <div className="loader animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
           </div>
