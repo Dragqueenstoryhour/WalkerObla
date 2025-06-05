@@ -195,7 +195,7 @@ export default function NewPhrases() {
     // Auto-load commonly used phrases when the page opens
     if (!shareId) {
       // Only if we're not loading shared phrases
-      handleGenerateTopicPhrases("Commonly Used Words");
+      handleGenerateTopicPhrases("Common Phrases");
     }
 
     // Cleanup function to handle any lingering recording sessions

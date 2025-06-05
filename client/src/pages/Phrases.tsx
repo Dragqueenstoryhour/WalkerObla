@@ -611,6 +611,28 @@ export default function Phrases() {
     loadSharedPhrases();
   }, [shareId, toast]);
 
+  // Auto-load commonly used phrases when the page opens
+  useEffect(() => {
+    // Only if we're not loading shared phrases
+    if (!shareId) {
+      handleGenerateTopicPhrases("Common Phrases");
+    }
+
+    // Cleanup function to handle any lingering recording sessions
+    return () => {
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== "inactive"
+      ) {
+        mediaRecorderRef.current.stop();
+      }
+
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []); // Empty dependency array to run once on mount
+
   const topicOptions = [
     "Common Phrases",
     "Greetings",

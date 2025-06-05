@@ -636,6 +636,28 @@ export default function Words() {
     loadSharedWords();
   }, [shareId, toast]);
 
+  // Auto-load commonly used words when the page opens
+  useEffect(() => {
+    // Only if we're not loading shared words
+    if (!shareId) {
+      handleGenerateTopicWords("Commonly Used Words");
+    }
+
+    // Cleanup function to handle any lingering recording sessions
+    return () => {
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== "inactive"
+      ) {
+        mediaRecorderRef.current.stop();
+      }
+
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []); // Empty dependency array to run once on mount
+
   const topicOptions = [
     "Commonly Used Words",
     "Household Items",
