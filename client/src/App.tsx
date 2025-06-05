@@ -14,6 +14,7 @@ import NewPhrases from "@/pages/NewPhrases";
 import Words from "@/pages/Words";
 import Phrases from "@/pages/Phrases";
 import MyWords from "@/pages/MyWords";
+import Profile from "@/pages/Profile";
 import Animation from "@/pages/Animation";
 import AzureAnimation from "@/pages/AzureAnimation";
 import { SettingsProvider } from "./contexts/SettingsContext";
@@ -154,6 +155,7 @@ function Router() {
         <Route path="/shared-phrases/:shareId" component={NewPhrases} />
         <Route path="/my-words" component={MyWords} />
         <Route path="/account" component={Account} />
+        <Route path="/profile" component={Profile} />
         <Route path="/animation" component={Animation} />
         <Route path="/azure-animation" component={AzureAnimation} />
         <Route component={NotFound} />

@@ -203,7 +203,7 @@ export default function MyWords() {
       }, 500);
       return;
     }
-  }, [phrasesError, toast]);
+  }, [phrasesError]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -218,7 +218,7 @@ export default function MyWords() {
       }, 500);
       return;
     }
-  }, [isAuthenticated, authLoading, toast]);
+  }, [isAuthenticated, authLoading]);
 
   const handleShuffle = () => {
     const shuffled = [...phrases].sort(() => Math.random() - 0.5);
