@@ -283,11 +283,6 @@ export default function Phrases() {
       // Start recording
       mediaRecorder.start(100);
       setIsRecording(true);
-
-      toast({
-        title: "Recording Started",
-        description: "Say the phrase clearly",
-      });
     } catch (error) {
       console.error("Error starting recording:", error);
       toast({
@@ -338,10 +333,7 @@ export default function Phrases() {
         ),
       );
 
-      toast({
-        title: "Processing Recording",
-        description: "Analyzing your pronunciation...",
-      });
+
 
       // Create a URL for the recording
       const recordingUrl = URL.createObjectURL(audioBlob);
@@ -386,10 +378,7 @@ export default function Phrases() {
         ),
       );
 
-      toast({
-        title: "Analysis Complete",
-        description: `Pronunciation: ${result.pronunciationScore.toFixed(1)}%`,
-      });
+
     } catch (error) {
       console.error("Error assessing phrase pronunciation:", error);
       toast({
