@@ -525,48 +525,11 @@ const FeedbackPanel = () => {
                 </div>
               )}
             </div>
-          ) : (
-            // Enhanced display for word pronunciation issues
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3"> {/* Stacks on small screens, 2 columns on medium/large */}
-              {pronunciationIssues.map((issue, index) => (
-                <div key={index} className="flex flex-col bg-white rounded-lg p-3 shadow-sm border border-gray-200">
-                  {/* Word and Score on separate rows */}
-                  <div className="mb-2">
-                    <p className="font-medium text-base mb-1">{issue.word}</p>
-                    <div className="inline-block text-xs py-0.5 px-2 bg-secondary/30 rounded-full font-semibold">
-                      {issue.score}%
-                    </div>
-                  </div>
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-3">
-                    <div 
-                      className={`h-full rounded-full ${
-                        issue.score < 60 ? 'bg-red-500' : issue.score < 80 ? 'bg-accent' : 'bg-green-500'
-                      }`} 
-                      style={{ width: `${issue.score}%` }}
-                    />
-                  </div>
-                  <div className="flex flex-col space-y-2"> {/* Buttons stack vertically */}
-                    <Button 
-                      onClick={() => playWordPronunciation(issue.word)}
-                      size="sm"
-                      variant="outline"
-                      className="w-full h-10 flex justify-center items-center" // Ensure fixed size and centering
-                    >
-                      <Volume2 className="w-5 h-5" /> {/* Adjusted icon size */}
-                    </Button>
-                    <Button 
-                      onClick={() => startWordPractice(issue.word)}
-                      size="sm"
-                      variant="default"
-                      className="w-full h-10 flex justify-center items-center" // Ensure fixed size and centering
-                    >
-                      <Mic className="w-5 h-5" /> {/* Adjusted icon size */}
-                    </Button>
-                  </div>
-                </div>
-              ))}
+          ) : pronunciationIssues.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No pronunciation issues found. Great job!</p>
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Removed Suggested Exercises section as per request. */}
