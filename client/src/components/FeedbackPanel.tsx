@@ -33,17 +33,21 @@ const FeedbackPanel = () => {
   useEffect(() => {
     if (pronunciationResults) {
       // Extract word-level issues for words scoring under 75%
-      const issues: PronunciationIssue[] = 
-        pronunciationResults.wordLevelResults
-          .filter(result => result.accuracyScore < 75) // Filter for words with accuracy less than 75%
-          .slice(0, 6) // Limit to maximum 6 words
-          .map(result => ({
-            word: result.word,
-            phonetic: result.word.split('').join('-'), // Simplified phonetic representation
-            score: result.accuracyScore
-          }));
+      const processIssues = async () => {
+        const issues: PronunciationIssue[] = await Promise.all(
+          pronunciationResults.wordLevelResults
+            .filter(result => result.accuracyScore < 75) // Filter for words with accuracy less than 75%
+            .slice(0, 6) // Limit to maximum 6 words
+            .map(async result => ({
+              word: result.word,
+              phonetic: await getPhoneticDisplay(result.word), // Get proper syllable breakdown
+              score: result.accuracyScore
+            }))
+        );
+        setPronunciationIssues(issues);
+      };
 
-      setPronunciationIssues(issues);
+      processIssues();
 
       // Generate enhanced general feedback based on results
       const overallPronunciationScore = pronunciationResults.pronunciationScore;

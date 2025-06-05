@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { assessPronunciation, synthesizeSpeech } from "./azure";
+import { assessPronunciation, synthesizeSpeech, getWordPronunciation } from "./azure";
 import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases, generateSampleContent } from "./openai";
 import multer from "multer";
 import { z } from "zod";
@@ -351,9 +351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Word parameter is required' });
       }
 
-      // For now, return a simple phonetic representation
-      // This could be enhanced with actual phonetic dictionary lookup
-      const phonetic = `/${word.toLowerCase()}/`;
+      const phonetic = await getWordPronunciation(word);
       
       res.json({ phonetic });
     } catch (error) {
