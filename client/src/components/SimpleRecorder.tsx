@@ -134,12 +134,31 @@ export function SimpleRecorder({
     try {
       console.log(`Processing recording with text: "${referenceText}"`);
 
-      const results = await submitReadingRecording(audioBlob, Date.now(), referenceText);
+      toast({
+        title: "Processing Recording",
+        description: "Analyzing your pronunciation...",
+      });
 
+      // Send to Azure Speech for assessment using the same pattern as phrases
+      const formData = new FormData();
+      formData.append("audio", audioBlob);
+      formData.append("text", referenceText);
+
+      const response = await fetch("/api/pronunciation/assess", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to assess pronunciation");
+      }
+
+      const results = await response.json();
       console.log('Received assessment results:', results);
 
-      if (!results) {
-        throw new Error('No results received from speech assessment');
+      // Validate the result has expected properties
+      if (typeof results.pronunciationScore !== "number") {
+        throw new Error("Invalid assessment result format");
       }
 
       setAssessmentResults(results);
@@ -147,6 +166,11 @@ export function SimpleRecorder({
       if (onAssessmentReceived) {
         onAssessmentReceived(results);
       }
+
+      toast({
+        title: "Analysis Complete",
+        description: `Pronunciation: ${results.pronunciationScore.toFixed(1)}%`,
+      });
 
     } catch (error) {
       console.error('Error assessing pronunciation:', error);
