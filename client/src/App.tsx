@@ -86,9 +86,9 @@ function Navigation() {
           </div>
         ) : isAuthenticated && user ? (
           // Show user avatar when authenticated
-          <Link href="/account" className="flex items-center gap-2">
+          <Link href="/profile" className="flex items-center gap-2">
             <div className="h-10 w-10 border-2 border-blue-500 rounded-full flex items-center justify-center bg-blue-500 text-white font-semibold text-xl">
-              {user.username?.charAt(0).toUpperCase() || user.firstName?.charAt(0).toUpperCase() || 'U'}
+              {user.firstName?.charAt(0).toUpperCase() || user.lastName?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}
             </div>
           </Link>
         ) : (
