@@ -59,13 +59,12 @@ async function convertAudioToWav(audioBuffer: Buffer, tempDir: string = "/tmp", 
     fs.writeFileSync(inputPath, audioBuffer);
     console.log(`✅ Created temporary input file at ${inputPath} (${audioBuffer.length} bytes)`);
     
-    // Convert audio format using ffmpeg with optimized settings for Azure pronunciation assessment
-    // Configure for 16kHz, mono, 16-bit PCM format with audio normalization
+    // Convert audio format using ffmpeg with detailed settings for Azure's requirements
+    // Configure for 16kHz, mono, 16-bit PCM format as required by Azure Speech SDK
     const ffmpegCommand = `"${ffmpegPath}" -i "${inputPath}" \
       -ac 1 \
       -ar 16000 \
       -acodec pcm_s16le \
-      -af "highpass=f=200,lowpass=f=4000,loudnorm=I=-16:TP=-1.5:LRA=11" \
       -f wav \
       -y \
       "${outputPath}"`;
@@ -334,20 +333,6 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
       // Important: Set the recognition language to English US
       speechConfig.speechRecognitionLanguage = "en-US";
       
-      // Configure speech recognition for pronunciation assessment
-      speechConfig.setProperty("Speech.SegmentationStrategy", "Manual");
-      speechConfig.setProperty("Speech.SegmentationSilenceTimeoutMs", "2000");
-      speechConfig.setProperty("Speech.InitialSilenceTimeoutMs", "2000");
-      speechConfig.setProperty("Speech.EndSilenceTimeoutMs", "1000");
-      
-      // Disable dictation mode for better pronunciation assessment
-      // speechConfig.enableDictation(); // Removed - this can interfere with pronunciation assessment
-      
-      // Configure for single-shot recognition optimized for pronunciation assessment
-      speechConfig.setProperty("Speech.Recognition.Mode", "Interactive");
-      speechConfig.setProperty("Speech.Context.PhraseList.Enabled", "true");
-      speechConfig.setProperty("Speech.Context.Verification", "true");
-      
       // Read the WAV file into a buffer
       const wavFileData = fs.readFileSync(wavFilePath);
       
@@ -405,11 +390,11 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
       speechConfig.setProperty("Speech.LogFilename", `/tmp/azure-speech-${Date.now()}.log`);
       speechConfig.setProperty("Speech.LogLevel", "3"); // Detailed logging
       
-      // Create pronunciation assessment configuration with proper settings
+      // Create pronunciation assessment configuration according to Microsoft docs
       const pronunciationAssessmentConfig = new sdk.PronunciationAssessmentConfig(
         cleanedText,
         sdk.PronunciationAssessmentGradingSystem.HundredMark,
-        sdk.PronunciationAssessmentGranularity.Word, // Use Word granularity for better results
+        sdk.PronunciationAssessmentGranularity.Phoneme,
         true // Enable miscue calculation
       );
       
@@ -609,36 +594,6 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
                 } catch (resultError: any) {
                   console.error("Error extracting pronunciation results:", resultError);
                   reject(new Error(`Failed to extract pronunciation results: ${resultError?.message || "Unknown error"}`));
-                }
-              } else if (result.reason === sdk.ResultReason.NoMatch) {
-                console.log(`⚠️ No speech could be recognized from audio`);
-                
-                // Still try to get pronunciation assessment data even if no speech was recognized
-                const jsonResponse = result.properties.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult);
-                if (jsonResponse) {
-                  console.log("Raw JSON Response (NoMatch):", jsonResponse);
-                  const jsonResult = JSON.parse(jsonResponse);
-                  
-                  // Return assessment indicating no clear speech was detected
-                  resolve({
-                    pronunciationScore: 20,
-                    fluencyScore: 20,
-                    completenessScore: 10,
-                    accuracyScore: 20,
-                    prosodyScore: 20,
-                    wordLevelResults: cleanedText.split(/\s+/).map(word => ({
-                      word: word,
-                      accuracyScore: 10,
-                      errorType: "Omission",
-                      offset: 0,
-                      duration: 1000,
-                      phonemes: []
-                    })),
-                    sdkVersion,
-                    rawJson: jsonResult
-                  });
-                } else {
-                  reject(new Error("No speech detected in audio"));
                 }
               } else {
                 console.warn(`Recognition didn't complete successfully: ${result.reason}`);

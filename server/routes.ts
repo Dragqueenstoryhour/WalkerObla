@@ -261,8 +261,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const assessment = await assessPronunciation(audioBuffer, text);
 
       // If user is authenticated, record the activity
-      if (req.user && (req.user as any).claims?.sub) {
-        const userId = (req.user as any).claims.sub;
+      if (req.user?.claims?.sub) {
+        const userId = req.user.claims.sub;
         await storage.recordActivity({
           userId,
           activityType: 'reading_practice',
