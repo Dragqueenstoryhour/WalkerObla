@@ -52,14 +52,14 @@ export default function MyWords() {
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
 
   // Fetch saved phrases
-  const { data: phrases = [], isLoading: phrasesLoading, error: phrasesError } = useQuery({
+  const { data: phrases = [], isLoading: phrasesLoading, error: phrasesError } = useQuery<SavedPhrase[]>({
     queryKey: ['/api/user/saved-phrases'],
     enabled: isAuthenticated,
     retry: false,
   });
 
   // Fetch practice groups
-  const { data: groups = [], isLoading: groupsLoading } = useQuery({
+  const { data: groups = [], isLoading: groupsLoading } = useQuery<PracticeGroup[]>({
     queryKey: ['/api/user/practice-groups'],
     enabled: isAuthenticated,
     retry: false,
@@ -67,7 +67,7 @@ export default function MyWords() {
 
   // Delete phrase mutation
   const deleteMutation = useMutation({
-    mutationFn: (phraseId: number) => apiRequest(`/api/user/saved-phrases/${phraseId}`, { method: 'DELETE' }),
+    mutationFn: (phraseId: number) => apiRequest(`/api/user/saved-phrases/${phraseId}`, 'DELETE'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/user/saved-phrases'] });
       toast({
@@ -105,11 +105,7 @@ export default function MyWords() {
   // Create group mutation
   const createGroupMutation = useMutation({
     mutationFn: (groupData: { name: string; description: string }) =>
-      apiRequest('/api/user/practice-groups', {
-        method: 'POST',
-        body: JSON.stringify(groupData),
-        headers: { 'Content-Type': 'application/json' },
-      }),
+      apiRequest('/api/user/practice-groups', 'POST', groupData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/user/practice-groups'] });
       toast({
@@ -143,11 +139,7 @@ export default function MyWords() {
   // Add to group mutation
   const addToGroupMutation = useMutation({
     mutationFn: ({ groupId, phraseId }: { groupId: number; phraseId: number }) =>
-      apiRequest(`/api/user/practice-groups/${groupId}/phrases`, {
-        method: 'POST',
-        body: JSON.stringify({ phraseId }),
-        headers: { 'Content-Type': 'application/json' },
-      }),
+      apiRequest(`/api/user/practice-groups/${groupId}/phrases`, 'POST', { phraseId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/user/practice-groups'] });
       toast({

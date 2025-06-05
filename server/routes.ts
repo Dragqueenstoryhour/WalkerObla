@@ -504,6 +504,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Saved words API endpoints (separate from phrases)
+  app.get('/api/saved-words', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const words = await storage.getSavedWords(userId);
+      res.json(words);
+    } catch (error) {
+      console.error("Error fetching saved words:", error);
+      res.status(500).json({ message: "Failed to fetch saved words" });
+    }
+  });
+
+  app.post('/api/saved-words', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { word, folderId } = req.body;
+      
+      if (!word) {
+        return res.status(400).json({ error: 'Word is required' });
+      }
+
+      const wordData = {
+        userId,
+        word,
+        folderId: folderId ? parseInt(folderId) : null,
+        difficultyLevel: 1,
+        practiceCount: 0,
+        masteryLevel: 0
+      };
+      
+      const savedWord = await storage.createSavedWord(wordData);
+      res.json(savedWord);
+    } catch (error) {
+      console.error("Error saving word:", error);
+      res.status(500).json({ message: "Failed to save word" });
+    }
+  });
+
+  app.delete('/api/saved-words/:word', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const wordToDelete = decodeURIComponent(req.params.word);
+      
+      // Find and delete the word by userId and word text
+      const words = await storage.getSavedWords(userId);
+      const wordToRemove = words.find(w => w.word === wordToDelete);
+      
+      if (wordToRemove) {
+        await storage.deleteSavedWord(wordToRemove.id);
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting saved word:", error);
+      res.status(500).json({ message: "Failed to delete word" });
+    }
+  });
+
+  // Legacy phrases save endpoint for backward compatibility
+  app.post('/api/phrases/save', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const phraseData = insertUserSavedPhraseSchema.parse({
+        ...req.body,
+        userId
+      });
+      
+      const phrase = await storage.createUserSavedPhrase(phraseData);
+      res.json(phrase);
+    } catch (error) {
+      console.error("Error saving phrase:", error);
+      res.status(500).json({ message: "Failed to save phrase" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
