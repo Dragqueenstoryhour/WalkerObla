@@ -394,23 +394,23 @@ IMPORTANT: Keep it engaging, informative, and under ${maxWords} words total.` }
 export async function generateSampleContent(): Promise<ReadingContent> {
   // Array of interesting topics for more variety
   const topics = [
-    "latest tech innovations",
-    "space exploration news",
+    "latest tech innovations and breakthrough developments",
+    "space exploration and recent discoveries",
     "health and wellness trends",
     "environmental conservation efforts",
-    "popular culture highlights",
-    "new scientific discoveries",
-    "travel destinations",
-    "sports achievements",
-    "interesting facts about animals",
-    "latest cooking trends"
+    "popular culture and entertainment highlights",
+    "new scientific discoveries and research",
+    "travel destinations and experiences",
+    "sports achievements and competitions",
+    "fascinating facts about animals and nature",
+    "latest cooking trends and cuisine"
   ];
 
   // Select a random topic from the array
   const randomTopic = topics[Math.floor(Math.random() * topics.length)];
 
-  // Generate content on the random topic
-  return generateReadingContent(randomTopic, "1"); // Default to difficulty 1
+  // Generate content on the random topic with easy difficulty
+  return generateReadingContent(randomTopic, "2"); // Use difficulty 2 for better readability
 }
 
 /**

@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { assessPronunciation, synthesizeSpeech } from "./azure";
-import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases } from "./openai";
+import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases, generateSampleContent } from "./openai";
 import multer from "multer";
 import { z } from "zod";
 import { insertUserSavedPhraseSchema, insertPracticeGroupSchema, insertUserActivitySchema } from "@shared/schema";
@@ -269,7 +269,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Content generation endpoint
+  // Content generation endpoints
+  app.post('/api/content/generate', async (req, res) => {
+    try {
+      const { topic, difficulty } = req.body;
+      
+      if (!topic) {
+        return res.status(400).json({ error: 'Topic is required' });
+      }
+
+      const content = await generateReadingContent(topic, difficulty || 'easy');
+      res.json(content);
+    } catch (error) {
+      console.error('Content generation error:', error);
+      res.status(500).json({ 
+        error: 'Content generation failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Sample content endpoint for initial page load
+  app.get('/api/content/sample', async (req, res) => {
+    try {
+      const content = await generateSampleContent();
+      res.json(content);
+    } catch (error) {
+      console.error('Sample content generation error:', error);
+      res.status(500).json({ 
+        error: 'Sample content generation failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Legacy content generation endpoint (keep for backward compatibility)
   app.post('/api/generate-content', async (req, res) => {
     try {
       const { topic, difficulty } = req.body;
