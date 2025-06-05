@@ -37,7 +37,7 @@ function TabBar() {
     { href: "/", label: "Words", icon: Edit, color: "from-blue-500 to-indigo-500" },
     { href: "/phrases", label: "Phrases", icon: Edit, color: "from-purple-500 to-pink-500" },
     { href: "/reader", label: "Reading", icon: Book, color: "from-emerald-500 to-teal-500" },
-    { href: "/my-words", label: "Saved Words", icon: Bookmark, color: "from-orange-500 to-red-500" },
+    { href: "/my-words", label: "Saved Lingo", icon: Bookmark, color: "from-orange-500 to-red-500" },
   ];
 
   return (

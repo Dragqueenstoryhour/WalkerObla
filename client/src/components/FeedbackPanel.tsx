@@ -36,7 +36,6 @@ const FeedbackPanel = () => {
       const issues: PronunciationIssue[] = 
         pronunciationResults.wordLevelResults
           .filter(result => result.accuracyScore < 75) // Filter for words with accuracy less than 75%
-          .slice(0, 6) // Limit to maximum 6 words
           .map(result => ({
             word: result.word,
             phonetic: result.word.split('').join('-'), // Simplified phonetic representation
@@ -313,10 +312,9 @@ const FeedbackPanel = () => {
           </p>
         </div>
 
-        {/* Word Pronunciation Help - Only show when there are problem words */}
-        {pronunciationIssues.length > 0 && (
-          <div className="mb-6">
-            <h3 className="font-medium mb-4 text-lg">Word Pronunciation Help</h3>
+        {/* Word Pronunciation Help - Carousel style like Practice Words */}
+        <div className="mb-6">
+          <h3 className="font-medium mb-4 text-lg">Word Pronunciation Help</h3>
           
           {/* Problem words carousel */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
@@ -427,40 +425,13 @@ const FeedbackPanel = () => {
                     )}
                   </div>
 
-                  {/* Start Recording Button - First Row */}
-                  <div className="flex justify-center mb-3">
-                    {!isRecording ? (
-                      <Button 
-                        onClick={() => startWordPractice(currentlyPracticing)}
-                        size="sm"
-                        disabled={isProcessingWord}
-                        className="h-10 px-6"
-                      >
-                        <Mic className="w-4 h-4 mr-2" />
-                        Start Recording
-                      </Button>
-                    ) : (
-                      <Button 
-                        onClick={stopWordPractice}
-                        size="sm"
-                        variant="destructive"
-                        className="h-10 px-6"
-                      >
-                        <StopCircle className="w-4 h-4 mr-2" />
-                        Stop Recording
-                      </Button>
-                    )}
-                  </div>
-
-                  {/* Listen Button and Slow Switch - Second Row */}
-                  <div className="flex items-center justify-center gap-4 mb-3">
+                  <div className="flex items-center justify-center gap-3">
                     <Button 
                       onClick={() => playWordPronunciation(currentlyPracticing)}
                       size="sm"
                       variant="outline"
                       className="h-10 px-4 bg-green-700 hover:bg-green-600 text-white border-green-700"
                     >
-                      <Volume2 className="w-4 h-4 mr-2" />
                       Listen
                     </Button>
 
@@ -469,21 +440,31 @@ const FeedbackPanel = () => {
                       <Switch
                         checked={isSlowMode}
                         onCheckedChange={setIsSlowMode}
-                        className="h-6 w-11"
+                        className="h-10 w-12"
                       />
-                      <span className="text-sm text-muted-foreground">Slow</span>
                     </div>
-                  </div>
 
-                  {/* Save Button - Third Row (placeholder for now) */}
-                  <div className="flex justify-center">
-                    <Button 
-                      size="sm"
-                      variant="outline"
-                      className="h-10 px-6"
-                    >
-                      Save Progress
-                    </Button>
+                    {!isRecording ? (
+                      <Button 
+                        onClick={() => startWordPractice(currentlyPracticing)}
+                        size="sm"
+                        disabled={isProcessingWord}
+                        className="h-10 px-4"
+                      >
+                        <Mic className="w-4 h-4 mr-1" />
+                        Record
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={stopWordPractice}
+                        size="sm"
+                        variant="destructive"
+                        className="h-10 px-4"
+                      >
+                        <StopCircle className="w-4 h-4 mr-1" />
+                        Stop
+                      </Button>
+                    )}
                   </div>
 
                   {isProcessingWord && (
@@ -544,9 +525,12 @@ const FeedbackPanel = () => {
                 </div>
               )}
             </div>
+          ) : pronunciationIssues.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No pronunciation issues found. Great job!</p>
+            </div>
           ) : null}
-          </div>
-        )}
+        </div>
 
         {/* Removed Suggested Exercises section as per request. */}
       </CardContent>
