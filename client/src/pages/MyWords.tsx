@@ -218,7 +218,7 @@ export default function MyWords() {
       }, 500);
       return;
     }
-  }, [isAuthenticated, authLoading]);
+  }, [isAuthenticated, authLoading, toast]);
 
   const handleShuffle = () => {
     const shuffled = [...phrases].sort(() => Math.random() - 0.5);

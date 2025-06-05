@@ -15,11 +15,7 @@ const FeedbackPanel = () => {
   const [generalFeedback, setGeneralFeedback] = useState(
     "Good progress! Continue practicing to improve fluency." // Initial general feedback
   );
-  const [pronunciationIssues, setPronunciationIssues] = useState<PronunciationIssue[]>([
-    // Initial sample data, will be overwritten by useEffect
-    { word: "container", phonetic: "kun-tey-ner", score: 60 },
-    { word: "advantage", phonetic: "uhd-van-tij", score: 75 }
-  ]);
+  const [pronunciationIssues, setPronunciationIssues] = useState<PronunciationIssue[]>([]);
   const [currentlyPracticing, setCurrentlyPracticing] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [wordAssessmentResult, setWordAssessmentResult] = useState<any>(null);
@@ -36,16 +32,15 @@ const FeedbackPanel = () => {
   // Update feedback when pronunciation results change
   useEffect(() => {
     if (pronunciationResults) {
-      // Extract word-level issues
+      // Extract word-level issues for words scoring under 75%
       const issues: PronunciationIssue[] = 
         pronunciationResults.wordLevelResults
-          .filter(result => result.accuracyScore < 80) // Filter for words with accuracy less than 80%
+          .filter(result => result.accuracyScore < 75) // Filter for words with accuracy less than 75%
           .map(result => ({
             word: result.word,
             phonetic: result.word.split('').join('-'), // Simplified phonetic representation
             score: result.accuracyScore
-          }))
-          .slice(0, 5); // Limit to 5 issues
+          }));
 
       setPronunciationIssues(issues);
 
@@ -362,14 +357,37 @@ const FeedbackPanel = () => {
                         Listen
                       </Button>
 
-                      <div className="flex items-center gap-1">
-                        <Turtle className="w-3 h-3" />
-                        <Switch
-                          checked={isSlowMode}
-                          onCheckedChange={setIsSlowMode}
-                          className="h-8 w-10"
-                        />
-                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsSlowMode(!isSlowMode);
+                        }}
+                        className={`relative inline-flex h-8 w-12 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                          isSlowMode ? 'bg-green-500' : 'bg-gray-300'
+                        }`}
+                        role="switch"
+                        aria-checked={isSlowMode}
+                        aria-label="Toggle slow playback"
+                      >
+                        <span
+                          className={`inline-flex h-6 w-6 transform rounded-full bg-white transition-transform duration-200 ease-in-out items-center justify-center ${
+                            isSlowMode ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        >
+                          <Turtle className="w-2 h-2 text-gray-600" />
+                        </span>
+                      </button>
+                      
+                      <Button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startWordPractice(issue.word);
+                        }}
+                        size="sm"
+                        className="h-8 px-3"
+                      >
+                        Start Recording
+                      </Button>
                     </div>
                   </div>
                 </CardContent>

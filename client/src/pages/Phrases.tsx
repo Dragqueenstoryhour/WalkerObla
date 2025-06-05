@@ -839,24 +839,23 @@ export default function Phrases() {
                         >
                           Listen
                         </Button>
-                        <div className="flex items-center gap-2">
-                          <Turtle className="w-4 h-4" />
-                          <button
-                            onClick={() => toggleSlowPlayback(phrase.id)}
-                            className={`relative inline-flex h-10 w-14 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                              slowPlaybackPhrases[phrase.id] ? 'bg-blue-900' : 'bg-gray-300'
+                        <button
+                          onClick={() => toggleSlowPlayback(phrase.id)}
+                          className={`relative inline-flex h-10 w-16 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                            slowPlaybackPhrases[phrase.id] ? 'bg-green-500' : 'bg-gray-300'
+                          }`}
+                          role="switch"
+                          aria-checked={slowPlaybackPhrases[phrase.id]}
+                          aria-label="Toggle slow playback"
+                        >
+                          <span
+                            className={`inline-flex h-8 w-8 transform rounded-full bg-white transition-transform duration-200 ease-in-out items-center justify-center ${
+                              slowPlaybackPhrases[phrase.id] ? 'translate-x-8' : 'translate-x-1'
                             }`}
-                            role="switch"
-                            aria-checked={slowPlaybackPhrases[phrase.id]}
-                            aria-label="Toggle slow playback"
                           >
-                            <span
-                              className={`inline-block h-8 w-8 transform rounded-full bg-white transition-transform duration-200 ease-in-out ${
-                                slowPlaybackPhrases[phrase.id] ? 'translate-x-6' : 'translate-x-1'
-                              }`}
-                            />
-                          </button>
-                        </div>
+                            <Turtle className="w-3 h-3 text-gray-600" />
+                          </span>
+                        </button>
                       </div>
 
                       {/* Assessment Results */}
