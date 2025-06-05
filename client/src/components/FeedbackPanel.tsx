@@ -321,6 +321,60 @@ const FeedbackPanel = () => {
     });
   };
 
+  // Save words to My Words page
+  const saveWordsToMyWords = async () => {
+    try {
+      // Check if user is authenticated
+      const userResponse = await fetch("/api/auth/user");
+      if (!userResponse.ok) {
+        toast({
+          title: "Sign In Required",
+          description: "Please sign in to save words to your collection.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Save each problem word (limit to 6)
+      const wordsToSave = pronunciationIssues.slice(0, 6);
+      const savePromises = wordsToSave.map(async (issue) => {
+        const response = await fetch("/api/phrases/save", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            phrase: issue.word,
+            phonetic: issue.phonetic || null,
+            difficulty: "intermediate",
+            source: "reader_feedback",
+            sourceId: null,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to save word: ${issue.word}`);
+        }
+
+        return response.json();
+      });
+
+      await Promise.all(savePromises);
+
+      toast({
+        title: "Words Saved",
+        description: `Successfully saved ${wordsToSave.length} words to My Words.`,
+      });
+    } catch (error) {
+      console.error('Error saving words:', error);
+      toast({
+        title: 'Save Error',
+        description: 'Could not save words. Please try again.',
+        variant: 'destructive'
+      });
+    }
+  };
+
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardContent className="p-4 lg:p-6">
