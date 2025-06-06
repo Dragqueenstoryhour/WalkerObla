@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, varchar, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, varchar, index, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -150,8 +150,8 @@ export const readingSession = pgTable("reading_session", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id"), // Updated to match user ID type
   contentId: integer("content_id").notNull(),
-  pronunciationScore: integer("pronunciation_score"),
-  fluencyScore: integer("fluency_score"),
+  pronunciationScore: real("pronunciation_score"),
+  fluencyScore: real("fluency_score"),
   wordsRead: integer("words_read"),
   feedback: jsonb("feedback"),
   recordingUrl: text("recording_url"),
@@ -214,7 +214,7 @@ export const userExercises = pgTable("user_exercises", {
   userId: varchar("user_id").notNull(), // Updated to match user ID type
   exerciseId: integer("exercise_id").notNull(),
   completed: boolean("completed").notNull().default(false),
-  pronunciationScore: integer("pronunciation_score"),
+  pronunciationScore: real("pronunciation_score"),
   attemptCount: integer("attempt_count").notNull().default(0),
   lastAttemptAt: timestamp("last_attempt_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -312,10 +312,10 @@ export const userActivity = pgTable("user_activity", {
   userId: varchar("user_id").notNull(),
   activityType: text("activity_type").notNull(), // 'word_practice', 'phrase_practice', 'reading_session', 'assessment'
   itemPracticed: text("item_practiced").notNull(), // The word/phrase/content practiced
-  score: integer("score"), // 0-100 pronunciation score
-  accuracy: integer("accuracy"), // 0-100 accuracy score  
-  fluency: integer("fluency"), // 0-100 fluency score
-  completeness: integer("completeness"), // 0-100 completeness score
+  score: real("score"), // 0-100 pronunciation score
+  accuracy: real("accuracy"), // 0-100 accuracy score  
+  fluency: real("fluency"), // 0-100 fluency score
+  completeness: real("completeness"), // 0-100 completeness score
   duration: integer("duration"), // Practice duration in seconds
   difficulty: text("difficulty"), // easy, medium, hard
   source: text("source"), // Where the practice came from (e.g., "my-words", "topic-practice", "shared")
@@ -339,9 +339,9 @@ export const userStats = pgTable("user_stats", {
   totalPhrasesPracticed: integer("total_phrases_practiced").notNull().default(0),
   totalReadingSessions: integer("total_reading_sessions").notNull().default(0),
   totalPracticeTime: integer("total_practice_time").notNull().default(0), // in seconds
-  averagePronunciationScore: integer("average_pronunciation_score"), // 0-100
-  averageAccuracyScore: integer("average_accuracy_score"), // 0-100
-  averageFluencyScore: integer("average_fluency_score"), // 0-100
+  averagePronunciationScore: real("average_pronunciation_score"), // 0-100
+  averageAccuracyScore: real("average_accuracy_score"), // 0-100
+  averageFluencyScore: real("average_fluency_score"), // 0-100
   currentStreak: integer("current_streak").notNull().default(0), // consecutive practice days
   longestStreak: integer("longest_streak").notNull().default(0),
   lastPracticeDate: timestamp("last_practice_date"),
