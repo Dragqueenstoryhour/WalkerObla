@@ -75,43 +75,67 @@ export function DifficultySelectionDialog({ open, onClose }: DifficultySelection
     <Dialog open={open} onOpenChange={(isOpen) => {
       if (!isOpen) onClose();
     }}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Select Your Difficulty Level</DialogTitle>
-          <DialogDescription>
-            Choose a difficulty level that matches your comfort with speech and pronunciation.
-            You can always change this later from the header.
+      <DialogContent className="sm:max-w-lg bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 border-2 border-purple-200 shadow-2xl">
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
+            <span className="text-2xl">🎉</span>
+          </div>
+          <DialogTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
+            Welcome to ReadAssist!
+          </DialogTitle>
+          <DialogDescription className="text-lg text-gray-700 leading-relaxed">
+            Your AI-powered speech therapy companion is ready to help you improve pronunciation and reading fluency!
           </DialogDescription>
-        </DialogHeader>
+        </div>
         
-        <div className="py-4">
+        <div className="bg-white/70 rounded-lg p-6 mb-6 border border-purple-100 backdrop-blur-sm">
+          <h3 className="text-xl font-semibold text-purple-800 mb-4 text-center">
+            Let's personalize your experience
+          </h3>
+          <p className="text-gray-700 mb-4 text-center">
+            Choose your starting difficulty level. Don't worry - you can always adjust it later!
+          </p>
+          
           <DifficultySlider />
           
-          <div className="mt-6 text-sm text-gray-600">
-            <p>
-              Setting the appropriate difficulty level helps us provide:
-            </p>
-            <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li>More relevant practice material</li>
-              <li>Better customized challenges</li>
-              <li>Appropriate progression for your skill level</li>
+          <div className="mt-6 bg-gradient-to-r from-blue-100 to-purple-100 rounded-lg p-4">
+            <h4 className="font-semibold text-purple-800 mb-2 flex items-center">
+              <span className="mr-2">✨</span>
+              What you'll get:
+            </h4>
+            <ul className="space-y-2 text-sm text-gray-700">
+              <li className="flex items-center">
+                <span className="mr-2 text-green-500">🎯</span>
+                Personalized practice materials
+              </li>
+              <li className="flex items-center">
+                <span className="mr-2 text-blue-500">📈</span>
+                Real-time pronunciation feedback
+              </li>
+              <li className="flex items-center">
+                <span className="mr-2 text-purple-500">🏆</span>
+                Progressive skill building
+              </li>
             </ul>
           </div>
         </div>
         
-        <div className="flex justify-end">
+        <div className="flex justify-center">
           <Button 
             onClick={handleConfirm}
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg transform transition-all duration-200 hover:scale-105"
             disabled={isGenerating}
           >
             {isGenerating ? (
               <>
-                <span className="mr-2">Updating...</span>
-                <RotateCw className="h-4 w-4 animate-spin" />
+                <span className="mr-2">Setting up your experience...</span>
+                <RotateCw className="h-5 w-5 animate-spin" />
               </>
             ) : (
-              "OK"
+              <>
+                <span className="mr-2">🚀</span>
+                Start My Journey!
+              </>
             )}
           </Button>
         </div>

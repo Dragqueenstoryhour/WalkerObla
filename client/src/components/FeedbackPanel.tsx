@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Volume2, Share2, BookmarkIcon, Snail } from 'lucide-react';
+import { Volume2, Share2, BookmarkIcon, Snail, Check } from 'lucide-react';
 import { useReading } from '@/contexts/ReadingContext';
 import { PronunciationIssue, SuggestedExercise } from '@/lib/types';
 import { synthesizeSpeech } from '@/lib/azure';
@@ -37,6 +37,7 @@ const FeedbackPanel = () => {
   const [wordAssessmentResult, setWordAssessmentResult] = useState<any>(null);
   const [isProcessingWord, setIsProcessingWord] = useState(false);
   const [isSlowMode, setIsSlowMode] = useState(false);
+  const [savedWords, setSavedWords] = useState<Set<string>>(new Set());
 
   // Refs for media recording
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -481,27 +482,30 @@ const FeedbackPanel = () => {
                               });
                               
                               if (response.ok) {
-                                toast({
-                                  title: "Word Saved",
-                                  description: `"${issue.word}" has been added to your saved words.`,
-                                });
+                                setSavedWords(prev => new Set(Array.from(prev).concat([issue.word])));
                               } else {
                                 throw new Error('Failed to save word');
                               }
                             } catch (error) {
-                              toast({
-                                title: "Error",
-                                description: "Failed to save word. Please try again.",
-                                variant: "destructive"
-                              });
+                              console.error('Error saving word:', error);
                             }
                           }}
                           size="sm"
-                          variant="outline"
-                          className="h-8 px-3"
+                          variant={savedWords.has(issue.word) ? "default" : "outline"}
+                          className={`h-8 px-3 ${savedWords.has(issue.word) ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+                          disabled={savedWords.has(issue.word)}
                         >
-                          <BookmarkIcon className="w-3 h-3 mr-1" />
-                          Save
+                          {savedWords.has(issue.word) ? (
+                            <>
+                              <Check className="w-3 h-3 mr-1" />
+                              Saved
+                            </>
+                          ) : (
+                            <>
+                              <BookmarkIcon className="w-3 h-3 mr-1" />
+                              Save
+                            </>
+                          )}
                         </Button>
                       </div>
                     </div>

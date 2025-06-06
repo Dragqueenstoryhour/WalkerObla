@@ -180,7 +180,7 @@ export default function MyWords() {
       setShuffledPhrases([]);
       setCurrentIndex(0);
     }
-  }, [phrases]);
+  }, [phrases.length]);
 
   // Handle unauthorized errors
   useEffect(() => {
