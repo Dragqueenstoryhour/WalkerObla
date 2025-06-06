@@ -8,12 +8,14 @@ import { PronunciationAssessmentResult } from '@/lib/types';
 
 interface SimpleRecorderProps {
   referenceText: string;
+  contentId?: number;
   onTranscriptReceived?: (transcript: string) => void;
   onAssessmentReceived?: (assessment: PronunciationAssessmentResult) => void;
 }
 
 export function SimpleRecorder({
   referenceText,
+  contentId,
   onTranscriptReceived,
   onAssessmentReceived
 }: SimpleRecorderProps) {
@@ -132,6 +134,12 @@ export function SimpleRecorder({
     setIsProcessing(true);
 
     try {
+      // Validate reference text
+      if (!referenceText || referenceText.trim() === '') {
+        console.error('Invalid reference text:', referenceText);
+        throw new Error('No text available for assessment');
+      }
+
       console.log(`Processing recording with text: "${referenceText}"`);
 
       toast({
@@ -142,7 +150,12 @@ export function SimpleRecorder({
       // Send to Azure Speech for assessment using the same pattern as phrases
       const formData = new FormData();
       formData.append("audio", audioBlob);
-      formData.append("text", referenceText);
+      formData.append("text", referenceText.trim());
+      formData.append("itemType", "reading");
+      formData.append("source", "reader");
+      if (contentId) {
+        formData.append("contentId", contentId.toString());
+      }
 
       const response = await fetch("/api/pronunciation/assess", {
         method: "POST",

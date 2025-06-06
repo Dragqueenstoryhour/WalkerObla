@@ -7,6 +7,7 @@ import { PronunciationAssessmentResult } from '@/lib/types';
 
 interface PracticeSpeakingCardProps {
   text: string;
+  contentId?: number;
   onAssessmentReceived?: (assessment: PronunciationAssessmentResult) => void;
 }
 
@@ -21,13 +22,23 @@ interface ProcessedPhrase {
   status: "idle" | "recording" | "assessing" | "complete";
 }
 
-export default function PracticeSpeakingCard({ text, onAssessmentReceived }: PracticeSpeakingCardProps) {
+export default function PracticeSpeakingCard({ text, contentId, onAssessmentReceived }: PracticeSpeakingCardProps) {
   const { toast } = useToast();
   const [phrase, setPhrase] = useState<ProcessedPhrase>({
     id: `practice-${Date.now()}`,
     text,
     status: "idle"
   });
+
+  // Update phrase text when prop changes
+  useEffect(() => {
+    if (text && text.trim() !== '') {
+      setPhrase(prev => ({
+        ...prev,
+        text: text.trim()
+      }));
+    }
+  }, [text]);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingRecording, setIsProcessingRecording] = useState(false);
 
@@ -124,6 +135,14 @@ export default function PracticeSpeakingCard({ text, onAssessmentReceived }: Pra
     setIsProcessingRecording(true);
 
     try {
+      // Validate phrase data
+      if (!phrase || !phrase.text || phrase.text.trim() === '') {
+        console.error('Invalid phrase data:', phrase);
+        throw new Error('No text available for assessment');
+      }
+
+      console.log('Processing reading phrase:', phrase.text);
+
       // Update status to assessing
       setPhrase(prev => ({ ...prev, status: "assessing" }));
 
@@ -138,7 +157,9 @@ export default function PracticeSpeakingCard({ text, onAssessmentReceived }: Pra
       // Send to Azure Speech for assessment
       const formData = new FormData();
       formData.append("audio", audioBlob);
-      formData.append("text", phrase.text);
+      formData.append("text", phrase.text.trim());
+      formData.append("itemType", "reading");
+      formData.append("source", "reader");
 
       const response = await fetch("/api/pronunciation/assess", {
         method: "POST",
