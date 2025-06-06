@@ -276,7 +276,197 @@ function createMockAssessmentResults(referenceText: string): PronunciationAssess
  * Assess pronunciation from audio buffer
  */
 export async function assessPronunciation(audioBuffer: Buffer, referenceText: string): Promise<PronunciationAssessmentResult> {
-  return assessPronunciationDebug(audioBuffer, referenceText);
+  console.log(`🎯 Starting pronunciation assessment for reference text: "${referenceText}"`);
+
+  // Check if Azure key is properly configured
+  if (speechKey === "dummy-key-for-development") {
+    console.error("No Azure Speech key provided. Cannot assess pronunciation.");
+    throw new Error("Azure Speech key is required for pronunciation assessment");
+  }
+
+  let wavFilePath: string | null = null;
+
+  try {
+    // Convert audio to WAV format
+    wavFilePath = await convertAudioToWav(audioBuffer);
+    
+    // Validate reference text length and format
+    if (!referenceText || referenceText.trim().length === 0) {
+      throw new Error("Reference text cannot be empty for pronunciation assessment");
+    }
+    
+    if (referenceText.length > 1000) {
+      console.warn(`⚠️ Reference text exceeds Azure's recommended limit (${referenceText.length} > 1000 chars). Truncating.`);
+    }
+    
+    // Clean and normalize the reference text
+    const cleanedText = referenceText
+      .trim()
+      .replace(/\s+/g, ' ')  // Normalize whitespace
+      .replace(/[^\w\s.,?!'-]/g, '') // Remove special characters that might cause issues
+      .slice(0, 1000);  // Limit length to avoid Azure limits
+    
+    console.log(`🔤 Cleaned reference text: "${cleanedText}" (${cleanedText.length} chars)`);
+    
+    // Log word count for tracking completion
+    const wordCount = cleanedText.split(/\s+/).length;
+    console.log(`📊 Reference text contains ${wordCount} words`);
+
+    return new Promise((resolve, reject) => {
+      try {
+        // Initialize speech configuration
+        const speechConfig = sdk.SpeechConfig.fromSubscription(speechKey, speechRegion);
+        speechConfig.speechRecognitionLanguage = "en-US";
+        
+        // Create pronunciation assessment configuration
+        const pronunciationAssessmentConfig = new sdk.PronunciationAssessmentConfig(
+          cleanedText,
+          sdk.PronunciationAssessmentGradingSystem.HundredMark,
+          sdk.PronunciationAssessmentGranularity.Phoneme,
+          true // enableMiscue
+        );
+
+        // Read WAV file data
+        const wavFileData = fs.readFileSync(wavFilePath!);
+        
+        // Create audio configuration from the WAV file buffer
+        const audioConfig = sdk.AudioConfig.fromWavFileInput(wavFileData);
+        
+        // Create speech recognizer
+        const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
+        
+        // Apply pronunciation assessment configuration
+        pronunciationAssessmentConfig.applyTo(recognizer);
+        
+        console.log(`📝 SESSION STARTED`);
+        
+        // Perform recognition
+        recognizer.recognizeOnceAsync(
+          (result) => {
+            console.log(`🛑 SESSION STOPPED`);
+            recognizer.close();
+            
+            // Clean up the temporary file
+            try {
+              if (wavFilePath && fs.existsSync(wavFilePath)) {
+                fs.unlinkSync(wavFilePath);
+              }
+            } catch (cleanupError) {
+              console.error("Error cleaning up temporary file:", cleanupError);
+            }
+            
+            try {
+              if (result.reason === sdk.ResultReason.RecognizedSpeech) {
+                console.log(`✅ RECOGNIZED: ${result.text}`);
+                
+                // Get pronunciation assessment result
+                const pronunciationResult = sdk.PronunciationAssessmentResult.fromResult(result);
+                
+                // Get detailed JSON response
+                const jsonResponse = result.properties.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult);
+                console.log("Raw JSON Response:", jsonResponse);
+                
+                let jsonResult: any = {};
+                try {
+                  jsonResult = JSON.parse(jsonResponse);
+                } catch (parseError) {
+                  console.warn("Could not parse JSON response:", parseError);
+                }
+                
+                // Extract word-level results
+                const wordLevelResults: any[] = [];
+                if (jsonResult.NBest && jsonResult.NBest[0] && jsonResult.NBest[0].Words) {
+                  jsonResult.NBest[0].Words.forEach((wordData: any) => {
+                    wordLevelResults.push({
+                      word: wordData.Word,
+                      accuracyScore: wordData.PronunciationAssessment?.AccuracyScore || 0,
+                      errorType: wordData.PronunciationAssessment?.ErrorType || "None",
+                      offset: wordData.Offset || 0,
+                      duration: wordData.Duration || 0,
+                      phonemes: [] // Keep empty for now to avoid complexity
+                    });
+                  });
+                }
+                
+                console.log(`🔍 Processing ${wordLevelResults.length} words from Azure response`);
+                
+                // Build final assessment result
+                const finalResult: PronunciationAssessmentResult = {
+                  pronunciationScore: pronunciationResult.pronunciationScore,
+                  fluencyScore: pronunciationResult.fluencyScore,
+                  completenessScore: pronunciationResult.completenessScore,
+                  accuracyScore: pronunciationResult.accuracyScore,
+                  prosodyScore: pronunciationResult.prosodyScore,
+                  wordLevelResults,
+                  sdkVersion: "production",
+                  rawJson: jsonResult
+                };
+                
+                console.log(`📊 Assessment results summary:`);
+                console.log(`  - Pronunciation Score: ${finalResult.pronunciationScore}`);
+                console.log(`  - Fluency Score: ${finalResult.fluencyScore}`);
+                console.log(`  - Completeness Score: ${finalResult.completenessScore}`);
+                console.log(`  - Accuracy Score: ${finalResult.accuracyScore}`);
+                console.log(`  - Prosody Score: ${finalResult.prosodyScore || 'N/A'}`);
+                console.log(`  - Words with timing data: ${wordLevelResults.length}/${wordCount}`);
+                
+                resolve(finalResult);
+                
+              } else if (result.reason === sdk.ResultReason.NoMatch) {
+                console.log(`⚠️ No speech could be recognized from audio`);
+                reject(new Error("No speech could be recognized from the audio"));
+              } else if (result.reason === sdk.ResultReason.Canceled) {
+                const cancellation = sdk.CancellationDetails.fromResult(result);
+                console.error(`🚫 Recognition canceled: ${cancellation.reason}`);
+                if (cancellation.reason === sdk.CancellationReason.Error) {
+                  console.error(`Error details: ${cancellation.errorDetails}`);
+                  reject(new Error(`Azure Speech recognition error: ${cancellation.errorDetails}`));
+                } else {
+                  reject(new Error(`Recognition canceled: ${cancellation.reason}`));
+                }
+              } else {
+                reject(new Error(`Unexpected recognition result: ${result.reason}`));
+              }
+            } catch (processingError: any) {
+              console.error("Error processing recognition result:", processingError);
+              reject(new Error(`Failed to process recognition result: ${processingError?.message || "Unknown error"}`));
+            }
+          },
+          (error) => {
+            console.error("Error during speech recognition:", error);
+            recognizer.close();
+            
+            // Clean up the temporary file
+            try {
+              if (wavFilePath && fs.existsSync(wavFilePath)) {
+                fs.unlinkSync(wavFilePath);
+              }
+            } catch (cleanupError) {
+              console.error("Error cleaning up temporary file:", cleanupError);
+            }
+            
+            reject(error);
+          }
+        );
+      } catch (setupError: any) {
+        console.error("Error setting up Azure Speech recognition:", setupError);
+        reject(new Error(`Failed to set up Azure Speech recognition: ${setupError?.message || "Unknown error"}`));
+      }
+    });
+    
+  } catch (conversionError: any) {
+    console.error("Failed to convert audio for Azure:", conversionError);
+    throw new Error(`Failed to convert audio for Azure Speech assessment: ${conversionError?.message || "Unknown error"}`);
+  } finally {
+    // Final cleanup to be sure
+    if (wavFilePath && fs.existsSync(wavFilePath)) {
+      try {
+        fs.unlinkSync(wavFilePath);
+      } catch (cleanupError) {
+        console.error("Error in final cleanup:", cleanupError);
+      }
+    }
+  }
 }
 
 /**

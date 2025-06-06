@@ -326,6 +326,14 @@ export default function Phrases() {
     try {
       const phrase = processedPhrases[phraseIndex];
 
+      // Validate phrase data
+      if (!phrase || !phrase.text || phrase.text.trim() === '') {
+        console.error('Invalid phrase data:', phrase);
+        throw new Error('No phrase text available for assessment');
+      }
+
+      console.log('Processing phrase:', phrase.text);
+
       // Update status to assessing
       setProcessedPhrases((phrases) =>
         phrases.map((p, idx) =>
@@ -333,15 +341,15 @@ export default function Phrases() {
         ),
       );
 
-
-
       // Create a URL for the recording
       const recordingUrl = URL.createObjectURL(audioBlob);
 
       // Send to Azure Speech for assessment
       const formData = new FormData();
       formData.append("audio", audioBlob);
-      formData.append("text", phrase.text);
+      formData.append("text", phrase.text.trim());
+      formData.append("itemType", "phrase");
+      formData.append("source", "phrases");
 
       const response = await fetch("/api/pronunciation/assess", {
         method: "POST",

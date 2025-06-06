@@ -200,19 +200,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Assessment endpoints
-  app.post('/api/assess', isAuthenticated, upload.single('audio'), async (req: any, res) => {
+  // Unified pronunciation assessment endpoint
+  app.post('/api/pronunciation/assess', upload.single('audio'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No audio file provided' });
       }
 
-      const { referenceText, difficulty, source, itemType } = req.body;
+      // Support both 'text' and 'referenceText' parameter names for backward compatibility
+      const referenceText = req.body.text || req.body.referenceText;
+      const { contentId, difficulty, source, itemType } = req.body;
+
+      if (!referenceText) {
+        return res.status(400).json({ error: 'Reference text is required' });
+      }
+
+      console.log(`🎯 Starting unified pronunciation assessment for text: "${referenceText}"`);
+      console.log(`📊 Request details - contentId: ${contentId}, difficulty: ${difficulty}, source: ${source}, itemType: ${itemType}`);
+
+      const audioBuffer = req.file.buffer;
+      const assessment = await assessPronunciation(audioBuffer, referenceText);
+
+      // If user is authenticated, record the activity
+      if (req.user && (req.user as any).claims?.sub) {
+        const userId = (req.user as any).claims.sub;
+        
+        // Determine activity type based on context
+        let activityType = 'reading_practice'; // default
+        if (itemType === 'word') {
+          activityType = 'word_practice';
+        } else if (itemType === 'phrase') {
+          activityType = 'phrase_practice';
+        } else if (contentId) {
+          activityType = 'reading_practice';
+        }
+
+        const activityData = {
+          userId,
+          activityType,
+          itemPracticed: referenceText,
+          score: assessment.pronunciationScore,
+          accuracy: assessment.accuracyScore,
+          fluency: assessment.fluencyScore,
+          completeness: assessment.completenessScore,
+          difficulty: difficulty || 'medium',
+          source: source || (contentId ? 'reading' : 'practice'),
+          metadata: { 
+            ...(contentId && { contentId }),
+            wordLevelResults: assessment.wordLevelResults,
+            sdkVersion: assessment.sdkVersion 
+          }
+        };
+
+        console.log(`📝 Recording activity for user ${userId}: ${activityType}`);
+        await storage.recordActivity(activityData);
+      } else {
+        console.log(`👤 Anonymous user - assessment completed without recording activity`);
+      }
+
+      console.log(`✅ Assessment completed successfully - Score: ${assessment.pronunciationScore}%`);
+      res.json(assessment);
+      
+    } catch (error) {
+      console.error('Pronunciation assessment error:', error);
+      res.status(500).json({ 
+        error: 'Pronunciation assessment failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Legacy endpoint for backward compatibility (Words/Phrases pages)
+  app.post('/api/assess', isAuthenticated, upload.single('audio'), async (req: any, res) => {
+    console.log('⚠️ Using legacy /api/assess endpoint - redirecting to unified assessment');
+    
+    // Forward to the unified endpoint with proper parameter mapping
+    req.body.text = req.body.referenceText;
+    
+    // Call the unified handler
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No audio file provided' });
+      }
+
+      const referenceText = req.body.referenceText;
+      const { difficulty, source, itemType } = req.body;
       const userId = req.user.claims.sub;
 
       if (!referenceText) {
         return res.status(400).json({ error: 'Reference text is required' });
       }
+
+      console.log(`🎯 Legacy assessment for text: "${referenceText}"`);
 
       const audioBuffer = req.file.buffer;
       const assessment = await assessPronunciation(audioBuffer, referenceText);
@@ -236,56 +315,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(assessment);
     } catch (error) {
-      console.error('Assessment error:', error);
+      console.error('Legacy assessment error:', error);
       res.status(500).json({ 
         error: 'Assessment failed',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
-
-  // Pronunciation assessment endpoint (for reading content)
-  app.post('/api/pronunciation/assess', upload.single('audio'), async (req, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ error: 'No audio file provided' });
-      }
-
-      const { text, contentId } = req.body;
-
-      if (!text) {
-        return res.status(400).json({ error: 'Reference text is required' });
-      }
-
-      const audioBuffer = req.file.buffer;
-      const assessment = await assessPronunciation(audioBuffer, text);
-
-      // If user is authenticated, record the activity
-      if (req.user && (req.user as any).claims?.sub) {
-        const userId = (req.user as any).claims.sub;
-        await storage.recordActivity({
-          userId,
-          activityType: 'reading_practice',
-          itemPracticed: text,
-          score: assessment.pronunciationScore,
-          accuracy: assessment.accuracyScore,
-          fluency: assessment.fluencyScore,
-          completeness: assessment.completenessScore,
-          difficulty: 'medium',
-          source: 'reading',
-          metadata: { 
-            contentId: contentId,
-            wordLevelResults: assessment.wordLevelResults,
-            sdkVersion: assessment.sdkVersion 
-          }
-        });
-      }
-
-      res.json(assessment);
-    } catch (error) {
-      console.error('Pronunciation assessment error:', error);
-      res.status(500).json({ 
-        error: 'Pronunciation assessment failed',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
