@@ -288,11 +288,22 @@ export default function MyWords() {
   };
 
   const handleAddToGroup = () => {
-    if (selectedPhrase && selectedGroupId) {
-      addToGroupMutation.mutate({
-        groupId: parseInt(selectedGroupId),
-        phraseId: selectedPhrase.id,
-      });
+    if (selectedPhrase && selectedGroupId && selectedPhrase.id) {
+      const groupId = parseInt(selectedGroupId);
+      const phraseId = parseInt(selectedPhrase.id.toString());
+      
+      if (!isNaN(groupId) && !isNaN(phraseId)) {
+        addToGroupMutation.mutate({
+          groupId,
+          phraseId,
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Invalid group or phrase selection.',
+          variant: 'destructive',
+        });
+      }
     }
   };
 
@@ -319,7 +330,7 @@ export default function MyWords() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">My Words</h1>
+            <h1 className="text-3xl font-bold text-purple-800">My Words</h1>
             <p className="text-muted-foreground">
               {shuffledPhrases.length === 0 
                 ? 'No saved words yet' 
@@ -328,7 +339,10 @@ export default function MyWords() {
             </p>
           </div>
           {shuffledPhrases.length > 0 && (
-            <Button onClick={handleShuffle} variant="outline" size="sm">
+            <Button 
+              onClick={handleShuffle} 
+              className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white shadow-lg transform transition-all duration-200 hover:scale-105"
+            >
               <Shuffle className="h-4 w-4 mr-2" />
               Shuffle
             </Button>
@@ -338,21 +352,37 @@ export default function MyWords() {
         {/* Practice Groups */}
         {groups.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4">Practice Groups</h2>
+            <h2 className="text-xl font-semibold mb-4 text-purple-800">Practice Groups</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {groups.map((group) => (
-                <Card key={group.id}>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2">
+              {groups.map((group, index) => (
+                <Card key={group.id} className={`bg-gradient-to-br ${
+                  index % 3 === 0 ? 'from-purple-50 to-pink-50 border-purple-200' :
+                  index % 3 === 1 ? 'from-blue-50 to-indigo-50 border-blue-200' :
+                  'from-green-50 to-teal-50 border-green-200'
+                } shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105`}>
+                  <CardHeader className={`pb-3 ${
+                    index % 3 === 0 ? 'bg-gradient-to-r from-purple-100 to-pink-100' :
+                    index % 3 === 1 ? 'bg-gradient-to-r from-blue-100 to-indigo-100' :
+                    'bg-gradient-to-r from-green-100 to-teal-100'
+                  } rounded-t-lg`}>
+                    <CardTitle className={`text-lg flex items-center gap-2 ${
+                      index % 3 === 0 ? 'text-purple-800' :
+                      index % 3 === 1 ? 'text-blue-800' :
+                      'text-green-800'
+                    }`}>
                       <Folder className="h-4 w-4" />
                       {group.name}
                     </CardTitle>
                     {group.description && (
-                      <CardDescription>{group.description}</CardDescription>
+                      <CardDescription className="text-gray-600">{group.description}</CardDescription>
                     )}
                   </CardHeader>
-                  <CardContent>
-                    <Badge variant="secondary">
+                  <CardContent className="bg-white/50">
+                    <Badge className={`${
+                      index % 3 === 0 ? 'bg-purple-100 text-purple-700 border-purple-300' :
+                      index % 3 === 1 ? 'bg-blue-100 text-blue-700 border-blue-300' :
+                      'bg-green-100 text-green-700 border-green-300'
+                    }`} variant="outline">
                       {group.phraseCount} word{group.phraseCount === 1 ? '' : 's'}
                     </Badge>
                   </CardContent>
@@ -473,65 +503,67 @@ export default function MyWords() {
 
         {/* Action Buttons */}
         <div className="text-center space-y-4">
-          <Button 
-            onClick={() => {
-              const shuffled = [...phrases].sort(() => Math.random() - 0.5);
-              setShuffledPhrases(shuffled);
-              setCurrentIndex(0);
-            }}
-            className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white px-6 py-3 rounded-full shadow-lg transform transition-all duration-200 hover:scale-105"
-          >
-            <Shuffle className="h-5 w-5 mr-2" />
-            Shuffle Words
-          </Button>
-          
-          <Dialog open={showCreateGroupDialog} onOpenChange={setShowCreateGroupDialog}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="bg-gradient-to-r from-green-100 to-blue-100 hover:from-green-200 hover:to-blue-200 border-green-300 text-green-700 hover:text-green-800">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Practice Group
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create Practice Group</DialogTitle>
-                <DialogDescription>
-                  Create a new group to organize your practice words and phrases.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="group-name">Group Name</Label>
-                  <Input
-                    id="group-name"
-                    value={newGroupName}
-                    onChange={(e) => setNewGroupName(e.target.value)}
-                    placeholder="Enter group name"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="group-description">Description (optional)</Label>
-                  <Textarea
-                    id="group-description"
-                    value={newGroupDescription}
-                    onChange={(e) => setNewGroupDescription(e.target.value)}
-                    placeholder="Enter group description"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowCreateGroupDialog(false)}>
-                  Cancel
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button 
+              onClick={() => {
+                const shuffled = [...phrases].sort(() => Math.random() - 0.5);
+                setShuffledPhrases(shuffled);
+                setCurrentIndex(0);
+              }}
+              className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white px-6 py-3 rounded-full shadow-lg transform transition-all duration-200 hover:scale-105"
+            >
+              <Shuffle className="h-5 w-5 mr-2" />
+              Shuffle Words
+            </Button>
+            
+            <Dialog open={showCreateGroupDialog} onOpenChange={setShowCreateGroupDialog}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="bg-gradient-to-r from-green-100 to-blue-100 hover:from-green-200 hover:to-blue-200 border-green-300 text-green-700 hover:text-green-800 px-6 py-3 rounded-full shadow-lg transform transition-all duration-200 hover:scale-105">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Practice Group
                 </Button>
-                <Button
-                  onClick={handleCreateGroup}
-                  disabled={!newGroupName.trim() || createGroupMutation.isPending}
-                >
-                  Create Group
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create Practice Group</DialogTitle>
+                  <DialogDescription>
+                    Create a new group to organize your practice words and phrases.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="group-name">Group Name</Label>
+                    <Input
+                      id="group-name"
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                      placeholder="Enter group name"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="group-description">Description (optional)</Label>
+                    <Textarea
+                      id="group-description"
+                      value={newGroupDescription}
+                      onChange={(e) => setNewGroupDescription(e.target.value)}
+                      placeholder="Enter group description"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowCreateGroupDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleCreateGroup}
+                    disabled={!newGroupName.trim() || createGroupMutation.isPending}
+                  >
+                    Create Group
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </div>
 
