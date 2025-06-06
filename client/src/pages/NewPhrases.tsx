@@ -54,7 +54,7 @@ import {
 } from "lucide-react";
 import { useDifficulty } from "@/contexts/DifficultyContext";
 import { DifficultyDropdown } from "@/components/difficulty/SimplifiedDifficultySelector";
-import { Turtle } from "lucide-react";
+import { Snail } from "lucide-react";
 import useEmblaCarousel from 'embla-carousel-react';
 
 interface ProcessedPhrase {
@@ -2384,7 +2384,7 @@ I'd like to schedule an appointment."
                                   }}
                                   title="Play at half speed"
                                 >
-                                  <Turtle className="h-4 w-4 mr-1" />
+                                  <Snail className="h-4 w-4 mr-1" />
                                   Slow
                                 </Button>
                               </div>
@@ -2521,7 +2521,7 @@ I'd like to schedule an appointment."
                                 speechSynthesis.speak(utterance);
                               }}
                             >
-                              <Turtle className="h-4 w-4 mr-1" />
+                              <Snail className="h-4 w-4 mr-1" />
                               Slow
                             </Button>
                             <Button

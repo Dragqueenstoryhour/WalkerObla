@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Volume2, Share2, BookmarkIcon } from 'lucide-react';
+import { Volume2, Share2, BookmarkIcon, Snail } from 'lucide-react';
 import { useReading } from '@/contexts/ReadingContext';
 import { PronunciationIssue, SuggestedExercise } from '@/lib/types';
 import { synthesizeSpeech } from '@/lib/azure';
@@ -464,7 +464,7 @@ const FeedbackPanel = () => {
                               isSlowMode ? 'translate-x-6' : 'translate-x-1'
                             }`}
                           >
-                            <Turtle className="w-2 h-2 text-gray-600" />
+                            <Snail className="w-2 h-2 text-gray-600" />
                           </span>
                         </button>
                         
