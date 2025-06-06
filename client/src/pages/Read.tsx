@@ -119,6 +119,7 @@ const Read = () => {
                 {currentContent && (
                   <PracticeSpeakingCard
                     text={referenceText}
+                    contentId={currentContent.id}
                     onAssessmentReceived={handleAssessmentReceived}
                   />
                 )}

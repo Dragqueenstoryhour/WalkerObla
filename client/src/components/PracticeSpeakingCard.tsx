@@ -160,6 +160,9 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
       formData.append("text", phrase.text.trim());
       formData.append("itemType", "reading");
       formData.append("source", "reader");
+      if (contentId) {
+        formData.append("contentId", contentId.toString());
+      }
 
       const response = await fetch("/api/pronunciation/assess", {
         method: "POST",
