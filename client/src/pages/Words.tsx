@@ -42,7 +42,7 @@ import {
   ChevronRight,
   ChevronLeft,
   ArrowRight,
-  Turtle,
+  Snail,
   Flag,
 } from "lucide-react";
 import { useDifficulty } from "@/contexts/DifficultyContext";
@@ -878,7 +878,7 @@ export default function Words() {
                               slowPlaybackWords[word.id] ? 'translate-x-8' : 'translate-x-1'
                             }`}
                           >
-                            <Turtle className="w-3 h-3 text-gray-600" />
+                            <Snail className="w-3 h-3 text-gray-600" />
                           </span>
                         </button>
                       </div>
