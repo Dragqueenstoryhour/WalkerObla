@@ -482,7 +482,11 @@ const FeedbackPanel = () => {
                               });
                               
                               if (response.ok) {
-                                setSavedWords(prev => new Set(Array.from(prev).concat([issue.word])));
+                                setSavedWords(prev => {
+                                  const newSet = new Set(prev);
+                                  newSet.add(issue.word);
+                                  return newSet;
+                                });
                               } else {
                                 throw new Error('Failed to save word');
                               }

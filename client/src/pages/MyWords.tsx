@@ -364,19 +364,22 @@ export default function MyWords() {
 
         {/* Practice Words Section */}
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Practice Words and Phrases</h2>
+          <h2 className="text-xl font-semibold mb-4 text-purple-800">Practice Words and Phrases</h2>
           
           {shuffledPhrases.length === 0 ? (
-            <Card>
+            <Card className="bg-gradient-to-br from-blue-50 to-purple-50 border-purple-200">
               <CardContent className="text-center py-12">
-                <p className="text-muted-foreground mb-4">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center">
+                  <span className="text-2xl">📚</span>
+                </div>
+                <p className="text-gray-600 mb-4">
                   You haven't saved any words yet. Save words during practice sessions to see them here!
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <Card>
-              <CardHeader>
+            <Card className="bg-gradient-to-br from-green-50 to-blue-50 border-green-200 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-green-100 to-blue-100 rounded-t-lg">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <Button
@@ -384,11 +387,12 @@ export default function MyWords() {
                       size="sm"
                       onClick={handlePrevious}
                       disabled={currentIndex === 0}
+                      className="bg-white/80 hover:bg-white border-green-300 text-green-700 hover:text-green-800"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                     
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-sm font-medium text-green-700">
                       {currentIndex + 1} of {shuffledPhrases.length}
                     </span>
                     
@@ -397,6 +401,7 @@ export default function MyWords() {
                       size="sm"
                       onClick={handleNext}
                       disabled={currentIndex === shuffledPhrases.length - 1}
+                      className="bg-white/80 hover:bg-white border-green-300 text-green-700 hover:text-green-800"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
@@ -406,19 +411,19 @@ export default function MyWords() {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDeleteClick(currentPhrase)}
-                    className="text-destructive hover:text-destructive"
+                    className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200"
                   >
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
               </CardHeader>
               
-              <CardContent className="text-center py-8">
+              <CardContent className="text-center py-8 bg-white/50">
                 <div className="space-y-4">
-                  <h3 className="text-2xl font-bold">{currentPhrase.phrase}</h3>
+                  <h3 className="text-2xl font-bold text-purple-800">{currentPhrase.phrase}</h3>
                   
                   {currentPhrase.phonetic && (
-                    <p className="text-lg text-muted-foreground font-mono">
+                    <p className="text-lg text-blue-600 font-mono bg-blue-50 px-3 py-1 rounded-full inline-block">
                       [{currentPhrase.phonetic}]
                     </p>
                   )}
@@ -428,6 +433,7 @@ export default function MyWords() {
                       onClick={() => handlePlayAudio(currentPhrase.phrase)}
                       variant="outline"
                       size="sm"
+                      className="bg-gradient-to-r from-green-100 to-blue-100 hover:from-green-200 hover:to-blue-200 border-green-300 text-green-700 hover:text-green-800"
                     >
                       {isPlaying ? (
                         <Pause className="h-4 w-4 mr-2" />
@@ -441,20 +447,21 @@ export default function MyWords() {
                       onClick={() => handleAddToGroupClick(currentPhrase)}
                       variant="outline"
                       size="sm"
+                      className="bg-gradient-to-r from-purple-100 to-pink-100 hover:from-purple-200 hover:to-pink-200 border-purple-300 text-purple-700 hover:text-purple-800"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Add to Group
                     </Button>
                   </div>
                   
-                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center justify-center gap-2 text-sm">
                     {currentPhrase.difficulty && (
-                      <Badge variant="outline">{currentPhrase.difficulty}</Badge>
+                      <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">{currentPhrase.difficulty}</Badge>
                     )}
                     {currentPhrase.source && (
-                      <Badge variant="outline">{currentPhrase.source}</Badge>
+                      <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">{currentPhrase.source}</Badge>
                     )}
-                    <span>
+                    <span className="text-gray-600">
                       Saved {new Date(currentPhrase.createdAt).toLocaleDateString()}
                     </span>
                   </div>
@@ -464,11 +471,23 @@ export default function MyWords() {
           )}
         </div>
 
-        {/* Create Group Button */}
-        <div className="text-center">
+        {/* Action Buttons */}
+        <div className="text-center space-y-4">
+          <Button 
+            onClick={() => {
+              const shuffled = [...phrases].sort(() => Math.random() - 0.5);
+              setShuffledPhrases(shuffled);
+              setCurrentIndex(0);
+            }}
+            className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white px-6 py-3 rounded-full shadow-lg transform transition-all duration-200 hover:scale-105"
+          >
+            <Shuffle className="h-5 w-5 mr-2" />
+            Shuffle Words
+          </Button>
+          
           <Dialog open={showCreateGroupDialog} onOpenChange={setShowCreateGroupDialog}>
             <DialogTrigger asChild>
-              <Button variant="outline">
+              <Button variant="outline" className="bg-gradient-to-r from-green-100 to-blue-100 hover:from-green-200 hover:to-blue-200 border-green-300 text-green-700 hover:text-green-800">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Practice Group
               </Button>
