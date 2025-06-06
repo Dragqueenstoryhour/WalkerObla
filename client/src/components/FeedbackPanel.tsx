@@ -421,7 +421,6 @@ const FeedbackPanel = () => {
                   <CardContent className="p-4">
                     <div className="text-center">
                       <h4 className="text-lg font-semibold mb-2">{issue.word}</h4>
-                      <p className="text-sm text-muted-foreground mb-3">{issue.phonetic}</p>
                       
                       {/* Score display */}
                       <div className="mb-3">
@@ -434,7 +433,7 @@ const FeedbackPanel = () => {
                       </div>
                       
                       {/* Controls */}
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-center gap-2 mb-3">
                         <Button 
                           onClick={(e) => {
                             e.stopPropagation();
@@ -467,8 +466,43 @@ const FeedbackPanel = () => {
                             <Snail className="w-2 h-2 text-gray-600" />
                           </span>
                         </button>
-                        
+                      </div>
 
+                      {/* Save Button */}
+                      <div className="flex justify-center">
+                        <Button 
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              const response = await fetch('/api/saved-words', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ word: issue.word })
+                              });
+                              
+                              if (response.ok) {
+                                toast({
+                                  title: "Word Saved",
+                                  description: `"${issue.word}" has been added to your saved words.`,
+                                });
+                              } else {
+                                throw new Error('Failed to save word');
+                              }
+                            } catch (error) {
+                              toast({
+                                title: "Error",
+                                description: "Failed to save word. Please try again.",
+                                variant: "destructive"
+                              });
+                            }
+                          }}
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-3"
+                        >
+                          <BookmarkIcon className="w-3 h-3 mr-1" />
+                          Save
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
