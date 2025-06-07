@@ -9,6 +9,7 @@ export interface ReadingContent {
   readingTime: number;
   difficulty: 'easy' | 'medium' | 'hard';
   createdAt: string;
+  topic?: string;
 }
 
 export interface ReadingSession {
