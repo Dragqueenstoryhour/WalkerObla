@@ -439,13 +439,71 @@ export default function Phrases() {
   };
 
   // Handle text-to-speech
-  const handleTextToSpeech = (phraseIndex: number) => {
+  const handleTextToSpeech = async (phraseIndex: number) => {
     const phrase = processedPhrases[phraseIndex];
     if (!phrase) return;
 
-    const utterance = new SpeechSynthesisUtterance(phrase.text);
-    utterance.rate = slowPlaybackPhrases[phrase.id] ? 0.6 : 1;
-    speechSynthesis.speak(utterance);
+    try {
+      const response = await fetch("/api/tts/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text: phrase.text,
+          voice: "en-US-JennyNeural",
+          speed: slowPlaybackPhrases[phrase.id] ? 0.5 : 1.0,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate speech");
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+
+      audioRef.current = new Audio(audioUrl);
+      audioRef.current.oncanplaythrough = () => {
+        audioRef.current?.play().then(() => {
+          toast({
+            title: slowPlaybackPhrases[phrase.id] ? "Playing Slowly" : "Playing",
+            description: `Playing: "${phrase.text}"`,
+          });
+        }).catch(error => {
+          toast({
+            title: "Playback Error",
+            description: "Could not play the audio. Please try again.",
+            variant: "destructive",
+          });
+        });
+      };
+
+      audioRef.current.onerror = () => {
+        URL.revokeObjectURL(audioUrl);
+        toast({
+          title: "Playback Error",
+          description: "Could not play the audio. Please try again.",
+          variant: "destructive",
+        });
+      };
+
+      audioRef.current.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+      };
+    } catch (error) {
+      console.error("Error with text-to-speech:", error);
+      toast({
+        title: "Speech Error",
+        description: "Could not generate speech. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Play back user's recording
