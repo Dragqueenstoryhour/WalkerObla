@@ -644,18 +644,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Text is required' });
       }
 
-      // Import Azure SDK at runtime to avoid startup issues
-      const sdk = require('microsoft-cognitiveservices-speech-sdk');
-
-      // Create speech config
-      const speechConfig = sdk.SpeechConfig.fromSubscription(
-        process.env.AZURE_SPEECH_KEY!,
-        process.env.AZURE_SPEECH_REGION!
-      );
-
-      speechConfig.speechSynthesisVoiceName = voice;
-
-      // Create SSML with speed control
+      // Use existing synthesizeSpeech function with speed control
       const ssml = `
         <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
           <voice name="${voice}">
@@ -666,36 +655,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         </speak>
       `;
 
-      // Create synthesizer
-      const synthesizer = new sdk.SpeechSynthesizer(speechConfig);
+      const audioBuffer = await synthesizeSpeech(ssml, voice);
 
-      return new Promise((resolve, reject) => {
-        synthesizer.speakSsmlAsync(
-          ssml,
-          (result: any) => {
-            if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
-              const audioData = result.audioData;
-              res.set({
-                'Content-Type': 'audio/wav',
-                'Content-Length': audioData.byteLength,
-              });
-              res.send(Buffer.from(audioData));
-              resolve(result);
-            } else {
-              console.error('Speech synthesis failed:', result.errorDetails);
-              res.status(500).json({ error: 'Speech synthesis failed' });
-              reject(new Error(result.errorDetails));
-            }
-            synthesizer.close();
-          },
-          (error: any) => {
-            console.error('Speech synthesis error:', error);
-            res.status(500).json({ error: 'Speech synthesis error' });
-            synthesizer.close();
-            reject(error);
-          }
-        );
+      res.set({
+        'Content-Type': 'audio/wav',
+        'Content-Length': audioBuffer.length.toString(),
       });
+
+      res.send(audioBuffer);
     } catch (error) {
       console.error('TTS generation error:', error);
       res.status(500).json({ error: 'Failed to generate speech' });

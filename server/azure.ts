@@ -46,19 +46,19 @@ async function convertAudioToWav(audioBuffer: Buffer, tempDir: string = "/tmp", 
   const timestamp = Date.now();
   const inputPath = join(tempDir, `input-${timestamp}.webm`);
   const outputPath = join(tempDir, `output-${timestamp}.wav`);
-  
+
   // Validate input audio buffer
   if (!audioBuffer || audioBuffer.length === 0) {
     throw new Error("Empty or invalid audio buffer provided for conversion");
   }
-  
+
   console.log(`⏳ Converting audio buffer (${audioBuffer.length} bytes) to WAV format...`);
-  
+
   try {
     // Write input buffer to temporary file
     fs.writeFileSync(inputPath, audioBuffer);
     console.log(`✅ Created temporary input file at ${inputPath} (${audioBuffer.length} bytes)`);
-    
+
     // Convert audio format using ffmpeg with optimized settings for Azure pronunciation assessment
     // Configure for 16kHz, mono, 16-bit PCM format with audio normalization
     const ffmpegCommand = `"${ffmpegPath}" -i "${inputPath}" \
@@ -69,24 +69,24 @@ async function convertAudioToWav(audioBuffer: Buffer, tempDir: string = "/tmp", 
       -f wav \
       -y \
       "${outputPath}"`;
-    
+
     console.log(`🔄 Running ffmpeg command to create 16kHz mono PCM WAV:`);
     console.log(ffmpegCommand);
-    
+
     // Execute ffmpeg command
     const conversionOutput = execSync(ffmpegCommand, { encoding: 'utf8' });
-    
+
     // Validate the output file
     if (fs.existsSync(outputPath)) {
       const stats = fs.statSync(outputPath);
-      
+
       // Verify that the file is not empty
       if (stats.size <= 44) { // 44 bytes is the WAV header size
         throw new Error("WAV file created but contains only header (no audio data)");
       }
-      
+
       console.log(`✅ Successfully created WAV file at ${outputPath} (${stats.size} bytes)`);
-      
+
       // Log file details for debugging purposes
       try {
         const fileInfo = execSync(`"${ffmpegPath}" -i "${outputPath}" 2>&1`, { encoding: 'utf8' });
@@ -99,14 +99,14 @@ async function convertAudioToWav(audioBuffer: Buffer, tempDir: string = "/tmp", 
         ).join('\n');
         console.log(`🔍 WAV file details:\n${infoOutput}`);
       }
-      
+
       return outputPath;
     } else {
       throw new Error(`WAV file was not created at ${outputPath}`);
     }
   } catch (error) {
     console.error(`❌ Error during audio conversion: ${error instanceof Error ? error.message : String(error)}`);
-    
+
     // Clean up input file
     if (fs.existsSync(inputPath)) {
       try {
@@ -116,7 +116,7 @@ async function convertAudioToWav(audioBuffer: Buffer, tempDir: string = "/tmp", 
         console.error(`❌ Failed to clean up temporary input file: ${cleanupError}`);
       }
     }
-    
+
     throw new Error(`Failed to convert audio: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
@@ -128,15 +128,15 @@ async function convertAudioToWav(audioBuffer: Buffer, tempDir: string = "/tmp", 
 function createMockAssessmentResults(referenceText: string): PronunciationAssessmentResult {
   // Extract all words from the reference text to use in the mock results
   const words = referenceText.split(/\s+/).filter(w => w.trim().length > 0);
-  
+
   // Track current timestamp for word durations and offsets
   let currentOffset = 0;
-  
+
   // Create word level results for each word in the reference text to match Azure structure
   const wordLevelResults = words.map((word, index) => {
     // Generate realistic scores with more variation
     const accuracyScore = Math.floor(Math.random() * 30) + 70; // Score between 70-99
-    
+
     // Determine error type based on score threshold
     let errorType: string | undefined;
     if (accuracyScore < 75) {
@@ -150,22 +150,22 @@ function createMockAssessmentResults(referenceText: string): PronunciationAssess
     } else {
       errorType = "None"; // No error
     }
-    
+
     // Calculate a realistic duration for the word (shorter words typically take less time)
     const wordLength = word.length;
     const baseDuration = 150 + (wordLength * 60) + (Math.random() * 100 - 50); // duration in ms
     const duration = Math.max(100, Math.round(baseDuration));
-    
+
     // Generate phonemes for each word to match Azure's format
     const phonemes = [];
     const cleanWord = word.replace(/[.,?!]/g, ''); // Remove punctuation from words
-    
+
     // Simple IPA phoneme generation - this is a simplification, real IPA would be more complex
     for (let i = 0; i < cleanWord.length; i++) {
       // Generate a phoneme for each letter or combination
       let phoneme;
       let letter = cleanWord[i].toLowerCase();
-      
+
       // Very simplified phoneme mapping
       switch(letter) {
         case 'a': phoneme = 'æ'; break;
@@ -177,20 +177,20 @@ function createMockAssessmentResults(referenceText: string): PronunciationAssess
         case 's': phoneme = 's'; break;
         default: phoneme = letter; // For simplicity, use the letter itself
       }
-      
+
       // Generate a score for this phoneme
       const phonemeScore = Math.max(60, Math.min(100, accuracyScore + (Math.random() * 20 - 10)));
-      
+
       phonemes.push({
         phoneme: phoneme,
         score: phonemeScore
       });
     }
-    
+
     // Calculate word offset based on previous words
     const offset = currentOffset;
     currentOffset += duration + Math.round(Math.random() * 100); // Add some silence between words
-    
+
     // Return a complete word result matching Azure's structure
     return {
       word: cleanWord,
@@ -204,13 +204,13 @@ function createMockAssessmentResults(referenceText: string): PronunciationAssess
 
   // Calculate global scores based on word-level results for more realistic relationship
   const avgAccuracy = wordLevelResults.reduce((sum, w) => sum + w.accuracyScore, 0) / wordLevelResults.length;
-  
+
   // Generate related scores that would be typical from Azure (fluency usually lower than accuracy)
   const fluencyScore = Math.max(50, Math.min(100, avgAccuracy - 5 - Math.floor(Math.random() * 15)));
   const pronunciationScore = Math.max(60, Math.min(100, (avgAccuracy + fluencyScore) / 2 + (Math.random() * 10 - 5)));
   const completenessScore = Math.max(70, Math.min(100, avgAccuracy + 10 - Math.floor(Math.random() * 10)));
   const prosodyScore = Math.max(60, Math.min(100, fluencyScore + (Math.random() * 20 - 10)));
-  
+
   // Create mock raw JSON response similar to what Azure would return
   const mockRawJson = {
     RecognitionStatus: "Success",
@@ -249,7 +249,7 @@ function createMockAssessmentResults(referenceText: string): PronunciationAssess
       }
     ]
   };
-  
+
   // Return mock results with words from the actual text and realistic score relationships
   return {
     pronunciationScore,
@@ -289,25 +289,25 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
   try {
     // Convert audio to WAV format
     wavFilePath = await convertAudioToWav(audioBuffer);
-    
+
     // Validate reference text length and format
     if (!referenceText || referenceText.trim().length === 0) {
       throw new Error("Reference text cannot be empty for pronunciation assessment");
     }
-    
+
     if (referenceText.length > 1000) {
       console.warn(`⚠️ Reference text exceeds Azure's recommended limit (${referenceText.length} > 1000 chars). Truncating.`);
     }
-    
+
     // Clean and normalize the reference text
     const cleanedText = referenceText
       .trim()
       .replace(/\s+/g, ' ')  // Normalize whitespace
       .replace(/[^\w\s.,?!'-]/g, '') // Remove special characters that might cause issues
       .slice(0, 1000);  // Limit length to avoid Azure limits
-    
+
     console.log(`🔤 Cleaned reference text: "${cleanedText}" (${cleanedText.length} chars)`);
-    
+
     // Log word count for tracking completion
     const wordCount = cleanedText.split(/\s+/).length;
     console.log(`📊 Reference text contains ${wordCount} words`);
@@ -317,7 +317,7 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
         // Initialize speech configuration
         const speechConfig = sdk.SpeechConfig.fromSubscription(speechKey, speechRegion);
         speechConfig.speechRecognitionLanguage = "en-US";
-        
+
         // Create pronunciation assessment configuration
         const pronunciationAssessmentConfig = new sdk.PronunciationAssessmentConfig(
           cleanedText,
@@ -328,24 +328,24 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
 
         // Read WAV file data
         const wavFileData = fs.readFileSync(wavFilePath!);
-        
+
         // Create audio configuration from the WAV file buffer
         const audioConfig = sdk.AudioConfig.fromWavFileInput(wavFileData);
-        
+
         // Create speech recognizer
         const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
-        
+
         // Apply pronunciation assessment configuration
         pronunciationAssessmentConfig.applyTo(recognizer);
-        
+
         console.log(`📝 SESSION STARTED`);
-        
+
         // Perform recognition
         recognizer.recognizeOnceAsync(
           (result) => {
             console.log(`🛑 SESSION STOPPED`);
             recognizer.close();
-            
+
             // Clean up the temporary file
             try {
               if (wavFilePath && fs.existsSync(wavFilePath)) {
@@ -354,25 +354,25 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
             } catch (cleanupError) {
               console.error("Error cleaning up temporary file:", cleanupError);
             }
-            
+
             try {
               if (result.reason === sdk.ResultReason.RecognizedSpeech) {
                 console.log(`✅ RECOGNIZED: ${result.text}`);
-                
+
                 // Get pronunciation assessment result
                 const pronunciationResult = sdk.PronunciationAssessmentResult.fromResult(result);
-                
+
                 // Get detailed JSON response
                 const jsonResponse = result.properties.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult);
                 console.log("Raw JSON Response:", jsonResponse);
-                
+
                 let jsonResult: any = {};
                 try {
                   jsonResult = JSON.parse(jsonResponse);
                 } catch (parseError) {
                   console.warn("Could not parse JSON response:", parseError);
                 }
-                
+
                 // Extract word-level results
                 const wordLevelResults: any[] = [];
                 if (jsonResult.NBest && jsonResult.NBest[0] && jsonResult.NBest[0].Words) {
@@ -387,9 +387,9 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
                     });
                   });
                 }
-                
+
                 console.log(`🔍 Processing ${wordLevelResults.length} words from Azure response`);
-                
+
                 // Build final assessment result
                 const finalResult: PronunciationAssessmentResult = {
                   pronunciationScore: pronunciationResult.pronunciationScore,
@@ -401,7 +401,7 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
                   sdkVersion: "production",
                   rawJson: jsonResult
                 };
-                
+
                 console.log(`📊 Assessment results summary:`);
                 console.log(`  - Pronunciation Score: ${finalResult.pronunciationScore}`);
                 console.log(`  - Fluency Score: ${finalResult.fluencyScore}`);
@@ -409,9 +409,9 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
                 console.log(`  - Accuracy Score: ${finalResult.accuracyScore}`);
                 console.log(`  - Prosody Score: ${finalResult.prosodyScore || 'N/A'}`);
                 console.log(`  - Words with timing data: ${wordLevelResults.length}/${wordCount}`);
-                
+
                 resolve(finalResult);
-                
+
               } else if (result.reason === sdk.ResultReason.NoMatch) {
                 console.log(`⚠️ No speech could be recognized from audio`);
                 reject(new Error("No speech could be recognized from the audio"));
@@ -435,7 +435,7 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
           (error) => {
             console.error("Error during speech recognition:", error);
             recognizer.close();
-            
+
             // Clean up the temporary file
             try {
               if (wavFilePath && fs.existsSync(wavFilePath)) {
@@ -444,7 +444,7 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
             } catch (cleanupError) {
               console.error("Error cleaning up temporary file:", cleanupError);
             }
-            
+
             reject(error);
           }
         );
@@ -453,7 +453,7 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
         reject(new Error(`Failed to set up Azure Speech recognition: ${setupError?.message || "Unknown error"}`));
       }
     });
-    
+
   } catch (conversionError: any) {
     console.error("Failed to convert audio for Azure:", conversionError);
     throw new Error(`Failed to convert audio for Azure Speech assessment: ${conversionError?.message || "Unknown error"}`);
@@ -475,12 +475,12 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
  */
 export async function assessPronunciationDebug(audioBuffer: Buffer, referenceText: string, options: { disableMock?: boolean, debugInfo?: any } = {}): Promise<PronunciationAssessmentResult> {
   const { disableMock = true, debugInfo = {} } = options;
-  
+
   if (debugInfo) {
     // Add detailed diagnostics about our Azure configuration
     const keyInfo = speechKey === 'dummy-key-for-development' ? 'dummy' : 
       speechKey ? `real key (${speechKey.substring(0, 3)}...${speechKey.substring(speechKey.length - 3)})` : 'missing';
-    
+
     debugInfo.sdkInfo = {
       version: 'Checking...',
       azureKeyStatus: keyInfo,
@@ -491,7 +491,7 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
         speechRegionEnv: process.env.SPEECH_REGION || 'missing' 
       }
     };
-    
+
     console.log(`🔑 Azure Speech Services configuration check:\n` +
       `- Key status: ${keyInfo}\n` +
       `- Region: ${speechRegion || 'not configured'}\n` +
@@ -501,7 +501,7 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
   }
   // Temporary file paths
   let wavFilePath: string | null = null;
-  
+
   try {
     // Log diagnostic information
     console.log(`Processing audio buffer length: ${audioBuffer.length} bytes`);
@@ -517,84 +517,84 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
       // Convert the audio buffer to WAV format using ffmpeg
       wavFilePath = await convertAudioToWav(audioBuffer);
       console.log(`Using converted WAV file: ${wavFilePath}`);
-      
+
       // Set up the speech config with our credentials
       const speechConfig = sdk.SpeechConfig.fromSubscription(speechKey, speechRegion);
-      
+
       // Important: Set the recognition language to English US
       speechConfig.speechRecognitionLanguage = "en-US";
-      
+
       // Configure speech recognition for pronunciation assessment
       speechConfig.setProperty("Speech.SegmentationStrategy", "Manual");
       speechConfig.setProperty("Speech.SegmentationSilenceTimeoutMs", "2000");
       speechConfig.setProperty("Speech.InitialSilenceTimeoutMs", "2000");
       speechConfig.setProperty("Speech.EndSilenceTimeoutMs", "1000");
-      
+
       // Disable dictation mode for better pronunciation assessment
       // speechConfig.enableDictation(); // Removed - this can interfere with pronunciation assessment
-      
+
       // Configure for single-shot recognition optimized for pronunciation assessment
       speechConfig.setProperty("Speech.Recognition.Mode", "Interactive");
       speechConfig.setProperty("Speech.Context.PhraseList.Enabled", "true");
       speechConfig.setProperty("Speech.Context.Verification", "true");
-      
+
       // Read the WAV file into a buffer
       const wavFileData = fs.readFileSync(wavFilePath);
-      
+
       // Create audio config from the WAV file buffer
       const audioConfig = sdk.AudioConfig.fromWavFileInput(wavFileData);
-      
+
       // Validate reference text length and format
       if (!referenceText || referenceText.trim().length === 0) {
         throw new Error("Reference text cannot be empty for pronunciation assessment");
       }
-      
+
       if (referenceText.length > 1000) {
         console.warn(`⚠️ Reference text exceeds Azure's recommended limit (${referenceText.length} > 1000 chars). Truncating.`);
       }
-      
+
       // Clean and normalize the reference text
       const cleanedText = referenceText
         .trim()
         .replace(/\s+/g, ' ')  // Normalize whitespace
         .replace(/[^\w\s.,?!]/g, '') // Remove special characters that might cause issues
         .slice(0, 1000);  // Limit length to avoid Azure limits
-      
+
       console.log(`🔤 Cleaned reference text: "${cleanedText}" (${cleanedText.length} chars)`);
-      
+
       // Log word count for tracking completion
       const wordCount = cleanedText.split(/\s+/).length;
       console.log(`📊 Reference text contains ${wordCount} words`);
-      
+
       // Create speech recognizer first
       const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
-      
+
       // Try to detect the SDK version
       let sdkVersion = "unknown";
       try {
         // Different ways to extract version info based on undocumented SDK properties
         // This is just for logging purposes, so we'll handle any errors gracefully
-        
+
         // Try to get version from various possible sources
         // Using Function.toString() to check internal implementation details
         const sdkString = Function.toString.call(sdk.SpeechConfig.fromSubscription);
         const versionMatch = sdkString.match(/VERSION\s*=\s*['"]([^'"]+)['"]/) || 
                            sdkString.match(/version\s*:\s*['"]([^'"]+)['"]/) ||
                            sdkString.match(/v([0-9]+\.[0-9]+\.[0-9]+)/);
-        
+
         if (versionMatch && versionMatch[1]) {
           sdkVersion = versionMatch[1];
         }
       } catch (e) {
         // Ignore version detection errors, it's not critical
       }
-      
+
       console.log(`🔖 Azure Speech SDK version: ${sdkVersion}`);
-      
+
       // Add the version to the request for diagnostic purposes
       speechConfig.setProperty("Speech.LogFilename", `/tmp/azure-speech-${Date.now()}.log`);
       speechConfig.setProperty("Speech.LogLevel", "3"); // Detailed logging
-      
+
       // Create pronunciation assessment configuration with proper settings
       const pronunciationAssessmentConfig = new sdk.PronunciationAssessmentConfig(
         cleanedText,
@@ -602,7 +602,7 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
         sdk.PronunciationAssessmentGranularity.Word, // Use Word granularity for better results
         true // Enable miscue calculation
       );
-      
+
       // Enable miscue detection explicitly for omission/insertion tracking
       try {
         // @ts-ignore - enableMiscue might not be in TypeScript definition yet but exists in newer SDKs
@@ -617,13 +617,13 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
       } catch (miscueError) {
         console.warn(`⚠️ Could not explicitly enable miscue detection: ${miscueError}`);
       }
-      
+
       // Set the phoneme alphabet to IPA
       try {
         // Different SDK versions might have different method names for setting phoneme alphabet
         // Attempt various potential method names with type safety protections
         let phonemeAlphabetSet = false;
-        
+
         // @ts-ignore - Try the phonemeAlphabet method first
         if (typeof pronunciationAssessmentConfig.phonemeAlphabet === 'function') {
           try {
@@ -635,7 +635,7 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
             console.warn(`⚠️ phonemeAlphabet() method failed:`, e);
           }
         }
-        
+
         // If the first method failed, try an alternative method name
         // @ts-ignore
         if (!phonemeAlphabetSet && typeof pronunciationAssessmentConfig.setPhonemesAlphabet === 'function') {
@@ -648,7 +648,7 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
             console.warn(`⚠️ setPhonemesAlphabet() method failed:`, e);
           }
         }
-        
+
         // If we couldn't set it, log that information
         if (!phonemeAlphabetSet) {
           console.log(`ℹ️ Could not set phoneme alphabet to IPA - this SDK version might not support it`);
@@ -656,7 +656,7 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
       } catch (alphabetError) {
         console.warn(`⚠️ Error while attempting to set phoneme alphabet: ${alphabetError}`);
       }
-      
+
       // Enable prosody assessment with version check
       const hasProsodySupport = (
         // @ts-ignore
@@ -664,7 +664,7 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
         // @ts-ignore
         typeof sdk.PronunciationAssessmentConfig.prototype.enableProsodyAssessment === 'function'
       );
-      
+
       try {
         if (hasProsodySupport) {
           // @ts-ignore - Skip TypeScript checking for the function call
@@ -677,10 +677,10 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
         console.warn(`⚠️ Could not enable prosody assessment: ${error}`);
         // Continue even if prosody assessment can't be enabled
       }
-      
+
       // Apply the pronunciation config to the recognizer
       pronunciationAssessmentConfig.applyTo(recognizer);
-      
+
       // Process the audio and get assessment results
       return new Promise((resolve, reject) => {
         // Add detailed event listeners for debugging
@@ -690,12 +690,12 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
           azureSessionId = e.sessionId;
           console.log(`📝 SESSION STARTED - ID: ${azureSessionId}`);
         };
-        
+
         // Log various recognizer events
         recognizer.recognizing = (s, e) => {
           console.log(`🔊 RECOGNIZING: ${e.result.text}`);
         };
-        
+
         recognizer.recognized = (s, e) => {
           if (e.result.reason === sdk.ResultReason.RecognizedSpeech) {
             console.log(`✅ RECOGNIZED: ${e.result.text}`);
@@ -703,29 +703,29 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
             console.log(`⚠️ RECOGNITION FAILED: ${e.result.reason}`);
           }
         };
-        
+
         recognizer.canceled = (s, e) => {
           console.log(`❌ CANCELED: Reason=${e.reason}, Details=${e.errorDetails || 'none'}`);
         };
-        
+
         recognizer.sessionStopped = (s, e) => {
           console.log(`🛑 SESSION STOPPED for ID: ${azureSessionId}`);
         };
-        
+
         recognizer.recognizeOnceAsync(
           async (result) => {
             try {
               console.log(`Recognition result reason: ${result.reason}`);
               console.log(`Recognized text: "${result.text}"`);
-              
+
               // Close the recognizer when done with it
               recognizer.close();
-              
+
               if (result.reason === sdk.ResultReason.RecognizedSpeech) {
                 try {
                   // Get the pronunciation assessment result from the speech recognition result
                   const pronunciationAssessmentResult = sdk.PronunciationAssessmentResult.fromResult(result);
-                  
+
                   // Log the result details to understand the data format
                   console.log("Pronunciation Assessment Result:", JSON.stringify({
                     accuracy: pronunciationAssessmentResult.accuracyScore,
@@ -734,20 +734,20 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
                     fluency: pronunciationAssessmentResult.fluencyScore,
                     prosody: pronunciationAssessmentResult.prosodyScore
                   }));
-                  
+
                   // Get the detailed JSON response
                   const jsonResponse = result.properties.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult);
                   console.log("Raw JSON Response:", jsonResponse);
-                  
+
                   // Parse the JSON response
                   const jsonResult = JSON.parse(jsonResponse);
-                  
+
                   // Extract word-level results with alignments, durations, offsets, and phonemes
                   let wordLevelResults: any[] = [];
-                  
+
                   if (jsonResult?.NBest?.[0]?.Words) {
                     console.log(`🔍 Processing ${jsonResult.NBest[0].Words.length} words from Azure response`);
-                    
+
                     wordLevelResults = jsonResult.NBest[0].Words.map((word: any) => {
                       // Extract word details
                       const wordResult = {
@@ -758,24 +758,24 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
                         duration: word.Duration !== undefined ? Number(word.Duration) : undefined,
                         phonemes: [] as any[]
                       };
-                      
+
                       // Extract phoneme-level assessments if available
                       if (word.Phonemes && Array.isArray(word.Phonemes)) {
                         wordResult.phonemes = word.Phonemes.map((phoneme: any) => ({
                           phoneme: phoneme.Phoneme || "",
                           score: phoneme.PronunciationAssessment?.AccuracyScore || 0
                         }));
-                        
+
                         // Log phoneme details for debugging
                         if (wordResult.phonemes.length > 0) {
                           console.log(`📝 Word "${word.Word}" has ${wordResult.phonemes.length} phonemes: ${wordResult.phonemes.map((p: any) => p.phoneme).join(', ')}`);
                         }
                       }
-                      
+
                       return wordResult;
                     });
                   }
-                  
+
                   // Show some diagnostic information about the results
                   console.log(`📊 Assessment results summary:`);
                   console.log(`  - Pronunciation Score: ${pronunciationAssessmentResult.pronunciationScore}`);
@@ -784,7 +784,7 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
                   console.log(`  - Accuracy Score: ${pronunciationAssessmentResult.accuracyScore}`);
                   console.log(`  - Prosody Score: ${pronunciationAssessmentResult.prosodyScore || 'N/A'}`);
                   console.log(`  - Words with timing data: ${wordLevelResults.filter(w => w.offset !== undefined && w.duration !== undefined).length}/${wordLevelResults.length}`);
-                  
+
                   // Build the final assessment result with SDK version and raw JSON for debugging
                   resolve({
                     pronunciationScore: pronunciationAssessmentResult.pronunciationScore,
@@ -802,13 +802,13 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
                 }
               } else if (result.reason === sdk.ResultReason.NoMatch) {
                 console.log(`⚠️ No speech could be recognized from audio`);
-                
+
                 // Still try to get pronunciation assessment data even if no speech was recognized
                 const jsonResponse = result.properties.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult);
                 if (jsonResponse) {
                   console.log("Raw JSON Response (NoMatch):", jsonResponse);
                   const jsonResult = JSON.parse(jsonResponse);
-                  
+
                   // Return assessment indicating no clear speech was detected
                   resolve({
                     pronunciationScore: 20,
@@ -852,7 +852,7 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
           (error) => {
             console.error("Error during speech recognition:", error);
             recognizer.close();
-            
+
             // Clean up the temporary file
             try {
               if (wavFilePath && fs.existsSync(wavFilePath)) {
@@ -861,7 +861,7 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
             } catch (cleanupError) {
               console.error("Error cleaning up temporary file:", cleanupError);
             }
-            
+
             reject(error);
           }
         );
@@ -957,10 +957,10 @@ export async function getWordPronunciation(word: string): Promise<string> {
 function countSyllables(word: string): number {
   word = word.toLowerCase();
   if (word.length <= 3) return 1;
-  
+
   word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
   word = word.replace(/^y/, '');
-  
+
   const matches = word.match(/[aeiouy]{1,2}/g);
   return matches ? matches.length : 1;
 }
@@ -970,10 +970,10 @@ function breakIntoSyllables(word: string): string {
   const vowels = 'aeiouAEIOU';
   const syllables: string[] = [];
   let currentSyllable = '';
-  
+
   for (let i = 0; i < word.length; i++) {
     currentSyllable += word[i];
-    
+
     if (vowels.includes(word[i])) {
       // If next character is consonant followed by vowel, break here
       if (i + 2 < word.length && 
@@ -985,82 +985,63 @@ function breakIntoSyllables(word: string): string {
       }
     }
   }
-  
+
   if (currentSyllable) {
     syllables.push(currentSyllable);
   }
-  
+
   return syllables.length > 1 ? syllables.join('-').toUpperCase() : word.toUpperCase();
 }
 
 /**
  * Synthesize speech from text
  */
-export async function synthesizeSpeech(text: string, voice = "default"): Promise<Buffer> {
-  try {
-    const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
-    const VOICE_ID = "EXAVITQu4vr4xnSDxMaL"; // Verified working voice ID
-    const MODEL_ID = "eleven_multilingual_v2";
+export async function synthesizeSpeech(text: string, voice: string = "en-US-JennyNeural"): Promise<Buffer> {
+  const speechKey = process.env.AZURE_SPEECH_KEY || process.env.SPEECH_KEY;
+  const speechRegion = process.env.AZURE_SPEECH_REGION || process.env.SPEECH_REGION;
 
-    if (!ELEVENLABS_API_KEY) {
-      console.warn("No Eleven Labs API key provided. Using fallback audio.");
-      return Buffer.from([/*...*/]);
-    }
-
-    // Input validation
-    if (!text || text.trim().length === 0) {
-      throw new Error("Text cannot be empty for speech synthesis");
-    }
-
-    const trimmedText = text.trim().slice(0, 1000);
-
-    try {
-      // Required fields based on API spec
-      const requestBody = {
-        text: trimmedText,
-        model_id: MODEL_ID,
-        voice_settings: {
-          stability: 0.85,
-          similarity_boost: 0.85
-        }
-        // Removed language_code parameter since it's not supported by this model
-      };
-
-      console.log("Final request body:", JSON.stringify(requestBody, null, 2));
-
-      const response = await fetch(
-        `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
-        {
-          method: 'POST',
-          headers: {
-            'Accept': 'audio/mpeg',
-            'Content-Type': 'application/json',
-            'xi-api-key': ELEVENLABS_API_KEY
-          },
-          body: JSON.stringify(requestBody)
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => "Could not read error response body");
-        console.error(`ElevenLabs API returned ${response.status} ${response.statusText}:`, errorText);
-        throw new Error(`Eleven Labs API error: ${response.status} ${response.statusText} - ${errorText}`);
-      }
-
-      const arrayBuffer = await response.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-
-      if (!buffer || buffer.length === 0) {
-        throw new Error("Received empty audio from ElevenLabs API");
-      }
-
-      return buffer;
-    } catch (error) {
-      console.error("Network error during ElevenLabs API call:", error);
-      throw error;
-    }
-  } catch (error) {
-    console.error("Error synthesizing speech with Eleven Labs:", error);
-    throw error;
+  if (!speechKey || !speechRegion) {
+    console.error("Azure Speech credentials not found");
+    throw new Error("Azure Speech credentials not configured");
   }
+
+  console.log(`🔊 Synthesizing speech for text: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
+  console.log(`Voice: ${voice}`);
+
+  const sdk = await import('microsoft-cognitiveservices-speech-sdk');
+
+  const speechConfig = sdk.SpeechConfig.fromSubscription(speechKey, speechRegion);
+  speechConfig.speechSynthesisVoiceName = voice;
+  speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3;
+
+  const synthesizer = new sdk.SpeechSynthesizer(speechConfig);
+
+  return new Promise((resolve, reject) => {
+    // Check if input is SSML (contains XML tags) or plain text
+    const isSSML = text.includes('<speak') || text.includes('<voice') || text.includes('<prosody');
+
+    const synthesizeFunction = isSSML ? 
+      synthesizer.speakSsmlAsync.bind(synthesizer) : 
+      synthesizer.speakTextAsync.bind(synthesizer);
+
+    synthesizeFunction(
+      text,
+      (result) => {
+        if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
+          console.log(`✅ Speech synthesis completed successfully`);
+          const audioData = Buffer.from(result.audioData);
+          resolve(audioData);
+        } else {
+          console.error('Speech synthesis failed:', result.errorDetails);
+          reject(new Error(`Speech synthesis failed: ${result.errorDetails}`));
+        }
+        synthesizer.close();
+      },
+      (error) => {
+        console.error('Speech synthesis error:', error);
+        synthesizer.close();
+        reject(error);
+      }
+    );
+  });
 }
