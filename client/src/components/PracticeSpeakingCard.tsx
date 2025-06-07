@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MicIcon, StopCircleIcon, Volume2, Star, BookmarkIcon } from 'lucide-react';
+import { MicIcon, StopCircleIcon, Volume2, Star, BookmarkIcon, Ear, Snail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PronunciationAssessmentResult } from '@/lib/types';
 
@@ -41,6 +41,7 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
   }, [text]);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingRecording, setIsProcessingRecording] = useState(false);
+  const [slowPlayback, setSlowPlayback] = useState(false);
 
   // Refs for media recording
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -214,6 +215,20 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
     }
   };
 
+  // Text-to-speech handler
+  const handleTextToSpeech = () => {
+    if (phrase.text) {
+      const utterance = new SpeechSynthesisUtterance(phrase.text);
+      utterance.rate = slowPlayback ? 0.6 : 1.0;
+      speechSynthesis.speak(utterance);
+    }
+  };
+
+  // Toggle slow playback
+  const toggleSlowPlayback = () => {
+    setSlowPlayback(prev => !prev);
+  };
+
   // Clean up on unmount
   useEffect(() => {
     return () => {
@@ -239,7 +254,7 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
           {phrase.status === "idle" && (
             <Button
               onClick={startPhrasePractice}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
             >
               <MicIcon className="w-4 h-4" />
               Start Recording
@@ -263,6 +278,35 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
               Analyzing...
             </div>
           )}
+        </div>
+
+        {/* Text-to-Speech and Slow Switch */}
+        <div className="flex justify-center gap-2">
+          <Button
+            onClick={handleTextToSpeech}
+            variant="outline"
+            className="h-10 px-4 bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0"
+          >
+            <Ear className="h-4 w-4 mr-1" />
+            Hear
+          </Button>
+          <button
+            onClick={toggleSlowPlayback}
+            className={`relative inline-flex h-10 w-16 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+              slowPlayback ? 'bg-[#FFE8E8]' : 'bg-gray-300'
+            }`}
+            role="switch"
+            aria-checked={slowPlayback}
+            aria-label="Toggle slow playback"
+          >
+            <span
+              className={`inline-flex h-8 w-8 transform rounded-full bg-white transition-transform duration-200 ease-in-out items-center justify-center ${
+                slowPlayback ? 'translate-x-8' : 'translate-x-1'
+              }`}
+            >
+              <Snail className="w-3 h-3 text-gray-600" />
+            </span>
+          </button>
         </div>
 
         {/* Assessment Results */}

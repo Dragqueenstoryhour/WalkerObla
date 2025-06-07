@@ -365,7 +365,7 @@ const ReadingContent = ({ onSelectContent }: ReadingContentProps) => {
             className={`text-sm ${
               isListeningVoiceCommand ? 'bg-red-500 hover:bg-red-600' :
               isProcessingVoiceCommand ? 'bg-yellow-500 hover:bg-yellow-600' :
-              'bg-green-700 hover:bg-green-600' // Applied green style when idle
+              'bg-[#F95A2C] hover:bg-[#E64E20] text-white border-0'
             }`}
           >
             <MicIcon className="w-4 h-4 mr-1" />
@@ -377,19 +377,10 @@ const ReadingContent = ({ onSelectContent }: ReadingContentProps) => {
             onClick={generateNewContent}
             disabled={isGenerating}
             size="sm"
-            className="text-sm bg-green-700 hover:bg-green-600" // Applied green style
+            className="text-sm bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
           >
             <RefreshCw className="w-4 h-4 mr-1" />
             {isGenerating ? 'Generating...' : 'New Content'}
-          </Button>
-
-          {/* Select Button */}
-          <Button
-            onClick={onSelectContent}
-            size="sm"
-            className="text-sm bg-green-700 hover:bg-green-600"
-          >
-            Select
           </Button>
         </div>
       </CardContent>

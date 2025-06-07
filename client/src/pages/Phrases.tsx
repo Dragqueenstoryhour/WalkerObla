@@ -971,7 +971,7 @@ export default function Phrases() {
                       <Button
                         onClick={() => handleSavePhrase(idx)}
                         variant="outline"
-                        className="flex items-center gap-2"
+                        className="flex items-center gap-2 bg-[#FFBD12] hover:bg-[#E6A910] text-white border-0"
                         disabled={savedPhraseId === phrase.id}
                       >
                         {savedPhraseId === phrase.id ? (
