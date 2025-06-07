@@ -9,6 +9,7 @@ interface PracticeSpeakingCardProps {
   text: string;
   contentId?: number;
   onAssessmentReceived?: (assessment: PronunciationAssessmentResult) => void;
+  onNewContent?: () => void;
 }
 
 interface ProcessedPhrase {
@@ -22,7 +23,7 @@ interface ProcessedPhrase {
   status: "idle" | "recording" | "assessing" | "complete";
 }
 
-export default function PracticeSpeakingCard({ text, contentId, onAssessmentReceived }: PracticeSpeakingCardProps) {
+export default function PracticeSpeakingCard({ text, contentId, onAssessmentReceived, onNewContent }: PracticeSpeakingCardProps) {
   const { toast } = useToast();
   const [phrase, setPhrase] = useState<ProcessedPhrase>({
     id: `practice-${Date.now()}`,
@@ -304,6 +305,33 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
     setSlowPlayback(prev => !prev);
   };
 
+  // Reset the component to initial state
+  const resetComponent = () => {
+    setPhrase(prev => ({
+      ...prev,
+      status: "idle",
+      recordingUrl: null,
+      recordingBlob: undefined,
+      assessmentResult: undefined
+    }));
+    setIsRecording(false);
+    setIsProcessingRecording(false);
+    setSlowPlayback(false);
+    
+    // Clean up any existing streams
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    
+    // Clean up media recorder
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    mediaRecorderRef.current = null;
+    chunksRef.current = [];
+  };
+
   // Clean up on unmount
   useEffect(() => {
     return () => {
@@ -495,11 +523,24 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
             <div className="flex justify-center gap-2">
               <Button 
                 onClick={startPhrasePractice}
+                className="bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 font-bold text-base h-12 px-6"
                 size="sm"
               >
-                <MicIcon className="w-4 h-4 mr-1" />
+                <MicIcon className="w-5 h-5 mr-1" />
                 Try Again
               </Button>
+              {onNewContent && (
+                <Button 
+                  onClick={() => {
+                    resetComponent();
+                    onNewContent();
+                  }}
+                  className="bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 font-bold text-base h-12 px-6"
+                  size="sm"
+                >
+                  New Content
+                </Button>
+              )}
             </div>
 
             {/* Playback recording section */}
