@@ -167,6 +167,7 @@ export default function AzureTest() {
                     }
                   }}
                   disabled={isProcessing}
+                  className="bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0"
                 >
                   <VolumeIcon className="mr-2 h-4 w-4" />
                   Play

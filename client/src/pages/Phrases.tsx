@@ -866,7 +866,7 @@ export default function Phrases() {
                         {phrase.status === "idle" && (
                           <Button
                             onClick={() => startPhrasePractice(idx)}
-                            className="flex items-center gap-2"
+                            className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
                             disabled={isRecording || isProcessingRecording}
                           >
                             <MicIcon className="h-4 w-4" />
@@ -919,14 +919,14 @@ export default function Phrases() {
                         <Button
                           onClick={() => handleTextToSpeech(idx)}
                           variant="outline"
-                          className="h-10 px-4 bg-green-700 hover:bg-green-600 text-white border-green-700"
+                          className="h-10 px-4 bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0"
                         >
                           Listen
                         </Button>
                         <button
                           onClick={() => toggleSlowPlayback(phrase.id)}
                           className={`relative inline-flex h-10 w-16 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                            slowPlaybackPhrases[phrase.id] ? 'bg-green-500' : 'bg-gray-300'
+                            slowPlaybackPhrases[phrase.id] ? 'bg-[#FFE8E8]' : 'bg-gray-300'
                           }`}
                           role="switch"
                           aria-checked={slowPlaybackPhrases[phrase.id]}

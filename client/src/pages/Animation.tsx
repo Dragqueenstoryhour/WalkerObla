@@ -314,6 +314,7 @@ const Animation = () => {
                   <Button
                     variant={isRecording ? "destructive" : "default"}
                     onClick={isRecording ? stopRecording : startRecording}
+                    className={isRecording ? "" : "bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"}
                     disabled={isProcessing}
                     className="w-full"
                   >

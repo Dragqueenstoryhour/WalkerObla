@@ -93,7 +93,7 @@ export function SaveWordButton({ word, className, variant = "outline", size = "s
         size={size}
         onClick={handleClick}
         disabled={isLoading}
-        className={className}
+        className={`${className} bg-[#FFBD12] hover:bg-[#E6A910] text-white border-0`}
       >
         {isSaved ? (
           <BookmarkCheck className="h-4 w-4 mr-1" />

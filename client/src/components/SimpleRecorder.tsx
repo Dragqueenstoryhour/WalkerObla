@@ -287,7 +287,7 @@ export function SimpleRecorder({
              <button
                 onClick={startRecording}
                 className={`relative flex items-center justify-center w-20 h-20 rounded-md p-4 cursor-pointer hover:bg-opacity-90 transition-all
-                  ${buttonStatus === 'listening' ? 'bg-red-500' : buttonStatus === 'processing' ? 'bg-yellow-500' : 'bg-blue-900'}
+                  ${buttonStatus === 'listening' ? 'bg-red-500' : buttonStatus === 'processing' ? 'bg-yellow-500' : 'bg-[#00C6AE]'}
                   ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
                 aria-label={
                   buttonStatus === 'listening'

@@ -883,7 +883,7 @@ export default function Words() {
                         {word.status === "idle" && (
                           <Button
                             onClick={() => startWordPractice(idx)}
-                            className="flex items-center gap-2"
+                            className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
                             disabled={isRecording || isProcessingRecording}
                           >
                             <MicIcon className="h-4 w-4" />
@@ -936,14 +936,14 @@ export default function Words() {
                         <Button
                           onClick={() => handleTextToSpeech(idx)}
                           variant="outline"
-                          className="justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 flex items-center gap-2 bg-[#00C6AE]"
+                          className="justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-white hover:bg-[#FF7F7C] h-10 px-4 py-2 flex items-center gap-2 bg-[#FF9692] border-0"
                         >
                           Listen
                         </Button>
                         <button
                           onClick={() => toggleSlowPlayback(word.id)}
                           className={`relative inline-flex h-10 w-16 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                            slowPlaybackWords[word.id] ? 'bg-green-500' : 'bg-gray-300'
+                            slowPlaybackWords[word.id] ? 'bg-[#FFE8E8]' : 'bg-gray-300'
                           }`}
                           role="switch"
                           aria-checked={slowPlaybackWords[word.id]}

@@ -262,7 +262,7 @@ export function GameExerciseRecorder({
                 {!isRecording ? (
                   <Button 
                     onClick={startRecording} 
-                    className="flex-1 bg-green-500 hover:bg-green-600"
+                    className="flex-1 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
                     disabled={isProcessing}
                   >
                     <MicIcon className="mr-2 h-4 w-4" />
@@ -288,6 +288,7 @@ export function GameExerciseRecorder({
                       audio.play();
                     }}
                     disabled={isProcessing}
+                    className="bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0"
                   >
                     <VolumeIcon className="mr-2 h-4 w-4" />
                     Play
