@@ -115,7 +115,7 @@ const Read = () => {
               <ReadingContent onSelectContent={handleSelectContent} />
               {/* Practice Speaking Card */}
               <div ref={simpleRecorderRef} className="mb-6">
-                <h3 className="text-lg font-medium mb-4">Practice Speaking</h3>
+                <h3 className="text-lg font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">Practice Speaking</h3>
                 {currentContent && (
                   <PracticeSpeakingCard
                     text={referenceText}

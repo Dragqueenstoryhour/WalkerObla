@@ -457,7 +457,7 @@ export default function Phrases() {
     });
 
     const isSlowPlayback = slowPlaybackPhrases[phrase.id] || false;
-    const speed = isSlowPlayback ? 0.7 : 1.0; // Snail mode at 70% speed
+    const speed = isSlowPlayback ? 0.75 : 1.0; // Snail mode at 70% speed
 
     try {
       const response = await fetch("/api/speech/synthesize", {

@@ -299,7 +299,7 @@ const ReadingContent = ({ onSelectContent }: ReadingContentProps) => {
     <Card className="mb-6">
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-medium">Select Your Topic</h2>
+          <h2 className="text-lg font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Select Your Topic</h2>
         </div>
 
         {/* Voice Command Feedback Section, similar to original VoiceControl.tsx */}
@@ -377,7 +377,7 @@ const ReadingContent = ({ onSelectContent }: ReadingContentProps) => {
             onClick={generateNewContent}
             disabled={isGenerating}
             size="sm"
-            className="text-sm bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
+            className="text-sm bg-[#FFBD12] hover:bg-[#E6A800] text-white border-0"
           >
             <RefreshCw className="w-4 h-4 mr-1" />
             {isGenerating ? 'Generating...' : 'New Content'}

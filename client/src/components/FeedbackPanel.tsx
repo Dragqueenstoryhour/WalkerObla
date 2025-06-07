@@ -380,11 +380,8 @@ const FeedbackPanel = () => {
     <Card className="w-full max-w-4xl mx-auto">
       <CardContent className="p-4 lg:p-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xl font-semibold">Feedback & Assistance</h2>
-          <Button onClick={shareProgress} variant="outline" size="sm" className="text-sm">
-            <Share2 className="w-4 h-4 mr-1" />
-            Share Progress
-          </Button>
+          <h2 className="text-xl font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Feedback & Assistance</h2>
+
         </div>
 
         <div className="border-l-4 border-accent pl-4 mb-4">
