@@ -832,6 +832,33 @@ export default function Words() {
         </DialogContent>
       </Dialog>
 
+      {/* Letter Selection Modal */}
+      <Dialog open={showLetterModal} onOpenChange={setShowLetterModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {letterModalType === 'begin' ? 'Select Starting Letter or Sound' : 'Select Letter or Sound to Include'}
+            </DialogTitle>
+            <DialogDescription>
+              Choose a letter or sound to generate words {letterModalType === 'begin' ? 'that begin with' : 'that include'} it.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-6 md:grid-cols-8 gap-3 max-h-96 overflow-y-auto">
+            {letterOptions.map((letter) => (
+              <Button
+                key={letter}
+                onClick={() => handleLetterSelection(letter)}
+                className="h-12 text-lg font-bold"
+                style={{ backgroundColor: '#FF89BB', color: 'white' }}
+                disabled={isProcessing}
+              >
+                {letter}
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">Practice Words</h1>
         <DifficultyDropdown onConfirm={async (newDifficulty) => {
