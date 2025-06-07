@@ -1099,6 +1099,35 @@ export default function Words() {
           )}
         </div>
       )}
+
+      {/* Letter Selection Modal */}
+      <Dialog open={showLetterModal} onOpenChange={setShowLetterModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {letterModalType === 'begin' ? 'Words that Begin with...' : 'Words that Include...'}
+            </DialogTitle>
+            <DialogDescription>
+              {letterModalType === 'begin' 
+                ? 'Choose a letter to practice words that start with that letter.'
+                : 'Choose a letter to practice words that contain that letter.'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-6 gap-2 p-4">
+            {letterOptions.map((letter) => (
+              <Button
+                key={letter}
+                onClick={() => handleLetterSelection(letter)}
+                variant="outline"
+                className="h-12 text-lg font-semibold hover:bg-blue-50 hover:border-blue-300 transition-colors"
+              >
+                {letter}
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
