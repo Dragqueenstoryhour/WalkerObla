@@ -936,7 +936,7 @@ export default function Words() {
                         <Button
                           onClick={() => handleTextToSpeech(idx)}
                           variant="outline"
-                          className="h-10 px-4 bg-green-700 hover:bg-green-600 text-white border-green-700"
+                          className="justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 flex items-center gap-2 bg-[#00C6AE]"
                         >
                           Listen
                         </Button>
