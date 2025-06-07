@@ -35,18 +35,19 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
   }
 
   if (isAuthenticated && user) {
+    const userData = user as any;
     return (
       <div className="flex items-center gap-2">
         <Avatar className="h-8 w-8 border-2 border-primary">
-          <AvatarImage src={user.profileImageUrl || undefined} alt={user.username || 'User'} />
+          <AvatarImage src={userData.profileImageUrl || undefined} alt={userData.username || 'User'} />
           <AvatarFallback className="bg-primary text-primary-foreground">
-            {(user.username || user.firstName || 'U').charAt(0).toUpperCase()}
+            {(userData.username || userData.firstName || 'U').charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
         {showText && (
           <div className="hidden md:flex flex-col">
             <span className="text-sm font-medium leading-none">
-              {user.username || `${user.firstName} ${user.lastName}` || 'User'}
+              {userData.username || `${userData.firstName} ${userData.lastName}` || 'User'}
             </span>
             <span className="text-xs text-muted-foreground leading-none mt-1">
               Logged In

@@ -39,7 +39,8 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
       maxAge: sessionTtl,
     },
   });
@@ -68,6 +69,11 @@ async function upsertUser(claims: any) {
 }
 
 export async function setupAuth(app: Express) {
+  console.log("Setting up Replit Auth...");
+  console.log("REPLIT_DOMAINS:", process.env.REPLIT_DOMAINS);
+  console.log("REPL_ID:", process.env.REPL_ID ? "present" : "missing");
+  console.log("SESSION_SECRET:", process.env.SESSION_SECRET ? "present" : "missing");
+  
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
@@ -130,26 +136,41 @@ export async function setupAuth(app: Express) {
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
 
-  if (!req.isAuthenticated() || !user?.expires_at) {
+  // Debug authentication state
+  console.log("Auth check:", {
+    isAuthenticated: req.isAuthenticated(),
+    hasUser: !!req.user,
+    hasClaims: !!user?.claims,
+    sessionID: req.sessionID,
+    url: req.url
+  });
+
+  if (!req.isAuthenticated() || !user?.claims) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
   const now = Math.floor(Date.now() / 1000);
-  if (now <= user.expires_at) {
+  const expiresAt = user.expires_at || user.claims?.exp;
+  
+  if (!expiresAt || now <= expiresAt) {
     return next();
   }
 
   const refreshToken = user.refresh_token;
   if (!refreshToken) {
-    return res.redirect("/api/login");
+    console.log("No refresh token available, session expired");
+    return res.status(401).json({ message: "Session expired" });
   }
 
   try {
+    console.log("Attempting token refresh...");
     const config = await getOidcConfig();
     const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
     updateUserSession(user, tokenResponse);
+    console.log("Token refresh successful");
     return next();
   } catch (error) {
-    return res.redirect("/api/login");
+    console.error("Token refresh failed:", error);
+    return res.status(401).json({ message: "Session expired" });
   }
 };

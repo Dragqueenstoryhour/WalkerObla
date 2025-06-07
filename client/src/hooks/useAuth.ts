@@ -5,10 +5,15 @@ export function useAuth() {
   
   const { data: user, isLoading, error } = useQuery({
     queryKey: ["/api/auth/user"],
-    retry: false,
-    // Only retry on network errors, not auth errors
+    retry: (failureCount, error: any) => {
+      // Don't retry on 401 (unauthorized) errors
+      if (error?.status === 401) return false;
+      // Only retry network errors, max 1 time
+      return failureCount < 1;
+    },
     retryOnMount: false,
     refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
   });
 
   const login = () => {
