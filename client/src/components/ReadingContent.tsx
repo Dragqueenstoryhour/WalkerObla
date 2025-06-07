@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useReading } from '@/contexts/ReadingContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, BarChart2, MicIcon, Volume2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { RefreshCw, BarChart2, MicIcon, Volume2, BookOpen } from 'lucide-react';
 import { generateReadingContent } from '@/lib/openai';
 import { useToast } from '@/hooks/use-toast';
 import { useDifficulty, mapDifficultyToServer, DifficultyLevel } from '@/contexts/DifficultyContext';
@@ -19,6 +20,22 @@ const ReadingContent = ({ onSelectContent }: ReadingContentProps) => {
   const { difficulty, setDifficulty } = useDifficulty();
   const [isGenerating, setIsGenerating] = useState(false);
   const readingContentRef = useRef<HTMLDivElement>(null);
+
+  // Topic selection states
+  const [customTopic, setCustomTopic] = useState('');
+  const [isGeneratingCustom, setIsGeneratingCustom] = useState(false);
+
+  // Predefined reading topics
+  const readingTopics = [
+    'Current Events',
+    'Health & Wellness', 
+    'Technology',
+    'Travel & Culture',
+    'Science & Nature',
+    'Food & Cooking',
+    'Sports & Recreation',
+    'History & Biography'
+  ];
 
   // --- Voice Control States and Refs ---
   const [isListeningVoiceCommand, setIsListeningVoiceCommand] = useState(false);
@@ -224,6 +241,60 @@ const ReadingContent = ({ onSelectContent }: ReadingContentProps) => {
     }, 500);
   };
 
+  // Handle predefined topic selection
+  const handleTopicSelection = async (topic: string) => {
+    setIsGenerating(true);
+    try {
+      const serverDifficulty = mapDifficultyToServer(difficulty);
+      console.log(`Generating content about "${topic}" with difficulty "${serverDifficulty}"`);
+      
+      const content = await generateReadingContent(topic, serverDifficulty);
+      setCurrentContent(content);
+      onSelectContent(); // Scroll to practice section
+    } catch (error) {
+      console.error("Error generating topic content:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate content for this topic. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Handle custom topic generation
+  const handleCustomTopicGeneration = async () => {
+    if (!customTopic.trim()) {
+      toast({
+        title: "Please enter a topic",
+        description: "Enter something you'd like to read about",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGeneratingCustom(true);
+    try {
+      const serverDifficulty = mapDifficultyToServer(difficulty);
+      console.log(`Generating custom content about "${customTopic}" with difficulty "${serverDifficulty}"`);
+      
+      const content = await generateReadingContent(customTopic, serverDifficulty);
+      setCurrentContent(content);
+      setCustomTopic(''); // Clear the input
+      onSelectContent(); // Scroll to practice section
+    } catch (error) {
+      console.error("Error generating custom content:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate content for your topic. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingCustom(false);
+    }
+  };
+
   useEffect(() => {
     if (readingContentRef.current && currentContent) {
       try {
@@ -302,7 +373,7 @@ const ReadingContent = ({ onSelectContent }: ReadingContentProps) => {
           <h2 className="text-lg font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Select Your Topic</h2>
         </div>
 
-        {/* Voice Command Feedback Section, similar to original VoiceControl.tsx */}
+        {/* Voice Command Feedback Section */}
         {(transcribedVoiceCommandText || confirmationVoiceCommandMessage || isProcessingVoiceCommand) && (
           <div className="bg-secondary bg-opacity-30 rounded-lg p-3 flex items-center mb-4">
             <div className="flex items-center mr-3">
@@ -337,26 +408,75 @@ const ReadingContent = ({ onSelectContent }: ReadingContentProps) => {
             </div>
           </div>
         )}
-        {/* End Voice Command Feedback Section */}
 
-        <div className="mb-4 border-b border-secondary pb-2">
-          <h3 className="font-semibold text-lg mb-2">{currentContent.title}</h3>
-          <p className="text-sm text-textColor opacity-70 mb-1">
-            Source: {currentContent.source} •
-            {' '}{Math.round(currentContent.readingTime / 60)} min read •
-            {' '}{currentContent.wordCount} words
-          </p>
+        {/* Choose a Topic Cards */}
+        <div className="mb-6">
+          <h3 className="text-md font-bold mb-3">Choose a Topic</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {readingTopics.map((topic) => (
+              <Card
+                key={topic}
+                className="cursor-pointer hover:shadow-md transition-shadow duration-200 h-16"
+                style={{ backgroundColor: '#FF89BB' }}
+                onClick={() => handleTopicSelection(topic)}
+              >
+                <CardContent className="p-3 text-center flex items-center justify-center h-full">
+                  <p className="font-semibold text-white text-sm">{topic}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
 
-        <div
-          ref={readingContentRef}
-          className="prose max-w-none text-lg leading-relaxed"
-        >
-          {/* Content will be injected via useEffect */}
+        {/* Custom Topic Input */}
+        <div className="mb-6">
+          <p className="text-sm text-gray-600 mb-3">Or enter a custom topic:</p>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Enter a topic you'd like to read about..."
+              value={customTopic}
+              onChange={(e) => setCustomTopic(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleCustomTopicGeneration();
+                }
+              }}
+              className="flex-1"
+              disabled={isGeneratingCustom}
+            />
+            <Button
+              onClick={handleCustomTopicGeneration}
+              disabled={isGeneratingCustom || !customTopic.trim()}
+              className="bg-[#1947E5] hover:bg-[#1537CC] text-white border-0"
+            >
+              {isGeneratingCustom ? 'Generating...' : 'Generate'}
+            </Button>
+          </div>
         </div>
 
-        {/* New row for action buttons at the bottom right */}
-        <div className="flex justify-end space-x-2 mt-6"> {/* Added mt-6 for separation */}
+        {/* Current Content Display */}
+        {currentContent && (
+          <>
+            <div className="mb-4 border-b border-secondary pb-2">
+              <h3 className="font-semibold text-lg mb-2">{currentContent.title}</h3>
+              <p className="text-sm text-textColor opacity-70 mb-1">
+                Source: {currentContent.source} •
+                {' '}{Math.round(currentContent.readingTime / 60)} min read •
+                {' '}{currentContent.wordCount} words
+              </p>
+            </div>
+
+            <div
+              ref={readingContentRef}
+              className="prose max-w-none text-lg leading-relaxed"
+            >
+              {/* Content will be injected via useEffect */}
+            </div>
+          </>
+        )}
+
+        {/* Action buttons at the bottom */}
+        <div className="flex justify-end space-x-2 mt-6">
           {/* Voice Command Button */}
           <Button
             onClick={toggleVoiceCommandListening}
@@ -377,9 +497,9 @@ const ReadingContent = ({ onSelectContent }: ReadingContentProps) => {
             onClick={generateNewContent}
             disabled={isGenerating}
             size="sm"
-            className="text-sm bg-[#FFBD12] hover:bg-[#E6A800] text-white border-0"
+            className="text-sm bg-[#FFD23F] hover:bg-[#FFC107] text-black border-0"
           >
-            <RefreshCw className="w-4 h-4 mr-1" />
+            <BookOpen className="w-4 h-4 mr-1" />
             {isGenerating ? 'Generating...' : 'New Content'}
           </Button>
         </div>
