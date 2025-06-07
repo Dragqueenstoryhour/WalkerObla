@@ -27,6 +27,7 @@ const Read = () => {
     userStats 
   } = useReading();
   const [articleCompleted, setArticleCompleted] = useState(false);
+  const [hasCompletedRecording, setHasCompletedRecording] = useState(false);
   const simpleRecorderRef = useRef<HTMLDivElement>(null); // Ref for SimpleRecorder
 
   // Fetch initial sample content
@@ -65,6 +66,7 @@ const Read = () => {
   const handleAssessmentReceived = (results: PronunciationAssessmentResult) => {
     // Store in reading context
     setPronunciationResults(results);
+    setHasCompletedRecording(true); // Show feedback panel after recording
 
     // Update progress based on word count
     const wordsRead = referenceText.split(/\s+/).length || 0;
@@ -127,7 +129,7 @@ const Read = () => {
             </div>
 
             <div className="lg:col-span-1">
-              <FeedbackPanel />
+              {hasCompletedRecording && <FeedbackPanel />}
             </div>
           </div>
         )}

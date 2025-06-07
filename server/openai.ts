@@ -325,8 +325,9 @@ export async function generateReadingContent(topic: string, difficulty: string):
     - Use ${syllableCount}. 
     - Write exactly ${sentenceCount} sentence(s), ${sentenceLength} each.
     - Keep it under ${maxWords} words total.
-    - Use **natural, grammatically correct phrasing** (e.g., avoid "See the cat run").
-    - Prioritize clarity and flow over strict syllable counts when needed.
+    - Write in proper newspaper article style with complete, grammatically correct sentences.
+    - Avoid fragments, choppy phrases, or awkward constructions like "Eat clean, move more."
+    - Use natural, flowing language that sounds like professional journalism.
     - Return ONLY JSON: {"title": "string", "content": "string", "source": "ReadAssist"}`;
 
     console.log(`Using OpenAI to generate content about "${topic}" with difficulty "${difficulty}"`);
@@ -336,9 +337,9 @@ export async function generateReadingContent(topic: string, difficulty: string):
       model: "gpt-3.5-turbo", // Using a cheaper model to conserve tokens
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Write an interesting ${maxWords}-word max content about ${topic}. 
-Use ${languageLevel} vocabulary and create exactly ${sentenceCount} sentence(s) with ${syllableCount}.
-Use only commonly used words that people encounter in everyday situations.
+        { role: "user", content: `Write an interesting ${maxWords}-word max newspaper-style content about ${topic}. 
+Use ${languageLevel} vocabulary and create exactly ${sentenceCount} complete, grammatically correct sentence(s) with ${syllableCount}.
+Write in the style of a professional news article with proper sentence structure.
 IMPORTANT: Keep it engaging, informative, and under ${maxWords} words total.` }
       ],
       temperature: 0.7,

@@ -450,7 +450,7 @@ const FeedbackPanel = () => {
                             setIsSlowMode(!isSlowMode);
                           }}
                           className={`relative inline-flex h-8 w-12 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                            isSlowMode ? 'bg-green-500' : 'bg-gray-300'
+                            isSlowMode ? 'bg-[#FFE8E8]' : 'bg-gray-300'
                           }`}
                           role="switch"
                           aria-checked={isSlowMode}
@@ -493,7 +493,7 @@ const FeedbackPanel = () => {
                           }}
                           size="sm"
                           variant={savedWords.has(issue.word) ? "default" : "outline"}
-                          className={`h-8 px-3 ${savedWords.has(issue.word) ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+                          className={`h-8 px-3 ${savedWords.has(issue.word) ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-[#FFBD12] hover:bg-[#E6A800] text-white border-0'}`}
                           disabled={savedWords.has(issue.word)}
                         >
                           {savedWords.has(issue.word) ? (
