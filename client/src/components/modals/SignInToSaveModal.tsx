@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useAuthContext } from "@/contexts/AuthContext";
-import { LogIn, UserPlus } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { LogIn } from "lucide-react";
 
 interface SignInToSaveModalProps {
   isOpen: boolean;
@@ -11,18 +11,15 @@ interface SignInToSaveModalProps {
 }
 
 export function SignInToSaveModal({ isOpen, onClose, wordToSave, onSaveAfterLogin }: SignInToSaveModalProps) {
-  const { oauthLogin } = useAuthContext();
+  const { login } = useAuth();
 
-  const handleSignIn = async () => {
-    try {
-      await oauthLogin('google');
-      if (onSaveAfterLogin) {
-        onSaveAfterLogin();
-      }
-      onClose();
-    } catch (error) {
-      console.error('Sign in failed:', error);
+  const handleSignIn = () => {
+    // Store callback for after login if provided
+    if (onSaveAfterLogin) {
+      sessionStorage.setItem('afterLoginCallback', 'saveWord');
+      sessionStorage.setItem('wordToSave', wordToSave || '');
     }
+    login();
   };
 
   return (
@@ -59,20 +56,12 @@ export function SignInToSaveModal({ isOpen, onClose, wordToSave, onSaveAfterLogi
               size="lg"
             >
               <LogIn className="h-4 w-4 mr-2" />
-              Sign in with Google
+              Sign In
             </Button>
             
             <div className="text-center">
               <p className="text-sm text-muted-foreground">
-                Don't have an account? 
-                <Button 
-                  variant="link" 
-                  className="p-0 ml-1 h-auto"
-                  onClick={handleSignIn}
-                >
-                  <UserPlus className="h-3 w-3 mr-1" />
-                  Create one now
-                </Button>
+                Click above to sign in with your Replit account
               </p>
             </div>
           </div>
