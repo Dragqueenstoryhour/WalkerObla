@@ -826,7 +826,7 @@ export default function Words() {
               }}
             >
               <CardContent className="p-4 text-center">
-                <p className="font-semibold text-gray-800">{topic}</p>
+                <p className="font-semibold text-white">{topic}</p>
               </CardContent>
             </Card>
           ))}
@@ -873,7 +873,7 @@ export default function Words() {
                 <div key={word.id} className={`embla__slide flex-shrink-0 w-full sm:w-[90%] md:w-[80%] lg:w-[70%] xl:w-[60%] 2xl:w-[50%] px-4 sm:px-6 md:px-8 ${idx === currentCarouselIndex ? 'is-in-view' : ''}`}>
                   <Card className="h-full card-content" style={{ backgroundColor: '#1947E5' }}>
                     <CardHeader className="text-center">
-                      <CardTitle className="text-2xl font-bold">{word.text}</CardTitle>
+                      <CardTitle className="text-3xl font-bold text-white">{word.text}</CardTitle>
                       {word.phonetic && (
                         <CardDescription className="text-lg text-muted-foreground">
                           {word.phonetic}

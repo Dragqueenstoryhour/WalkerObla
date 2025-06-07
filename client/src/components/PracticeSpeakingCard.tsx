@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MicIcon, StopCircleIcon, Volume2, Star, BookmarkIcon, Ear, Snail } from 'lucide-react';
+import { MicIcon, StopCircleIcon, Volume2, Star, BookmarkIcon, Ear, Snail, BookOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PronunciationAssessmentResult } from '@/lib/types';
 
@@ -535,9 +535,10 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
                     resetComponent();
                     onNewContent();
                   }}
-                  className="bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 font-bold text-base h-12 px-6"
+                  className="bg-[#FFD23F] hover:bg-[#FFC107] text-black border-0 font-bold text-base h-12 px-6"
                   size="sm"
                 >
+                  <BookOpen className="w-5 h-5 mr-1" />
                   New Content
                 </Button>
               )}

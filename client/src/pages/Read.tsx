@@ -138,26 +138,28 @@ const Read = () => {
             <p>Unable to load reading content. Please try again later.</p>
           </div>
         ) : (
-          <div className="grid gap-8 md:gap-12 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <ReadingContent onSelectContent={handleSelectContent} />
-              {/* Practice Speaking Card */}
-              <div ref={simpleRecorderRef} className="mb-6">
-                <h3 className="text-lg font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">Practice Speaking</h3>
-                {currentContent && (
-                  <PracticeSpeakingCard
-                    text={referenceText}
-                    contentId={currentContent.id}
-                    onAssessmentReceived={handleAssessmentReceived}
-                    onNewContent={handleNewContent}
-                  />
-                )}
-              </div>
+          <div className="space-y-8">
+            <ReadingContent onSelectContent={handleSelectContent} />
+            
+            {/* Practice Speaking Card */}
+            <div ref={simpleRecorderRef} className="mb-6">
+              <h3 className="text-lg font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">Practice Speaking</h3>
+              {currentContent && (
+                <PracticeSpeakingCard
+                  text={referenceText}
+                  contentId={currentContent.id}
+                  onAssessmentReceived={handleAssessmentReceived}
+                  onNewContent={handleNewContent}
+                />
+              )}
             </div>
 
-            <div className="lg:col-span-1">
-              {hasCompletedRecording && <FeedbackPanel />}
-            </div>
+            {/* Feedback Panel - Always below Practice Speaking */}
+            {hasCompletedRecording && (
+              <div className="mt-8">
+                <FeedbackPanel />
+              </div>
+            )}
           </div>
         )}
       </main>
