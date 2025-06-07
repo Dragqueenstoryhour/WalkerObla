@@ -919,7 +919,7 @@ export default function Phrases() {
                         <Button
                           onClick={() => handleTextToSpeech(idx)}
                           variant="outline"
-                          className="h-10 px-4 bg-green-700 hover:bg-green-600 text-white border-green-700"
+                          className="h-10 px-4 bg-[#45d143e6] hover:bg-green-600 text-white border-green-700"
                         >
                           Listen
                         </Button>
