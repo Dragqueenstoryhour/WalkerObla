@@ -92,7 +92,9 @@ export default function Words() {
     loop: false,
     align: 'center',
     containScroll: 'trimSnaps',
-    slidesToScroll: 1
+    slidesToScroll: 1,
+    skipSnaps: false,
+    inViewThreshold: 0.7
   });
 
   // Refs for media recording
@@ -864,11 +866,11 @@ export default function Words() {
           <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Practice Words</h2>
           
           {/* Carousel for words */}
-          <div className="embla overflow-hidden w-full" ref={emblaRef}>
+          <div className="embla overflow-hidden w-full max-w-7xl mx-auto" ref={emblaRef}>
             <div className="embla__container flex">
               {processedWords.map((word, idx) => (
-                <div key={word.id} className="embla__slide flex-shrink-0 w-80 md:w-96 mx-2">
-                  <Card className="h-full">
+                <div key={word.id} className={`embla__slide flex-shrink-0 w-full sm:w-[90%] md:w-[80%] lg:w-[70%] xl:w-[60%] 2xl:w-[50%] px-4 sm:px-6 md:px-8 ${idx === currentCarouselIndex ? 'is-in-view' : ''}`}>
+                  <Card className="h-full card-content">
                     <CardHeader className="text-center">
                       <CardTitle className="text-2xl font-bold">{word.text}</CardTitle>
                       {word.phonetic && (

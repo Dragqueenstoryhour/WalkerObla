@@ -91,7 +91,9 @@ export default function Phrases() {
     loop: false,
     align: 'center',
     containScroll: 'trimSnaps',
-    slidesToScroll: 1
+    slidesToScroll: 1,
+    skipSnaps: false,
+    inViewThreshold: 0.7
   });
 
   // Refs for media recording
@@ -847,10 +849,10 @@ export default function Phrases() {
           <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Practice Phrases</h2>
           
           {/* Carousel for phrases */}
-          <div className="embla overflow-hidden w-full" ref={emblaRef}>
+          <div className="embla overflow-hidden w-full max-w-7xl mx-auto" ref={emblaRef}>
             <div className="embla__container flex">
               {processedPhrases.map((phrase, idx) => (
-                <div key={phrase.id} className="embla__slide flex-shrink-0 w-80 md:w-96 mx-2">
+                <div key={phrase.id} className="embla__slide flex-shrink-0 w-full sm:w-[90%] md:w-[80%] lg:w-[70%] xl:w-[60%] 2xl:w-[50%] px-4 sm:px-6 md:px-8">
                   <Card className="h-full">
                     <CardHeader className="text-center">
                       <CardTitle className="text-xl font-bold">{phrase.text}</CardTitle>
@@ -990,7 +992,7 @@ export default function Phrases() {
               
               {/* Summary Card */}
               {showSummary && (
-                <div className="embla__slide flex-shrink-0 w-full mx-2 flex justify-center">
+                <div className="embla__slide flex-shrink-0 w-full sm:w-[90%] md:w-[80%] lg:w-[70%] xl:w-[60%] 2xl:w-[50%] px-4 sm:px-6 md:px-8 flex justify-center">
                   <SummaryCard
                     assessmentResults={processedPhrases.map(phrase => phrase.assessmentResult).filter(Boolean)}
                     type="phrases"
