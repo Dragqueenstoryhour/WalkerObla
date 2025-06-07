@@ -867,7 +867,7 @@ export default function Words() {
               }}
             >
               <CardContent className="p-4 text-center">
-                <p className="font-semibold text-white">{topic}</p>
+                <p className="font-semibold text-black">{topic}</p>
               </CardContent>
             </Card>
           ))}

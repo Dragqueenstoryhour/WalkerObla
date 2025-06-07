@@ -421,7 +421,7 @@ const ReadingContent = ({ onSelectContent }: ReadingContentProps) => {
                 onClick={() => handleTopicSelection(topic)}
               >
                 <CardContent className="p-3 text-center flex items-center justify-center h-full">
-                  <p className="font-semibold text-white text-sm">{topic}</p>
+                  <p className="font-semibold text-black text-sm">{topic}</p>
                 </CardContent>
               </Card>
             ))}
