@@ -35,7 +35,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const stats = await storage.getUserStats(userId);
       const activities = await storage.getUserActivities(userId, 10);
-
+      
       res.json({
         stats: stats || {
           totalWordsPracticed: 0,
@@ -65,7 +65,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         userId
       });
-
+      
       const activity = await storage.recordActivity(activityData);
       res.json(activity);
     } catch (error) {
@@ -78,11 +78,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/user/saved-phrases', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-
+      
       // Get both saved phrases and saved words
       const phrases = await storage.getUserSavedPhrases(userId);
       const words = await storage.getSavedWords(userId);
-
+      
       // Convert saved words to phrase format for unified display
       const convertedWords = words.map(word => ({
         id: `word_${word.id}`,
@@ -95,11 +95,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sourceId: null,
         createdAt: word.createdAt
       }));
-
+      
       // Combine and sort by creation date
       const combinedItems = [...phrases, ...convertedWords]
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
+      
       res.json(combinedItems);
     } catch (error) {
       console.error("Error fetching saved phrases:", error);
@@ -114,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         userId
       });
-
+      
       const phrase = await storage.createUserSavedPhrase(phraseData);
       res.json(phrase);
     } catch (error) {
@@ -139,7 +139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const groups = await storage.getPracticeGroups(userId);
-
+      
       // Get phrases for each group
       const groupsWithPhrases = await Promise.all(
         groups.map(async (group) => {
@@ -147,7 +147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return { ...group, phraseCount: groupPhrases.length };
         })
       );
-
+      
       res.json(groupsWithPhrases);
     } catch (error) {
       console.error("Error fetching practice groups:", error);
@@ -162,7 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         userId
       });
-
+      
       const group = await storage.createPracticeGroup(groupData);
       res.json(group);
     } catch (error) {
@@ -187,12 +187,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const groupId = parseInt(req.params.groupId);
       const { phraseId } = req.body;
-
+      
       const groupPhrase = await storage.addPhraseToPracticeGroup({
         groupId,
         phraseId: parseInt(phraseId)
       });
-
+      
       res.json(groupPhrase);
     } catch (error) {
       console.error("Error adding phrase to group:", error);
@@ -224,7 +224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If user is authenticated, record the activity
       if (req.user && (req.user as any).claims?.sub) {
         const userId = (req.user as any).claims.sub;
-
+        
         // Determine activity type based on context
         let activityType = 'reading_practice'; // default
         if (itemType === 'word') {
@@ -260,7 +260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`✅ Assessment completed successfully - Score: ${assessment.pronunciationScore}%`);
       res.json(assessment);
-
+      
     } catch (error) {
       console.error('Pronunciation assessment error:', error);
       res.status(500).json({ 
@@ -273,10 +273,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Legacy endpoint for backward compatibility (Words/Phrases pages)
   app.post('/api/assess', isAuthenticated, upload.single('audio'), async (req: any, res) => {
     console.log('⚠️ Using legacy /api/assess endpoint - redirecting to unified assessment');
-
+    
     // Forward to the unified endpoint with proper parameter mapping
     req.body.text = req.body.referenceText;
-
+    
     // Call the unified handler
     try {
       if (!req.file) {
@@ -327,18 +327,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/synthesize', async (req, res) => {
     try {
       const { text, voice } = req.body;
-
+      
       if (!text) {
         return res.status(400).json({ error: 'Text is required' });
       }
 
       const audioBuffer = await synthesizeSpeech(text, voice);
-
+      
       res.set({
         'Content-Type': 'audio/wav',
         'Content-Length': audioBuffer.length.toString(),
       });
-
+      
       res.send(audioBuffer);
     } catch (error) {
       console.error('Speech synthesis error:', error);
@@ -352,18 +352,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/speech/synthesize', async (req, res) => {
     try {
       const { text, voice } = req.body;
-
+      
       if (!text) {
         return res.status(400).json({ error: 'Text is required' });
       }
 
       const audioBuffer = await synthesizeSpeech(text, voice);
-
+      
       res.set({
         'Content-Type': 'audio/wav',
         'Content-Length': audioBuffer.length.toString(),
       });
-
+      
       res.send(audioBuffer);
     } catch (error) {
       console.error('Speech synthesis error:', error);
@@ -378,13 +378,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/pronunciation/word', async (req, res) => {
     try {
       const { word } = req.query;
-
+      
       if (!word || typeof word !== 'string') {
         return res.status(400).json({ error: 'Word parameter is required' });
       }
 
       const phonetic = await getWordPronunciation(word);
-
+      
       res.json({ phonetic });
     } catch (error) {
       console.error('Word pronunciation error:', error);
@@ -404,7 +404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const audioBuffer = req.file.buffer;
       const transcription = await transcribeAudio(audioBuffer);
-
+      
       res.json({ transcription });
     } catch (error) {
       console.error('Transcription error:', error);
@@ -419,7 +419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/content/generate', async (req, res) => {
     try {
       const { topic, difficulty } = req.body;
-
+      
       if (!topic) {
         return res.status(400).json({ error: 'Topic is required' });
       }
@@ -453,7 +453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/generate-content', async (req, res) => {
     try {
       const { topic, difficulty } = req.body;
-
+      
       if (!topic) {
         return res.status(400).json({ error: 'Topic is required' });
       }
@@ -473,7 +473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/content/generate-topic-phrases', async (req, res) => {
     try {
       const { topic, difficulty, type } = req.body;
-
+      
       if (!topic) {
         return res.status(400).json({ error: 'Topic is required' });
       }
@@ -485,7 +485,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         difficulty || '4', 
         type || 'phrases'
       );
-
+      
       console.log(`Generated ${phrases.length} items:`, phrases);
       res.json({ phrases });
     } catch (error) {
@@ -505,13 +505,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const audioBuffer = req.file.buffer;
-
+      
       // First transcribe the audio
       const transcription = await transcribeAudio(audioBuffer);
-
+      
       // Then process the command
       const result = await processVoiceCommand(transcription);
-
+      
       res.json({
         transcription,
         command: result
@@ -533,13 +533,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const audioBuffer = req.file.buffer;
-
+      
       // First transcribe the audio
       const transcription = await transcribeAudio(audioBuffer);
-
+      
       // Then process the command with enhanced AI
       const result = await processVoiceCommand(transcription);
-
+      
       res.json({
         transcription,
         result,
@@ -571,7 +571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const { word, folderId } = req.body;
-
+      
       if (!word) {
         return res.status(400).json({ error: 'Word is required' });
       }
@@ -584,7 +584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         practiceCount: 0,
         masteryLevel: 0
       };
-
+      
       const savedWord = await storage.createSavedWord(wordData);
       res.json(savedWord);
     } catch (error) {
@@ -597,15 +597,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const wordToDelete = decodeURIComponent(req.params.word);
-
+      
       // Find and delete the word by userId and word text
       const words = await storage.getSavedWords(userId);
       const wordToRemove = words.find(w => w.word === wordToDelete);
-
+      
       if (wordToRemove) {
         await storage.deleteSavedWord(wordToRemove.id);
       }
-
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting saved word:", error);
@@ -621,51 +621,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         userId
       });
-
+      
       const phrase = await storage.createUserSavedPhrase(phraseData);
       res.json(phrase);
     } catch (error) {
       console.error("Error saving phrase:", error);
       res.status(500).json({ message: "Failed to save phrase" });
-    }
-  });
-
-  // Health check
-  app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
-
-  // Text-to-speech generation
-  app.post('/api/tts/generate', async (req, res) => {
-    try {
-      const { text, voice = 'en-US-JennyNeural', speed = 1.0 } = req.body;
-
-      if (!text || typeof text !== 'string') {
-        return res.status(400).json({ error: 'Text is required' });
-      }
-
-      // Use existing synthesizeSpeech function with speed control
-      const ssml = `
-        <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
-          <voice name="${voice}">
-            <prosody rate="${speed}">
-              ${text}
-            </prosody>
-          </voice>
-        </speak>
-      `;
-
-      const audioBuffer = await synthesizeSpeech(ssml, voice);
-
-      res.set({
-        'Content-Type': 'audio/wav',
-        'Content-Length': audioBuffer.length.toString(),
-      });
-
-      res.send(audioBuffer);
-    } catch (error) {
-      console.error('TTS generation error:', error);
-      res.status(500).json({ error: 'Failed to generate speech' });
     }
   });
 
