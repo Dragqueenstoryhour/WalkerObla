@@ -416,8 +416,8 @@ const ReadingContent = ({ onSelectContent }: ReadingContentProps) => {
             {readingTopics.map((topic) => (
               <Card
                 key={topic}
-                className="cursor-pointer hover:shadow-md transition-shadow duration-200 h-16"
-                style={{ backgroundColor: '#FF89BB' }}
+                className="cursor-pointer hover:shadow-md hover:bg-[#FF9692] transition-all duration-200 h-16"
+                style={{ backgroundColor: '#FFE8E8' }}
                 onClick={() => handleTopicSelection(topic)}
               >
                 <CardContent className="p-3 text-center flex items-center justify-center h-full">

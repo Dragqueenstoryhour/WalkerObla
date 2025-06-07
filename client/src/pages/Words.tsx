@@ -850,9 +850,9 @@ export default function Words() {
               className={`cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 ${
                 aiGenerateTopic === topic 
                   ? 'ring-2 ring-blue-500 shadow-md' 
-                  : 'hover:bg-gradient-to-br hover:from-gray-50 hover:to-blue-50'
+                  : 'hover:bg-[#FF9692]'
               } ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
-              style={{ backgroundColor: '#FF89BB' }}
+              style={{ backgroundColor: '#FFE8E8' }}
               onClick={() => {
                 if (topic === "Words that Begin with..") {
                   setLetterModalType('begin');
@@ -1120,7 +1120,7 @@ export default function Words() {
                 key={letter}
                 onClick={() => handleLetterSelection(letter)}
                 variant="outline"
-                className="h-12 text-lg font-semibold hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                className="h-12 text-lg font-semibold bg-[#FFE8E8] hover:bg-[#FF9692] border-gray-300 transition-colors"
               >
                 {letter}
               </Button>

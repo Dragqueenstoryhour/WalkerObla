@@ -800,9 +800,9 @@ export default function Phrases() {
               className={`cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 ${
                 aiGenerateTopic === topic 
                   ? 'ring-2 ring-blue-500 shadow-md' 
-                  : 'hover:bg-gradient-to-br hover:from-gray-50 hover:to-blue-50'
+                  : 'hover:bg-[#FF9692]'
               } ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
-              style={{ backgroundColor: '#FF89BB' }}
+              style={{ backgroundColor: '#FFE8E8' }}
               onClick={() => {
                 setAiGenerateTopic(topic);
                 handleGenerateTopicPhrases(topic);
