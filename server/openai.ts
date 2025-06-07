@@ -414,21 +414,25 @@ export async function generateSampleContent(): Promise<ReadingContent> {
 }
 
 /**
- * Generate a speech response from text using OpenAI text-to-speech
+ * Generate a speech response from text using OpenAI text-to-speech with speed control
  */
-export async function generateSpeechResponse(text: string, voice: string = "alloy"): Promise<Buffer> {
+export async function generateSpeechResponse(text: string, voice: string = "alloy", speed: number = 1.0): Promise<Buffer> {
   try {
     // OpenAI only accepts specific voice options: nova, shimmer, echo, onyx, fable, alloy, ash, sage, or coral
     // If voice is invalid, default to alloy
     const validVoices = ["nova", "shimmer", "echo", "onyx", "fable", "alloy", "ash", "sage", "coral"];
     const safeVoice = validVoices.includes(voice) ? voice : "alloy";
 
-    console.log(`Generating speech with voice: ${safeVoice}`);
+    // Clamp speed between OpenAI's limits (0.25 to 4.0)
+    const clampedSpeed = Math.max(0.25, Math.min(4.0, speed));
+
+    console.log(`Generating speech with voice: ${safeVoice}, speed: ${clampedSpeed}`);
 
     const mp3 = await openai.audio.speech.create({
-      model: "tts-1",
+      model: "tts-1", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       voice: safeVoice,
       input: text,
+      speed: clampedSpeed,
     });
 
     // Convert to buffer for sending over HTTP

@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { assessPronunciation, synthesizeSpeech, getWordPronunciation } from "./azure";
-import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases, generateSampleContent } from "./openai";
+import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases, generateSampleContent, generateSpeechResponse } from "./openai";
 import multer from "multer";
 import { z } from "zod";
 import { insertUserSavedPhraseSchema, insertPracticeGroupSchema, insertUserActivitySchema } from "@shared/schema";
@@ -351,16 +351,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/speech/synthesize', async (req, res) => {
     try {
-      const { text, voice } = req.body;
+      const { text, voice = "alloy", speed = 1.0 } = req.body;
       
       if (!text) {
         return res.status(400).json({ error: 'Text is required' });
       }
 
-      const audioBuffer = await synthesizeSpeech(text, voice);
+      const audioBuffer = await generateSpeechResponse(text, voice, speed);
       
       res.set({
-        'Content-Type': 'audio/wav',
+        'Content-Type': 'audio/mp3',
         'Content-Length': audioBuffer.length.toString(),
       });
       
