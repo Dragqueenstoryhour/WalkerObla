@@ -336,7 +336,7 @@ const FeedbackPanel = () => {
         return;
       }
 
-      // Save each problem word (limit to 6)
+      // Save all 6 words to /my-words
       const wordsToSave = pronunciationIssues.slice(0, 6);
       const savePromises = wordsToSave.map(async (issue) => {
         const response = await fetch("/api/phrases/save", {
@@ -422,7 +422,6 @@ const FeedbackPanel = () => {
                       
                       {/* Score display */}
                       <div className="mb-3">
-                        <div className="text-sm text-muted-foreground mb-1">Accuracy Score</div>
                         <div className="text-xl font-bold" style={{ 
                           color: issue.score >= 80 ? '#10b981' : issue.score >= 60 ? '#f59e0b' : '#ef4444' 
                         }}>
@@ -439,9 +438,10 @@ const FeedbackPanel = () => {
                           }}
                           size="sm"
                           variant="outline"
-                          className="h-8 px-3 bg-green-700 hover:bg-green-600 text-white border-green-700"
+                          className="h-8 px-3 bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0"
                         >
-                          Listen
+                          <Volume2 className="h-3 w-3 mr-1" />
+                          Hear
                         </Button>
 
                         <button
@@ -521,10 +521,10 @@ const FeedbackPanel = () => {
                 <Button 
                   onClick={saveWordsToMyWords}
                   size="sm"
-                  className="h-10 px-6"
+                  className="h-10 px-6 bg-[#FFBD12] hover:bg-[#E6A800] text-white border-0"
                 >
                   <BookmarkIcon className="w-4 h-4 mr-2" />
-                  Save Words
+                  Save All Words
                 </Button>
               </div>
             )}
