@@ -2837,7 +2837,9 @@ I'd like to schedule an appointment."
               className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white"
               variant="default"
               size="lg"
-              onClick={() => window.location.href = "/api/login"}
+              onClick={() => {
+                window.location.href = "/api/login";
+              }}
             >
               Sign in to Save
             </Button>

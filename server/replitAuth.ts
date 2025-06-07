@@ -69,11 +69,6 @@ async function upsertUser(claims: any) {
 }
 
 export async function setupAuth(app: Express) {
-  console.log("Setting up Replit Auth...");
-  console.log("REPLIT_DOMAINS:", process.env.REPLIT_DOMAINS);
-  console.log("REPL_ID:", process.env.REPL_ID ? "present" : "missing");
-  console.log("SESSION_SECRET:", process.env.SESSION_SECRET ? "present" : "missing");
-  
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
@@ -136,15 +131,6 @@ export async function setupAuth(app: Express) {
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
 
-  // Debug authentication state
-  console.log("Auth check:", {
-    isAuthenticated: req.isAuthenticated(),
-    hasUser: !!req.user,
-    hasClaims: !!user?.claims,
-    sessionID: req.sessionID,
-    url: req.url
-  });
-
   if (!req.isAuthenticated() || !user?.claims) {
     return res.status(401).json({ message: "Unauthorized" });
   }
@@ -158,16 +144,13 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 
   const refreshToken = user.refresh_token;
   if (!refreshToken) {
-    console.log("No refresh token available, session expired");
     return res.status(401).json({ message: "Session expired" });
   }
 
   try {
-    console.log("Attempting token refresh...");
     const config = await getOidcConfig();
     const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
     updateUserSession(user, tokenResponse);
-    console.log("Token refresh successful");
     return next();
   } catch (error) {
     console.error("Token refresh failed:", error);
