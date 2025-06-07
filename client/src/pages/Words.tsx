@@ -456,13 +456,89 @@ export default function Words() {
   };
 
   // Handle text-to-speech
-  const handleTextToSpeech = (wordIndex: number) => {
+  const handleTextToSpeech = async (wordIndex: number) => {
     const word = processedWords[wordIndex];
-    if (!word) return;
+    if (!word?.text) {
+      toast({
+        title: "No Text",
+        description: "No text available for this word.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    const utterance = new SpeechSynthesisUtterance(word.text);
-    utterance.rate = slowPlaybackWords[word.id] ? 0.6 : 1;
-    speechSynthesis.speak(utterance);
+    const loadingToast = toast({
+      title: "Loading Audio",
+      description: "Preparing text-to-speech...",
+    });
+
+    const isSlowPlayback = slowPlaybackWords[word.id] || false;
+    const speed = isSlowPlayback ? 0.6 : 1.0; // Snail mode at 60% speed
+
+    try {
+      const response = await fetch("/api/speech/synthesize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          text: word.text,
+          voice: "alloy",
+          speed: speed
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to synthesize speech: ${response.status}`);
+      }
+
+      const audioBlob = await response.blob();
+      if (audioBlob.size === 0) {
+        throw new Error("Received empty audio data");
+      }
+
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+
+      audio.onerror = () => {
+        toast({
+          title: "Playback Error",
+          description: "Could not play the audio. Please try again.",
+          variant: "destructive",
+        });
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      audio.oncanplaythrough = () => {
+        loadingToast.dismiss?.();
+        audio.play().then(() => {
+          toast({
+            title: isSlowPlayback ? "Playing Slowly" : "Playing",
+            description: `Playing: "${word.text}"`,
+          });
+        }).catch((error) => {
+          toast({
+            title: "Playback Error",
+            description: "Could not play the audio. Please try again.",
+            variant: "destructive",
+          });
+          URL.revokeObjectURL(audioUrl);
+        });
+      };
+
+      audio.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      audio.src = audioUrl;
+    } catch (error) {
+      loadingToast.dismiss?.();
+      toast({
+        title: "TTS Error",
+        description: error instanceof Error ? error.message : "Could not generate audio.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Play back user's recording

@@ -1175,6 +1175,7 @@ export default function NewPhrases() {
     });
 
     const isSlowPlayback = slowPlaybackPhrases[phrase.id] || false;
+    const speed = isSlowPlayback ? 0.6 : 1.0; // Snail mode at 60% speed
 
     try {
       const response = await fetch("/api/speech/synthesize", {
@@ -1182,7 +1183,11 @@ export default function NewPhrases() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text: phrase.text }),
+        body: JSON.stringify({ 
+          text: phrase.text,
+          voice: "alloy",
+          speed: speed
+        }),
       });
 
       if (!response.ok) {
@@ -1211,10 +1216,6 @@ export default function NewPhrases() {
 
       audioRef.current.oncanplaythrough = () => {
         loadingToast.dismiss?.();
-        const audio = audioRef.current;
-        if (audio) {
-          audio.playbackRate = isSlowPlayback ? 0.5 : 1.0;
-        }
         audioRef.current?.play().then(() => {
           toast({
             title: isSlowPlayback ? "Playing Slowly" : "Playing",

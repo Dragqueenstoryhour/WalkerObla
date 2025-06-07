@@ -138,10 +138,46 @@ export function SavedWordsWithFolders() {
     });
   };
 
-  const handleTextToSpeech = (word: string) => {
-    const utterance = new SpeechSynthesisUtterance(word);
-    utterance.rate = 0.8;
-    speechSynthesis.speak(utterance);
+  const handleTextToSpeech = async (word: string) => {
+    if (!word) return;
+
+    try {
+      const response = await fetch("/api/speech/synthesize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          text: word,
+          voice: "alloy",
+          speed: 0.8 // Slightly slower for better comprehension
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to synthesize speech: ${response.status}`);
+      }
+
+      const audioBlob = await response.blob();
+      if (audioBlob.size === 0) {
+        throw new Error("Received empty audio data");
+      }
+
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+
+      audio.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      audio.play();
+    } catch (error) {
+      console.error('TTS Error:', error);
+      // Fallback to browser TTS if API fails
+      const utterance = new SpeechSynthesisUtterance(word);
+      utterance.rate = 0.8;
+      speechSynthesis.speak(utterance);
+    }
   };
 
   const filteredWords = selectedFolderId 
