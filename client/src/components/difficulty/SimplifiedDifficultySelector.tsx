@@ -162,7 +162,7 @@ export function DifficultyDropdown({ onConfirm }: DifficultyDropdownProps) {
     <div className="relative">
       <button 
         onClick={() => setIsOpen(!isOpen)} 
-        className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold rounded-lg shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2"
+        className="flex items-center justify-center gap-2 px-8 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold rounded-lg shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2"
       >
         <span className="font-bold">Level: {difficulty}/8</span>
         <Gauge className="h-5 w-5 animate-pulse" />
