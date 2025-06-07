@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { SaveWordButton } from "@/components/SaveWordButton";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Trophy,
   Star,
@@ -13,6 +15,7 @@ import {
   Lightbulb,
   BookOpen,
   CheckCircle,
+  BarChart3,
 } from "lucide-react";
 
 interface WordResult {
@@ -28,13 +31,31 @@ interface SummaryCardProps {
 
 export function SummaryCard({ assessmentResults, type, onRestart }: SummaryCardProps) {
   const { toast } = useToast();
+  const { isAuthenticated, login } = useAuth();
   const [tips, setTips] = useState<string>("");
   const [isGeneratingTips, setIsGeneratingTips] = useState(false);
   const [troubleWords, setTroubleWords] = useState<WordResult[]>([]);
 
-  // Calculate overall score
+  // Calculate overall score and detailed scores
   const overallScore = assessmentResults.length > 0 
     ? Math.round(assessmentResults.reduce((sum, result) => sum + (result?.pronunciationScore || 0), 0) / assessmentResults.length)
+    : 0;
+
+  // Calculate average scores for each metric
+  const avgPronunciation = assessmentResults.length > 0 
+    ? Math.round(assessmentResults.reduce((sum, result) => sum + (result?.pronunciationScore || 0), 0) / assessmentResults.length)
+    : 0;
+  
+  const avgFluency = assessmentResults.length > 0 
+    ? Math.round(assessmentResults.reduce((sum, result) => sum + (result?.fluencyScore || 0), 0) / assessmentResults.length)
+    : 0;
+  
+  const avgCompleteness = assessmentResults.length > 0 
+    ? Math.round(assessmentResults.reduce((sum, result) => sum + (result?.completenessScore || 0), 0) / assessmentResults.length)
+    : 0;
+  
+  const avgAccuracy = assessmentResults.length > 0 
+    ? Math.round(assessmentResults.reduce((sum, result) => sum + (result?.accuracyScore || 0), 0) / assessmentResults.length)
     : 0;
 
   // Extract trouble words
@@ -65,41 +86,25 @@ export function SummaryCard({ assessmentResults, type, onRestart }: SummaryCardP
     }
   }, [assessmentResults]);
 
-  // Generate AI tips
+  // Generate stable, supportive tips based on performance
   useEffect(() => {
-    const generateTips = async () => {
-      if (assessmentResults.length === 0) return;
+    if (assessmentResults.length === 0) return;
 
-      setIsGeneratingTips(true);
-      try {
-        const response = await fetch("/api/content/generate-tips", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            assessmentResults,
-            troubleWords: troubleWords.map(w => w.word),
-            type,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to generate tips");
-        }
-
-        const data = await response.json();
-        setTips(data.tips);
-      } catch (error) {
-        console.error("Error generating tips:", error);
-        setTips("Great work on your practice session! Keep practicing regularly to improve your pronunciation skills.");
-      } finally {
-        setIsGeneratingTips(false);
+    // Generate stable tips based on overall performance without API calls
+    const generateStableTips = () => {
+      if (overallScore >= 85) {
+        return "Excellent work! Your pronunciation is very clear. Keep practicing regularly to maintain this high level of performance. Try challenging yourself with more complex vocabulary or faster speech patterns.";
+      } else if (overallScore >= 70) {
+        return "Good progress! You're developing strong pronunciation skills. Focus on the words that were challenging today, and practice speaking at a steady pace. Consistency is key to improvement.";
+      } else if (overallScore >= 50) {
+        return "You're making progress! Every practice session helps improve your speech clarity. Try speaking slowly and clearly, focusing on one word at a time. Don't give up - improvement comes with regular practice.";
+      } else {
+        return "Keep going! Learning pronunciation takes time and patience. Focus on listening carefully to each word, then practice speaking slowly and clearly. Each attempt is a step forward in your journey.";
       }
     };
 
-    if (troubleWords.length >= 0) {
-      generateTips();
-    }
-  }, [troubleWords, assessmentResults, type]);
+    setTips(generateStableTips());
+  }, [overallScore, assessmentResults.length]);
 
   const getScoreColor = (score: number) => {
     if (score >= 85) return "text-green-600";
@@ -153,20 +158,66 @@ export function SummaryCard({ assessmentResults, type, onRestart }: SummaryCardP
       </CardHeader>
 
       <CardContent className="space-y-6">
+        {/* Score Breakdown Bar Chart */}
+        <div className="bg-white rounded-lg p-4 border border-purple-100">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="h-5 w-5 text-blue-500" />
+            <h3 className="text-lg font-semibold text-gray-800">Score Breakdown</h3>
+          </div>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="font-medium">Pronunciation</span>
+                <span>{avgPronunciation}%</span>
+              </div>
+              <Progress 
+                value={avgPronunciation} 
+                className="h-2.5"
+              />
+            </div>
+            
+            <div className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="font-medium">Fluency</span>
+                <span>{avgFluency}%</span>
+              </div>
+              <Progress 
+                value={avgFluency} 
+                className="h-2.5"
+              />
+            </div>
+            
+            <div className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="font-medium">Completeness</span>
+                <span>{avgCompleteness}%</span>
+              </div>
+              <Progress 
+                value={avgCompleteness} 
+                className="h-2.5"
+              />
+            </div>
+            
+            <div className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="font-medium">Accuracy</span>
+                <span>{avgAccuracy}%</span>
+              </div>
+              <Progress 
+                value={avgAccuracy} 
+                className="h-2.5"
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Tips Section */}
         <div className="bg-white rounded-lg p-4 border border-purple-100">
           <div className="flex items-center gap-2 mb-3">
             <Lightbulb className="h-5 w-5 text-yellow-500" />
             <h3 className="text-lg font-semibold text-gray-800">Tips for Improvement</h3>
           </div>
-          {isGeneratingTips ? (
-            <div className="flex items-center gap-2 text-gray-600">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
-              <span>Generating personalized tips...</span>
-            </div>
-          ) : (
-            <p className="text-gray-700 leading-relaxed">{tips}</p>
-          )}
+          <p className="text-gray-700 leading-relaxed">{tips}</p>
         </div>
 
         {/* Trouble Words Section */}
@@ -221,11 +272,17 @@ export function SummaryCard({ assessmentResults, type, onRestart }: SummaryCardP
             variant="outline"
             className="flex-1 border-purple-300 text-purple-700 hover:bg-purple-50 font-semibold py-3"
             onClick={() => {
-              window.location.href = "/my-words";
+              if (!isAuthenticated) {
+                // Redirect to login instead of causing auth errors
+                login();
+              } else {
+                // Navigate to saved words page if authenticated
+                window.location.href = "/my-words";
+              }
             }}
           >
             <BookOpen className="h-4 w-4 mr-2" />
-            Review Saved Words
+            {isAuthenticated ? "Review Saved Words" : "Sign In to Save Words"}
           </Button>
         </div>
       </CardContent>
