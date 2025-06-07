@@ -412,7 +412,7 @@ const ReadingContent = ({ onSelectContent }: ReadingContentProps) => {
         {/* Choose a Topic Cards */}
         <div className="mb-6">
           <h3 className="text-md font-bold mb-3">Choose a Topic</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto">
             {readingTopics.map((topic) => (
               <Card
                 key={topic}
@@ -430,7 +430,7 @@ const ReadingContent = ({ onSelectContent }: ReadingContentProps) => {
 
         {/* Custom Topic Input */}
         <div className="mb-6">
-          <p className="text-sm text-gray-600 mb-3">Or enter a custom topic:</p>
+          <p className="text-base font-medium text-purple-600 mb-3">Or enter a custom topic:</p>
           <div className="flex gap-2">
             <Input
               placeholder="Enter a topic you'd like to read about..."

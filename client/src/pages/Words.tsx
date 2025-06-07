@@ -810,7 +810,7 @@ export default function Words() {
       {/* Topic Selection */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Choose a Topic</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
           {topicOptions.map((topic) => (
             <Card
               key={topic}
@@ -834,7 +834,7 @@ export default function Words() {
 
         {/* Custom Topic Input */}
         <div className="mt-6">
-          <Label htmlFor="custom-topic" className="text-base font-medium">
+          <Label htmlFor="custom-topic" className="text-base font-medium text-purple-600">
             Or enter a custom topic:
           </Label>
           <div className="flex gap-2 mt-2">
