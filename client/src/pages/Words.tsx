@@ -816,15 +816,16 @@ export default function Words() {
               key={topic}
               className={`cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 ${
                 aiGenerateTopic === topic 
-                  ? 'ring-2 ring-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-md' 
+                  ? 'ring-2 ring-blue-500 shadow-md' 
                   : 'hover:bg-gradient-to-br hover:from-gray-50 hover:to-blue-50'
               } ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
+              style={{ backgroundColor: '#FF89BB' }}
               onClick={() => {
                 setAiGenerateTopic(topic);
                 handleGenerateTopicWords(topic);
               }}
             >
-              <CardContent className="p-6 text-center">
+              <CardContent className="p-4 text-center">
                 <p className="font-semibold text-gray-800">{topic}</p>
               </CardContent>
             </Card>
@@ -870,7 +871,7 @@ export default function Words() {
             <div className="embla__container flex">
               {processedWords.map((word, idx) => (
                 <div key={word.id} className={`embla__slide flex-shrink-0 w-full sm:w-[90%] md:w-[80%] lg:w-[70%] xl:w-[60%] 2xl:w-[50%] px-4 sm:px-6 md:px-8 ${idx === currentCarouselIndex ? 'is-in-view' : ''}`}>
-                  <Card className="h-full card-content">
+                  <Card className="h-full card-content" style={{ backgroundColor: '#1947E5' }}>
                     <CardHeader className="text-center">
                       <CardTitle className="text-2xl font-bold">{word.text}</CardTitle>
                       {word.phonetic && (
@@ -886,10 +887,10 @@ export default function Words() {
                         {word.status === "idle" && (
                           <Button
                             onClick={() => startWordPractice(idx)}
-                            className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
+                            className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 font-bold text-base h-12 px-6"
                             disabled={isRecording || isProcessingRecording}
                           >
-                            <MicIcon className="h-4 w-4" />
+                            <MicIcon className="h-5 w-5" />
                             Start Recording
                           </Button>
                         )}
@@ -916,10 +917,9 @@ export default function Words() {
                           <div className="flex gap-2">
                             <Button
                               onClick={() => startWordPractice(idx)}
-                              variant="outline"
-                              className="flex items-center gap-2"
+                              className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 font-bold text-base h-12 px-6"
                             >
-                              <RotateCw className="h-4 w-4" />
+                              <RotateCw className="h-5 w-5" />
                               Try Again
                             </Button>
                             <Button
