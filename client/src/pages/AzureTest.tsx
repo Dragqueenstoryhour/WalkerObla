@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { MicIcon, StopCircleIcon, VolumeIcon, RotateCw } from 'lucide-react';
+import { MicIcon, StopCircleIcon, VolumeIcon, RotateCw, Ear } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import useAudioRecording from '@/hooks/useAudioRecording';
 import { PronunciationAssessmentResult } from '@/lib/types';
@@ -169,8 +169,8 @@ export default function AzureTest() {
                   disabled={isProcessing}
                   className="bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0"
                 >
-                  <VolumeIcon className="mr-2 h-4 w-4" />
-                  Play
+                  <Ear className="mr-2 h-4 w-4" />
+                  Hear
                 </Button>
               )}
               

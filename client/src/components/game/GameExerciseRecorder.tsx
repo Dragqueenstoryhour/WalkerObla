@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { MicIcon, StopCircleIcon, VolumeIcon, XIcon, CheckCircle2, Award, Volume2 } from 'lucide-react';
+import { MicIcon, StopCircleIcon, VolumeIcon, XIcon, CheckCircle2, Award, Volume2, Ear } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { submitReadingRecording } from '@/lib/azure';
 import { Exercise, PronunciationAssessmentResult } from '@/lib/types';
@@ -290,8 +290,8 @@ export function GameExerciseRecorder({
                     disabled={isProcessing}
                     className="bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0"
                   >
-                    <VolumeIcon className="mr-2 h-4 w-4" />
-                    Play
+                    <Ear className="mr-2 h-4 w-4" />
+                    Hear
                   </Button>
                 )}
               </div>

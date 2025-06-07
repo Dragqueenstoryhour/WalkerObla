@@ -44,6 +44,7 @@ import {
   ArrowRight,
   Snail,
   Flag,
+  Ear,
 } from "lucide-react";
 import { useDifficulty } from "@/contexts/DifficultyContext";
 import { DifficultyDropdown } from "@/components/difficulty/SimplifiedDifficultySelector";
@@ -921,7 +922,8 @@ export default function Phrases() {
                           variant="outline"
                           className="h-10 px-4 bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0"
                         >
-                          Listen
+                          <Ear className="h-4 w-4 mr-1" />
+                          Hear
                         </Button>
                         <button
                           onClick={() => toggleSlowPlayback(phrase.id)}

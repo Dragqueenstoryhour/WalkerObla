@@ -44,6 +44,7 @@ import {
   ArrowRight,
   Snail,
   Flag,
+  Ear,
 } from "lucide-react";
 import { useDifficulty } from "@/contexts/DifficultyContext";
 import { DifficultyDropdown } from "@/components/difficulty/SimplifiedDifficultySelector";
@@ -938,7 +939,8 @@ export default function Words() {
                           variant="outline"
                           className="justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-white hover:bg-[#FF7F7C] h-10 px-4 py-2 flex items-center gap-2 bg-[#FF9692] border-0"
                         >
-                          Listen
+                          <Ear className="h-4 w-4" />
+                          Hear
                         </Button>
                         <button
                           onClick={() => toggleSlowPlayback(word.id)}
