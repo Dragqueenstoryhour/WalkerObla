@@ -85,6 +85,8 @@ export default function Words() {
   const [pendingSaveIndex, setPendingSaveIndex] = useState<number | null>(null);
   const [slowPlaybackWords, setSlowPlaybackWords] = useState<{ [key: string]: boolean }>({});
   const [showSummary, setShowSummary] = useState(false);
+  const [showLetterModal, setShowLetterModal] = useState(false);
+  const [letterModalType, setLetterModalType] = useState<'begin' | 'include'>('begin');
 
   // Carousel state
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
@@ -737,6 +739,30 @@ export default function Words() {
     };
   }, []); // Empty dependency array to run once on mount
 
+  // Handle letter selection for word generation
+  const handleLetterSelection = async (letter: string) => {
+    setShowLetterModal(false);
+    setIsProcessing(true);
+    
+    try {
+      const topicQuery = letterModalType === 'begin' 
+        ? `words that begin with ${letter}` 
+        : `words that include the letter ${letter}`;
+      
+      setAiGenerateTopic(topicQuery);
+      await handleGenerateTopicWords(topicQuery);
+    } catch (error) {
+      console.error("Error generating letter-based words:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate words. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const topicOptions = [
     "Commonly Used Words",
     "Household Items",
@@ -748,8 +774,15 @@ export default function Words() {
     "Weather",
     "Transportation",
     "Animals",
-    "Emotions",
-    "Actions"
+    "Words that Begin with..",
+    "Words that Include.."
+  ];
+
+  // Letter options for letter-based word generation
+  const letterOptions = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+    'St', 'Tr', 'Br', 'Cl', 'Fl', 'Pl', 'Sp', 'Th', 'Ch', 'Sh'
   ];
 
   return (
@@ -821,8 +854,16 @@ export default function Words() {
               } ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
               style={{ backgroundColor: '#FF89BB' }}
               onClick={() => {
-                setAiGenerateTopic(topic);
-                handleGenerateTopicWords(topic);
+                if (topic === "Words that Begin with..") {
+                  setLetterModalType('begin');
+                  setShowLetterModal(true);
+                } else if (topic === "Words that Include..") {
+                  setLetterModalType('include');
+                  setShowLetterModal(true);
+                } else {
+                  setAiGenerateTopic(topic);
+                  handleGenerateTopicWords(topic);
+                }
               }}
             >
               <CardContent className="p-4 text-center">
