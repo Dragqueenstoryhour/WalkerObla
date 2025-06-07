@@ -852,8 +852,8 @@ export default function Phrases() {
           <div className="embla overflow-hidden w-full max-w-7xl mx-auto" ref={emblaRef}>
             <div className="embla__container flex">
               {processedPhrases.map((phrase, idx) => (
-                <div key={phrase.id} className="embla__slide flex-shrink-0 w-full sm:w-[90%] md:w-[80%] lg:w-[70%] xl:w-[60%] 2xl:w-[50%] px-4 sm:px-6 md:px-8">
-                  <Card className="h-full">
+                <div key={phrase.id} className={`embla__slide flex-shrink-0 w-full sm:w-[90%] md:w-[80%] lg:w-[70%] xl:w-[60%] 2xl:w-[50%] px-4 sm:px-6 md:px-8 ${idx === currentCarouselIndex ? 'is-in-view' : ''}`}>
+                  <Card className="h-full card-content">
                     <CardHeader className="text-center">
                       <CardTitle className="text-xl font-bold">{phrase.text}</CardTitle>
                       {phrase.phonetic && (
