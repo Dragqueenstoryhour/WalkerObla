@@ -215,12 +215,87 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
     }
   };
 
-  // Text-to-speech handler
-  const handleTextToSpeech = () => {
-    if (phrase.text) {
-      const utterance = new SpeechSynthesisUtterance(phrase.text);
-      utterance.rate = slowPlayback ? 0.6 : 1.0;
-      speechSynthesis.speak(utterance);
+  // Text-to-speech handler using OpenAI API
+  const handleTextToSpeech = async () => {
+    if (!phrase.text) {
+      toast({
+        title: "No Text",
+        description: "No text available for this phrase.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const loadingToast = toast({
+      title: "Loading Audio",
+      description: "Preparing text-to-speech...",
+    });
+
+    const speed = slowPlayback ? 0.6 : 1.0;
+
+    try {
+      const response = await fetch("/api/speech/synthesize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          text: phrase.text,
+          voice: "alloy",
+          speed: speed
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to synthesize speech: ${response.status}`);
+      }
+
+      const audioBlob = await response.blob();
+      if (audioBlob.size === 0) {
+        throw new Error("Received empty audio data");
+      }
+
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+
+      audio.onerror = () => {
+        toast({
+          title: "Playback Error",
+          description: "Could not play the audio. Please try again.",
+          variant: "destructive",
+        });
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      audio.oncanplaythrough = () => {
+        loadingToast.dismiss?.();
+        audio.play().then(() => {
+          toast({
+            title: slowPlayback ? "Playing Slowly" : "Playing",
+            description: `Playing: "${phrase.text.substring(0, 20)}${phrase.text.length > 20 ? "..." : ""}"`,
+          });
+        }).catch((error) => {
+          toast({
+            title: "Playback Error",
+            description: "Could not play the audio. Please try again.",
+            variant: "destructive",
+          });
+          URL.revokeObjectURL(audioUrl);
+        });
+      };
+
+      audio.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      audio.src = audioUrl;
+    } catch (error) {
+      loadingToast.dismiss?.();
+      toast({
+        title: "TTS Error",
+        description: error instanceof Error ? error.message : "Could not generate audio.",
+        variant: "destructive",
+      });
     }
   };
 
