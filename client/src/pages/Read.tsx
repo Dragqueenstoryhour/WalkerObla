@@ -94,6 +94,32 @@ const Read = () => {
     setArticleCompleted(false);
   }, [currentContent]);
 
+  // Handle generating new content
+  const handleNewContent = async () => {
+    setHasCompletedRecording(false);
+    try {
+      const response = await fetch('/api/content/sample');
+      if (!response.ok) {
+        throw new Error('Failed to fetch new content');
+      }
+      const newContent = await response.json() as ReadingContentType;
+      setCurrentContent(newContent);
+      setReferenceText(newContent.content);
+      toast({
+        title: "New Content Loaded",
+        description: "Fresh reading material is ready for practice",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error("Error loading new content:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load new content. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Header
@@ -123,6 +149,7 @@ const Read = () => {
                     text={referenceText}
                     contentId={currentContent.id}
                     onAssessmentReceived={handleAssessmentReceived}
+                    onNewContent={handleNewContent}
                   />
                 )}
               </div>
