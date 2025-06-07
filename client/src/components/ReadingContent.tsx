@@ -393,14 +393,14 @@ const ReadingContent = ({ onSelectContent }: ReadingContentProps) => {
               ) : transcribedVoiceCommandText || confirmationVoiceCommandMessage ? (
                 <div className={isPlayingVoiceResponse ? 'border-l-4 border-accent pl-3' : ''}>
                   <p className="text-sm text-textColor opacity-70 mb-1">
-                    {isPlayingVoiceResponse ? 'AI Response:' : confirmationVoiceCommandMessage ? 'ReadAssist:' : 'I heard:'}
+                    {isPlayingVoiceResponse ? 'AI Response:' : confirmationVoiceCommandMessage ? 'Obla:' : 'I heard:'}
                   </p>
                   <p className="font-medium">
                     {isProcessingVoiceCommand || confirmationVoiceCommandMessage ? confirmationVoiceCommandMessage : transcribedVoiceCommandText}
                   </p>
                   {isPlayingVoiceResponse && (
                     <div className="mt-1 pt-1 border-t border-gray-200 text-sm text-textColor opacity-90 italic">
-                      <p>ReadAssist is speaking...</p>
+                      <p>Obla is speaking...</p>
                     </div>
                   )}
                 </div>

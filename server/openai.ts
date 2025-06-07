@@ -142,7 +142,7 @@ export async function transcribeAudio(audioBuffer: Buffer): Promise<string> {
 export async function processVoiceCommand(command: string): Promise<any> {
   try {
     // Enhanced system prompt to handle topic and difficulty parsing
-    const systemPrompt = `You're ReadAssist, helping stroke recovery patients with speech. 
+    const systemPrompt = `You're Obla, helping people with the pronunciation of their speech. 
 Parse the user's voice command to determine their intent. 
 Return a JSON with:
 - 'action': generateContent, startReading, pauseReading, pronunciationHelp, etc.
@@ -233,7 +233,7 @@ function createDefaultContent(topic: string, rawContent: string): any {
   return {
     title: title,
     content: cleanContent,
-    source: "ReadAssist"
+    source: "Obla"
   };
 }
 
@@ -328,7 +328,7 @@ export async function generateReadingContent(topic: string, difficulty: string):
     - Write in proper newspaper article style with complete, grammatically correct sentences.
     - Avoid fragments, choppy phrases, or awkward constructions like "Eat clean, move more."
     - Use natural, flowing language that sounds like professional journalism.
-    - Return ONLY JSON: {"title": "string", "content": "string", "source": "ReadAssist"}`;
+    - Return ONLY JSON: {"title": "string", "content": "string", "source": "Obla"}`;
 
     console.log(`Using OpenAI to generate content about "${topic}" with difficulty "${difficulty}"`);
 
@@ -374,7 +374,7 @@ IMPORTANT: Keep it engaging, informative, and under ${maxWords} words total.` }
       id: Date.now(),
       title: content.title,
       content: content.content,
-      source: content.source || "AI-Generated for ReadAssist",
+      source: content.source || "AI-Generated for Obla",
       wordCount: Math.min(calculatedWordCount, maxWords), // Ensure word count doesn't exceed our limit
       readingTime: calculatedWordCount * 3,
       difficulty: mappedDifficulty, 

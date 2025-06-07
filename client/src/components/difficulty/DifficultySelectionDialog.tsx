@@ -31,29 +31,29 @@ export function DifficultySelectionDialog({ open, onClose }: DifficultySelection
           description: "Using medium difficulty (level 4) as default",
         });
       }
-      
+
       toast({
         title: "Setting Difficulty",
         description: `Generating content for difficulty level ${difficulty}/8...`,
       });
-      
+
       // Use a default topic or the current content topic
       const topic = currentContent?.title?.split(' ').slice(0, 2).join(' ').toLowerCase() || 'interesting facts';
-      
+
       // Send the numeric difficulty directly to ensure API compatibility
       const content = await generateReadingContent(topic, difficulty);
-      
+
       // Update content
       setCurrentContent(content);
-      
+
       // Mark as having selected difficulty
       setHasSelectedDifficulty(true);
-      
+
       toast({
         title: "Difficulty Set",
         description: `Ready to practice at level ${difficulty}/8`,
       });
-      
+
       // Close dialog
       onClose();
     } catch (error) {
@@ -78,16 +78,16 @@ export function DifficultySelectionDialog({ open, onClose }: DifficultySelection
       <DialogContent className="sm:max-w-lg bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 border-2 border-purple-200 shadow-2xl">
         <div className="text-center mb-6">
           <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
-            <span className="text-2xl">🎉</span>
+            <span className="text-2xl">脂</span>
           </div>
           <DialogTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
-            Welcome to ReadAssist!
+            Welcome to Obla!
           </DialogTitle>
           <DialogDescription className="text-lg text-gray-700 leading-relaxed">
-            Your AI-powered speech therapy companion is ready to help you improve pronunciation and reading fluency!
+            Your AI-powered speech therapy companion is ready to help you improve pronunciation!
           </DialogDescription>
         </div>
-        
+
         <div className="bg-white/70 rounded-lg p-6 mb-6 border border-purple-100 backdrop-blur-sm">
           <h3 className="text-xl font-semibold text-purple-800 mb-4 text-center">
             Let's personalize your experience
@@ -95,31 +95,11 @@ export function DifficultySelectionDialog({ open, onClose }: DifficultySelection
           <p className="text-gray-700 mb-4 text-center">
             Choose your starting difficulty level. Don't worry - you can always adjust it later!
           </p>
-          
+
           <DifficultySlider />
-          
-          <div className="mt-6 bg-gradient-to-r from-blue-100 to-purple-100 rounded-lg p-4">
-            <h4 className="font-semibold text-purple-800 mb-2 flex items-center">
-              <span className="mr-2">✨</span>
-              What you'll get:
-            </h4>
-            <ul className="space-y-2 text-sm text-gray-700">
-              <li className="flex items-center">
-                <span className="mr-2 text-green-500">🎯</span>
-                Personalized practice materials
-              </li>
-              <li className="flex items-center">
-                <span className="mr-2 text-blue-500">📈</span>
-                Real-time pronunciation feedback
-              </li>
-              <li className="flex items-center">
-                <span className="mr-2 text-purple-500">🏆</span>
-                Progressive skill building
-              </li>
-            </ul>
-          </div>
+
         </div>
-        
+
         <div className="flex justify-center">
           <Button 
             onClick={handleConfirm}
@@ -133,7 +113,7 @@ export function DifficultySelectionDialog({ open, onClose }: DifficultySelection
               </>
             ) : (
               <>
-                <span className="mr-2">🚀</span>
+                <span className="mr-2">噫</span>
                 Start My Journey!
               </>
             )}

@@ -129,7 +129,7 @@ async function processAudioWithRealtimeAPI(sessionId: string, audioChunk: Buffer
       const speechData = await openai.audio.speech.create({
         model: "tts-1",
         voice: "alloy",
-        input: "Hello, I'm ReadAssist, your voice assistant for reading practice. How can I help you today?",
+        input: "Hello, I'm Obla, your voice assistant for reading practice. How can I help you today?",
       });
       
       // Using a controller for handling request cancellation
@@ -165,7 +165,7 @@ async function processAudioWithRealtimeAPI(sessionId: string, audioChunk: Buffer
         messages: [
           {
             role: "system",
-            content: `You are an AI voice assistant named ReadAssist, designed to help stroke recovery patients 
+            content: `You are an AI voice assistant named Obla, designed to help people practice their speech.
               with reading practice and pronunciation. Parse the user's request and respond in JSON format.
               
               If the user is asking for a reading passage, respond with:
