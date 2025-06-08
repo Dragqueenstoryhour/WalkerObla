@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ChevronLeft, ChevronRight, X, Plus, Folder, Volume2, Play, Pause, Shuffle, TrendingUp, Award, Target, Clock, BarChart3, BookOpen, Mic } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Plus, Folder, Volume2, Play, Pause, Shuffle, TrendingUp, Award, Target, Clock, BarChart3, BookOpen, Type, List } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { isUnauthorizedError } from '@/lib/authUtils';
@@ -51,7 +51,7 @@ interface ActivityStats {
   readingStats: { total: number; avgScore: number; recent: UserActivity[] };
 }
 
-// Bar Chart Component
+// Bar Chart Component with Y-axis labels
 function ScoreChart({ scores, title, color }: { scores: number[], title: string, color: string }) {
   if (scores.length === 0) {
     return (
@@ -61,18 +61,29 @@ function ScoreChart({ scores, title, color }: { scores: number[], title: string,
     );
   }
 
-  const maxScore = Math.max(...scores, 100);
+  const maxScore = 100; // Always use 100 as max for consistency
+  const yAxisLabels = [100, 75, 50, 25];
   
   return (
-    <div className="h-32 flex items-end gap-1 justify-center">
-      {scores.slice(-10).map((score, index) => (
-        <div
-          key={index}
-          className={`${color} rounded-t transition-all duration-300 hover:opacity-80 min-w-[12px] flex-1 max-w-[20px]`}
-          style={{ height: `${(score / maxScore) * 100}%` }}
-          title={`Score: ${Math.round(score)}%`}
-        />
-      ))}
+    <div className="flex h-32">
+      {/* Y-axis labels */}
+      <div className="flex flex-col justify-between text-xs text-gray-400 pr-2 py-1">
+        {yAxisLabels.map(label => (
+          <span key={label}>{label}%</span>
+        ))}
+      </div>
+      
+      {/* Chart bars */}
+      <div className="flex items-end gap-1 justify-center flex-1">
+        {scores.slice(-10).map((score, index) => (
+          <div
+            key={index}
+            className={`${color} rounded-t transition-all duration-300 hover:opacity-80 min-w-[12px] flex-1 max-w-[20px]`}
+            style={{ height: `${(score / maxScore) * 100}%` }}
+            title={`Score: ${Math.round(score)}%`}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -399,47 +410,7 @@ export default function MyWords() {
           )}
         </div>
 
-        {/* My Stats Section */}
-        {activityStats && (
-          <div className="mb-12">
-            <h2 className="text-2xl font-semibold mb-6 text-purple-800 flex items-center gap-2">
-              <BarChart3 className="h-6 w-6" />
-              My Stats
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <StatsCard
-                title="Words"
-                icon={Mic}
-                total={activityStats.wordStats.total}
-                avgScore={activityStats.wordStats.avgScore}
-                recentScores={activityStats.wordStats.recent.map(a => a.score || 0)}
-                color="text-blue-700"
-                bgGradient="bg-gradient-to-br from-blue-50 to-blue-100"
-              />
-              
-              <StatsCard
-                title="Phrases"
-                icon={Volume2}
-                total={activityStats.phraseStats.total}
-                avgScore={activityStats.phraseStats.avgScore}
-                recentScores={activityStats.phraseStats.recent.map(a => a.score || 0)}
-                color="text-purple-700"
-                bgGradient="bg-gradient-to-br from-purple-50 to-purple-100"
-              />
-              
-              <StatsCard
-                title="Reading"
-                icon={BookOpen}
-                total={activityStats.readingStats.total}
-                avgScore={activityStats.readingStats.avgScore}
-                recentScores={activityStats.readingStats.recent.map(a => a.score || 0)}
-                color="text-emerald-700"
-                bgGradient="bg-gradient-to-br from-emerald-50 to-emerald-100"
-              />
-            </div>
-          </div>
-        )}
+
 
         {/* Practice Groups */}
         {groups.length > 0 && (
@@ -651,6 +622,48 @@ export default function MyWords() {
             </Card>
           )}
         </div>
+
+        {/* My Stats Section - Moved below Practice Words */}
+        {activityStats && (
+          <div className="mb-12">
+            <h2 className="text-2xl font-semibold mb-6 text-purple-800 flex items-center gap-2">
+              <BarChart3 className="h-6 w-6" />
+              My Stats
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <StatsCard
+                title="Words"
+                icon={Type}
+                total={activityStats.wordStats.total}
+                avgScore={activityStats.wordStats.avgScore}
+                recentScores={activityStats.wordStats.recent.map(a => a.score || 0)}
+                color="text-blue-700"
+                bgGradient="bg-gradient-to-br from-blue-50 to-blue-100"
+              />
+              
+              <StatsCard
+                title="Phrases"
+                icon={List}
+                total={activityStats.phraseStats.total}
+                avgScore={activityStats.phraseStats.avgScore}
+                recentScores={activityStats.phraseStats.recent.map(a => a.score || 0)}
+                color="text-purple-700"
+                bgGradient="bg-gradient-to-br from-purple-50 to-purple-100"
+              />
+              
+              <StatsCard
+                title="Reading"
+                icon={BookOpen}
+                total={activityStats.readingStats.total}
+                avgScore={activityStats.readingStats.avgScore}
+                recentScores={activityStats.readingStats.recent.map(a => a.score || 0)}
+                color="text-emerald-700"
+                bgGradient="bg-gradient-to-br from-emerald-50 to-emerald-100"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

@@ -373,6 +373,9 @@ export default function Words() {
       const formData = new FormData();
       formData.append("audio", audioBlob);
       formData.append("text", word.text);
+      formData.append("itemType", "word");
+      formData.append("source", "practice");
+      formData.append("difficulty", word.difficulty || "medium");
 
       const response = await fetch("/api/pronunciation/assess", {
         method: "POST",

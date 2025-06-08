@@ -68,14 +68,14 @@ function TabBar() {
 
 function Navigation() {
   return (
-    <div className="bg-gradient-to-b from-white to-green-50 py-2 px-4 mb-0">
+    <div className="bg-gradient-to-b from-white to-green-50 py-2 px-4 mb-6">
       {/* Tab Bar - Full Width */}
-      <div className="w-full mb-3">
+      <div className="w-full mb-6">
         <TabBar />
       </div>
       
-      {/* Authentication Row - Right Aligned with proper spacing */}
-      <div className="flex justify-end pb-2">
+      {/* Authentication Row - Centered over Level button */}
+      <div className="flex justify-center pb-4">
         <AuthButtons
           variant="default"
           className="bg-green-600 hover:bg-green-700 text-white border-none"
