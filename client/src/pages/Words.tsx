@@ -811,7 +811,6 @@ export default function Words() {
           </div>
         </DialogContent>
       </Dialog>
-
       {/* Sign in dialog */}
       <Dialog open={showSignInDialog} onOpenChange={setShowSignInDialog}>
         <DialogContent>
@@ -835,7 +834,6 @@ export default function Words() {
           </div>
         </DialogContent>
       </Dialog>
-
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">Practice Words</h1>
         <DifficultyDropdown onConfirm={async (newDifficulty) => {
@@ -843,7 +841,6 @@ export default function Words() {
           await handleGenerateTopicWords(aiGenerateTopic, newDifficulty);
         }} />
       </div>
-
       {/* Topic Selection */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Choose a Topic</h2>
@@ -870,7 +867,7 @@ export default function Words() {
                 }
               }}
             >
-              <CardContent className="p-4 text-center">
+              <CardContent className="p-4 text-center bg-[1947e5] text-[#ffffff]">
                 <p className="font-semibold text-black">{topic}</p>
               </CardContent>
             </Card>
@@ -905,7 +902,6 @@ export default function Words() {
           </div>
         </div>
       </div>
-
       {/* Practice Section */}
       {processedWords.length > 0 && (
         <div id="practice-words-section" className="mb-8">
@@ -1103,7 +1099,6 @@ export default function Words() {
           )}
         </div>
       )}
-
       {/* Letter Selection Modal */}
       <Dialog open={showLetterModal} onOpenChange={setShowLetterModal}>
         <DialogContent className="max-w-2xl">
