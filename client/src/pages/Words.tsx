@@ -966,10 +966,10 @@ export default function Words() {
                             <Button
                               onClick={() => playUserRecording(idx)}
                               variant="outline"
-                              className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0"
+                              className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0 h-12 px-6"
                             >
                               <VolumeIcon className="h-4 w-4" />
-                              Hear me
+                              Listen to me
                             </Button>
                           </div>
                         )}
@@ -1017,8 +1017,8 @@ export default function Words() {
                       {word.assessmentResult && (
                         <div className="text-center space-y-2">
                           <div className="flex items-center justify-center gap-2">
-                            <Gauge className="h-5 w-5 text-primary" />
-                            <span className="text-lg font-semibold">
+                            <Gauge className="h-5 w-5 text-white" />
+                            <span className="text-lg font-semibold text-white">
                               {word.assessmentResult.pronunciationScore.toFixed(1)}%
                             </span>
                           </div>
