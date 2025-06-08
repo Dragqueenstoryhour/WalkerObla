@@ -35,6 +35,10 @@ export interface PronunciationIssue {
   word: string;
   phonetic: string;
   score: number;
+  id?: string;
+  status?: "idle" | "recording" | "assessing" | "complete";
+  assessmentResult?: any;
+  recordingUrl?: string;
 }
 
 export interface SuggestedExercise {

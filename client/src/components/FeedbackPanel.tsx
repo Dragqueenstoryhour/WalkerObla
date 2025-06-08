@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Volume2, Share2, BookmarkIcon, Snail, Check } from 'lucide-react';
+import { Volume2, Share2, BookmarkIcon, Snail, Check, MicIcon, StopCircleIcon, RotateCw, VolumeIcon, Ear, ChevronLeft, ChevronRight, Gauge, Star } from 'lucide-react';
 import { useReading } from '@/contexts/ReadingContext';
 import { PronunciationIssue, SuggestedExercise } from '@/lib/types';
 import { synthesizeSpeech } from '@/lib/azure';
 import { useToast } from '@/hooks/use-toast';
 import { submitReadingRecording } from '@/lib/azure';
+import useEmblaCarousel from 'embla-carousel-react';
 
 // Helper function to get phonetic display from API
 async function getPhoneticDisplay(word: string): Promise<string> {
@@ -38,11 +39,40 @@ const FeedbackPanel = () => {
   const [isProcessingWord, setIsProcessingWord] = useState(false);
   const [isSlowMode, setIsSlowMode] = useState(false);
   const [savedWords, setSavedWords] = useState<Set<string>>(new Set());
+  
+  // Carousel state
+  const [emblaRef, emblaApi] = useEmblaCarousel();
+  const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
+  const [slowPlaybackWords, setSlowPlaybackWords] = useState<Record<string, boolean>>({});
 
   // Refs for media recording
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Carousel navigation functions
+  const goToPrevious = () => {
+    if (emblaApi) {
+      emblaApi.scrollPrev();
+    }
+  };
+
+  const goToNext = () => {
+    if (emblaApi) {
+      emblaApi.scrollNext();
+    }
+  };
+
+  useEffect(() => {
+    if (emblaApi) {
+      const onSelect = () => {
+        setCurrentCarouselIndex(emblaApi.selectedScrollSnap());
+      };
+      emblaApi.on('select', onSelect);
+      onSelect();
+    }
+  }, [emblaApi]);
 
   // Update feedback when pronunciation results change
   useEffect(() => {
@@ -53,13 +83,16 @@ const FeedbackPanel = () => {
           pronunciationResults.wordLevelResults
             .filter(result => result.accuracyScore < 75) // Filter for words with accuracy less than 75%
             .slice(0, 6) // Limit to maximum 6 words
-            .map(async result => ({
+            .map(async (result, index) => ({
               word: result.word,
               phonetic: await getPhoneticDisplay(result.word), // Get proper syllable breakdown
-              score: result.accuracyScore
+              score: result.accuracyScore,
+              id: `issue-${Date.now()}-${index}`,
+              status: "idle" as const
             }))
         );
         setPronunciationIssues(issues);
+        setCurrentCarouselIndex(0);
       };
 
       processIssues();
@@ -148,12 +181,21 @@ const FeedbackPanel = () => {
     }
   };
 
-  // Start recording word pronunciation practice
-  const startWordPractice = async (word: string) => {
+  // Start recording for an individual word practice
+  const startWordPractice = async (wordIndex: number) => {
+    if (wordIndex < 0 || wordIndex >= pronunciationIssues.length) return;
+
     try {
-      setCurrentlyPracticing(word);
-      setWordAssessmentResult(null);
+      const issue = pronunciationIssues[wordIndex];
+      setCurrentlyPracticing(issue.word);
       chunksRef.current = [];
+
+      // Update the issue status to recording
+      setPronunciationIssues((issues) =>
+        issues.map((w, idx) =>
+          idx === wordIndex ? { ...w, status: "recording" } : w,
+        ),
+      );
 
       // Get microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -175,44 +217,53 @@ const FeedbackPanel = () => {
         // Clean up the stream properly
         if (streamRef.current) {
           const tracks = streamRef.current.getTracks();
-          tracks.forEach(track => track.stop());
+          tracks.forEach((track) => track.stop());
           streamRef.current = null;
         }
 
         try {
           // Create audio blob
-          const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+          const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
 
-          // Process with Azure
-          await processWordRecording(audioBlob, word);
+          // Process the word recording
+          await processWordRecording(audioBlob, wordIndex);
         } catch (error) {
-          console.error('Error processing word recording:', error);
+          console.error("Error processing word recording:", error);
           toast({
-            title: 'Recording Error',
-            description: 'Could not process the recording. Please try again.',
-            variant: 'destructive'
+            title: "Recording Error",
+            description: "Could not process the recording. Please try again.",
+            variant: "destructive",
           });
           setIsRecording(false);
           setIsProcessingWord(false);
+
+          // Reset issue status
+          setPronunciationIssues((issues) =>
+            issues.map((w, idx) =>
+              idx === wordIndex ? { ...w, status: "idle" } : w,
+            ),
+          );
         }
       };
 
       // Start recording
-      mediaRecorder.start(100); // Collect data every 100ms
+      mediaRecorder.start(100);
       setIsRecording(true);
-
-      toast({
-        title: 'Recording Started',
-        description: `Say the word "${word}" clearly`,
-      });
     } catch (error) {
-      console.error('Error starting recording:', error);
+      console.error("Error starting recording:", error);
       toast({
-        title: 'Microphone Error',
-        description: 'Could not access the microphone. Please check permissions.',
-        variant: 'destructive'
+        title: "Microphone Error",
+        description: "Could not access the microphone. Please check permissions.",
+        variant: "destructive",
       });
       setCurrentlyPracticing(null);
+
+      // Reset issue status
+      setPronunciationIssues((issues) =>
+        issues.map((w, idx) =>
+          idx === wordIndex ? { ...w, status: "idle" } : w,
+        ),
+      );
     }
   };
 
