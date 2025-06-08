@@ -87,11 +87,7 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
           await processPhraseRecording(audioBlob);
         } catch (error) {
           console.error('Error processing phrase recording:', error);
-          toast({
-            title: 'Recording Error',
-            description: 'Could not process the recording. Please try again.',
-            variant: 'destructive'
-          });
+
           setIsRecording(false);
           setIsProcessingRecording(false);
           setPhrase(prev => ({ ...prev, status: "idle" }));
@@ -102,17 +98,10 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
       mediaRecorder.start(100); // Collect data every 100ms
       setIsRecording(true);
 
-      toast({
-        title: 'Recording Started',
-        description: 'Say the text clearly',
-      });
+
     } catch (error) {
       console.error('Error starting recording:', error);
-      toast({
-        title: 'Microphone Error',
-        description: 'Could not access the microphone. Please check permissions.',
-        variant: 'destructive'
-      });
+
       setPhrase(prev => ({ ...prev, status: "idle" }));
     }
   };
@@ -148,10 +137,7 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
       // Update status to assessing
       setPhrase(prev => ({ ...prev, status: "assessing" }));
 
-      toast({
-        title: "Processing Recording",
-        description: "Analyzing your pronunciation...",
-      });
+
 
       // Create a URL for the recording
       const recordingUrl = URL.createObjectURL(audioBlob);
@@ -197,17 +183,10 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
         onAssessmentReceived(result);
       }
 
-      toast({
-        title: "Analysis Complete",
-        description: `Pronunciation: ${result.pronunciationScore.toFixed(1)}%`,
-      });
+
     } catch (error) {
       console.error("Error assessing pronunciation:", error);
-      toast({
-        title: "Assessment Error",
-        description: "Could not analyze your speech. Please try again.",
-        variant: "destructive",
-      });
+
 
       // Reset status to idle
       setPhrase(prev => ({ ...prev, status: "idle" }));
