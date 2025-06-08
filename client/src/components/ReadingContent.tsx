@@ -478,6 +478,7 @@ const ReadingContent = ({ onSelectContent }: ReadingContentProps) => {
         {/* Action buttons at the bottom */}
         <div className="flex justify-end space-x-2 mt-6">
           {/* Voice Command Button */}
+          {/*
           <Button
             onClick={toggleVoiceCommandListening}
             disabled={isPlayingVoiceResponse || isProcessingVoiceCommand}
@@ -491,7 +492,7 @@ const ReadingContent = ({ onSelectContent }: ReadingContentProps) => {
             <MicIcon className="w-4 h-4 mr-1" />
             {isListeningVoiceCommand ? 'Listening...' : isProcessingVoiceCommand ? 'Thinking...' : 'I want to read about..'}
           </Button>
-
+          */} 
           {/* New Content Button */}
           <Button
             onClick={generateNewContent}
