@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MicIcon, StopCircleIcon, Volume2, Star, BookmarkIcon, Ear, Snail, BookOpen } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+
 import { PronunciationAssessmentResult } from '@/lib/types';
 
 interface PracticeSpeakingCardProps {
@@ -24,7 +24,6 @@ interface ProcessedPhrase {
 }
 
 export default function PracticeSpeakingCard({ text, contentId, onAssessmentReceived, onNewContent }: PracticeSpeakingCardProps) {
-  const { toast } = useToast();
   const [phrase, setPhrase] = useState<ProcessedPhrase>({
     id: `practice-${Date.now()}`,
     text,
@@ -198,18 +197,8 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
   // Text-to-speech handler using OpenAI API with enhanced mobile Safari support
   const handleTextToSpeech = async () => {
     if (!phrase.text) {
-      toast({
-        title: "No Text",
-        description: "No text available for this phrase.",
-        variant: "destructive",
-      });
       return;
     }
-
-    const loadingToast = toast({
-      title: "Loading Audio",
-      description: "Preparing text-to-speech...",
-    });
 
     const speed = slowPlayback ? 0.8 : 1.0;
 
@@ -246,35 +235,19 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
       // Enhanced error handling
       audio.onerror = (e) => {
         console.error('Audio playback error:', e);
-        toast({
-          title: "Playback Error",
-          description: "Could not play the audio. Your device may not support this audio format.",
-          variant: "destructive",
-        });
         URL.revokeObjectURL(audioUrl);
-        loadingToast.dismiss?.();
       };
 
       // More reliable event handling for mobile
       const playAudio = () => {
-        loadingToast.dismiss?.();
-        
         // Use a promise-based approach for better error handling
         const playPromise = audio.play();
         
         if (playPromise !== undefined) {
           playPromise.then(() => {
-            toast({
-              title: slowPlayback ? "Playing Slowly" : "Playing",
-              description: `Playing: "${phrase.text.substring(0, 20)}${phrase.text.length > 20 ? "..." : ""}"`,
-            });
+            // Audio playing successfully
           }).catch((error) => {
             console.error('Audio play promise rejected:', error);
-            toast({
-              title: "Playback Error",
-              description: "Audio playback was blocked. Please try tapping the play button again.",
-              variant: "destructive",
-            });
           });
         }
       };
@@ -300,13 +273,7 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
       audio.load();
       
     } catch (error) {
-      loadingToast.dismiss?.();
       console.error('TTS Error:', error);
-      toast({
-        title: "TTS Error",
-        description: error instanceof Error ? error.message : "Could not generate audio.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -563,8 +530,31 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
                 <button
                   className="bg-[#57cc99] text-white rounded-full p-2 flex items-center justify-center shadow-md hover:bg-[#38b37a] transition-colors"
                   onClick={() => {
-                    const audio = new Audio(phrase.recordingUrl as string);
-                    audio.play();
+                    const audio = new Audio();
+                    audio.preload = 'metadata';
+                    audio.crossOrigin = 'anonymous';
+                    
+                    audio.onerror = (e) => {
+                      console.error('Recording playback error:', e);
+                    };
+                    
+                    audio.onloadeddata = () => {
+                      const playPromise = audio.play();
+                      if (playPromise !== undefined) {
+                        playPromise.catch((error) => {
+                          console.error('Recording play failed:', error);
+                        });
+                      }
+                    };
+                    
+                    audio.onended = () => {
+                      if (phrase.recordingUrl) {
+                        URL.revokeObjectURL(phrase.recordingUrl);
+                      }
+                    };
+                    
+                    audio.src = phrase.recordingUrl as string;
+                    audio.load();
                   }}
                 >
                   <Volume2 className="h-5 w-5" />
