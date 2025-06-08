@@ -79,7 +79,7 @@ export function DifficultySelectionDialog({ open, onClose }: DifficultySelection
       <DialogContent className="sm:max-w-lg bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 border-2 border-purple-200 shadow-2xl">
         <div className="text-center mb-6">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
-            <span className="text-2xl">脂</span>
+            <img src={oblaLogoPath} alt="Obla Logo" className="w-full h-full object-cover" />
           </div>
           <DialogTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
             Welcome to Obla!
@@ -114,7 +114,7 @@ export function DifficultySelectionDialog({ open, onClose }: DifficultySelection
               </>
             ) : (
               <>
-                <span className="mr-2">噫</span>
+                Start My Journey!
                 Start My Journey!
               </>
             )}
