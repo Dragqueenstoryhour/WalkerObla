@@ -86,7 +86,12 @@ export async function setupAuth(app: Express) {
     verified(null, user);
   };
 
-  for (const domain of process.env.REPLIT_DOMAINS!.split(",")) {
+  // Register strategies for all possible domains
+  const domains = process.env.REPLIT_DOMAINS!.split(",");
+  const additionalDomains = ["obla.me"]; // Add custom domain
+  const allDomains = [...domains, ...additionalDomains];
+  
+  for (const domain of allDomains) {
     const strategy = new Strategy(
       {
         name: `replitauth:${domain}`,
@@ -103,14 +108,36 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
-    passport.authenticate(`replitauth:${req.hostname}`, {
+    // Determine the correct domain for authentication
+    const hostname = req.hostname;
+    let authDomain = hostname;
+    
+    // If hostname is obla.me, use the primary Replit domain for auth
+    if (hostname === "obla.me") {
+      authDomain = process.env.REPLIT_DOMAINS!.split(",")[0];
+    }
+    
+    console.log(`Login attempt: hostname=${hostname}, using auth domain=${authDomain}`);
+    
+    passport.authenticate(`replitauth:${authDomain}`, {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
     })(req, res, next);
   });
 
   app.get("/api/callback", (req, res, next) => {
-    passport.authenticate(`replitauth:${req.hostname}`, {
+    // Determine the correct domain for authentication
+    const hostname = req.hostname;
+    let authDomain = hostname;
+    
+    // If hostname is obla.me, use the primary Replit domain for auth
+    if (hostname === "obla.me") {
+      authDomain = process.env.REPLIT_DOMAINS!.split(",")[0];
+    }
+    
+    console.log(`Callback: hostname=${hostname}, using auth domain=${authDomain}`);
+    
+    passport.authenticate(`replitauth:${authDomain}`, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
     })(req, res, next);
