@@ -2502,7 +2502,7 @@ I'd like to schedule an appointment."
                             <Button
                               variant="outline"
                               size="sm"
-                              className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                              className="border-blue-500 text-blue-600 hover:bg-blue-50 h-9"
                               onClick={() => {
                                 const utterance = new SpeechSynthesisUtterance(phrase.text);
                                 utterance.rate = 1;
@@ -2510,12 +2510,12 @@ I'd like to schedule an appointment."
                               }}
                             >
                               <Volume2 className="h-4 w-4 mr-1" />
-                              Normal
+                              Listen to me
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
-                              className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                              className="border-blue-500 text-blue-600 hover:bg-blue-50 h-9"
                               onClick={() => {
                                 const utterance = new SpeechSynthesisUtterance(phrase.text);
                                 utterance.rate = 0.6;
@@ -2528,7 +2528,7 @@ I'd like to schedule an appointment."
                             <Button
                               variant="outline"
                               size="sm"
-                              className="border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                              className="border-yellow-500 text-yellow-600 hover:bg-yellow-50 h-9"
                               onClick={() => handleSavePhrase(idx)}
                             >
                               <Star className="h-4 w-4" />
@@ -2556,8 +2556,8 @@ I'd like to schedule an appointment."
                             <div className="space-y-2 mb-3">
                               <div className="space-y-1">
                                 <div className="flex justify-between text-sm">
-                                  <span className="font-medium">Pronunciation</span>
-                                  <span>{Math.round(phrase.assessmentResult.pronunciationScore)}%</span>
+                                  <span className="font-medium text-white">Pronunciation</span>
+                                  <span className="text-white">{Math.round(phrase.assessmentResult.pronunciationScore)}%</span>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                                   <div
@@ -2577,8 +2577,8 @@ I'd like to schedule an appointment."
 
                               <div className="space-y-1">
                                 <div className="flex justify-between text-sm">
-                                  <span className="font-medium">Fluency</span>
-                                  <span>{Math.round(phrase.assessmentResult.fluencyScore)}%</span>
+                                  <span className="font-medium text-white">Fluency</span>
+                                  <span className="text-white">{Math.round(phrase.assessmentResult.fluencyScore)}%</span>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                                   <div
@@ -2598,8 +2598,8 @@ I'd like to schedule an appointment."
 
                               <div className="space-y-1">
                                 <div className="flex justify-between text-sm">
-                                  <span className="font-medium">Completeness</span>
-                                  <span>{Math.round(phrase.assessmentResult.completenessScore)}%</span>
+                                  <span className="font-medium text-white">Completeness</span>
+                                  <span className="text-white">{Math.round(phrase.assessmentResult.completenessScore)}%</span>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                                   <div
@@ -2619,8 +2619,8 @@ I'd like to schedule an appointment."
 
                               <div className="space-y-1">
                                 <div className="flex justify-between text-sm">
-                                  <span className="font-medium">Accuracy</span>
-                                  <span>{Math.round(phrase.assessmentResult.accuracyScore)}%</span>
+                                  <span className="font-medium text-white">Accuracy</span>
+                                  <span className="text-white">{Math.round(phrase.assessmentResult.accuracyScore)}%</span>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                                   <div
@@ -2641,8 +2641,8 @@ I'd like to schedule an appointment."
                               {phrase.assessmentResult.prosodyScore && (
                                 <div className="space-y-1">
                                   <div className="flex justify-between text-sm">
-                                    <span className="font-medium">Prosody</span>
-                                    <span>{Math.round(phrase.assessmentResult.prosodyScore)}%</span>
+                                    <span className="font-medium text-white">Prosody</span>
+                                    <span className="text-white">{Math.round(phrase.assessmentResult.prosodyScore)}%</span>
                                   </div>
                                   <div className="w-full bg-gray-200 rounded-full h-2.5">
                                     <div
