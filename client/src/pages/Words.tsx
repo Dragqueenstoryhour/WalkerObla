@@ -867,8 +867,8 @@ export default function Words() {
                 }
               }}
             >
-              <CardContent className="p-4 text-center bg-[1947e5] text-[#ffffff]">
-                <p className="font-semibold text-black">{topic}</p>
+              <CardContent className="p-4 text-center bg-[#1947e5] text-white">
+                <p className="font-bold text-white">{topic}</p>
               </CardContent>
             </Card>
           ))}
