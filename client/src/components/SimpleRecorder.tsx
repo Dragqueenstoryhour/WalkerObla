@@ -371,8 +371,8 @@ export function SimpleRecorder({
             <div className="space-y-3 mb-5">
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
-                  <span className="font-medium">Pronunciation</span>
-                  <span>{Math.round(assessmentResults.pronunciationScore)}%</span>
+                  <span className="font-medium text-white">Pronunciation</span>
+                  <span className="text-white">{Math.round(assessmentResults.pronunciationScore)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div
@@ -388,8 +388,8 @@ export function SimpleRecorder({
 
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
-                  <span className="font-medium">Fluency</span>
-                  <span>{Math.round(assessmentResults.fluencyScore)}%</span>
+                  <span className="font-medium text-white">Fluency</span>
+                  <span className="text-white">{Math.round(assessmentResults.fluencyScore)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div
@@ -405,8 +405,8 @@ export function SimpleRecorder({
 
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
-                  <span className="font-medium">Completeness</span>
-                  <span>{Math.round(assessmentResults.completenessScore)}%</span>
+                  <span className="font-medium text-white">Completeness</span>
+                  <span className="text-white">{Math.round(assessmentResults.completenessScore)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div
@@ -422,8 +422,8 @@ export function SimpleRecorder({
 
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
-                  <span className="font-medium">Accuracy</span>
-                  <span>{Math.round(assessmentResults.accuracyScore)}%</span>
+                  <span className="font-medium text-white">Accuracy</span>
+                  <span className="text-white">{Math.round(assessmentResults.accuracyScore)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div
