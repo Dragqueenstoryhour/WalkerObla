@@ -125,6 +125,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Words} />
         <Route path="/reader" component={Read} />
+        <Route path="/read" component={Read} />
         <Route path="/words" component={Words} />
         <Route path="/phrases" component={Phrases} />
         <Route path="/game" component={() => <GameProvider initialUsername="player1"><RecordingTest /></GameProvider>} />

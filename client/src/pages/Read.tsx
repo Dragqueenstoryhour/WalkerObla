@@ -11,12 +11,12 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { ReadingContent as ReadingContentType, PronunciationAssessmentResult } from '@/lib/types';
 import PracticeSpeakingCard from '@/components/PracticeSpeakingCard';
 import { CheckCircle, BookOpen } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+
 
 const Read = () => {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const { toast } = useToast();
+
   const { isAuthenticated } = useAuthContext();
   const { 
     currentContent, 
@@ -77,11 +77,7 @@ const Read = () => {
       completeArticle(currentContent.id)
         .then(() => {
           setArticleCompleted(true);
-          toast({
-            title: "Article Completed",
-            description: "Your progress has been saved",
-            duration: 3000,
-          });
+
         })
         .catch(err => {
           console.error("Error tracking article completion:", err);
@@ -105,18 +101,10 @@ const Read = () => {
       const newContent = await response.json() as ReadingContentType;
       setCurrentContent(newContent);
       setReferenceText(newContent.content);
-      toast({
-        title: "New Content Loaded",
-        description: "Fresh reading material is ready for practice",
-        duration: 3000,
-      });
+
     } catch (error) {
       console.error("Error loading new content:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load new content. Please try again.",
-        variant: "destructive",
-      });
+
     }
   };
 
