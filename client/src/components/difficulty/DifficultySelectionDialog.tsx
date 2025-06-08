@@ -113,10 +113,7 @@ export function DifficultySelectionDialog({ open, onClose }: DifficultySelection
                 <RotateCw className="h-5 w-5 animate-spin" />
               </>
             ) : (
-              <>
-                Start My Journey!
-                Start My Journey!
-              </>
+              "Start My Journey!"
             )}
           </Button>
         </div>
