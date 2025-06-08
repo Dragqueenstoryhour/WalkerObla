@@ -166,11 +166,7 @@ const FeedbackPanel = () => {
       // Play the audio and handle success
       await audio.play();
 
-      // Show success toast
-      toast({
-        title: "Playing Pronunciation",
-        description: `Pronouncing: "${word}"`,
-      });
+
     } catch (error) {
       console.error("Error playing pronunciation:", error);
       toast({
@@ -321,11 +317,6 @@ const FeedbackPanel = () => {
           } : w,
         ),
       );
-
-      toast({
-        title: "Assessment Complete",
-        description: `Score: ${Math.round(result.pronunciationScore)}%`,
-      });
     } catch (error) {
       console.error("Error processing word recording:", error);
       toast({
@@ -431,10 +422,7 @@ const FeedbackPanel = () => {
         URL.revokeObjectURL(audioUrl);
       };
 
-      toast({
-        title: "Playing Pronunciation",
-        description: `Pronouncing: "${issue.word}"`,
-      });
+
     } catch (error) {
       console.error("Error with text-to-speech:", error);
       toast({
@@ -564,11 +552,6 @@ const FeedbackPanel = () => {
                     <Card className="h-full card-content" style={{ backgroundColor: '#1947E5' }}>
                       <CardHeader className="text-center">
                         <CardTitle className="text-3xl font-bold text-white">{issue.word}</CardTitle>
-                        {issue.phonetic && (
-                          <CardDescription className="text-lg text-muted-foreground">
-                            {issue.phonetic}
-                          </CardDescription>
-                        )}
                       </CardHeader>
                       
                       <CardContent className="space-y-4">
