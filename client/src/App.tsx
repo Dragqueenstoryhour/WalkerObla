@@ -67,24 +67,26 @@ function TabBar() {
 }
 
 function Navigation() {
-  const { isAuthenticated, user, isLoading } = useAuth();
-
   return (
     <div className="bg-white py-2 px-4 mb-4">
       {/* Tab Bar - Full Width */}
-      <div className="w-full mb-3">
+      <div className="w-full">
         <TabBar />
       </div>
-      
-      {/* Authentication Row - Right Aligned */}
-      <div className="flex justify-end">
-        <AuthButtons
-          variant="default"
-          className="bg-green-600 hover:bg-green-700 text-white border-none"
-          size="sm"
-          showText={true}
-        />
-      </div>
+    </div>
+  );
+}
+
+// Component to show auth buttons in main content area
+function MainAuthSection() {
+  return (
+    <div className="flex justify-end mb-4">
+      <AuthButtons
+        variant="default"
+        className="bg-green-600 hover:bg-green-700 text-white border-none"
+        size="sm"
+        showText={true}
+      />
     </div>
   );
 }
@@ -165,3 +167,4 @@ function App() {
 }
 
 export default App;
+export { MainAuthSection };

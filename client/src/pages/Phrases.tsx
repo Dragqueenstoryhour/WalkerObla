@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthButtons } from "@/components/AuthButtons";
+import { MainAuthSection } from "@/App";
 import {
   Card,
   CardContent,

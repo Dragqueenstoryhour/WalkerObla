@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthButtons } from "@/components/AuthButtons";
+import { MainAuthSection } from "@/App";
 import {
   Card,
   CardContent,
@@ -787,6 +788,7 @@ export default function Words() {
 
   return (
     <div className="container mx-auto px-4 py-6">
+      <MainAuthSection />
       {/* Shared words notification dialog */}
       <Dialog open={showSharedDialog} onOpenChange={setShowSharedDialog}>
         <DialogContent>

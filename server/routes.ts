@@ -57,6 +57,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User activity stats endpoint
+  app.get('/api/user/activity-stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const activityStats = await storage.getUserActivityStats(userId);
+      res.json(activityStats);
+    } catch (error) {
+      console.error("Error fetching activity stats:", error);
+      res.status(500).json({ message: "Failed to fetch activity stats" });
+    }
+  });
+
   // Record user activity
   app.post('/api/user/activity', isAuthenticated, async (req: any, res) => {
     try {
