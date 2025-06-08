@@ -47,10 +47,10 @@ interface DifficultyProviderProps {
 }
 
 export function DifficultyProvider({ children }: DifficultyProviderProps) {
-  // Initialize state from localStorage if available, or default to medium (level 4)
+  // Initialize state from localStorage if available, or default to easy (level 2)
   const [difficulty, setDifficultyState] = useState<DifficultyLevel>(() => {
     const savedDifficulty = localStorage.getItem('readAssistDifficulty');
-    return (savedDifficulty as DifficultyLevel) || '4';
+    return (savedDifficulty as DifficultyLevel) || '2';
   });
 
   // Track whether user has explicitly selected a difficulty level
