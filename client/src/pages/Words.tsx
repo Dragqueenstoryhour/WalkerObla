@@ -851,9 +851,9 @@ export default function Words() {
               className={`cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 ${
                 aiGenerateTopic === topic 
                   ? 'ring-2 ring-blue-500 shadow-md' 
-                  : 'hover:bg-[#FF9692]'
+                  : 'hover:bg-[#0F3CC9]'
               } ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
-              style={{ backgroundColor: '#FFE8E8' }}
+              style={{ backgroundColor: '#1947e5' }}
               onClick={() => {
                 if (topic === "Words that Begin with..") {
                   setLetterModalType('begin');
@@ -867,7 +867,7 @@ export default function Words() {
                 }
               }}
             >
-              <CardContent className="p-4 text-center bg-[#1947e5] text-white">
+              <CardContent className="p-4 text-center">
                 <p className="font-bold text-white">{topic}</p>
               </CardContent>
             </Card>

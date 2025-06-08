@@ -371,9 +371,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const audioBuffer = await generateSpeechResponse(text, voice, speed);
       
+      // Enhanced headers for better Safari/mobile compatibility
       res.set({
-        'Content-Type': 'audio/mp3',
+        'Content-Type': 'audio/mpeg',
         'Content-Length': audioBuffer.length.toString(),
+        'Accept-Ranges': 'bytes',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
       });
       
       res.send(audioBuffer);

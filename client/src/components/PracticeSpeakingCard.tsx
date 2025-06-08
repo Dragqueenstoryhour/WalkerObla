@@ -216,7 +216,7 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
     }
   };
 
-  // Text-to-speech handler using OpenAI API
+  // Text-to-speech handler using OpenAI API with enhanced mobile Safari support
   const handleTextToSpeech = async () => {
     if (!phrase.text) {
       toast({
@@ -256,42 +256,73 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
         throw new Error("Received empty audio data");
       }
 
+      // Enhanced audio handling for Safari/mobile compatibility
       const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-
-      audio.onerror = () => {
+      const audio = new Audio();
+      
+      // Set preload to metadata for better mobile performance
+      audio.preload = 'metadata';
+      audio.crossOrigin = 'anonymous';
+      
+      // Enhanced error handling
+      audio.onerror = (e) => {
+        console.error('Audio playback error:', e);
         toast({
           title: "Playback Error",
-          description: "Could not play the audio. Please try again.",
+          description: "Could not play the audio. Your device may not support this audio format.",
           variant: "destructive",
         });
         URL.revokeObjectURL(audioUrl);
+        loadingToast.dismiss?.();
       };
 
-      audio.oncanplaythrough = () => {
+      // More reliable event handling for mobile
+      const playAudio = () => {
         loadingToast.dismiss?.();
-        audio.play().then(() => {
-          toast({
-            title: slowPlayback ? "Playing Slowly" : "Playing",
-            description: `Playing: "${phrase.text.substring(0, 20)}${phrase.text.length > 20 ? "..." : ""}"`,
+        
+        // Use a promise-based approach for better error handling
+        const playPromise = audio.play();
+        
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            toast({
+              title: slowPlayback ? "Playing Slowly" : "Playing",
+              description: `Playing: "${phrase.text.substring(0, 20)}${phrase.text.length > 20 ? "..." : ""}"`,
+            });
+          }).catch((error) => {
+            console.error('Audio play promise rejected:', error);
+            toast({
+              title: "Playback Error",
+              description: "Audio playback was blocked. Please try tapping the play button again.",
+              variant: "destructive",
+            });
           });
-        }).catch((error) => {
-          toast({
-            title: "Playback Error",
-            description: "Could not play the audio. Please try again.",
-            variant: "destructive",
-          });
-          URL.revokeObjectURL(audioUrl);
-        });
+        }
+      };
+
+      // Use loadeddata instead of canplaythrough for better mobile support
+      audio.onloadeddata = playAudio;
+      
+      // Fallback for older browsers
+      audio.oncanplaythrough = () => {
+        if (audio.readyState >= 3) {
+          playAudio();
+        }
       };
 
       audio.onended = () => {
         URL.revokeObjectURL(audioUrl);
       };
 
+      // Set the source last to trigger loading
       audio.src = audioUrl;
+      
+      // For mobile Safari, sometimes we need to explicitly trigger load
+      audio.load();
+      
     } catch (error) {
       loadingToast.dismiss?.();
+      console.error('TTS Error:', error);
       toast({
         title: "TTS Error",
         description: error instanceof Error ? error.message : "Could not generate audio.",
