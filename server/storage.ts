@@ -62,6 +62,11 @@ export interface IStorage {
   // User activity tracking
   recordActivity(activity: InsertUserActivity): Promise<UserActivity>;
   getUserActivities(userId: string, limit?: number): Promise<UserActivity[]>;
+  getUserActivityStats(userId: string): Promise<{
+    wordStats: { total: number; avgScore: number; recent: UserActivity[] };
+    phraseStats: { total: number; avgScore: number; recent: UserActivity[] };
+    readingStats: { total: number; avgScore: number; recent: UserActivity[] };
+  }>;
   
   // User profile operations
   getUserProfile(userId: string): Promise<UserProfile | undefined>;
@@ -541,6 +546,57 @@ export class DatabaseStorage implements IStorage {
           sql`${practiceGroupPhrases.phraseId} = ANY(${phraseIds})`
         )
       );
+  }
+
+  async getUserActivityStats(userId: string): Promise<{
+    wordStats: { total: number; avgScore: number; recent: UserActivity[] };
+    phraseStats: { total: number; avgScore: number; recent: UserActivity[] };
+    readingStats: { total: number; avgScore: number; recent: UserActivity[] };
+  }> {
+    // Get word practice activities
+    const wordActivities = await db
+      .select()
+      .from(userActivity)
+      .where(and(
+        eq(userActivity.userId, userId),
+        eq(userActivity.activityType, 'word_practice')
+      ))
+      .orderBy(desc(userActivity.createdAt));
+
+    // Get phrase practice activities  
+    const phraseActivities = await db
+      .select()
+      .from(userActivity)
+      .where(and(
+        eq(userActivity.userId, userId),
+        eq(userActivity.activityType, 'phrase_practice')
+      ))
+      .orderBy(desc(userActivity.createdAt));
+
+    // Get reading session activities
+    const readingActivities = await db
+      .select()
+      .from(userActivity)
+      .where(and(
+        eq(userActivity.userId, userId),
+        eq(userActivity.activityType, 'reading_session')
+      ))
+      .orderBy(desc(userActivity.createdAt));
+
+    // Calculate averages and get recent items
+    const calculateStats = (activities: UserActivity[]) => ({
+      total: activities.length,
+      avgScore: activities.length > 0 
+        ? activities.reduce((sum, a) => sum + (a.score || 0), 0) / activities.length 
+        : 0,
+      recent: activities.slice(0, 10)
+    });
+
+    return {
+      wordStats: calculateStats(wordActivities),
+      phraseStats: calculateStats(phraseActivities),
+      readingStats: calculateStats(readingActivities)
+    };
   }
 }
 

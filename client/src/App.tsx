@@ -37,26 +37,26 @@ function TabBar() {
     { href: "/", label: "Words", icon: Edit, color: "from-blue-500 to-indigo-500" },
     { href: "/phrases", label: "Phrases", icon: Edit, color: "from-purple-500 to-pink-500" },
     { href: "/reader", label: "Reading", icon: Book, color: "from-emerald-500 to-teal-500" },
-    { href: "/my-words", label: "Saved Words", icon: Bookmark, color: "from-orange-500 to-red-500" },
+    { href: "/my-words", label: "My Journey", icon: Bookmark, color: "from-orange-500 to-red-500" },
   ];
 
   return (
-    <div className="relative flex items-center justify-center h-18 w-full">
-      <div className="flex bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl p-2 w-full justify-around mx-auto shadow-lg border border-gray-300">
+    <div className="relative flex items-center justify-center h-12 w-full">
+      <div className="flex bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl p-1.5 w-full justify-around mx-auto shadow-lg border border-gray-300">
         {navItems.map((item) => {
           const isActive = location === item.href;
           const IconComponent = item.icon;
           return (
             <Link href={item.href} key={item.href}>
               <a
-                className={`flex flex-col items-center justify-center py-3 px-4 rounded-xl transition-all duration-300 ease-in-out flex-grow transform hover:scale-105 ${
+                className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-300 ease-in-out flex-grow transform hover:scale-105 ${
                   isActive 
                     ? `bg-gradient-to-r ${item.color} text-white shadow-lg scale-105` 
                     : "text-gray-600 hover:text-gray-800 hover:bg-white hover:shadow-md"
                 }`}
               >
-                <IconComponent className={`h-7 w-7 mb-1 ${isActive ? 'animate-pulse' : ''}`} />
-                <span className="text-sm font-bold">{item.label}</span>
+                <IconComponent className={`h-5 w-5 mb-0.5 ${isActive ? 'animate-pulse' : ''}`} />
+                <span className="text-xs font-bold">{item.label}</span>
               </a>
             </Link>
           );
@@ -70,13 +70,14 @@ function Navigation() {
   const { isAuthenticated, user, isLoading } = useAuth();
 
   return (
-    <div className="bg-white py-2 px-4 mb-4 flex items-center justify-between">
-      {/* Integrating the new TabBar component */}
-      <div className="flex-grow flex justify-center">
+    <div className="bg-white py-2 px-4 mb-4">
+      {/* Tab Bar - Full Width */}
+      <div className="w-full mb-3">
         <TabBar />
       </div>
-
-      <div className="flex items-center ml-auto pl-4">
+      
+      {/* Authentication Row - Right Aligned */}
+      <div className="flex justify-end">
         <AuthButtons
           variant="default"
           className="bg-green-600 hover:bg-green-700 text-white border-none"
