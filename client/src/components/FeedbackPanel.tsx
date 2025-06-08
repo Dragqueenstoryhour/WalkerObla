@@ -267,35 +267,31 @@ const FeedbackPanel = () => {
     }
   };
 
-  // Stop recording
-  const stopWordPractice = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
 
-    // Make sure we clean up streams even if recorder fails
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-
-    setIsRecording(false);
-  };
 
   // Process word recording with Azure
-  const processWordRecording = async (audioBlob: Blob, word: string) => {
+  const processWordRecording = async (audioBlob: Blob, wordIndex: number) => {
     setIsProcessingWord(true);
 
     try {
-      toast({
-        title: 'Processing Recording',
-        description: 'Analyzing your pronunciation...'
-      });
+      const issue = pronunciationIssues[wordIndex];
 
-      // Send to Azure Speech for assessment using the same pattern as the main reader
+      // Update status to assessing
+      setPronunciationIssues((issues) =>
+        issues.map((w, idx) =>
+          idx === wordIndex ? { ...w, status: "assessing" } : w,
+        ),
+      );
+
+      // Create a URL for the recording
+      const recordingUrl = URL.createObjectURL(audioBlob);
+
+      // Send to Azure Speech for assessment
       const formData = new FormData();
       formData.append("audio", audioBlob);
-      formData.append("text", word);
+      formData.append("text", issue.word);
+      formData.append("itemType", "word");
+      formData.append("source", "feedback");
 
       const response = await fetch("/api/pronunciation/assess", {
         method: "POST",
@@ -306,50 +302,155 @@ const FeedbackPanel = () => {
         throw new Error("Failed to assess pronunciation");
       }
 
-      const results = await response.json();
+      const result = await response.json();
+      console.log("Received assessment results:", result);
 
-      if (!results || typeof results.pronunciationScore !== "number") {
-        throw new Error('No results received from speech assessment');
+      // Validate the result has expected properties
+      if (typeof result.pronunciationScore !== "number") {
+        throw new Error("Invalid assessment result format");
       }
 
       // Update with results
-      setWordAssessmentResult(results);
+      setPronunciationIssues((issues) =>
+        issues.map((w, idx) =>
+          idx === wordIndex ? { 
+            ...w, 
+            status: "complete",
+            assessmentResult: result,
+            recordingUrl: recordingUrl
+          } : w,
+        ),
+      );
 
       toast({
-        title: 'Analysis Complete',
-        description: `Pronunciation: ${results.pronunciationScore.toFixed(1)}%`
+        title: "Assessment Complete",
+        description: `Score: ${Math.round(result.pronunciationScore)}%`,
       });
-
     } catch (error) {
-      console.error('Error assessing word pronunciation:', error);
+      console.error("Error processing word recording:", error);
       toast({
-        title: 'Assessment Error',
-        description: 'Could not analyze your speech. Please try again.',
-        variant: 'destructive'
+        title: "Assessment Error",
+        description: "Could not analyze your pronunciation. Please try again.",
+        variant: "destructive",
       });
+
+      // Reset issue status on error
+      setPronunciationIssues((issues) =>
+        issues.map((w, idx) =>
+          idx === wordIndex ? { ...w, status: "idle" } : w,
+        ),
+      );
     } finally {
       setIsProcessingWord(false);
+      setIsRecording(false);
+      setCurrentlyPracticing(null);
     }
   };
 
-  // Cancel word practice
-  const cancelWordPractice = () => {
-    // Stop any ongoing recording
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+  // Stop recording the word
+  const stopWordPractice = () => {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
       mediaRecorderRef.current.stop();
     }
 
-    // Clean up resources
+    // Make sure we clean up streams even if recorder fails
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
 
-    // Reset state
-    setCurrentlyPracticing(null);
     setIsRecording(false);
-    setIsProcessingWord(false);
-    setWordAssessmentResult(null);
+  };
+
+  // Play back user's recording
+  const playUserRecording = (wordIndex: number) => {
+    const issue = pronunciationIssues[wordIndex];
+    if (!issue?.recordingUrl) return;
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+
+    audioRef.current = new Audio(issue.recordingUrl);
+    audioRef.current.play().catch(error => {
+      console.error("Error playing recording:", error);
+      toast({
+        title: "Playback Error",
+        description: "Could not play your recording.",
+        variant: "destructive",
+      });
+    });
+  };
+
+  // Handle text-to-speech for pronunciation guide
+  const handleTextToSpeech = async (wordIndex: number) => {
+    const issue = pronunciationIssues[wordIndex];
+    if (!issue) return;
+
+    try {
+      const isSlowMode = slowPlaybackWords[issue.id || issue.word];
+      const speed = isSlowMode ? 0.7 : 1.0;
+
+      const response = await fetch("/api/speech/synthesize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: issue.word,
+          voice: "alloy",
+          speed: speed,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate speech");
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+
+      audioRef.current = new Audio(audioUrl);
+      audioRef.current.play().catch(error => {
+        console.error("Error playing TTS:", error);
+        toast({
+          title: "Audio Error",
+          description: "Could not play pronunciation guide.",
+          variant: "destructive",
+        });
+      });
+
+      audioRef.current.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      toast({
+        title: "Playing Pronunciation",
+        description: `Pronouncing: "${issue.word}"`,
+      });
+    } catch (error) {
+      console.error("Error with text-to-speech:", error);
+      toast({
+        title: "Audio Error",
+        description: "Could not generate pronunciation guide.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Toggle slow playback
+  const toggleSlowPlayback = (issueId: string) => {
+    setSlowPlaybackWords(prev => ({
+      ...prev,
+      [issueId]: !prev[issueId]
+    }));
   };
 
   // Clean up on unmount
@@ -455,116 +556,165 @@ const FeedbackPanel = () => {
           <div className="mb-6">
             <h3 className="font-medium mb-4 text-lg">Word Pronunciation Help</h3>
           
-            {/* Problem words carousel */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-              {pronunciationIssues.map((issue, index) => (
-                <Card 
-                  key={`${issue.word}-${index}`} 
-                  className={`cursor-pointer transition-all duration-200 border-2 ${
-                    currentlyPracticing === issue.word 
-                      ? 'border-primary bg-primary/5' 
-                      : 'border-gray-200 hover:border-primary/50 hover:shadow-md'
-                  }`}
-                  onClick={() => setCurrentlyPracticing(issue.word)}
-                >
-                  <CardContent className="p-4">
-                    <div className="text-center">
-                      <h4 className="text-lg font-semibold mb-2">{issue.word}</h4>
+            {/* Carousel for pronunciation issues */}
+            <div className="embla overflow-hidden w-full max-w-7xl mx-auto" ref={emblaRef}>
+              <div className="embla__container flex">
+                {pronunciationIssues.map((issue, idx) => (
+                  <div key={issue.id} className={`embla__slide flex-shrink-0 w-full sm:w-[90%] md:w-[80%] lg:w-[70%] xl:w-[60%] 2xl:w-[50%] px-4 sm:px-6 md:px-8 ${idx === currentCarouselIndex ? 'is-in-view' : ''}`}>
+                    <Card className="h-full card-content" style={{ backgroundColor: '#1947E5' }}>
+                      <CardHeader className="text-center">
+                        <CardTitle className="text-3xl font-bold text-white">{issue.word}</CardTitle>
+                        {issue.phonetic && (
+                          <CardDescription className="text-lg text-muted-foreground">
+                            {issue.phonetic}
+                          </CardDescription>
+                        )}
+                      </CardHeader>
                       
-                      {/* Score display */}
-                      <div className="mb-3">
-                        <div className="text-xl font-bold" style={{ 
-                          color: issue.score >= 80 ? '#10b981' : issue.score >= 60 ? '#f59e0b' : '#ef4444' 
-                        }}>
-                          {Math.round(issue.score)}%
-                        </div>
-                      </div>
-                      
-                      {/* Controls */}
-                      <div className="flex items-center justify-center gap-2 mb-3">
-                        <Button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            playWordPronunciation(issue.word);
-                          }}
-                          size="sm"
-                          variant="outline"
-                          className="h-8 px-3 bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0"
-                        >
-                          <Volume2 className="h-3 w-3 mr-1" />
-                          Hear
-                        </Button>
-
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsSlowMode(!isSlowMode);
-                          }}
-                          className={`relative inline-flex h-8 w-12 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                            isSlowMode ? 'bg-[#FFE8E8]' : 'bg-gray-300'
-                          }`}
-                          role="switch"
-                          aria-checked={isSlowMode}
-                          aria-label="Toggle slow playback"
-                        >
-                          <span
-                            className={`inline-flex h-6 w-6 transform rounded-full bg-white transition-transform duration-200 ease-in-out items-center justify-center ${
-                              isSlowMode ? 'translate-x-6' : 'translate-x-1'
-                            }`}
-                          >
-                            <Snail className="w-2 h-2 text-gray-600" />
-                          </span>
-                        </button>
-                      </div>
-
-                      {/* Save Button */}
-                      <div className="flex justify-center">
-                        <Button 
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            try {
-                              const response = await fetch('/api/saved-words', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ word: issue.word })
-                              });
-                              
-                              if (response.ok) {
-                                setSavedWords(prev => {
-                                  const newSet = new Set(prev);
-                                  newSet.add(issue.word);
-                                  return newSet;
-                                });
-                              } else {
-                                throw new Error('Failed to save word');
-                              }
-                            } catch (error) {
-                              console.error('Error saving word:', error);
-                            }
-                          }}
-                          size="sm"
-                          variant={savedWords.has(issue.word) ? "default" : "outline"}
-                          className={`h-8 px-3 ${savedWords.has(issue.word) ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-[#FFBD12] hover:bg-[#E6A800] text-white border-0'}`}
-                          disabled={savedWords.has(issue.word)}
-                        >
-                          {savedWords.has(issue.word) ? (
-                            <>
-                              <Check className="w-3 h-3 mr-1" />
-                              Saved
-                            </>
-                          ) : (
-                            <>
-                              <BookmarkIcon className="w-3 h-3 mr-1" />
-                              Save
-                            </>
+                      <CardContent className="space-y-4">
+                        {/* Recording Controls */}
+                        <div className="flex justify-center gap-2">
+                          {issue.status === "idle" && (
+                            <Button
+                              onClick={() => startWordPractice(idx)}
+                              className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 font-bold text-base h-12 px-6"
+                              disabled={isRecording || isProcessingWord}
+                            >
+                              <MicIcon className="h-5 w-5" />
+                              Start Recording
+                            </Button>
                           )}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                          
+                          {issue.status === "recording" && (
+                            <Button
+                              onClick={() => stopWordPractice()}
+                              variant="destructive"
+                              className="flex items-center gap-2"
+                            >
+                              <StopCircleIcon className="h-4 w-4" />
+                              Stop Recording
+                            </Button>
+                          )}
+                          
+                          {issue.status === "assessing" && (
+                            <Button disabled className="flex items-center gap-2">
+                              <RotateCw className="h-4 w-4 animate-spin" />
+                              Analyzing...
+                            </Button>
+                          )}
+                          
+                          {issue.status === "complete" && (
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={() => startWordPractice(idx)}
+                                className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 font-bold text-base h-12 px-6"
+                              >
+                                <RotateCw className="h-5 w-5" />
+                                Try Again
+                              </Button>
+                              <Button
+                                onClick={() => playUserRecording(idx)}
+                                variant="outline"
+                                className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0 h-12 px-6"
+                              >
+                                <VolumeIcon className="h-4 w-4" />
+                                Listen to me
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Text-to-Speech and Slow Switch */}
+                        <div className="flex justify-center gap-2">
+                          <Button
+                            onClick={() => handleTextToSpeech(idx)}
+                            variant="outline"
+                            className="justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-white hover:bg-[#FF7F7C] h-10 px-4 py-2 flex items-center gap-2 bg-[#FF9692] border-0"
+                          >
+                            <Ear className="h-4 w-4" />
+                            Hear
+                          </Button>
+                          <button
+                            onClick={() => toggleSlowPlayback(issue.id || issue.word)}
+                            className={`relative inline-flex h-10 w-16 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                              slowPlaybackWords[issue.id || issue.word] ? 'bg-[#FFE8E8]' : 'bg-gray-300'
+                            }`}
+                            role="switch"
+                            aria-checked={slowPlaybackWords[issue.id || issue.word]}
+                            aria-label="Toggle slow playback"
+                          >
+                            <span
+                              className={`inline-flex h-8 w-8 transform rounded-full bg-white transition-transform duration-200 ease-in-out items-center justify-center ${
+                                slowPlaybackWords[issue.id || issue.word] ? 'translate-x-8' : 'translate-x-1'
+                              }`}
+                            >
+                              <Snail className="w-3 h-3 text-gray-600" />
+                            </span>
+                          </button>
+                        </div>
+
+                        {/* Assessment Results */}
+                        {issue.assessmentResult && (
+                          <div className="text-center space-y-2">
+                            <div className="flex items-center justify-center gap-2">
+                              <Gauge className="h-5 w-5 text-white" />
+                              <span className="text-lg font-semibold text-white">
+                                {issue.assessmentResult.pronunciationScore.toFixed(1)}%
+                              </span>
+                            </div>
+                            <div className="flex justify-center gap-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star
+                                  key={star}
+                                  className={`h-4 w-4 ${
+                                    issue.assessmentResult && star <= Math.round(issue.assessmentResult.pronunciationScore / 20)
+                                      ? "text-yellow-500 fill-current"
+                                      : "text-gray-300"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                ))}
+              </div>
             </div>
+
+            {/* Carousel Navigation */}
+            {pronunciationIssues.length > 1 && (
+              <div className="flex justify-center gap-4 mt-4">
+                <Button
+                  onClick={goToPrevious}
+                  variant="outline"
+                  disabled={currentCarouselIndex === 0}
+                  className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 transition-all duration-300 hover:scale-105"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <span className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 rounded-lg">
+                  <span className="font-semibold text-gray-700">{currentCarouselIndex + 1}</span>
+                  <span className="text-gray-500">of</span>
+                  <span className="font-semibold text-gray-700">{pronunciationIssues.length}</span>
+                </span>
+                <Button
+                  onClick={goToNext}
+                  variant="outline"
+                  disabled={currentCarouselIndex === pronunciationIssues.length - 1}
+                  className={`transition-all duration-300 hover:scale-105 ${
+                    currentCarouselIndex === pronunciationIssues.length - 1
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0'
+                  }`}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
 
             {/* Save Words Button */}
             {pronunciationIssues.length > 0 && (
