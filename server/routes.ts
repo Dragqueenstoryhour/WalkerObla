@@ -238,13 +238,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const userId = (req.user as any).claims.sub;
         
         // Determine activity type based on context
-        let activityType = 'reading_practice'; // default
+        let activityType = 'reading_session'; // default for reading
         if (itemType === 'word') {
           activityType = 'word_practice';
         } else if (itemType === 'phrase') {
           activityType = 'phrase_practice';
-        } else if (contentId) {
-          activityType = 'reading_practice';
+        } else if (contentId || source === 'reader') {
+          activityType = 'reading_session';
         }
 
         const activityData = {

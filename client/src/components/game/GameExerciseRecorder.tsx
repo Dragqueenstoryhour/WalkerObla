@@ -77,10 +77,7 @@ export function GameExerciseRecorder({
     setIsProcessing(true);
 
     try {
-      toast({
-        title: 'Processing Recording',
-        description: 'Analyzing your pronunciation...'
-      });
+
 
       console.log(`Processing recording with text: "${exercise.content}"`);
 

@@ -103,22 +103,11 @@ export function DifficultyDropdown() {
       // Convert numeric difficulty to server format
       const serverDifficulty = mapDifficultyToServer(difficulty);
 
-      // Show generating toast
-      toast({
-        title: `Updating Content`,
-        description: `Applying difficulty level ${difficulty}/8...`,
-      });
-
       const content = await generateReadingContent(currentTopic, serverDifficulty);
       setCurrentContent(content);
       
       // Close the dropdown
       setIsOpen(false);
-      
-      toast({
-        title: "Difficulty Updated",
-        description: `Content now at level ${difficulty}/8`,
-      });
     } catch (error) {
       console.error("Error generating content:", error);
       toast({

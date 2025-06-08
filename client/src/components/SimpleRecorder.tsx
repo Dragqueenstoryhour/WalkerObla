@@ -142,10 +142,7 @@ export function SimpleRecorder({
 
       console.log(`Processing recording with text: "${referenceText}"`);
 
-      toast({
-        title: "Processing Recording",
-        description: "Analyzing your pronunciation...",
-      });
+
 
       // Send to Azure Speech for assessment using the same pattern as phrases
       const formData = new FormData();
