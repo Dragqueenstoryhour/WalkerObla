@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { MainAuthSection } from '@/App';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -353,8 +353,7 @@ export default function MyWords() {
 
   if (authLoading || phrasesLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <MainAuthSection />
+      <div className="container mx-auto px-4 py-8 bg-green-50 min-h-screen">
         <div className="animate-pulse space-y-6">
           <div className="h-8 bg-gray-200 rounded w-1/3"></div>
           <div className="h-64 bg-gray-200 rounded"></div>
@@ -365,8 +364,7 @@ export default function MyWords() {
 
   if (!isAuthenticated) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <MainAuthSection />
+      <div className="container mx-auto px-4 py-8 bg-green-50 min-h-screen">
         <div className="text-center py-12">
           <BookOpen className="h-16 w-16 mx-auto text-gray-400 mb-4" />
           <h2 className="text-2xl font-semibold text-gray-600 mb-2">Sign in to view your journey</h2>
@@ -379,8 +377,7 @@ export default function MyWords() {
   const currentPhrase = shuffledPhrases[currentIndex];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <MainAuthSection />
+    <div className="container mx-auto px-4 py-8 bg-green-50 min-h-screen">
       
       <div className="max-w-6xl mx-auto">
         {/* Header */}

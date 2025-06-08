@@ -68,25 +68,21 @@ function TabBar() {
 
 function Navigation() {
   return (
-    <div className="bg-white py-2 px-4 mb-4">
+    <div className="bg-gradient-to-b from-white to-green-50 py-2 px-4 mb-0">
       {/* Tab Bar - Full Width */}
-      <div className="w-full">
+      <div className="w-full mb-3">
         <TabBar />
       </div>
-    </div>
-  );
-}
-
-// Component to show auth buttons in main content area
-function MainAuthSection() {
-  return (
-    <div className="flex justify-end mb-4">
-      <AuthButtons
-        variant="default"
-        className="bg-green-600 hover:bg-green-700 text-white border-none"
-        size="sm"
-        showText={true}
-      />
+      
+      {/* Authentication Row - Right Aligned with proper spacing */}
+      <div className="flex justify-end pb-2">
+        <AuthButtons
+          variant="default"
+          className="bg-green-600 hover:bg-green-700 text-white border-none"
+          size="sm"
+          showText={true}
+        />
+      </div>
     </div>
   );
 }
@@ -167,4 +163,3 @@ function App() {
 }
 
 export default App;
-export { MainAuthSection };
