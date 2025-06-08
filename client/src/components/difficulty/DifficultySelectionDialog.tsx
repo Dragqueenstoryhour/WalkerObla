@@ -7,6 +7,7 @@ import { useReading } from '@/contexts/ReadingContext';
 import { generateReadingContent } from '@/lib/openai';
 import { useToast } from '@/hooks/use-toast';
 import { RotateCw } from 'lucide-react';
+import oblaLogoPath from '@assets/e0dfb3c8-508c-4b30-994b-f471210dcd7c_1749383232529.jpg';
 
 interface DifficultySelectionDialogProps {
   open: boolean;
@@ -77,7 +78,7 @@ export function DifficultySelectionDialog({ open, onClose }: DifficultySelection
     }}>
       <DialogContent className="sm:max-w-lg bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 border-2 border-purple-200 shadow-2xl">
         <div className="text-center mb-6">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
             <span className="text-2xl">脂</span>
           </div>
           <DialogTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
