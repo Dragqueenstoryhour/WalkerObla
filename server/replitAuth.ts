@@ -138,7 +138,7 @@ export async function setupAuth(app: Express) {
     console.log(`Callback: hostname=${hostname}, using auth domain=${authDomain}`);
     
     passport.authenticate(`replitauth:${authDomain}`, {
-      successReturnToOrRedirect: "/",
+      successReturnToOrRedirect: "/my-words",
       failureRedirect: "/api/login",
     })(req, res, next);
   });

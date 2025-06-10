@@ -157,7 +157,7 @@ function StatsCard({
 }
 
 export default function MyWords() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -506,7 +506,9 @@ export default function MyWords() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-purple-800">My Journey</h1>
+            <h1 className="text-3xl font-bold text-purple-800">
+              {user?.firstName ? `Welcome, ${user.firstName}!` : 'My Journey'}
+            </h1>
             <p className="text-muted-foreground">
               Track your progress and practice your saved words
             </p>
@@ -735,7 +737,7 @@ export default function MyWords() {
           )}
         </div>
 
-        {/* My Stats Section - Moved below Practice Words */}
+        {/* My Stats Section - Combined Line Chart */}
         {activityStats && (
           <div className="mb-12">
             <h2 className="text-2xl font-semibold mb-6 text-purple-800 flex items-center gap-2">
@@ -743,37 +745,11 @@ export default function MyWords() {
               My Stats
             </h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <StatsCard
-                title="Words"
-                icon={Type}
-                total={activityStats.wordStats.total}
-                avgScore={activityStats.wordStats.avgScore}
-                recentScores={activityStats.wordStats.recent.map(a => a.score || 0)}
-                color="text-blue-700"
-                bgGradient="bg-gradient-to-br from-blue-50 to-blue-100"
-              />
-              
-              <StatsCard
-                title="Phrases"
-                icon={List}
-                total={activityStats.phraseStats.total}
-                avgScore={activityStats.phraseStats.avgScore}
-                recentScores={activityStats.phraseStats.recent.map(a => a.score || 0)}
-                color="text-purple-700"
-                bgGradient="bg-gradient-to-br from-purple-50 to-purple-100"
-              />
-              
-              <StatsCard
-                title="Reading"
-                icon={BookOpen}
-                total={activityStats.readingStats.total}
-                avgScore={activityStats.readingStats.avgScore}
-                recentScores={activityStats.readingStats.recent.map(a => a.score || 0)}
-                color="text-emerald-700"
-                bgGradient="bg-gradient-to-br from-emerald-50 to-emerald-100"
-              />
-            </div>
+            <CombinedLineChart
+              wordActivities={activityStats.wordStats.recent}
+              phraseActivities={activityStats.phraseStats.recent}
+              readingActivities={activityStats.readingStats.recent}
+            />
           </div>
         )}
 
