@@ -280,9 +280,30 @@ export function GameExerciseRecorder({
                 {audioUrl && !isRecording && (
                   <Button 
                     variant="outline" 
-                    onClick={() => {
-                      const audio = new Audio(audioUrl);
-                      audio.play();
+                    onClick={async () => {
+                      try {
+                        const audio = new Audio();
+                        audio.preload = 'auto';
+                        audio.crossOrigin = 'anonymous';
+                        
+                        const playAudio = () => {
+                          const playPromise = audio.play();
+                          if (playPromise !== undefined) {
+                            playPromise.catch((error) => {
+                              console.error('Audio play failed:', error);
+                              const fallbackAudio = new Audio(audioUrl);
+                              fallbackAudio.play().catch(e => console.error('Fallback failed:', e));
+                            });
+                          }
+                        };
+                        
+                        audio.oncanplay = playAudio;
+                        audio.onloadeddata = playAudio;
+                        audio.src = audioUrl;
+                        audio.load();
+                      } catch (error) {
+                        console.error('Error setting up audio:', error);
+                      }
                     }}
                     disabled={isProcessing}
                     className="bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0"
@@ -444,10 +465,33 @@ export function GameExerciseRecorder({
                   <div className="bg-white/80 border border-[#57cc99] rounded-md p-3 mb-4 mt-4 flex items-center justify-between">
                     <div className="text-sm font-medium text-[#264653]">Listen to your recording:</div>
                     <button
-                      className="bg-[#57cc99] text-white rounded-full p-2 flex items-center justify-center shadow-md hover:bg-[#38b37a] transition-colors"
-                      onClick={() => {
-                        const audio = new Audio(audioUrl);
-                        audio.play();
+                      className="bg-green-700 text-white rounded-full p-2 flex items-center justify-center shadow-md hover:bg-green-800 transition-colors"
+                      onClick={async () => {
+                        try {
+                          const audio = new Audio();
+                          audio.preload = 'auto';
+                          audio.crossOrigin = 'anonymous';
+                          
+                          const playAudio = () => {
+                            const playPromise = audio.play();
+                            if (playPromise !== undefined) {
+                              playPromise.then(() => {
+                                console.log('Recording playback started successfully');
+                              }).catch((error) => {
+                                console.error('Audio play failed:', error);
+                                const fallbackAudio = new Audio(audioUrl);
+                                fallbackAudio.play().catch(e => console.error('Fallback failed:', e));
+                              });
+                            }
+                          };
+                          
+                          audio.oncanplay = playAudio;
+                          audio.onloadeddata = playAudio;
+                          audio.src = audioUrl;
+                          audio.load();
+                        } catch (error) {
+                          console.error('Error setting up recording playback:', error);
+                        }
                       }}
                     >
                       <Volume2 className="h-5 w-5" />

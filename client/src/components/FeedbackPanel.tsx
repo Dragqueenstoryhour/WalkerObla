@@ -391,7 +391,7 @@ const FeedbackPanel = () => {
             console.error('Audio play promise rejected:', error);
             
             // Fallback for mobile browsers
-            const fallbackAudio = new Audio(issue.recordingUrl);
+            const fallbackAudio = new Audio(issue.recordingUrl || '');
             fallbackAudio.play().catch(fallbackError => {
               console.error('Fallback audio play failed:', fallbackError);
               toast({
@@ -407,7 +407,7 @@ const FeedbackPanel = () => {
       audio.oncanplay = playAudio;
       audio.onloadeddata = playAudio;
       
-      audio.src = issue.recordingUrl;
+      audio.src = issue.recordingUrl || '';
       audio.load();
       audioRef.current = audio;
       

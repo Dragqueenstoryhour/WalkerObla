@@ -2703,14 +2703,43 @@ I'd like to schedule an appointment."
                                   Listen to your recording:
                                 </div>
                                 <button
-                                  className="bg-[#57cc99] text-white rounded-full p-2 flex items-center justify-center shadow-md hover:bg-[#38b37a] transition-colors"
-                                  onClick={() => {
-                                    if (phrase.recordingBlob) {
-                                      const audio = new Audio(URL.createObjectURL(phrase.recordingBlob));
-                                      audio.play();
-                                    } else if (phrase.recordingUrl) {
-                                      const audio = new Audio(phrase.recordingUrl);
-                                      audio.play();
+                                  className="bg-green-700 text-white rounded-full p-2 flex items-center justify-center shadow-md hover:bg-green-800 transition-colors"
+                                  onClick={async () => {
+                                    try {
+                                      const audio = new Audio();
+                                      audio.preload = 'auto';
+                                      audio.crossOrigin = 'anonymous';
+                                      
+                                      const playAudio = () => {
+                                        const playPromise = audio.play();
+                                        if (playPromise !== undefined) {
+                                          playPromise.then(() => {
+                                            console.log('Recording playback started successfully');
+                                          }).catch((error) => {
+                                            console.error('Audio play failed:', error);
+                                            // Fallback approach
+                                            const fallbackAudio = new Audio();
+                                            if (phrase.recordingBlob) {
+                                              fallbackAudio.src = URL.createObjectURL(phrase.recordingBlob);
+                                            } else if (phrase.recordingUrl) {
+                                              fallbackAudio.src = phrase.recordingUrl;
+                                            }
+                                            fallbackAudio.play().catch(e => console.error('Fallback failed:', e));
+                                          });
+                                        }
+                                      };
+                                      
+                                      audio.oncanplay = playAudio;
+                                      audio.onloadeddata = playAudio;
+                                      
+                                      if (phrase.recordingBlob) {
+                                        audio.src = URL.createObjectURL(phrase.recordingBlob);
+                                      } else if (phrase.recordingUrl) {
+                                        audio.src = phrase.recordingUrl;
+                                      }
+                                      audio.load();
+                                    } catch (error) {
+                                      console.error('Error setting up recording playback:', error);
                                     }
                                   }}
                                 >

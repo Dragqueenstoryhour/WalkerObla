@@ -585,7 +585,7 @@ export default function Words() {
             console.error('Audio play promise rejected:', error);
             
             // Fallback for mobile browsers
-            const fallbackAudio = new Audio(word.recordingUrl);
+            const fallbackAudio = new Audio(word.recordingUrl || '');
             fallbackAudio.play().catch(fallbackError => {
               console.error('Fallback audio play failed:', fallbackError);
               toast({
@@ -601,7 +601,7 @@ export default function Words() {
       audio.oncanplay = playAudio;
       audio.onloadeddata = playAudio;
       
-      audio.src = word.recordingUrl;
+      audio.src = word.recordingUrl || '';
       audio.load();
       audioRef.current = audio;
       
