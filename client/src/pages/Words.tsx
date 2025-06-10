@@ -1163,7 +1163,7 @@ export default function Words() {
                 key={letter}
                 onClick={() => handleLetterSelection(letter)}
                 variant="outline"
-                className="h-12 text-lg font-semibold bg-[#FFE8E8] hover:bg-[#FF9692] border-gray-300 transition-colors"
+                className="h-12 text-lg font-semibold bg-[#1947e5] hover:bg-[#0F3CC9] text-white border-gray-300 transition-colors"
               >
                 {letter}
               </Button>
