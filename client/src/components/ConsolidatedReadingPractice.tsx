@@ -579,7 +579,7 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
           phonetic: null,
           difficulty: "intermediate",
           source: "reader_content",
-          sourceId: currentContent.id || null,
+          sourceId: currentContent.id ? currentContent.id.toString() : null,
         }),
       });
 
@@ -793,14 +793,14 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
               style={{ lineHeight: '1.8', backgroundColor: '#1947e5' }}
             />
 
-            {/* Controls Row */}
-            <div className="flex justify-between items-center">
-              {/* Recording Controls */}
-              <div className="flex gap-2">
+            {/* Responsive Controls Layout */}
+            <div className="space-y-4 sm:space-y-0">
+              {/* First Row: Recording Controls */}
+              <div className="flex justify-center">
                 {phrase.status === "idle" && (
                   <Button
                     onClick={startPhrasePractice}
-                    className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
+                    className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 w-full sm:w-auto"
                   >
                     <MicIcon className="w-4 h-4" />
                     Start Recording
@@ -811,7 +811,7 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
                   <Button
                     onClick={stopPhrasePractice}
                     variant="destructive"
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 w-full sm:w-auto"
                   >
                     <StopCircleIcon className="w-4 h-4" />
                     Stop Recording
@@ -819,13 +819,15 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
                 )}
 
                 {phrase.status === "assessing" && (
-                  <div className="flex items-center gap-2 text-yellow-600">
+                  <div className="flex items-center justify-center gap-2 text-yellow-600 w-full sm:w-auto">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600"></div>
                     Analyzing...
                   </div>
                 )}
+              </div>
 
-                {/* Text-to-Speech Button */}
+              {/* Second Row: Hear and Slow Switch */}
+              <div className="flex justify-center items-center gap-2">
                 <Button
                   onClick={handleTextToSpeech}
                   variant="outline"
@@ -835,7 +837,6 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
                   Hear
                 </Button>
 
-                {/* Slow Switch */}
                 <button
                   onClick={toggleSlowPlayback}
                   className={`relative inline-flex h-10 w-16 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
@@ -855,19 +856,21 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
                 </button>
               </div>
 
-              {/* New Content Button */}
-              <Button
-                onClick={generateNewContent}
-                disabled={isGenerating}
-                className="bg-[#FFBD12] hover:bg-[#E6A800] text-white"
-              >
-                {isGenerating ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                ) : (
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                )}
-                New Content
-              </Button>
+              {/* Third Row: New Content Button */}
+              <div className="flex justify-center">
+                <Button
+                  onClick={generateNewContent}
+                  disabled={isGenerating}
+                  className="bg-[#FFBD12] hover:bg-[#E6A800] text-white w-full sm:w-auto"
+                >
+                  {isGenerating ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  ) : (
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                  )}
+                  New Content
+                </Button>
+              </div>
             </div>
 
             {/* Recording Playback and Save Reading Buttons */}

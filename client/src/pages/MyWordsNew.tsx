@@ -304,7 +304,14 @@ function PracticeCarousel({
         </Button>
       </CardHeader>
       <CardContent>
-        <Card className="h-full" style={{ backgroundColor: color }}>
+        <Card className="h-full relative" style={{ backgroundColor: color }}>
+          <button
+            onClick={() => handleRemoveClick(currentItem)}
+            className="absolute top-4 right-4 z-10 p-2 rounded-full bg-red-500 hover:bg-red-600 text-white transition-colors"
+            aria-label="Remove item"
+          >
+            <X className="h-4 w-4" />
+          </button>
           <CardHeader className="text-center">
             <CardTitle className="text-3xl font-bold text-white">{currentItem.text}</CardTitle>
           </CardHeader>
@@ -391,16 +398,7 @@ function PracticeCarousel({
               </button>
             </div>
 
-            {/* Save Button */}
-            <div className="flex justify-center">
-              <Button
-                onClick={() => saveItem(currentItem)}
-                className="flex items-center gap-2 h-10 px-6 border-0 bg-[#FFBD12] hover:bg-[#E6A800] text-white"
-              >
-                <BookmarkIcon className="w-4 h-4" />
-                Save
-              </Button>
-            </div>
+
 
             {/* Assessment Results */}
             {currentItem.status === "complete" && currentItem.assessmentResult && (
@@ -444,6 +442,32 @@ function PracticeCarousel({
           </div>
         )}
       </CardContent>
+      
+      {/* Remove Confirmation Dialog */}
+      <AlertDialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Item</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove "{itemToRemove?.text}" from your practice collection? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowRemoveDialog(false);
+              setItemToRemove(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => itemToRemove && removeItem(itemToRemove)}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
