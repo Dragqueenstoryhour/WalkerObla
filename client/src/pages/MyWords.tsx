@@ -310,15 +310,43 @@ export default function MyWords() {
 
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
+      const audio = new Audio();
+      audio.preload = 'auto';
+      audio.crossOrigin = 'anonymous';
       setAudioElement(audio);
 
+      audio.onerror = (e) => {
+        console.error('Audio playback error:', e);
+        setIsPlaying(false);
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      const playAudio = () => {
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            console.log('Audio playback started successfully');
+          }).catch((error) => {
+            console.error('Audio play failed:', error);
+            setIsPlaying(false);
+            const fallbackAudio = new Audio(audioUrl);
+            fallbackAudio.play().catch(e => {
+              console.error('Fallback failed:', e);
+              setIsPlaying(false);
+            });
+          });
+        }
+      };
+
+      audio.oncanplay = playAudio;
+      audio.onloadeddata = playAudio;
       audio.addEventListener('ended', () => {
         setIsPlaying(false);
         URL.revokeObjectURL(audioUrl);
       });
 
-      await audio.play();
+      audio.src = audioUrl;
+      audio.load();
     } catch (error) {
       setIsPlaying(false);
       toast({

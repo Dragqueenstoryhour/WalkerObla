@@ -164,13 +164,36 @@ export function SavedWordsWithFolders() {
       }
 
       const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
+      const audio = new Audio();
+      audio.preload = 'auto';
+      audio.crossOrigin = 'anonymous';
 
+      audio.onerror = (e) => {
+        console.error('Audio playback error:', e);
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      const playAudio = () => {
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            console.log('TTS playback started successfully');
+          }).catch((error) => {
+            console.error('Audio play failed:', error);
+            const fallbackAudio = new Audio(audioUrl);
+            fallbackAudio.play().catch(e => console.error('Fallback failed:', e));
+          });
+        }
+      };
+
+      audio.oncanplay = playAudio;
+      audio.onloadeddata = playAudio;
       audio.onended = () => {
         URL.revokeObjectURL(audioUrl);
       };
 
-      audio.play();
+      audio.src = audioUrl;
+      audio.load();
     } catch (error) {
       console.error('TTS Error:', error);
       // Fallback to browser TTS if API fails
