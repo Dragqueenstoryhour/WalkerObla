@@ -506,6 +506,64 @@ const FeedbackPanel = () => {
     });
   };
 
+  // Save individual word to My Words page
+  const saveWordToMyWords = async (issue: PronunciationIssue) => {
+    try {
+      // Check if user is authenticated
+      const userResponse = await fetch("/api/auth/user");
+      if (!userResponse.ok) {
+        toast({
+          title: "Sign In Required",
+          description: "Please sign in to save words to your collection.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Check if word is already saved
+      if (savedWords.has(issue.word)) {
+        toast({
+          title: "Already Saved",
+          description: `"${issue.word}" is already in your collection.`,
+        });
+        return;
+      }
+
+      const response = await fetch("/api/phrases/save", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phrase: issue.word,
+          phonetic: issue.phonetic || null,
+          difficulty: "intermediate",
+          source: "reader_feedback",
+          sourceId: null,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to save word: ${issue.word}`);
+      }
+
+      // Mark word as saved
+      setSavedWords(prev => new Set([...prev, issue.word]));
+
+      toast({
+        title: "Word Saved",
+        description: `"${issue.word}" saved to My Words.`,
+      });
+    } catch (error) {
+      console.error('Error saving word:', error);
+      toast({
+        title: 'Save Error',
+        description: 'Could not save word. Please try again.',
+        variant: 'destructive'
+      });
+    }
+  };
+
   // Save words to My Words page
   const saveWordsToMyWords = async () => {
     try {
@@ -557,6 +615,17 @@ const FeedbackPanel = () => {
         description: 'Could not save words. Please try again.',
         variant: 'destructive'
       });
+    }
+  };
+
+  // Scroll back to topic selection
+  const scrollToTopicSelection = () => {
+    const topicSection = document.querySelector('[data-topic-selection]');
+    if (topicSection) {
+      topicSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      // Fallback: scroll to top of page
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -678,6 +747,31 @@ const FeedbackPanel = () => {
                               <Snail className="w-3 h-3 text-gray-600" />
                             </span>
                           </button>
+                        </div>
+
+                        {/* Save Button */}
+                        <div className="flex justify-center">
+                          <Button
+                            onClick={() => saveWordToMyWords(issue)}
+                            disabled={savedWords.has(issue.word)}
+                            className={`flex items-center gap-2 h-10 px-6 border-0 ${
+                              savedWords.has(issue.word)
+                                ? 'bg-green-600 text-white cursor-not-allowed'
+                                : 'bg-[#FFBD12] hover:bg-[#E6A800] text-white'
+                            }`}
+                          >
+                            {savedWords.has(issue.word) ? (
+                              <>
+                                <Check className="w-4 h-4" />
+                                Saved
+                              </>
+                            ) : (
+                              <>
+                                <BookmarkIcon className="w-4 h-4" />
+                                Save
+                              </>
+                            )}
+                          </Button>
                         </div>
 
                         {/* Assessment Results */}

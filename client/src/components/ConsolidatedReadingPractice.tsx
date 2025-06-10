@@ -174,9 +174,31 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
     }
   };
 
+  // Reset practice section to initial state
+  const resetPracticeSection = () => {
+    setPhrase({
+      id: `practice-${Date.now()}`,
+      text: '',
+      status: "idle"
+    });
+    setIsRecording(false);
+    setIsProcessingRecording(false);
+    
+    // Stop any ongoing recording
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+  };
+
   // Handle predefined topic selection
   const handleTopicSelection = async (topic: string) => {
     setIsGenerating(true);
+    resetPracticeSection(); // Reset practice section when selecting new topic
+    
     try {
       const serverDifficulty = mapDifficultyToServer(difficulty);
       console.log(`Generating content about "${topic}" with difficulty "${serverDifficulty}"`);
@@ -215,6 +237,8 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
     }
 
     setIsGeneratingCustom(true);
+    resetPracticeSection(); // Reset practice section when generating custom content
+    
     try {
       const serverDifficulty = mapDifficultyToServer(difficulty);
       console.log(`Generating custom content about "${customTopic}" with difficulty "${serverDifficulty}"`);
@@ -245,6 +269,8 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
   // Generate new content
   const generateNewContent = async () => {
     setIsGenerating(true);
+    resetPracticeSection(); // Reset practice section when generating new content
+    
     try {
       const topics = [
         'gardening', 'cooking', 'travel', 'animals', 'history',
@@ -708,8 +734,8 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
             {/* Reading Content Display */}
             <div 
               ref={readingContentRef}
-              className="text-lg leading-relaxed p-4 bg-gray-50 rounded-lg min-h-[200px] max-h-[400px] overflow-y-auto"
-              style={{ lineHeight: '1.8' }}
+              className="text-lg leading-relaxed p-4 rounded-lg min-h-[200px] max-h-[400px] overflow-y-auto text-white"
+              style={{ lineHeight: '1.8', backgroundColor: '#1947e5' }}
             />
 
             {/* Controls Row */}
@@ -778,7 +804,7 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
               <Button
                 onClick={generateNewContent}
                 disabled={isGenerating}
-                className="bg-[#1947e5] hover:bg-[#0F3CC9] text-white"
+                className="bg-[#FFBD12] hover:bg-[#E6A800] text-white"
               >
                 {isGenerating ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
