@@ -415,7 +415,7 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
       return;
     }
 
-    const speed = slowPlayback ? 0.8 : 1.0;
+    const speed = slowPlayback ? 0.7 : 1.0;
 
     try {
       const response = await fetch("/api/speech/synthesize", {
