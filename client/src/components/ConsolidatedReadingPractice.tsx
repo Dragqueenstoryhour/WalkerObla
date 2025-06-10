@@ -624,7 +624,7 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
   return (
     <div className="space-y-6">
       {/* Topic Selection Section */}
-      <Card className="mb-6">
+      <Card className="mb-6" data-topic-selection>
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Select Your Topic</h2>

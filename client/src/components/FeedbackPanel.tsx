@@ -548,7 +548,11 @@ const FeedbackPanel = () => {
       }
 
       // Mark word as saved
-      setSavedWords(prev => new Set([...prev, issue.word]));
+      setSavedWords(prev => {
+        const newSet = new Set(prev);
+        newSet.add(issue.word);
+        return newSet;
+      });
 
       toast({
         title: "Word Saved",
@@ -821,19 +825,25 @@ const FeedbackPanel = () => {
                   <span className="text-gray-500">of</span>
                   <span className="font-semibold text-gray-700">{pronunciationIssues.length}</span>
                 </span>
-                <Button
-                  onClick={goToNext}
-                  variant="outline"
-                  disabled={currentCarouselIndex === pronunciationIssues.length - 1}
-                  className={`transition-all duration-300 hover:scale-105 ${
-                    currentCarouselIndex === pronunciationIssues.length - 1
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0'
-                  }`}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+                {currentCarouselIndex === pronunciationIssues.length - 1 ? (
+                  <Button
+                    onClick={scrollToTopicSelection}
+                    variant="outline"
+                    className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 transition-all duration-300 hover:scale-105"
+                  >
+                    Finish
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={goToNext}
+                    variant="outline"
+                    className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 transition-all duration-300 hover:scale-105"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             )}
 
