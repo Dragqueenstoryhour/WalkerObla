@@ -397,7 +397,7 @@ export default function MyWordsFixed() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-purple-800">
-              {user?.firstName ? `Welcome, ${user.firstName}!` : 'My Journey'}
+              {(user as any)?.firstName ? `Welcome, ${(user as any).firstName}!` : 'My Journey'}
             </h1>
             <p className="text-muted-foreground">
               Track your progress and practice your saved words
