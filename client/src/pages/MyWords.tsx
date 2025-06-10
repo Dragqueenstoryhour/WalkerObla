@@ -28,7 +28,7 @@ interface SavedPhrase {
 interface ProcessedItem {
   id: string;
   text: string;
-  phonetic?: string;
+  phonetic?: string | null;
   difficulty?: "beginner" | "intermediate" | "advanced";
   recordingUrl?: string | null;
   recordingBlob?: Blob;
@@ -278,24 +278,24 @@ export default function MyWords() {
       const words = phrases.filter(p => p.source === 'words' || p.source === 'reader_feedback').map(p => ({
         id: `word-${p.id}`,
         text: p.phrase,
-        phonetic: p.phonetic,
-        difficulty: p.difficulty as any,
+        phonetic: p.phonetic || undefined,
+        difficulty: (p.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
         status: "idle" as const
       }));
       
       const phrasesOnly = phrases.filter(p => p.source === 'phrases' || p.source === 'phrase_practice').map(p => ({
         id: `phrase-${p.id}`,
         text: p.phrase,
-        phonetic: p.phonetic,
-        difficulty: p.difficulty as any,
+        phonetic: p.phonetic || undefined,
+        difficulty: (p.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
         status: "idle" as const
       }));
       
       const readings = phrases.filter(p => p.source === 'reader_content' || p.source === 'reading').map(p => ({
         id: `reading-${p.id}`,
         text: p.phrase,
-        phonetic: p.phonetic,
-        difficulty: p.difficulty as any,
+        phonetic: p.phonetic || undefined,
+        difficulty: (p.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
         status: "idle" as const
       }));
 
@@ -338,21 +338,39 @@ export default function MyWords() {
     }
   }, [isAuthenticated, authLoading]);
 
-  const handleShuffle = () => {
-    const shuffled = [...phrases].sort(() => Math.random() - 0.5);
-    setShuffledPhrases(shuffled);
-    setCurrentIndex(0);
-  };
-
-  const handleNext = () => {
-    if (currentIndex < shuffledPhrases.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+  const handleShuffle = (type: 'words' | 'phrases' | 'readings') => {
+    if (type === 'words') {
+      const shuffled = [...shuffledWords].sort(() => Math.random() - 0.5);
+      setShuffledWords(shuffled);
+      setCurrentWordIndex(0);
+    } else if (type === 'phrases') {
+      const shuffled = [...shuffledPhrases].sort(() => Math.random() - 0.5);
+      setShuffledPhrases(shuffled);
+      setCurrentPhraseIndex(0);
+    } else if (type === 'readings') {
+      const shuffled = [...shuffledReadings].sort(() => Math.random() - 0.5);
+      setShuffledReadings(shuffled);
+      setCurrentReadingIndex(0);
     }
   };
 
-  const handlePrevious = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
+  const handleNext = (type: 'words' | 'phrases' | 'readings') => {
+    if (type === 'words' && currentWordIndex < shuffledWords.length - 1) {
+      setCurrentWordIndex(currentWordIndex + 1);
+    } else if (type === 'phrases' && currentPhraseIndex < shuffledPhrases.length - 1) {
+      setCurrentPhraseIndex(currentPhraseIndex + 1);
+    } else if (type === 'readings' && currentReadingIndex < shuffledReadings.length - 1) {
+      setCurrentReadingIndex(currentReadingIndex + 1);
+    }
+  };
+
+  const handlePrevious = (type: 'words' | 'phrases' | 'readings') => {
+    if (type === 'words' && currentWordIndex > 0) {
+      setCurrentWordIndex(currentWordIndex - 1);
+    } else if (type === 'phrases' && currentPhraseIndex > 0) {
+      setCurrentPhraseIndex(currentPhraseIndex - 1);
+    } else if (type === 'readings' && currentReadingIndex > 0) {
+      setCurrentReadingIndex(currentReadingIndex - 1);
     }
   };
 
