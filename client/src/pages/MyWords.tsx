@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ChevronLeft, ChevronRight, X, Plus, Folder, Volume2, Play, Pause, Shuffle, TrendingUp, Award, Target, Clock, BarChart3, BookOpen, Type, List } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Plus, Folder, Volume2, Play, Pause, Shuffle, TrendingUp, Award, Target, Clock, BarChart3, BookOpen, Type, List, MicIcon, StopCircleIcon, Ear, Snail, RotateCw, BookmarkIcon, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { isUnauthorizedError } from '@/lib/authUtils';
@@ -23,6 +23,17 @@ interface SavedPhrase {
   difficulty: string | null;
   source: string | null;
   createdAt: string;
+}
+
+interface ProcessedItem {
+  id: string;
+  text: string;
+  phonetic?: string;
+  difficulty?: "beginner" | "intermediate" | "advanced";
+  recordingUrl?: string | null;
+  recordingBlob?: Blob;
+  assessmentResult?: any;
+  status: "idle" | "recording" | "assessing" | "complete";
 }
 
 interface PracticeGroup {
@@ -149,14 +160,33 @@ export default function MyWords() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [shuffledPhrases, setShuffledPhrases] = useState<SavedPhrase[]>([]);
+  // Separate states for each carousel
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
+  const [currentReadingIndex, setCurrentReadingIndex] = useState(0);
+  
+  const [shuffledWords, setShuffledWords] = useState<ProcessedItem[]>([]);
+  const [shuffledPhrases, setShuffledPhrases] = useState<ProcessedItem[]>([]);
+  const [shuffledReadings, setShuffledReadings] = useState<ProcessedItem[]>([]);
+  
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
   const [showAddToGroupDialog, setShowAddToGroupDialog] = useState(false);
   const [selectedPhrase, setSelectedPhrase] = useState<SavedPhrase | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+
+  // Recording states for each type
+  const [recordingStates, setRecordingStates] = useState<{[key: string]: {
+    isRecording: boolean;
+    isProcessing: boolean;
+    slowPlayback: boolean;
+  }}>({});
+
+  // Refs for media recording
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
 
   // Form states
   const [newGroupName, setNewGroupName] = useState('');
@@ -241,17 +271,52 @@ export default function MyWords() {
     },
   });
 
-  // Shuffle phrases when they change
+  // Separate and process phrases when they change
   useEffect(() => {
     if (phrases.length > 0) {
-      const shuffled = [...phrases].sort(() => Math.random() - 0.5);
-      setShuffledPhrases(shuffled);
-      setCurrentIndex(0);
+      // Separate by source type
+      const words = phrases.filter(p => p.source === 'words' || p.source === 'reader_feedback').map(p => ({
+        id: `word-${p.id}`,
+        text: p.phrase,
+        phonetic: p.phonetic,
+        difficulty: p.difficulty as any,
+        status: "idle" as const
+      }));
+      
+      const phrasesOnly = phrases.filter(p => p.source === 'phrases' || p.source === 'phrase_practice').map(p => ({
+        id: `phrase-${p.id}`,
+        text: p.phrase,
+        phonetic: p.phonetic,
+        difficulty: p.difficulty as any,
+        status: "idle" as const
+      }));
+      
+      const readings = phrases.filter(p => p.source === 'reader_content' || p.source === 'reading').map(p => ({
+        id: `reading-${p.id}`,
+        text: p.phrase,
+        phonetic: p.phonetic,
+        difficulty: p.difficulty as any,
+        status: "idle" as const
+      }));
+
+      // Shuffle each category
+      setShuffledWords([...words].sort(() => Math.random() - 0.5));
+      setShuffledPhrases([...phrasesOnly].sort(() => Math.random() - 0.5));
+      setShuffledReadings([...readings].sort(() => Math.random() - 0.5));
+      
+      // Reset indices
+      setCurrentWordIndex(0);
+      setCurrentPhraseIndex(0);
+      setCurrentReadingIndex(0);
     } else {
+      setShuffledWords([]);
       setShuffledPhrases([]);
-      setCurrentIndex(0);
+      setShuffledReadings([]);
+      setCurrentWordIndex(0);
+      setCurrentPhraseIndex(0);
+      setCurrentReadingIndex(0);
     }
-  }, [phrases.length]);
+  }, [phrases]);
 
   // Handle unauthorized errors
   useEffect(() => {

@@ -536,7 +536,7 @@ const FeedbackPanel = () => {
         },
         body: JSON.stringify({
           phrase: issue.word,
-          phonetic: issue.phonetic || null,
+          phonetic: null, // Remove syllable information
           difficulty: "intermediate",
           source: "reader_feedback",
           sourceId: null,
@@ -592,7 +592,7 @@ const FeedbackPanel = () => {
           },
           body: JSON.stringify({
             phrase: issue.word,
-            phonetic: issue.phonetic || null,
+            phonetic: null, // Remove syllable information
             difficulty: "intermediate",
             source: "reader_feedback",
             sourceId: null,

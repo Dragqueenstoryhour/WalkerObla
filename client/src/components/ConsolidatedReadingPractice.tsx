@@ -546,6 +546,61 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
     setSlowPlayback(prev => !prev);
   };
 
+  // Save reading to My Journey
+  const handleSaveReading = async () => {
+    try {
+      // Check if user is authenticated
+      const userResponse = await fetch("/api/auth/user");
+      if (!userResponse.ok) {
+        toast({
+          title: "Sign In Required",
+          description: "Please sign in to save readings to your collection.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!currentContent || !phrase.text) {
+        toast({
+          title: "No Content",
+          description: "No reading content available to save.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const response = await fetch("/api/phrases/save", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phrase: phrase.text,
+          phonetic: null,
+          difficulty: "intermediate",
+          source: "reader_content",
+          sourceId: currentContent.id || null,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save reading");
+      }
+
+      toast({
+        title: "Reading Saved",
+        description: "Reading content saved to My Journey.",
+      });
+    } catch (error) {
+      console.error('Error saving reading:', error);
+      toast({
+        title: 'Save Error',
+        description: 'Could not save reading. Please try again.',
+        variant: 'destructive'
+      });
+    }
+  };
+
   useEffect(() => {
     if (readingContentRef.current && currentContent) {
       try {
@@ -734,7 +789,7 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
             {/* Reading Content Display */}
             <div 
               ref={readingContentRef}
-              className="text-lg leading-relaxed p-4 rounded-lg min-h-[200px] max-h-[400px] overflow-y-auto text-white"
+              className="text-base font-semibold leading-relaxed p-4 rounded-lg min-h-[200px] max-h-[400px] overflow-y-auto text-white"
               style={{ lineHeight: '1.8', backgroundColor: '#1947e5' }}
             />
 
@@ -815,15 +870,22 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
               </Button>
             </div>
 
-            {/* Recording Playback Button */}
+            {/* Recording Playback and Save Reading Buttons */}
             {phrase.status === "complete" && phrase.recordingBlob && (
-              <div className="flex justify-center">
+              <div className="flex justify-center gap-4">
                 <Button
                   onClick={handleRecordingPlayback}
                   className="bg-green-700 hover:bg-green-800 text-white"
                 >
                   <Volume2 className="w-4 h-4 mr-2" />
                   Listen to your recording
+                </Button>
+                <Button
+                  onClick={handleSaveReading}
+                  className="bg-[#FFBD12] hover:bg-[#E6A800] text-white"
+                >
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  Save Reading
                 </Button>
               </div>
             )}
