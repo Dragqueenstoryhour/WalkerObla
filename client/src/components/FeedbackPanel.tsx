@@ -356,8 +356,8 @@ const FeedbackPanel = () => {
     setIsRecording(false);
   };
 
-  // Play back user's recording
-  const playUserRecording = (wordIndex: number) => {
+  // Play back user's recording with enhanced mobile compatibility
+  const playUserRecording = async (wordIndex: number) => {
     const issue = pronunciationIssues[wordIndex];
     if (!issue?.recordingUrl) return;
 
@@ -366,15 +366,59 @@ const FeedbackPanel = () => {
       audioRef.current.currentTime = 0;
     }
 
-    audioRef.current = new Audio(issue.recordingUrl);
-    audioRef.current.play().catch(error => {
-      console.error("Error playing recording:", error);
+    try {
+      // Enhanced audio element for mobile Safari compatibility
+      const audio = new Audio();
+      audio.preload = 'auto';
+      audio.crossOrigin = 'anonymous';
+      
+      audio.onerror = (e) => {
+        console.error('Recording playback error:', e);
+        toast({
+          title: "Playback Error",
+          description: "Could not play your recording.",
+          variant: "destructive",
+        });
+      };
+
+      const playAudio = () => {
+        const playPromise = audio.play();
+        
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            console.log('Recording playback started successfully');
+          }).catch((error) => {
+            console.error('Audio play promise rejected:', error);
+            
+            // Fallback for mobile browsers
+            const fallbackAudio = new Audio(issue.recordingUrl);
+            fallbackAudio.play().catch(fallbackError => {
+              console.error('Fallback audio play failed:', fallbackError);
+              toast({
+                title: "Playback Error",
+                description: "Could not play your recording.",
+                variant: "destructive",
+              });
+            });
+          });
+        }
+      };
+
+      audio.oncanplay = playAudio;
+      audio.onloadeddata = playAudio;
+      
+      audio.src = issue.recordingUrl;
+      audio.load();
+      audioRef.current = audio;
+      
+    } catch (error) {
+      console.error("Error setting up recording playback:", error);
       toast({
         title: "Playback Error",
         description: "Could not play your recording.",
         variant: "destructive",
       });
-    });
+    }
   };
 
   // Handle text-to-speech for pronunciation guide

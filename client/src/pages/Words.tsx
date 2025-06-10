@@ -550,8 +550,8 @@ export default function Words() {
     }
   };
 
-  // Play back user's recording
-  const playUserRecording = (wordIndex: number) => {
+  // Play back user's recording with enhanced mobile compatibility
+  const playUserRecording = async (wordIndex: number) => {
     const word = processedWords[wordIndex];
     if (!word?.recordingUrl) return;
 
@@ -560,15 +560,59 @@ export default function Words() {
       audioRef.current.currentTime = 0;
     }
 
-    audioRef.current = new Audio(word.recordingUrl);
-    audioRef.current.play().catch(error => {
-      console.error("Error playing recording:", error);
+    try {
+      // Enhanced audio element for mobile Safari compatibility
+      const audio = new Audio();
+      audio.preload = 'auto';
+      audio.crossOrigin = 'anonymous';
+      
+      audio.onerror = (e) => {
+        console.error('Recording playback error:', e);
+        toast({
+          title: "Playback Error",
+          description: "Could not play your recording.",
+          variant: "destructive",
+        });
+      };
+
+      const playAudio = () => {
+        const playPromise = audio.play();
+        
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            console.log('Recording playback started successfully');
+          }).catch((error) => {
+            console.error('Audio play promise rejected:', error);
+            
+            // Fallback for mobile browsers
+            const fallbackAudio = new Audio(word.recordingUrl);
+            fallbackAudio.play().catch(fallbackError => {
+              console.error('Fallback audio play failed:', fallbackError);
+              toast({
+                title: "Playback Error",
+                description: "Could not play your recording.",
+                variant: "destructive",
+              });
+            });
+          });
+        }
+      };
+
+      audio.oncanplay = playAudio;
+      audio.onloadeddata = playAudio;
+      
+      audio.src = word.recordingUrl;
+      audio.load();
+      audioRef.current = audio;
+      
+    } catch (error) {
+      console.error("Error setting up recording playback:", error);
       toast({
         title: "Playback Error",
         description: "Could not play your recording.",
         variant: "destructive",
       });
-    });
+    }
   };
 
   // Toggle slow playback
