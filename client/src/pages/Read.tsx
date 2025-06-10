@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
-import ReadingContent from '@/components/ReadingContent';
+import ConsolidatedReadingPractice from '@/components/ConsolidatedReadingPractice';
 import FeedbackPanel from '@/components/FeedbackPanel';
 import Footer from '@/components/Footer';
 import SettingsModal from '@/components/modals/SettingsModal';
@@ -9,7 +9,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useReading } from '@/contexts/ReadingContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { ReadingContent as ReadingContentType, PronunciationAssessmentResult } from '@/lib/types';
-import PracticeSpeakingCard from '@/components/PracticeSpeakingCard';
 import { CheckCircle, BookOpen } from 'lucide-react';
 
 
@@ -28,7 +27,6 @@ const Read = () => {
   } = useReading();
   const [articleCompleted, setArticleCompleted] = useState(false);
   const [hasCompletedRecording, setHasCompletedRecording] = useState(false);
-  const simpleRecorderRef = useRef<HTMLDivElement>(null); // Ref for SimpleRecorder
 
   // Fetch initial sample content
   const { data: initialContent, isLoading, error } = useQuery({
@@ -45,23 +43,6 @@ const Read = () => {
     }
   }, [initialContent, currentContent, setCurrentContent]);
 
-  // State for reference text, derived from currentContent
-  const [referenceText, setReferenceText] = useState('');
-
-  // Update the reference text when content changes
-  useEffect(() => {
-    if (currentContent) {
-      setReferenceText(currentContent.content);
-    }
-  }, [currentContent]);
-
-  // Function to scroll to SimpleRecorder
-  const handleSelectContent = () => {
-    if (simpleRecorderRef.current) {
-      simpleRecorderRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
-
   // Handle assessment results
   const handleAssessmentReceived = (results: PronunciationAssessmentResult) => {
     // Store in reading context
@@ -69,15 +50,16 @@ const Read = () => {
     setHasCompletedRecording(true); // Show feedback panel after recording
 
     // Update progress based on word count
-    const wordsRead = referenceText.split(/\s+/).length || 0;
-    updateSessionProgress(wordsRead);
+    if (currentContent?.content) {
+      const wordsRead = currentContent.content.split(/\s+/).length || 0;
+      updateSessionProgress(wordsRead);
+    }
     
     // Mark article as completed if authenticated
     if (isAuthenticated && currentContent && !articleCompleted) {
       completeArticle(currentContent.id)
         .then(() => {
           setArticleCompleted(true);
-
         })
         .catch(err => {
           console.error("Error tracking article completion:", err);
@@ -100,11 +82,8 @@ const Read = () => {
       }
       const newContent = await response.json() as ReadingContentType;
       setCurrentContent(newContent);
-      setReferenceText(newContent.content);
-
     } catch (error) {
       console.error("Error loading new content:", error);
-
     }
   };
 
@@ -126,21 +105,12 @@ const Read = () => {
             <p>Unable to load reading content. Please try again later.</p>
           </div>
         ) : (
-          <div className="space-y-8">
-            <ReadingContent onSelectContent={handleSelectContent} />
-            
-            {/* Practice Speaking Card */}
-            <div ref={simpleRecorderRef} className="mb-6">
-              <h3 className="text-lg font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">Practice Speaking</h3>
-              {currentContent && (
-                <PracticeSpeakingCard
-                  text={referenceText}
-                  contentId={currentContent.id}
-                  onAssessmentReceived={handleAssessmentReceived}
-                  onNewContent={handleNewContent}
-                />
-              )}
-            </div>
+          <div className="space-y-8 pb-20">
+            <ConsolidatedReadingPractice
+              onAssessmentReceived={handleAssessmentReceived}
+              onNewContent={handleNewContent}
+              contentId={currentContent?.id}
+            />
 
             {/* Feedback Panel - Always below Practice Speaking */}
             {hasCompletedRecording && (
