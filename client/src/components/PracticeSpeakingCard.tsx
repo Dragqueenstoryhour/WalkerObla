@@ -330,7 +330,7 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
       
       <CardContent className="space-y-4">
         {/* Recording Controls */}
-        <div className="flex justify-center gap-2">
+        <div className="flex justify-center mb-4">
           {phrase.status === "idle" && (
             <Button
               onClick={startPhrasePractice}
@@ -361,7 +361,7 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
         </div>
 
         {/* Text-to-Speech and Slow Switch */}
-        <div className="flex justify-center gap-2">
+        <div className="flex justify-center gap-3 mb-4">
           <Button
             onClick={handleTextToSpeech}
             variant="outline"
@@ -497,7 +497,7 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-center gap-2">
+            <div className="flex justify-center gap-3 mt-4">
               <Button 
                 onClick={startPhrasePractice}
                 className="bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 font-bold text-base h-12 px-6"

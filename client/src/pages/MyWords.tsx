@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ChevronLeft, ChevronRight, X, Plus, Folder, Volume2, Play, Pause, Shuffle, TrendingUp, Award, Target, Clock, BarChart3, BookOpen, Type, List, MicIcon, StopCircleIcon, Ear, Snail, RotateCw, BookmarkIcon, Check } from 'lucide-react';
+import { CombinedLineChart } from '@/components/CombinedLineChart';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { isUnauthorizedError } from '@/lib/authUtils';
