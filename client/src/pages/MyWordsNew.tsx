@@ -5,7 +5,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Volume2, Shuffle, BookOpen, MicIcon, StopCircleIcon, Ear, Snail, RotateCw, BookmarkIcon, Check } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { ChevronLeft, ChevronRight, Volume2, Shuffle, BookOpen, MicIcon, StopCircleIcon, Ear, Snail, RotateCw, BookmarkIcon, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 
@@ -50,11 +51,14 @@ function PracticeCarousel({
   emptyMessage: string;
 }) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [recordingStates, setRecordingStates] = useState<{[key: string]: {
     isRecording: boolean;
     isProcessing: boolean;
     slowPlayback: boolean;
   }}>({});
+  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
+  const [itemToRemove, setItemToRemove] = useState<ProcessedItem | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -77,6 +81,7 @@ function PracticeCarousel({
   const startRecording = async (item: ProcessedItem) => {
     try {
       updateRecordingState(item.id, { isRecording: true });
+      item.status = "recording";
       chunksRef.current = [];
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -115,7 +120,8 @@ function PracticeCarousel({
     }
   };
 
-  const stopRecording = () => {
+  const stopRecording = (item: ProcessedItem) => {
+    updateRecordingState(item.id, { isRecording: false });
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
     }
@@ -228,38 +234,42 @@ function PracticeCarousel({
     updateRecordingState(item.id, { slowPlayback: !state.slowPlayback });
   };
 
-  const saveItem = async (item: ProcessedItem) => {
+  const removeItem = async (item: ProcessedItem) => {
     try {
-      const response = await fetch("/api/phrases/save", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          phrase: item.text,
-          phonetic: null,
-          difficulty: "intermediate",
-          source: "my_journey_practice",
-          sourceId: null,
-        }),
+      // Extract the original ID from the prefixed ID
+      const originalId = item.id.split('-')[1];
+      
+      const response = await fetch(`/api/user/saved-phrases/${originalId}`, {
+        method: "DELETE",
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save item");
+        throw new Error("Failed to remove item");
       }
 
+      // Refresh the data
+      queryClient.invalidateQueries({ queryKey: ['/api/user/saved-phrases'] });
+
       toast({
-        title: "Saved",
-        description: `"${item.text}" saved successfully.`,
+        title: "Removed",
+        description: `"${item.text}" removed from your collection.`,
       });
+      
+      setShowRemoveDialog(false);
+      setItemToRemove(null);
     } catch (error) {
-      console.error('Error saving item:', error);
+      console.error('Error removing item:', error);
       toast({
-        title: 'Save Error',
-        description: 'Could not save item. Please try again.',
+        title: 'Remove Error',
+        description: 'Could not remove item. Please try again.',
         variant: 'destructive'
       });
     }
+  };
+
+  const handleRemoveClick = (item: ProcessedItem) => {
+    setItemToRemove(item);
+    setShowRemoveDialog(true);
   };
 
   if (items.length === 0) {
@@ -315,7 +325,7 @@ function PracticeCarousel({
               
               {currentItem.status === "recording" && (
                 <Button
-                  onClick={stopRecording}
+                  onClick={() => stopRecording(currentItem)}
                   variant="destructive"
                   className="flex items-center gap-2"
                 >
@@ -503,7 +513,7 @@ export default function MyWords() {
       setCurrentPhraseIndex(0);
       setCurrentReadingIndex(0);
     }
-  }, [phrases]);
+  }, [phrases.length]);
 
   if (authLoading || phrasesLoading) {
     return (
