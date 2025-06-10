@@ -28,6 +28,7 @@ interface SavedPhrase {
 
 interface ProcessedItem {
   id: string;
+  originalId: number; // Store the original numeric ID for deletion
   text: string;
   phonetic?: string | null;
   difficulty?: "beginner" | "intermediate" | "advanced";
@@ -278,6 +279,7 @@ export default function MyWords() {
       // Separate by source type
       const words = phrases.filter(p => p.source === 'words' || p.source === 'reader_feedback').map(p => ({
         id: `word-${p.id}`,
+        originalId: p.id,
         text: p.phrase,
         phonetic: p.phonetic || undefined,
         difficulty: (p.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
@@ -286,6 +288,7 @@ export default function MyWords() {
       
       const phrasesOnly = phrases.filter(p => p.source === 'phrases' || p.source === 'phrase_practice').map(p => ({
         id: `phrase-${p.id}`,
+        originalId: p.id,
         text: p.phrase,
         phonetic: p.phonetic || undefined,
         difficulty: (p.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
@@ -294,6 +297,7 @@ export default function MyWords() {
       
       const readings = phrases.filter(p => p.source === 'reader_content' || p.source === 'reading').map(p => ({
         id: `reading-${p.id}`,
+        originalId: p.id,
         text: p.phrase,
         phonetic: p.phonetic || undefined,
         difficulty: (p.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
