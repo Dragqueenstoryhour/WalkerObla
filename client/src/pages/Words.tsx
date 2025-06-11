@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
+import useAudioRecording from "@/hooks/useAudioRecording";
 import { AuthButtons } from "@/components/AuthButtons";
 
 import {
@@ -80,7 +81,6 @@ export default function Words() {
   const [savedWordId, setSavedWordId] = useState<string | null>(null);
   const [showSharedDialog, setShowSharedDialog] = useState(false);
   const [currentlyPracticing, setCurrentlyPracticing] = useState<string | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
   const [isProcessingRecording, setIsProcessingRecording] = useState(false);
   const [wordAssessmentResult, setWordAssessmentResult] = useState<any>(null);
   const [showSignInDialog, setShowSignInDialog] = useState(false);
@@ -101,10 +101,32 @@ export default function Words() {
     inViewThreshold: 0.7
   });
 
-  // Refs for media recording
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  // Use audio recording hook for consistent recording management
+  const {
+    isRecording,
+    recordingDuration,
+    audioUrl,
+    audioBlob,
+    startRecording,
+    stopRecording,
+    cancelRecording,
+  } = useAudioRecording({
+    onRecordingComplete: (blob) => {
+      if (currentWordIndex >= 0) {
+        processWordRecording(blob, currentWordIndex);
+      }
+    },
+    onError: (error) => {
+      console.error("Recording error:", error);
+      toast({
+        title: "Recording Error",
+        description: "Could not access microphone. Please check your browser permissions.",
+        variant: "destructive",
+      });
+      setCurrentlyPracticing(null);
+    },
+  });
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Carousel navigation functions
@@ -254,7 +276,6 @@ export default function Words() {
       setCurrentlyPracticing(word.id);
       setCurrentWordIndex(wordIndex);
       setWordAssessmentResult(null);
-      chunksRef.current = [];
 
       // Update the word status to recording
       setProcessedWords((words) =>
@@ -263,9 +284,13 @@ export default function Words() {
         ),
       );
 
-      // Get microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
+      // Start recording using the hook
+      await startRecording();
+
+      toast({
+        title: "Recording Started",
+        description: `Recording word: "${word.text}"`,
+      });
 
       // Create media recorder
       const mediaRecorder = new MediaRecorder(stream);
