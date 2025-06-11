@@ -9,18 +9,21 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ChevronLeft, ChevronRight, Volume2, Shuffle, BookOpen, MicIcon, StopCircleIcon, Ear, Snail, RotateCw, BookmarkIcon, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { CombinedLineChart } from '@/components/CombinedLineChart'; // Import the chart component
 
 interface SavedPhrase {
   id: number;
   phrase: string;
   phonetic: string | null;
   difficulty: string | null;
-  source: string | null;
+  source: string | null; // e.g., 'words', 'phrases', 'reader_feedback', 'reader_content'
   createdAt: string;
+  assessmentResults?: any; // Added based on `routes.ts` conversion
+  sourceId?: number | null; // Added based on `routes.ts` conversion
 }
 
 interface ProcessedItem {
-  id: string;
+  id: string; // This ID will now include the prefix, e.g., "word-123" or "phrase-456"
   text: string;
   phonetic?: string;
   difficulty?: "beginner" | "intermediate" | "advanced";
@@ -28,18 +31,43 @@ interface ProcessedItem {
   recordingBlob?: Blob;
   assessmentResult?: any;
   status: "idle" | "recording" | "assessing" | "complete";
+  source: string; // Add source to ProcessedItem to determine API endpoint for deletion
 }
 
+// Interface for activity data fetched from backend (based on `routes.ts` `recordActivity` and `getUserActivityStats` expectation)
+interface Activity {
+  id: number;
+  userId: string;
+  activityType: 'word_practice' | 'phrase_practice' | 'reading_session';
+  itemPracticed: string;
+  score: number | null;
+  accuracy: number | null;
+  fluency: number | null;
+  completeness: number | null;
+  difficulty: string | null;
+  source: string | null;
+  metadata: any;
+  createdAt: string;
+}
+
+// NEW INTERFACE to match the backend's getUserActivityStats return type
+interface UserActivityStatsResponse {
+  wordStats: { total: number; avgScore: number; recent: Activity[] };
+  phraseStats: { total: number; avgScore: number; recent: Activity[] };
+  readingStats: { total: number; avgScore: number; recent: Activity[] };
+}
+
+
 // Practice Carousel Component
-function PracticeCarousel({ 
-  items, 
-  currentIndex, 
-  onNext, 
-  onPrevious, 
-  onShuffle, 
-  title, 
+function PracticeCarousel({
+  items,
+  currentIndex,
+  onNext,
+  onPrevious,
+  onShuffle,
+  title,
   color,
-  emptyMessage 
+  emptyMessage
 }: {
   items: ProcessedItem[];
   currentIndex: number;
@@ -61,7 +89,7 @@ function PracticeCarousel({
   const [itemToRemove, setItemToRemove] = useState<ProcessedItem | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const streamRef = useRef<MediaStream | null>(null); // Corrected type: MediaStream | null
   const chunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -140,8 +168,8 @@ function PracticeCarousel({
       const formData = new FormData();
       formData.append("audio", audioBlob);
       formData.append("text", item.text);
-      formData.append("itemType", "word");
-      formData.append("source", "my_journey");
+      formData.append("itemType", item.source === 'words' || item.source === 'reader_feedback' ? "word" : "phrase"); // Correct itemType
+      formData.append("source", item.source); // Pass the original source
 
       const response = await fetch("/api/pronunciation/assess", {
         method: "POST",
@@ -153,7 +181,7 @@ function PracticeCarousel({
       }
 
       const result = await response.json();
-      
+
       item.status = "complete";
       item.assessmentResult = result;
       item.recordingBlob = audioBlob;
@@ -211,7 +239,7 @@ function PracticeCarousel({
     try {
       const audioUrl = URL.createObjectURL(item.recordingBlob);
       const audio = new Audio(audioUrl);
-      
+
       audio.onerror = (e) => {
         console.error('Recording playback error:', e);
         URL.revokeObjectURL(audioUrl);
@@ -236,34 +264,49 @@ function PracticeCarousel({
 
   const removeItem = async (item: ProcessedItem) => {
     try {
-      // Extract the original ID from the prefixed ID
-      const originalId = item.id.split('-')[1];
-      
-      const response = await fetch(`/api/user/saved-phrases/${originalId}`, {
-        method: "DELETE",
-      });
+      const [type, originalId] = item.id.split('-');
+      let response;
+
+      if (type === 'word') {
+        // For words, use the specific /api/saved-words endpoint with the word text
+        response = await fetch(`/api/saved-words/${encodeURIComponent(item.text)}`, {
+          method: "DELETE",
+        });
+      } else {
+        // For phrases and readings, use the /api/user/saved-phrases endpoint with the ID
+        response = await fetch(`/api/user/saved-phrases/${originalId}`, {
+          method: "DELETE",
+        });
+      }
 
       if (!response.ok) {
         throw new Error("Failed to remove item");
       }
 
-      // Refresh the data
+      // Refresh the data - this invalidates all queries for '/api/user/saved-phrases'
       queryClient.invalidateQueries({ queryKey: ['/api/user/saved-phrases'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/activity-stats'] }); // Also invalidate activity stats for chart
 
+      // Commented out the success toast as requested
+      /*
       toast({
         title: "Removed",
         description: `"${item.text}" removed from your collection.`,
       });
-      
+      */
+
       setShowRemoveDialog(false);
       setItemToRemove(null);
     } catch (error) {
       console.error('Error removing item:', error);
+      // Commented out the error toast as requested (but generally good to keep error feedback)
+      /*
       toast({
         title: 'Remove Error',
         description: 'Could not remove item. Please try again.',
         variant: 'destructive'
       });
+      */
     }
   };
 
@@ -295,7 +338,7 @@ function PracticeCarousel({
     <Card className="mb-8">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-xl font-semibold text-purple-800">{title}</CardTitle>
-        <Button 
+        <Button
           onClick={onShuffle}
           className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white"
         >
@@ -315,7 +358,7 @@ function PracticeCarousel({
           <CardHeader className="text-center">
             <CardTitle className="text-3xl font-bold text-white">{currentItem.text}</CardTitle>
           </CardHeader>
-          
+
           <CardContent className="space-y-4">
             {/* Recording Controls */}
             <div className="flex justify-center gap-2">
@@ -329,7 +372,7 @@ function PracticeCarousel({
                   Start Recording
                 </Button>
               )}
-              
+
               {currentItem.status === "recording" && (
                 <Button
                   onClick={() => stopRecording(currentItem)}
@@ -340,14 +383,14 @@ function PracticeCarousel({
                   Stop Recording
                 </Button>
               )}
-              
+
               {currentItem.status === "assessing" && (
                 <Button disabled className="flex items-center gap-2">
                   <RotateCw className="h-4 w-4 animate-spin" />
                   Analyzing...
                 </Button>
               )}
-              
+
               {currentItem.status === "complete" && (
                 <div className="flex gap-2">
                   <Button
@@ -399,7 +442,6 @@ function PracticeCarousel({
             </div>
 
 
-
             {/* Assessment Results */}
             {currentItem.status === "complete" && currentItem.assessmentResult && (
               <div className="text-center space-y-2">
@@ -442,7 +484,7 @@ function PracticeCarousel({
           </div>
         )}
       </CardContent>
-      
+
       {/* Remove Confirmation Dialog */}
       <AlertDialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
         <AlertDialogContent>
@@ -459,7 +501,7 @@ function PracticeCarousel({
             }}>
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => itemToRemove && removeItem(itemToRemove)}
               className="bg-red-500 hover:bg-red-600"
             >
@@ -480,14 +522,22 @@ export default function MyWords() {
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
   const [currentReadingIndex, setCurrentReadingIndex] = useState(0);
-  
+
   const [shuffledWords, setShuffledWords] = useState<ProcessedItem[]>([]);
   const [shuffledPhrases, setShuffledPhrases] = useState<ProcessedItem[]>([]);
   const [shuffledReadings, setShuffledReadings] = useState<ProcessedItem[]>([]);
 
-  // Fetch saved phrases
+  // Fetch saved phrases (words, phrases, readings)
   const { data: phrases = [], isLoading: phrasesLoading } = useQuery<SavedPhrase[]>({
     queryKey: ['/api/user/saved-phrases'],
+    enabled: isAuthenticated,
+    retry: false,
+  });
+
+  // Fetch user activity stats for the chart
+  // UPDATED: Change the type to UserActivityStatsResponse
+  const { data: activityStats, isLoading: activityStatsLoading } = useQuery<UserActivityStatsResponse>({
+    queryKey: ['/api/user/activity-stats'],
     enabled: isAuthenticated,
     retry: false,
   });
@@ -501,30 +551,33 @@ export default function MyWords() {
         text: p.phrase,
         phonetic: p.phonetic || undefined,
         difficulty: (p.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
-        status: "idle" as const
+        status: "idle" as const,
+        source: p.source // Ensure source is carried over
       }));
-      
+
       const phrasesOnly = phrases.filter(p => p.source === 'phrases' || p.source === 'phrase_practice').map(p => ({
         id: `phrase-${p.id}`,
         text: p.phrase,
         phonetic: p.phonetic || undefined,
         difficulty: (p.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
-        status: "idle" as const
+        status: "idle" as const,
+        source: p.source // Ensure source is carried over
       }));
-      
+
       const readings = phrases.filter(p => p.source === 'reader_content' || p.source === 'reading').map(p => ({
         id: `reading-${p.id}`,
         text: p.phrase,
         phonetic: p.phonetic || undefined,
         difficulty: (p.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
-        status: "idle" as const
+        status: "idle" as const,
+        source: p.source // Ensure source is carried over
       }));
 
       // Shuffle each category
       setShuffledWords([...words].sort(() => Math.random() - 0.5));
       setShuffledPhrases([...phrasesOnly].sort(() => Math.random() - 0.5));
       setShuffledReadings([...readings].sort(() => Math.random() - 0.5));
-      
+
       // Reset indices
       setCurrentWordIndex(0);
       setCurrentPhraseIndex(0);
@@ -539,7 +592,22 @@ export default function MyWords() {
     }
   }, [phrases.length]);
 
-  if (authLoading || phrasesLoading) {
+  // UPDATED: Access the 'recent' arrays from the activityStats object
+  // Provide default empty arrays if activityStats is undefined or null initially
+  const wordActivities = activityStats?.wordStats?.recent
+    ?.filter(a => a.activityType === 'word_practice' && a.score !== null)
+    .map(a => ({ score: a.score, createdAt: a.createdAt })) || [];
+
+  const phraseActivities = activityStats?.phraseStats?.recent
+    ?.filter(a => a.activityType === 'phrase_practice' && a.score !== null)
+    .map(a => ({ score: a.score, createdAt: a.createdAt })) || [];
+
+  const readingActivities = activityStats?.readingStats?.recent
+    ?.filter(a => a.activityType === 'reading_session' && a.score !== null)
+    .map(a => ({ score: a.score, createdAt: a.createdAt })) || [];
+
+
+  if (authLoading || phrasesLoading || activityStatsLoading) {
     return (
       <div className="container mx-auto px-4 py-8 bg-green-50 min-h-screen">
         <div className="animate-pulse space-y-6">
@@ -620,6 +688,16 @@ export default function MyWords() {
           color="#1947e5"
           emptyMessage="No saved readings yet"
         />
+
+        {/* My Stats Component */}
+        <div className="mt-12">
+          <h2 className="text-2xl font-bold text-purple-800 mb-4">My Stats</h2>
+          <CombinedLineChart
+            wordActivities={wordActivities}
+            phraseActivities={phraseActivities}
+            readingActivities={readingActivities}
+          />
+        </div>
       </div>
     </div>
   );
