@@ -363,13 +363,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/speech/synthesize', async (req, res) => {
     try {
-      const { text, voice = "alloy", speed = 1.0 } = req.body;
+      const { text, voice = "default", speed = 1.0 } = req.body;
       
       if (!text) {
         return res.status(400).json({ error: 'Text is required' });
       }
 
-      const audioBuffer = await generateSpeechResponse(text, voice, speed);
+      const audioBuffer = await synthesizeSpeech(text, voice, speed);
       
       // Enhanced headers for better Safari/mobile compatibility
       res.set({

@@ -994,17 +994,15 @@ function breakIntoSyllables(word: string): string {
 }
 
 /**
- * Synthesize speech from text
+ * Synthesize speech from text using Azure AI Speech with en-US-AvaNeural voice
  */
-export async function synthesizeSpeech(text: string, voice = "default"): Promise<Buffer> {
+export async function synthesizeSpeech(text: string, voice = "default", speed = 1.0): Promise<Buffer> {
   try {
-    const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
-    const VOICE_ID = "EXAVITQu4vr4xnSDxMaL"; // Verified working voice ID
-    const MODEL_ID = "eleven_multilingual_v2";
+    const AZURE_SPEECH_KEY = process.env.AZURE_SPEECH_KEY;
+    const AZURE_SPEECH_REGION = process.env.AZURE_SPEECH_REGION || "eastus";
 
-    if (!ELEVENLABS_API_KEY) {
-      console.warn("No Eleven Labs API key provided. Using fallback audio.");
-      return Buffer.from([/*...*/]);
+    if (!AZURE_SPEECH_KEY) {
+      throw new Error("Azure Speech Services not configured. Please provide AZURE_SPEECH_KEY.");
     }
 
     // Input validation
@@ -1013,54 +1011,90 @@ export async function synthesizeSpeech(text: string, voice = "default"): Promise
     }
 
     const trimmedText = text.trim().slice(0, 1000);
+    console.log(`🎤 Synthesizing speech for: "${trimmedText}" with speed: ${speed}x`);
 
-    try {
-      // Required fields based on API spec
-      const requestBody = {
-        text: trimmedText,
-        model_id: MODEL_ID,
-        voice_settings: {
-          stability: 0.85,
-          similarity_boost: 0.85
-        }
-        // Removed language_code parameter since it's not supported by this model
-      };
+    // Import Azure Speech SDK
+    const sdk = await import('microsoft-cognitiveservices-speech-sdk');
+    
+    // Create speech config
+    const speechConfig = sdk.SpeechConfig.fromSubscription(AZURE_SPEECH_KEY, AZURE_SPEECH_REGION);
+    speechConfig.speechSynthesisVoiceName = "en-US-AvaNeural"; // HD Neural voice
+    speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio24Khz48KBitRateMonoMp3;
 
-      console.log("Final request body:", JSON.stringify(requestBody, null, 2));
+    // Use SSML for speed control when speed is not 1.0
+    let ssmlText: string;
+    if (speed !== 1.0) {
+      // Convert speed to SSML prosody rate
+      const prosodyRate = speed <= 0.6 ? "60%" : `${Math.round(speed * 100)}%`;
+      ssmlText = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
+        <voice name="en-US-AvaNeural">
+          <prosody rate="${prosodyRate}">${trimmedText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</prosody>
+        </voice>
+      </speak>`;
+      console.log(`🎵 Using SSML with prosody rate: ${prosodyRate}`);
+    } else {
+      ssmlText = trimmedText;
+    }
 
-      const response = await fetch(
-        `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
-        {
-          method: 'POST',
-          headers: {
-            'Accept': 'audio/mpeg',
-            'Content-Type': 'application/json',
-            'xi-api-key': ELEVENLABS_API_KEY
-          },
-          body: JSON.stringify(requestBody)
+    return new Promise<Buffer>((resolve, reject) => {
+      // Create synthesizer with null audio config to get raw audio data
+      const synthesizer = new sdk.SpeechSynthesizer(speechConfig, null);
+
+      // Synthesize speech
+      const synthesizeMethod = speed !== 1.0 ? 'speakSsmlAsync' : 'speakTextAsync';
+      
+      synthesizer[synthesizeMethod](
+        ssmlText,
+        (result: any) => {
+          try {
+            if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
+              console.log(`✅ Azure TTS synthesis completed. Audio size: ${result.audioData.byteLength} bytes`);
+              
+              // Convert ArrayBuffer to Buffer
+              const audioBuffer = Buffer.from(result.audioData);
+              
+              if (audioBuffer.length === 0) {
+                reject(new Error("Received empty audio from Azure Speech Services"));
+                return;
+              }
+              
+              resolve(audioBuffer);
+            } else if (result.reason === sdk.ResultReason.Canceled) {
+              const cancellation = sdk.CancellationDetails.fromResult(result);
+              const errorMessage = `Azure TTS synthesis canceled: ${cancellation.reason} - ${cancellation.errorDetails}`;
+              console.error(errorMessage);
+              reject(new Error(errorMessage));
+            } else {
+              const errorMessage = `Azure TTS synthesis failed with reason: ${result.reason}`;
+              console.error(errorMessage);
+              reject(new Error(errorMessage));
+            }
+          } catch (processingError) {
+            console.error("Error processing Azure TTS result:", processingError);
+            reject(processingError);
+          } finally {
+            // Clean up synthesizer
+            try {
+              synthesizer.close();
+            } catch (cleanupError) {
+              console.error("Error cleaning up synthesizer:", cleanupError);
+            }
+          }
+        },
+        (error: any) => {
+          console.error("Azure TTS synthesis error:", error);
+          try {
+            synthesizer.close();
+          } catch (cleanupError) {
+            console.error("Error cleaning up synthesizer after error:", cleanupError);
+          }
+          reject(new Error(`Azure TTS synthesis failed: ${error}`));
         }
       );
+    });
 
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => "Could not read error response body");
-        console.error(`ElevenLabs API returned ${response.status} ${response.statusText}:`, errorText);
-        throw new Error(`Eleven Labs API error: ${response.status} ${response.statusText} - ${errorText}`);
-      }
-
-      const arrayBuffer = await response.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-
-      if (!buffer || buffer.length === 0) {
-        throw new Error("Received empty audio from ElevenLabs API");
-      }
-
-      return buffer;
-    } catch (error) {
-      console.error("Network error during ElevenLabs API call:", error);
-      throw error;
-    }
   } catch (error) {
-    console.error("Error synthesizing speech with Eleven Labs:", error);
+    console.error("Error synthesizing speech with Azure AI Speech:", error);
     throw error;
   }
 }

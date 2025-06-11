@@ -200,7 +200,7 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
       return;
     }
 
-    const speed = slowPlayback ? 0.8 : 1.0;
+    const speed = slowPlayback ? 0.6 : 1.0; // Snail mode at 60% speed using Azure SSML prosody
 
     try {
       const response = await fetch("/api/speech/synthesize", {
