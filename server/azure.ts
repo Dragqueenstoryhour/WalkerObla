@@ -998,89 +998,52 @@ function breakIntoSyllables(word: string): string {
  */
 async function tryAzureSynthesis(text: string, speed: number, apiKey: string, region: string): Promise<Buffer | null> {
   try {
-    // Import Azure Speech SDK
-    const sdk = await import('microsoft-cognitiveservices-speech-sdk');
+    console.log(`🔑 Attempting Azure TTS via HTTP API with region: ${region}, key length: ${apiKey?.length || 0}`);
     
-    // Create speech config
-    const speechConfig = sdk.SpeechConfig.fromSubscription(apiKey, region);
-    speechConfig.speechSynthesisVoiceName = "en-US-AvaNeural"; // HD Neural voice
-    speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio24Khz48KBitRateMonoMp3;
-
-    // Use SSML for speed control when speed is not 1.0
-    let ssmlText: string;
+    // Prepare SSML with speed control
+    let ssmlContent: string;
     if (speed !== 1.0) {
-      // Convert speed to SSML prosody rate
       const prosodyRate = speed <= 0.6 ? "60%" : `${Math.round(speed * 100)}%`;
-      ssmlText = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
-        <voice name="en-US-AvaNeural">
+      ssmlContent = `<speak version="1.0" xml:lang="en-US">
+        <voice xml:lang="en-US" xml:gender="Female" name="en-US-AvaNeural">
           <prosody rate="${prosodyRate}">${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</prosody>
         </voice>
       </speak>`;
       console.log(`🎵 Using Azure SSML with prosody rate: ${prosodyRate}`);
     } else {
-      ssmlText = text;
+      ssmlContent = `<speak version="1.0" xml:lang="en-US">
+        <voice xml:lang="en-US" xml:gender="Female" name="en-US-AvaNeural">${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</voice>
+      </speak>`;
     }
 
-    return new Promise<Buffer>((resolve, reject) => {
-      // Create synthesizer with null audio config to get raw audio data
-      const synthesizer = new sdk.SpeechSynthesizer(speechConfig, null);
-
-      // Set a timeout for Azure synthesis
-      const timeout = setTimeout(() => {
-        try {
-          synthesizer.close();
-        } catch (e) {
-          // Ignore cleanup errors
-        }
-        reject(new Error("Azure TTS timeout"));
-      }, 10000); // 10 second timeout
-
-      // Synthesize speech
-      const synthesizeMethod = speed !== 1.0 ? 'speakSsmlAsync' : 'speakTextAsync';
-      
-      synthesizer[synthesizeMethod](
-        ssmlText,
-        (result: any) => {
-          clearTimeout(timeout);
-          try {
-            if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
-              console.log(`✅ Azure TTS synthesis completed. Audio size: ${result.audioData.byteLength} bytes`);
-              
-              // Convert ArrayBuffer to Buffer
-              const audioBuffer = Buffer.from(result.audioData);
-              
-              if (audioBuffer.length === 0) {
-                reject(new Error("Received empty audio from Azure Speech Services"));
-                return;
-              }
-              
-              resolve(audioBuffer);
-            } else {
-              reject(new Error(`Azure TTS synthesis failed with reason: ${result.reason}`));
-            }
-          } catch (processingError) {
-            reject(processingError);
-          } finally {
-            try {
-              synthesizer.close();
-            } catch (cleanupError) {
-              // Ignore cleanup errors
-            }
-          }
-        },
-        (error: any) => {
-          clearTimeout(timeout);
-          try {
-            synthesizer.close();
-          } catch (cleanupError) {
-            // Ignore cleanup errors
-          }
-          reject(new Error(`Azure TTS synthesis failed: ${error}`));
-        }
-      );
+    // Make direct HTTP request to Azure Speech API
+    const fetch = (await import('node-fetch')).default;
+    const response = await fetch(`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {
+      method: 'POST',
+      headers: {
+        'Ocp-Apim-Subscription-Key': apiKey,
+        'Content-Type': 'application/ssml+xml',
+        'X-Microsoft-OutputFormat': 'audio-24khz-160kbitrate-mono-mp3',
+        'User-Agent': 'SpeechTherapyApp/1.0'
+      },
+      body: ssmlContent
     });
+
+    if (!response.ok) {
+      throw new Error(`Azure API returned ${response.status}: ${response.statusText}`);
+    }
+
+    const audioBuffer = Buffer.from(await response.arrayBuffer());
+    console.log(`✅ Azure TTS synthesis completed via HTTP API. Audio size: ${audioBuffer.length} bytes`);
+    
+    if (audioBuffer.length === 0) {
+      throw new Error("Received empty audio from Azure Speech Services");
+    }
+
+    return audioBuffer;
   } catch (error) {
-    throw new Error(`Azure TTS initialization failed: ${error}`);
+    console.error(`Azure HTTP API error:`, error);
+    throw new Error(`Azure TTS HTTP API failed: ${error}`);
   }
 }
 
@@ -1091,7 +1054,7 @@ async function tryAzureSynthesis(text: string, speed: number, apiKey: string, re
 export async function synthesizeSpeech(text: string, voice = "default", speed = 1.0): Promise<Buffer> {
   try {
     const AZURE_SPEECH_KEY = process.env.AZURE_SPEECH_KEY;
-    const AZURE_SPEECH_REGION = process.env.AZURE_SPEECH_REGION || "westus2";
+    const AZURE_SPEECH_REGION = process.env.AZURE_SPEECH_REGION || "eastus";
 
     // Input validation
     if (!text || text.trim().length === 0) {
