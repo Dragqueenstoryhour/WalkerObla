@@ -12,6 +12,7 @@ export interface AudioRecordingOptions {
 export interface AudioPlaybackOptions {
   autoplay?: boolean;
   preload?: 'none' | 'metadata' | 'auto';
+  crossOrigin?: string;
 }
 
 /**
@@ -132,7 +133,7 @@ async function convertToWav(blob: Blob): Promise<Blob> {
         // Resample to 16kHz if not already
         const desiredSampleRate = 16000;
         let finalBuffer = audioBuffer;
-        if (audioBuffer.rate !== desiredSampleRate) {
+        if (audioBuffer.sampleRate !== desiredSampleRate) {
           const numberOfChannels = audioBuffer.numberOfChannels;
           const oldSampleRate = audioBuffer.sampleRate;
           const length = audioBuffer.length * desiredSampleRate / oldSampleRate;
@@ -280,6 +281,91 @@ export function loadAudioForPlayback(audioElement: HTMLAudioElement, url: string
       reject(new Error('Audio playback timeout'));
     }, 10000);
   });
+}
+
+/**
+ * Create an optimal audio element for the current browser environment
+ */
+export function createOptimalAudioElement(src: string, options: AudioPlaybackOptions = {}): HTMLAudioElement {
+  const audio = new Audio();
+  const capabilities = detectAudioCapabilities();
+  
+  // Set optimal properties based on browser
+  audio.preload = options.preload || (capabilities.isIOS || capabilities.isSafari ? 'metadata' : 'auto');
+  if (options.crossOrigin) {
+    audio.crossOrigin = options.crossOrigin;
+  }
+  
+  // iOS/Safari specific optimizations
+  if (capabilities.isIOS || capabilities.isSafari) {
+    audio.setAttribute('playsinline', 'true');
+    audio.setAttribute('webkit-playsinline', 'true');
+  }
+  
+  audio.src = src;
+  return audio;
+}
+
+/**
+ * Safely play audio with enhanced error handling and fallbacks
+ */
+export async function safeAudioPlay(audio: HTMLAudioElement): Promise<void> {
+  const capabilities = detectAudioCapabilities();
+  
+  try {
+    // For iOS/Safari, try to load the audio first
+    if (capabilities.isIOS || capabilities.isSafari) {
+      await new Promise<void>((resolve, reject) => {
+        const onCanPlay = () => {
+          audio.removeEventListener('canplay', onCanPlay);
+          audio.removeEventListener('error', onError);
+          resolve();
+        };
+        
+        const onError = (e: Event) => {
+          audio.removeEventListener('canplay', onCanPlay);
+          audio.removeEventListener('error', onError);
+          reject(new Error('Audio loading failed'));
+        };
+        
+        audio.addEventListener('canplay', onCanPlay);
+        audio.addEventListener('error', onError);
+        
+        audio.load();
+      });
+    }
+    
+    // Attempt to play
+    const playPromise = audio.play();
+    
+    if (playPromise !== undefined) {
+      await playPromise;
+    }
+    
+  } catch (error) {
+    console.error('[SafeAudioPlay] Primary play attempt failed:', error);
+    
+    // Fallback: try creating a new audio element
+    try {
+      const fallbackAudio = new Audio(audio.src);
+      if (audio.crossOrigin) {
+        fallbackAudio.crossOrigin = audio.crossOrigin;
+      }
+      
+      if (capabilities.isIOS || capabilities.isSafari) {
+        fallbackAudio.setAttribute('playsinline', 'true');
+        fallbackAudio.setAttribute('webkit-playsinline', 'true');
+      }
+      
+      const fallbackPlayPromise = fallbackAudio.play();
+      if (fallbackPlayPromise !== undefined) {
+        await fallbackPlayPromise;
+      }
+    } catch (fallbackError) {
+      console.error('[SafeAudioPlay] Fallback play attempt failed:', fallbackError);
+      throw new Error('Audio playback failed on this device');
+    }
+  }
 }
 
 /**
