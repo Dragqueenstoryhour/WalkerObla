@@ -131,6 +131,9 @@ export interface IStorage {
   getPracticeGroupPhrases(groupId: number): Promise<PracticeGroupPhrase[]>;
   addPhraseToPracticeGroup(groupPhrase: InsertPracticeGroupPhrase): Promise<PracticeGroupPhrase>;
   removePhrasesFromPracticeGroup(groupId: number, phraseIds: number[]): Promise<void>;
+  
+  // Health check for deployment readiness
+  healthCheck(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {

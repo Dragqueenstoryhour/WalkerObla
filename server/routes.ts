@@ -14,6 +14,37 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint for deployment readiness
+  app.get('/health', (req, res) => {
+    res.status(200).json({ 
+      status: 'healthy', 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      version: process.env.npm_package_version || '1.0.0'
+    });
+  });
+
+  // Readiness check endpoint
+  app.get('/ready', async (req, res) => {
+    try {
+      // Check database connection
+      await storage.healthCheck();
+      res.status(200).json({ 
+        status: 'ready',
+        database: 'connected',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Readiness check failed:', error);
+      res.status(503).json({ 
+        status: 'not ready',
+        database: 'disconnected',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Auth middleware
   await setupAuth(app);
 
