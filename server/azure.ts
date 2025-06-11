@@ -1049,6 +1049,90 @@ async function tryAzureSynthesis(text: string, speed: number, apiKey: string, re
 }
 
 /**
+ * Synthesize speech from SSML using Azure AI Speech SDK with native en-US-AvaNeural voice
+ */
+export async function synthesizeSpeechFromSSML(ssml: string): Promise<Buffer> {
+  try {
+    const AZURE_SPEECH_KEY = process.env.AZURE_SPEECH_KEY;
+    const AZURE_SPEECH_REGION = process.env.AZURE_SPEECH_REGION || "eastus";
+
+    if (!AZURE_SPEECH_KEY) {
+      throw new Error("Azure Speech key not configured");
+    }
+
+    // Import Azure Speech SDK
+    const sdk = await import('microsoft-cognitiveservices-speech-sdk');
+    
+    // Create speech config
+    const speechConfig = sdk.SpeechConfig.fromSubscription(AZURE_SPEECH_KEY, AZURE_SPEECH_REGION);
+    speechConfig.speechSynthesisVoiceName = "en-US-AvaNeural";
+    speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio24Khz160KBitRateMonoMp3;
+
+    return new Promise<Buffer>((resolve, reject) => {
+      const synthesizer = new sdk.SpeechSynthesizer(speechConfig, null);
+
+      const timeout = setTimeout(() => {
+        try {
+          synthesizer.close();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+        reject(new Error("Azure SSML synthesis timeout"));
+      }, 15000); // 15 second timeout
+
+      synthesizer.speakSsmlAsync(
+        ssml,
+        (result: any) => {
+          clearTimeout(timeout);
+          try {
+            if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
+              console.log(`✅ Azure SSML synthesis completed. Audio size: ${result.audioData.byteLength} bytes`);
+              
+              const audioBuffer = Buffer.from(result.audioData);
+              
+              if (audioBuffer.length === 0) {
+                reject(new Error("Received empty audio from Azure Speech Services"));
+                return;
+              }
+              
+              resolve(audioBuffer);
+            } else if (result.reason === sdk.ResultReason.Canceled) {
+              const cancellation = sdk.CancellationDetails.fromResult(result);
+              console.error(`🚫 Azure SSML synthesis canceled - Reason: ${cancellation.reason}, Error: ${cancellation.errorDetails}`);
+              reject(new Error(`Azure SSML synthesis canceled: ${cancellation.reason} - ${cancellation.errorDetails}`));
+            } else {
+              console.error(`🚫 Azure SSML synthesis failed with reason code: ${result.reason}`);
+              reject(new Error(`Azure SSML synthesis failed with reason: ${result.reason}`));
+            }
+          } catch (processingError) {
+            reject(processingError);
+          } finally {
+            try {
+              synthesizer.close();
+            } catch (cleanupError) {
+              // Ignore cleanup errors
+            }
+          }
+        },
+        (error: any) => {
+          clearTimeout(timeout);
+          try {
+            synthesizer.close();
+          } catch (cleanupError) {
+            // Ignore cleanup errors
+          }
+          reject(new Error(`Azure SSML synthesis failed: ${error}`));
+        }
+      );
+    });
+  } catch (error) {
+    console.error(`Azure SSML synthesis initialization failed:`, error);
+    // Fall back to HTTP API method
+    throw error;
+  }
+}
+
+/**
  * Synthesize speech from text using Azure AI Speech with en-US-AvaNeural voice
  * Falls back to OpenAI with enhanced quality settings if Azure is unavailable
  */

@@ -194,24 +194,37 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
     }
   };
 
-  // Text-to-speech handler using OpenAI API with enhanced mobile Safari support
+  // Text-to-speech handler using Azure AI Speech with SSML support
   const handleTextToSpeech = async () => {
     if (!phrase.text) {
       return;
     }
 
-    const speed = slowPlayback ? 0.6 : 1.0; // Snail mode at 60% speed using Azure SSML prosody
-
     try {
+      const textToSpeak = phrase.text;
+
+      // Construct the SSML string with Azure AI Speech native voice
+      let ssmlText = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">`;
+      ssmlText += `<voice name="en-US-AvaNeural">`;
+
+      if (slowPlayback) {
+        // Use SSML prosody rate to slow down to 60%
+        ssmlText += `<prosody rate="60%">`;
+        ssmlText += textToSpeak;
+        ssmlText += `</prosody>`;
+      } else {
+        ssmlText += textToSpeak;
+      }
+      ssmlText += `</voice>`;
+      ssmlText += `</speak>`;
+
       const response = await fetch("/api/speech/synthesize", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ 
-          text: phrase.text,
-          voice: "alloy",
-          speed: speed
+          ssml: ssmlText,
         }),
       });
 

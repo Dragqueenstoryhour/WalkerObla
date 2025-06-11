@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { assessPronunciation, synthesizeSpeech, getWordPronunciation } from "./azure";
+import { assessPronunciation, synthesizeSpeech, synthesizeSpeechFromSSML, getWordPronunciation } from "./azure";
 import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases, generateSampleContent, generateSpeechResponse } from "./openai";
 import multer from "multer";
 import { z } from "zod";
@@ -363,13 +363,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/speech/synthesize', async (req, res) => {
     try {
-      const { text, voice = "default", speed = 1.0 } = req.body;
+      const { ssml, text, voice = "default", speed = 1.0 } = req.body;
       
-      if (!text) {
-        return res.status(400).json({ error: 'Text is required' });
+      // Support both SSML and legacy text+speed format
+      if (!ssml && !text) {
+        return res.status(400).json({ error: 'SSML or text is required' });
       }
 
-      const audioBuffer = await synthesizeSpeech(text, voice, speed);
+      let audioBuffer: Buffer;
+      
+      if (ssml) {
+        // Use SSML with Azure Speech SDK
+        audioBuffer = await synthesizeSpeechFromSSML(ssml);
+      } else {
+        // Legacy support for text+speed format
+        audioBuffer = await synthesizeSpeech(text, voice, speed);
+      }
       
       // Enhanced headers for better Safari/mobile compatibility
       res.set({
