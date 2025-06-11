@@ -9,6 +9,7 @@ import { Exercise, PronunciationAssessmentResult } from '@/lib/types';
 import useAudioRecording from '@/hooks/useAudioRecording';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
+import { AudioPlaybackButton } from '@/components/AudioPlaybackButton';
 
 interface GameExerciseRecorderProps {
   exercise: Exercise;
@@ -278,39 +279,13 @@ export function GameExerciseRecorder({
 
                 {/* Only show play button when audio is available */}
                 {audioUrl && !isRecording && (
-                  <Button 
-                    variant="outline" 
-                    onClick={async () => {
-                      try {
-                        const audio = new Audio();
-                        audio.preload = 'auto';
-                        audio.crossOrigin = 'anonymous';
-                        
-                        const playAudio = () => {
-                          const playPromise = audio.play();
-                          if (playPromise !== undefined) {
-                            playPromise.catch((error) => {
-                              console.error('Audio play failed:', error);
-                              const fallbackAudio = new Audio(audioUrl);
-                              fallbackAudio.play().catch(e => console.error('Fallback failed:', e));
-                            });
-                          }
-                        };
-                        
-                        audio.oncanplay = playAudio;
-                        audio.onloadeddata = playAudio;
-                        audio.src = audioUrl;
-                        audio.load();
-                      } catch (error) {
-                        console.error('Error setting up audio:', error);
-                      }
-                    }}
+                  <AudioPlaybackButton
+                    audioUrl={audioUrl}
+                    buttonText="Listen to me"
+                    variant="outline"
+                    icon={<Ear className="h-4 w-4" />}
                     disabled={isProcessing}
-                    className="bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0"
-                  >
-                    <Ear className="mr-2 h-4 w-4" />
-                    Hear
-                  </Button>
+                  />
                 )}
               </div>
             </div>

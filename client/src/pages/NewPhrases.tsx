@@ -28,6 +28,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import useAudioRecording from "@/hooks/useAudioRecording";
+import { AudioPlaybackButton } from "@/components/AudioPlaybackButton";
 import { PronunciationAssessmentResult } from "@/lib/types";
 import {
   MicIcon,
