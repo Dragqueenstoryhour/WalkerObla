@@ -44,7 +44,24 @@ if (!isAzureConfigured) {
 // Helper function to convert audio buffer to WAV using ffmpeg
 async function convertAudioToWav(audioBuffer: Buffer, tempDir: string = "/tmp", debugInfo?: any): Promise<string> {
   const timestamp = Date.now();
-  const inputPath = join(tempDir, `input-${timestamp}.webm`);
+  
+  // Detect audio format from buffer header to choose appropriate extension
+  let inputExtension = '.webm'; // default
+  if (audioBuffer.length >= 12) {
+    const header = audioBuffer.subarray(0, 12).toString('hex');
+    if (header.startsWith('000000')) {
+      // MP4/M4A format (common on Safari/iOS)
+      inputExtension = '.m4a';
+    } else if (header.includes('4f676753')) {
+      // OGG format
+      inputExtension = '.ogg';
+    } else if (header.startsWith('52494646')) {
+      // WAV format (already WAV, but may need resampling)
+      inputExtension = '.wav';
+    }
+  }
+  
+  const inputPath = join(tempDir, `input-${timestamp}${inputExtension}`);
   const outputPath = join(tempDir, `output-${timestamp}.wav`);
   
   // Validate input audio buffer
@@ -53,6 +70,7 @@ async function convertAudioToWav(audioBuffer: Buffer, tempDir: string = "/tmp", 
   }
   
   console.log(`⏳ Converting audio buffer (${audioBuffer.length} bytes) to WAV format...`);
+  console.log(`🔍 Detected input format: ${inputExtension} based on audio header analysis`);
   
   try {
     // Write input buffer to temporary file

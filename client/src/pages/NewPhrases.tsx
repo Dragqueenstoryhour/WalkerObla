@@ -1487,15 +1487,14 @@ export default function NewPhrases() {
               <div className="text-sm font-medium text-[#264653]">
                 Listen to your recording:
               </div>
-              <button
-                className="bg-[#57cc99] text-white rounded-full p-2 flex items-center justify-center shadow-md hover:bg-[#38b37a] transition-colors"
-                onClick={() => {
-                  const audio = new Audio(phrase.recordingUrl as string);
-                  audio.play();
-                }}
-              >
-                <Volume2 className="h-5 w-5" />
-              </button>
+              <AudioPlaybackButton
+                audioUrl={phrase.recordingUrl}
+                buttonText="Listen to me"
+                variant="outline"
+                size="sm"
+                className="rounded-full p-2 shadow-md"
+                icon={<Volume2 className="h-5 w-5" />}
+              />
             </div>
           )}
         </div>

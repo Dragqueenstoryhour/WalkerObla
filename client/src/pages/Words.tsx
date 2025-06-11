@@ -25,6 +25,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { PronunciationAssessmentResult } from "@/lib/types";
+import { AudioPlaybackButton } from "@/components/AudioPlaybackButton";
 import {
   MicIcon,
   StopCircleIcon,
@@ -1020,14 +1021,13 @@ export default function Words() {
                               <RotateCw className="h-5 w-5" />
                               Try Again
                             </Button>
-                            <Button
-                              onClick={() => playUserRecording(idx)}
+                            <AudioPlaybackButton
+                              audioUrl={word.recordingUrl || ''}
+                              buttonText="Listen to me"
                               variant="outline"
-                              className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0 h-12 px-6"
-                            >
-                              <VolumeIcon className="h-4 w-4" />
-                              Listen to me
-                            </Button>
+                              className="h-12 px-6"
+                              icon={<VolumeIcon className="h-4 w-4" />}
+                            />
                           </div>
                         )}
                       </div>
