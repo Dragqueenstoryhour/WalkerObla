@@ -1091,7 +1091,7 @@ async function tryAzureSynthesis(text: string, speed: number, apiKey: string, re
 export async function synthesizeSpeech(text: string, voice = "default", speed = 1.0): Promise<Buffer> {
   try {
     const AZURE_SPEECH_KEY = process.env.AZURE_SPEECH_KEY;
-    const AZURE_SPEECH_REGION = process.env.AZURE_SPEECH_REGION || "eastus";
+    const AZURE_SPEECH_REGION = process.env.AZURE_SPEECH_REGION || "westus2";
 
     // Input validation
     if (!text || text.trim().length === 0) {
