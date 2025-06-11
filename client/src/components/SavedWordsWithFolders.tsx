@@ -13,7 +13,8 @@ import {
   Trash2, 
   Edit3, 
   MoreVertical,
-  Volume2
+  Volume2,
+  Snail
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -50,6 +51,7 @@ export function SavedWordsWithFolders() {
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderDescription, setNewFolderDescription] = useState('');
   const [newFolderColor, setNewFolderColor] = useState('#3b82f6');
+  const [slowPlaybackWords, setSlowPlaybackWords] = useState<Record<string, boolean>>({});
 
   // Fetch saved words
   const { data: savedWords = [] } = useQuery<SavedWord[]>({
@@ -142,6 +144,9 @@ export function SavedWordsWithFolders() {
     if (!word) return;
 
     try {
+      const isSlowMode = slowPlaybackWords[word] || false;
+      const speed = isSlowMode ? 0.6 : 1.0; // Snail mode at 60% speed using Azure SSML prosody
+
       const response = await fetch("/api/speech/synthesize", {
         method: "POST",
         headers: {
@@ -150,7 +155,7 @@ export function SavedWordsWithFolders() {
         body: JSON.stringify({ 
           text: word,
           voice: "default",
-          speed: 0.6 // Snail mode at 60% speed using Azure SSML prosody
+          speed: speed
         }),
       });
 

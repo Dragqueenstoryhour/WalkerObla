@@ -1003,13 +1003,14 @@ async function tryAzureSynthesis(text: string, speed: number, apiKey: string, re
     // Prepare SSML with speed control
     let ssmlContent: string;
     if (speed !== 1.0) {
-      const prosodyRate = speed <= 0.6 ? "60%" : `${Math.round(speed * 100)}%`;
+      // Convert speed factor to percentage - 0.6 becomes "60%" which is slower than normal
+      const prosodyRate = `${Math.round(speed * 100)}%`;
       ssmlContent = `<speak version="1.0" xml:lang="en-US">
         <voice xml:lang="en-US" xml:gender="Female" name="en-US-AvaNeural">
           <prosody rate="${prosodyRate}">${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</prosody>
         </voice>
       </speak>`;
-      console.log(`🎵 Using Azure SSML with prosody rate: ${prosodyRate}`);
+      console.log(`🐌 Using Azure SSML with prosody rate: ${prosodyRate} (${speed}x speed)`);
     } else {
       ssmlContent = `<speak version="1.0" xml:lang="en-US">
         <voice xml:lang="en-US" xml:gender="Female" name="en-US-AvaNeural">${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</voice>
