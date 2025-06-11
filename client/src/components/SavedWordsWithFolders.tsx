@@ -152,8 +152,8 @@ export function SavedWordsWithFolders() {
       ssmlText += `<voice name="en-US-AvaNeural">`;
 
       if (isSlowMode) {
-        // Use SSML prosody rate to slow down to 60%
-        ssmlText += `<prosody rate="60%">`;
+        // Use SSML prosody rate to slow down - Azure uses "slow" or decimal values
+        ssmlText += `<prosody rate="0.6">`;
         ssmlText += textToSpeak;
         ssmlText += `</prosody>`;
       } else {
