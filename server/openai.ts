@@ -142,8 +142,7 @@ export async function transcribeAudio(audioBuffer: Buffer): Promise<string> {
 export async function processVoiceCommand(command: string): Promise<any> {
   try {
     // Enhanced system prompt to handle topic and difficulty parsing
-    const systemPrompt = `You're Obla, helping people with the pronunciation of their speech.
-Parse the user's voice command to determine their intent.
+    const systemPrompt = `Parse the user's voice command to determine their intent.
 Return a JSON with:
 - 'action': The detected user intent. This should be one of: 'generateContent', 'startReading', 'pauseReading', 'pronunciationHelp', 'help'.
 - 'topic': The main subject of the request (e.g., "feeding dogs", "animals"). Use the full command as the topic unless it clearly specifies another action.
