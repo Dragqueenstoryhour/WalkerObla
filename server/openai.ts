@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import fs from "fs";
 import { ReadingContent } from "@shared/schema";
-import fetch from 'node-fetch';
+import fetch from 'node-fetch'; // eslint-disable-line @typescript-eslint/no-unused-vars -- This import is used by the original file.
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -122,8 +122,8 @@ export async function transcribeAudio(audioBuffer: Buffer): Promise<string> {
     fs.unlinkSync(tempFilePath);
 
     // Handle different response formats from OpenAI
-    const transcriptionText = typeof transcription === 'string' 
-      ? transcription 
+    const transcriptionText = typeof transcription === 'string'
+      ? transcription
       : (transcription as any).text || '';
 
     console.log(`Whisper transcription result: "${transcriptionText}"`);
@@ -142,19 +142,20 @@ export async function transcribeAudio(audioBuffer: Buffer): Promise<string> {
 export async function processVoiceCommand(command: string): Promise<any> {
   try {
     // Enhanced system prompt to handle topic and difficulty parsing
-    const systemPrompt = `You're Obla, helping people with the pronunciation of their speech. 
-Parse the user's voice command to determine their intent. 
+    const systemPrompt = `You're Obla, helping people with the pronunciation of their speech.
+Parse the user's voice command to determine their intent.
 Return a JSON with:
-- 'action': generateContent, startReading, pauseReading, pronunciationHelp, etc.
+- 'action': The detected user intent. This should be one of: 'generateContent', 'startReading', 'pauseReading', 'pronunciationHelp', 'help'.
 - 'topic': The main subject of the request (e.g., "feeding dogs", "animals"). Use the full command as the topic unless it clearly specifies another action.
 - 'parameters': Optional object with 'difficulty' (1-8) if mentioned.
-- 'message': Short, encouraging response.
+- 'message': Short, encouraging response relevant to the detected action and topic.
 
 Rules:
 - If the command is a topic (e.g., "feeding dogs", "animals"), set action to "generateContent" and use the full command as the topic.
 - If a difficulty level (1-8) is mentioned (e.g., "animals level 3"), include it in parameters.difficulty.
-- If no difficulty is specified, default to difficulty "1".
-- For non-content actions (e.g., "start reading"), omit topic and parameters unless relevant.
+- If no difficulty is specified for 'generateContent' action, default to difficulty "1".
+- For non-content actions (e.g., "start reading"), omit topic and parameters unless directly relevant to the action.
+- If intent is unclear, default 'action' to 'help' and provide a general supportive message.
 
 Examples:
 "feeding dogs" → {"action":"generateContent","topic":"feeding dogs","parameters":{"difficulty":"1"},"message":"I'll find a reading about feeding dogs."}
@@ -245,72 +246,81 @@ export async function generateReadingContent(topic: string, difficulty: string):
     let sentenceLength = "";
     let sentenceCount = 1;
     let syllableCount = "";
+    let complexityGuidance = "";
     let mappedDifficulty: "easy" | "medium" | "hard" = "easy"; // For backward compatibility
 
     switch(difficulty) {
       case "1":
         mappedDifficulty = "easy";
-        languageLevel = "adult-level, grammatically correct sentences with extremely simple vocabulary";
+        languageLevel = "adult-level, grammatically correct sentences using *only* the most basic, high-frequency, one-syllable words for everyday concepts.";
         maxWords = 15;
-        sentenceLength = "3-8 words";
+        sentenceLength = "3-5 words";
         sentenceCount = 1;
         syllableCount = "only one-syllable words (allow minor exceptions like 'the', 'and')";
+        complexityGuidance = "Use common, concrete nouns and verbs. Avoid abstract concepts, specialized jargon, or multi-syllabic words where simpler synonyms exist.";
         break;
       case "2":
         mappedDifficulty = "easy";
-        languageLevel = "adult-level, grammatically correct sentences with very simple vocabulary";
+        languageLevel = "adult-level, grammatically correct sentences with very simple, high-frequency vocabulary suitable for everyday topics and situations.";
         maxWords = 20;
-        sentenceLength = "5-10 words";
+        sentenceLength = "5-8 words";
         sentenceCount = 2;
         syllableCount = "primarily one-syllable words with a few basic two-syllable words";
+        complexityGuidance = "Focus on common, practical vocabulary. Avoid complex sentence structures or unfamiliar terms.";
         break;
       case "3":
         mappedDifficulty = "easy";
-        languageLevel = "adult-level, grammatically correct sentences with simple vocabulary";
+        languageLevel = "adult-level, grammatically correct sentences with simple vocabulary that is familiar in daily life.";
         maxWords = 25;
-        sentenceLength = "5-12 words";
+        sentenceLength = "5-10 words";
         sentenceCount = 2;
         syllableCount = "mix of one and two-syllable words, mostly common everyday terms";
+        complexityGuidance = "Use clear, direct language. Introduce occasional three-syllable words if they are common and easily understood.";
         break;
       case "4":
         mappedDifficulty = "medium";
-        languageLevel = "adult-level, grammatically correct sentences with basic vocabulary";
+        languageLevel = "adult-level, grammatically correct sentences with basic general vocabulary.";
         maxWords = 30;
-        sentenceLength = "7-15 words";
+        sentenceLength = "7-12 words";
         sentenceCount = 3;
         syllableCount = "mostly two-syllable words with some one-syllable words";
+        complexityGuidance = "Incorporate slightly more varied vocabulary, but keep sentence structures straightforward.";
         break;
       case "5":
         mappedDifficulty = "medium";
-        languageLevel = "adult-level, grammatically correct sentences with straightforward vocabulary";
+        languageLevel = "adult-level, grammatically correct sentences with straightforward vocabulary.";
         maxWords = 40;
-        sentenceLength = "8-18 words";
+        sentenceLength = "8-15 words";
         sentenceCount = 3;
         syllableCount = "balanced mix of one, two and occasional three-syllable words";
+        complexityGuidance = "Introduce some descriptive language and slightly more complex ideas, maintaining clarity.";
         break;
       case "6":
         mappedDifficulty = "hard";
-        languageLevel = "adult-level, grammatically correct sentences with moderately advanced vocabulary";
+        languageLevel = "adult-level, grammatically correct sentences with moderately advanced vocabulary.";
         maxWords = 50;
-        sentenceLength = "10-20 words";
+        sentenceLength = "10-18 words";
         sentenceCount = 4;
         syllableCount = "mix of two and three-syllable words with occasional specialized terms";
+        complexityGuidance = "Incorporate more nuanced vocabulary and moderately complex sentence structures suitable for general adult reading.";
         break;
       case "7":
         mappedDifficulty = "hard";
-        languageLevel = "adult-level, grammatically correct sentences with advanced vocabulary";
+        languageLevel = "adult-level, grammatically correct sentences with advanced vocabulary.";
         maxWords = 60;
-        sentenceLength = "12-25 words";
+        sentenceLength = "12-22 words";
         sentenceCount = 5;
         syllableCount = "mainly three-syllable words with some complex terms and technical vocabulary";
+        complexityGuidance = "Use precise and varied vocabulary. Sentence structures can be more complex but should remain clear and readable.";
         break;
       case "8":
         mappedDifficulty = "hard";
-        languageLevel = "adult-level, grammatically correct sentences with sophisticated vocabulary";
+        languageLevel = "adult-level, grammatically correct sentences with sophisticated vocabulary.";
         maxWords = 70;
-        sentenceLength = "15-30 words";
+        sentenceLength = "15-25 words";
         sentenceCount = 6;
         syllableCount = "complex multi-syllable words with specialized terminology relevant to the topic";
+        complexityGuidance = "Employ sophisticated vocabulary and complex sentence structures appropriate for expert-level content. Ensure all words and concepts are clearly explained within the context.";
         break;
       // Backward compatibility for older difficulty labels
       case "easy":
@@ -319,15 +329,18 @@ export async function generateReadingContent(topic: string, difficulty: string):
         return generateReadingContent(topic, "4");
       case "hard":
         return generateReadingContent(topic, "7");
+      default: // Fallback for invalid difficulty
+        return generateReadingContent(topic, "2"); // Default to level 2 for better readability
     }
 
     const systemPrompt = `You are creating short, ${languageLevel} about "${topic}".
-    - Use ${syllableCount}. 
-    - Write exactly ${sentenceCount} sentence(s), ${sentenceLength} each.
-    - Keep it under ${maxWords} words total.
-    - Write in proper newspaper article style with complete, grammatically correct sentences.
+    - Use ${syllableCount}.
+    - Write exactly ${sentenceCount} complete, grammatically correct sentences.
+    - Each sentence should be ${sentenceLength} long.
+    - Keep the total content under ${maxWords} words.
+    - Write in a natural, conversational style with clear narrative flow.
+    - **Crucially for lower levels (1-3)**: ${complexityGuidance} Ensure the sentences are coherent and flow naturally together.
     - Avoid fragments, choppy phrases, or awkward constructions like "Eat clean, move more."
-    - Use natural, flowing language that sounds like professional journalism.
     - Return ONLY JSON: {"title": "string", "content": "string", "source": "Obla"}`;
 
     console.log(`Using OpenAI to generate content about "${topic}" with difficulty "${difficulty}"`);
@@ -337,10 +350,10 @@ export async function generateReadingContent(topic: string, difficulty: string):
       model: "gpt-3.5-turbo", // Using a cheaper model to conserve tokens
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Write an interesting ${maxWords}-word max newspaper-style content about ${topic}. 
-Use ${languageLevel} vocabulary and create exactly ${sentenceCount} complete, grammatically correct sentence(s) with ${syllableCount}.
-Write in the style of a professional news article with proper sentence structure.
-IMPORTANT: Keep it engaging, informative, and under ${maxWords} words total.` }
+        { role: "user", content: `Write an interesting, coherent, and flowing passage about ${topic} for speech practice.
+        Use ${languageLevel} vocabulary and create exactly ${sentenceCount} complete, grammatically correct sentence(s) with ${syllableCount}.
+        ${parseInt(difficulty) <= 3 ? 'Ensure sentences use simple, everyday language and have a natural, flowing rhythm. Avoid complex words like "mysterious" or "inventor" when simpler synonyms are available. Focus on concrete ideas.' : ''}
+        IMPORTANT: Keep it engaging, informative, and under ${maxWords} words total. Ensure clear narrative flow, especially for shorter passages.` }
       ],
       temperature: 0.7,
       max_tokens: 300, // Strict token limit to prevent large responses
@@ -377,7 +390,7 @@ IMPORTANT: Keep it engaging, informative, and under ${maxWords} words total.` }
       source: content.source || "AI-Generated for Obla",
       wordCount: Math.min(calculatedWordCount, maxWords), // Ensure word count doesn't exceed our limit
       readingTime: calculatedWordCount * 3,
-      difficulty: mappedDifficulty, 
+      difficulty: mappedDifficulty,
       createdAt: new Date().toISOString(), // Store directly as ISO string for compatibility
     };
 
@@ -395,16 +408,36 @@ IMPORTANT: Keep it engaging, informative, and under ${maxWords} words total.` }
 export async function generateSampleContent(): Promise<ReadingContent> {
   // Array of interesting topics for more variety
   const topics = [
-    "latest tech innovations and breakthrough developments",
-    "space exploration and recent discoveries",
-    "health and wellness trends",
-    "environmental conservation efforts",
-    "popular culture and entertainment highlights",
-    "new scientific discoveries and research",
-    "travel destinations and experiences",
-    "sports achievements and competitions",
-    "fascinating facts about animals and nature",
-    "latest cooking trends and cuisine"
+    "recent heartwarming animal rescue stories",
+    "exciting new discoveries in space exploration",
+    "simple healthy eating tips for busy people",
+    "fun facts about famous landmarks around the world",
+    "new developments in renewable energy solutions",
+    "everyday acts of kindness making a difference",
+    "popular hobbies and how to get started",
+    "the latest trends in sustainable fashion",
+    "easy ways to practice mindfulness and relaxation",
+    "updates on community gardening projects",
+    "the history of common household items",
+    "innovative ways technology is helping education",
+    "uplifting stories of people achieving goals",
+    "exploring diverse cultures through food",
+    "simple home improvement projects for beginners",
+    "the science behind everyday phenomena",
+    "how to train common pets like dogs or cats",
+    "the benefits of spending time in nature",
+    "upcoming events and festivals in your local area",
+    "fascinating facts about the human body",
+    "new apps making daily life easier",
+    "the importance of local wildlife conservation",
+    "simple exercises for staying active at home",
+    "creative arts and crafts ideas for all ages",
+    "remarkable stories of human endurance",
+    "understanding different weather patterns",
+    "the impact of music on mood and well-being",
+    "simple tips for better sleep",
+    "how to start composting at home",
+    "celebrating cultural diversity through storytelling"
   ];
 
   // Select a random topic from the array
@@ -455,8 +488,14 @@ export async function processPhrases(phrases: string[]): Promise<any[]> {
     const systemPrompt = `You help language learners practice speech by analyzing phrases, adding phonetic guides, and determining difficulty.
     For each phrase, provide:
     1. The original text
-    2. A phonetic transcription using IPA symbols
-    3. Difficulty level (beginner/intermediate/advanced)
+    2. A phonetic transcription using standard General American English IPA symbols. Provide a single phonetic transcription for the entire phrase, reflecting natural connected speech, rather than isolated words.
+    3. Difficulty level (beginner/intermediate/advanced).
+
+    Difficulty should reflect the phonetic complexity and commonality of the phrase:
+    - 'beginner': Very common phrases with simple, regular sound patterns.
+    - 'intermediate': Common phrases with some typical English sound variations or slightly less common vocabulary.
+    - 'advanced': Less common phrases, complex sound combinations, or words with less predictable pronunciation.
+
     Return an array of JSON objects with { text, phonetic, difficulty }`;
 
     const response = await openai.chat.completions.create({
@@ -513,10 +552,10 @@ export async function generateSimilarPhrases(
 
     const systemPrompt = `You help language learners by generating variations of ${itemType} for speaking practice.
     Given a ${itemType}, create 5 similar ${itemType} that:
-    1. Maintain the same general meaning (if applicable for words)
-    2. Use a similar level of complexity
-    3. Are natural expressions a native speaker would use
-    4. Vary in structure to provide diverse practice (for phrases) or distinct but related words (for words)
+    1. Maintain the same general meaning (if applicable for words).
+    2. Use a similar level of complexity. Ensure the generated items strictly adhere to the phonetic and lexical complexity of the original item, aligning with one of the predefined difficulty levels (1-8) if the original phrase's complexity can be mapped.
+    3. Are natural expressions a native speaker would use.
+    4. Vary in structure to provide diverse practice (for phrases) or are distinct but related concepts (for words). Do NOT simply provide synonyms or minor grammatical variations; ensure structural diversity for phrases and distinct, related concepts for words.
     Return only a JSON array of strings with the new ${itemType}.`;
 
     const response = await openai.chat.completions.create({
@@ -579,18 +618,18 @@ export async function generateTopicPhrases(
     let itemTypeDescription;
     let complexityDescription;
     let lengthConstraint;
-    let examplesBasedOnType;
+    // let examplesBasedOnType; // This variable was not used, removed.
 
     if (type === "words") {
       itemTypeDescription = "meaningful single words";
       complexityDescription = difficultyInfo.complexity.replace('words with', 'single words with'); // Adjust for words
       lengthConstraint = `Words MUST be single standalone meaningful words (no articles, prepositions, or pronouns) with ${difficultyInfo.syllableRange}`;
-      examplesBasedOnType = difficultyInfo.examples.slice(0, 3).join(", ");
+      // examplesBasedOnType = difficultyInfo.examples.slice(0, 3).join(", "); // This variable was not used, removed.
     } else { // type === "phrases"
       itemTypeDescription = "natural, grammatically correct phrases";
       complexityDescription = `phrases with ${difficultyInfo.complexity.toLowerCase()}`;
       lengthConstraint = `Phrases should be ${difficultyInfo.maxSentenceLength} words or fewer`;
-      examplesBasedOnType = `Example phrases: "${difficultyInfo.examples.slice(0, 2).join('", "')}"`;
+      // examplesBasedOnType = `Example phrases: "${difficultyInfo.examples.slice(0, 2).join('", "')}"`; // This variable was not used, removed.
     }
 
     // Build system prompt
@@ -599,10 +638,11 @@ You are a speech rehabilitation assistant generating ${itemTypeDescription} for 
 
 **Task**:
 Generate exactly ${numberOfItems} ${itemTypeDescription} related to the topic "${topic}" for speech practice.
-${type === "words" ? `IMPORTANT: 
+${type === "words" ? `IMPORTANT:
 - Each item MUST be a SINGLE WORD ONLY (no phrases or sentences)
-- Focus on topic-relevant nouns, verbs, adjectives, and adverbs 
+- Focus on topic-relevant nouns, verbs, adjectives, and adverbs
 - Do NOT include articles (a, an, the), prepositions (in, on, at), or pronouns (I, you, he)
+- Ensure words are grammatically useful and convey clear meaning on their own, excluding purely grammatical connectors or common articles/prepositions unless specifically requested by context.
 - Ensure each word is directly related to the topic "${topic}"
 - Provide diverse, unique words (no repetition)
 - Words should be substantive and meaningful` : ""}
@@ -610,7 +650,7 @@ ${type === "words" ? `IMPORTANT:
 **Difficulty Level**: ${difficulty}/8 (${difficultyInfo.name})
 
 **Requirements**:
-- **Complexity**: ${complexityDescription}
+- **Complexity**: ${complexityDescription}. Each generated word/phrase must strictly conform to the phonetic and lexical complexity described for difficulty level ${difficultyInfo.name} (e.g., ${difficultyInfo.complexity}).
 - **Word Types**: Use ${difficultyInfo.wordTypes} (e.g., ${difficultyInfo.examples.slice(0,3).join(', ')})
 - **Length**: ${lengthConstraint}
 - **Phonetic Considerations**: Include ${difficultyInfo.phonetics} where appropriate
@@ -618,9 +658,11 @@ ${type === "words" ? `IMPORTANT:
   - ${itemTypeDescription} must be meaningful, practical, and usable in everyday conversations
   - If generating phrases, ensure they are complete sentences or standalone expressions
   - Relate ${itemTypeDescription} directly to the topic "${topic}"
+  - Ensure the ${numberOfItems} generated items provide a diverse range of words/phrases that collectively cover different aspects of the topic and common usage patterns within the specified difficulty. For phrases, include a mix of statements, questions, or commands if appropriate for the topic.
+  - The generated words/phrases should be analogous in complexity and type to the examples provided for this difficulty level, such as: ${difficultyInfo.examples.join(', ')}.
 - **Exclusions**:
   - Do NOT include numbers or numerical sequences (e.g., "5, 4, 3")
-  - Do NOT include hyphenated syllabic breakdowns (e.g., "cog-ni-tive ther-a-py")
+  - Do NOT include artificial hyphenated syllabic breakdowns (e.g., "cog-ni-tive"); however, naturally hyphenated compound words (e.g., "well-being") are acceptable.
   - Avoid overly technical or academic terms unless essential to the topic and difficulty
   - Do NOT include incomplete sentences, fragments, lists, bullet points, or markdown formatting
 - **Output Format**:

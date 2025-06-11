@@ -468,7 +468,7 @@ export default function Phrases() {
 
     if (isSlowPlayback) {
       // Use SSML prosody rate to slow down to 60%
-      ssmlText += `<prosody rate="60%">`;
+      ssmlText += `<prosody rate="40%">`;
       ssmlText += textToSpeak;
       ssmlText += `</prosody>`;
     } else {
