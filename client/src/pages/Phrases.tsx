@@ -460,7 +460,22 @@ export default function Phrases() {
     });
 
     const isSlowPlayback = slowPlaybackPhrases[phrase.id] || false;
-    const speed = isSlowPlayback ? 0.6 : 1.0; // Snail mode at 60% speed using Azure SSML prosody
+    const textToSpeak = phrase.text;
+
+    // Construct the SSML string with Azure AI Speech native voice
+    let ssmlText = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">`;
+    ssmlText += `<voice name="en-US-AvaNeural">`;
+
+    if (isSlowPlayback) {
+      // Use SSML prosody rate to slow down to 60%
+      ssmlText += `<prosody rate="60%">`;
+      ssmlText += textToSpeak;
+      ssmlText += `</prosody>`;
+    } else {
+      ssmlText += textToSpeak;
+    }
+    ssmlText += `</voice>`;
+    ssmlText += `</speak>`;
 
     try {
       const response = await fetch("/api/speech/synthesize", {
@@ -469,9 +484,7 @@ export default function Phrases() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ 
-          text: phrase.text,
-          voice: "alloy",
-          speed: speed
+          ssml: ssmlText,
         }),
       });
 
