@@ -779,13 +779,21 @@ export default function Words() {
     loadSharedWords();
   }, [shareId, toast]);
 
-  // Auto-load commonly used words when the page opens
+  // Auto-load commonly used words with delay for smooth startup
   useEffect(() => {
     // Only if we're not loading shared words
     if (!shareId) {
-      handleGenerateTopicWords("Commonly Used Words");
+      // Add a small delay to ensure smooth startup
+      const timer = setTimeout(() => {
+        handleGenerateTopicWords("Commonly Used Words");
+      }, 1500);
+      
+      return () => clearTimeout(timer);
     }
+  }, [shareId]);
 
+  // Cleanup function for recording sessions
+  useEffect(() => {
     // Cleanup function to handle any lingering recording sessions
     return () => {
       if (

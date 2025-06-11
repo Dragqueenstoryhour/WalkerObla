@@ -52,19 +52,27 @@ app.get('/health', (req, res) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
-    // Log error details for debugging
+    // Enhanced error logging with request context
     console.error(`Error ${status} on ${req.method} ${req.path}:`, {
       message: err.message,
-      stack: err.stack,
-      timestamp: new Date().toISOString()
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+      timestamp: new Date().toISOString(),
+      userAgent: req.get('User-Agent'),
+      ip: req.ip,
+      body: req.method === 'POST' ? req.body : undefined
     });
 
-    res.status(status).json({ message });
-    
-    // Don't throw in production to prevent crashes
-    if (process.env.NODE_ENV !== 'production') {
-      throw err;
+    // Send appropriate error response
+    if (status >= 500) {
+      res.status(status).json({ 
+        message: process.env.NODE_ENV === 'development' ? message : "Internal Server Error",
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(status).json({ message });
     }
+    
+    // Never throw errors in production to prevent crashes
   });
 
   // importantly only setup vite in development and after
