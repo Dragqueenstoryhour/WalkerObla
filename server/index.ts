@@ -36,6 +36,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// Health check endpoint for deployment
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
 (async () => {
   const server = await registerRoutes(app);
 

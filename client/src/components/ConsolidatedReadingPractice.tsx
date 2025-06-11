@@ -839,35 +839,37 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
                 )}
               </div>
 
-              {/* Second Row: Hear and Slow Switch */}
-              <div className="flex justify-center items-center gap-2 my-4">
-                <Button
-                  onClick={handleTextToSpeech}
-                  variant="outline"
-                  className="h-10 px-4 bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0"
-                >
-                  <Ear className="h-4 w-4 mr-1" />
-                  Hear
-                </Button>
-
-                <button
-                  onClick={toggleSlowPlayback}
-                  className={`relative inline-flex h-10 w-16 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                    slowPlayback ? 'bg-[#FFE8E8]' : 'bg-gray-300'
-                  }`}
-                  role="switch"
-                  aria-checked={slowPlayback}
-                  aria-label="Toggle slow playback"
-                >
-                  <span
-                    className={`inline-flex h-8 w-8 transform rounded-full bg-white transition-transform duration-200 ease-in-out items-center justify-center ${
-                      slowPlayback ? 'translate-x-8' : 'translate-x-1'
-                    }`}
+              {/* Controls available during recording and before completion */}
+              {phrase.status !== "complete" && (
+                <div className="flex justify-center items-center gap-2 my-4">
+                  <Button
+                    onClick={handleTextToSpeech}
+                    variant="outline"
+                    className="h-10 px-4 bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0"
                   >
-                    <Snail className="w-3 h-3 text-gray-600" />
-                  </span>
-                </button>
-              </div>
+                    <Ear className="h-4 w-4 mr-1" />
+                    Hear
+                  </Button>
+
+                  <button
+                    onClick={toggleSlowPlayback}
+                    className={`relative inline-flex h-10 w-16 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                      slowPlayback ? 'bg-[#FFE8E8]' : 'bg-gray-300'
+                    }`}
+                    role="switch"
+                    aria-checked={slowPlayback}
+                    aria-label="Toggle slow playback"
+                  >
+                    <span
+                      className={`inline-flex h-8 w-8 transform rounded-full bg-white transition-transform duration-200 ease-in-out items-center justify-center ${
+                        slowPlayback ? 'translate-x-8' : 'translate-x-1'
+                      }`}
+                    >
+                      <Snail className="w-3 h-3 text-gray-600" />
+                    </span>
+                  </button>
+                </div>
+              )}
 
               {/* Third Row: New Content Button */}
               <div className="flex justify-center my-4 mt-4">
@@ -886,23 +888,66 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
               </div>
             </div>
 
-            {/* Recording Playback and Save Reading Buttons */}
+            {/* Post-Recording Button Layout - Matching Words page layout */}
             {phrase.status === "complete" && phrase.recordingBlob && (
-              <div className="flex justify-center gap-4">
-                <Button
-                  onClick={handleRecordingPlayback}
-                  className="bg-green-700 hover:bg-green-800 text-white"
-                >
-                  <Volume2 className="w-4 h-4 mr-2" />
-                  Listen to your recording
-                </Button>
-                <Button
-                  onClick={handleSaveReading}
-                  className="bg-[#FFBD12] hover:bg-[#E6A800] text-white"
-                >
-                  <BookOpen className="w-4 h-4 mr-2" />
-                  Save Reading
-                </Button>
+              <div className="space-y-4">
+                {/* First Row: Try Again and Listen to me buttons */}
+                <div className="flex justify-center gap-4">
+                  <Button
+                    onClick={startPhrasePractice}
+                    className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 px-8 py-3 text-base"
+                  >
+                    <RefreshCw className="h-5 w-5" />
+                    Try Again
+                  </Button>
+                  <Button
+                    onClick={handleRecordingPlayback}
+                    className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 px-8 py-3 text-base"
+                  >
+                    <Volume2 className="h-5 w-5" />
+                    Listen to me
+                  </Button>
+                </div>
+
+                {/* Second Row: Hear button and slow switch */}
+                <div className="flex justify-center items-center gap-4">
+                  <Button
+                    onClick={handleTextToSpeech}
+                    className="h-12 px-6 bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0"
+                  >
+                    <Ear className="h-4 w-4 mr-2" />
+                    Hear
+                  </Button>
+
+                  <button
+                    onClick={toggleSlowPlayback}
+                    className={`relative inline-flex h-12 w-20 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                      slowPlayback ? 'bg-[#FFE8E8]' : 'bg-gray-300'
+                    }`}
+                    role="switch"
+                    aria-checked={slowPlayback}
+                    aria-label="Toggle slow playback"
+                  >
+                    <span
+                      className={`inline-flex h-10 w-10 transform rounded-full bg-white transition-transform duration-200 ease-in-out items-center justify-center ${
+                        slowPlayback ? 'translate-x-9' : 'translate-x-1'
+                      }`}
+                    >
+                      <Snail className="w-4 h-4 text-gray-600" />
+                    </span>
+                  </button>
+                </div>
+
+                {/* Third Row: Save Reading button */}
+                <div className="flex justify-center">
+                  <Button
+                    onClick={handleSaveReading}
+                    className="bg-[#FFBD12] hover:bg-[#E6A800] text-white px-8 py-3 text-base"
+                  >
+                    <BookOpen className="w-4 h-4 mr-2" />
+                    Save Reading
+                  </Button>
+                </div>
               </div>
             )}
 

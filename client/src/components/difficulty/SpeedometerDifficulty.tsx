@@ -124,37 +124,55 @@ export function DifficultyDropdown() {
     <div className="relative">
       <button 
         onClick={() => setIsOpen(!isOpen)} 
-        className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 focus:outline-none"
+        className="flex items-center justify-between gap-3 px-6 py-3 min-w-[160px] border-2 border-blue-300 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 shadow-sm hover:shadow-md"
       >
-        <span>Difficulty: {difficulty}/8</span>
-        <Gauge className="h-4 w-4" />
+        <div className="flex flex-col items-start">
+          <span className="text-sm font-medium text-blue-900">Level</span>
+          <span className="text-xs text-blue-700">{difficultyLevelNames[difficulty as DifficultyLevel]}</span>
+        </div>
+        <Gauge className="h-5 w-5 text-blue-600" />
       </button>
       
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-50">
-          <div className="mb-3">
-            <h3 className="font-medium">Adjust Difficulty</h3>
+        <div className="absolute right-0 mt-2 w-96 bg-white border-2 border-blue-200 rounded-xl shadow-2xl p-6 z-50 backdrop-blur-sm">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-800 mb-1">Adjust Difficulty Level</h3>
+            <p className="text-sm text-gray-600">Choose the level that matches your reading ability</p>
           </div>
           
-          <SpeedometerDifficulty />
-          
-          <div className="mt-2 text-xs text-gray-500">
-            Adjust the difficulty level to match your speech needs.
+          <div className="mb-6">
+            <SpeedometerDifficulty />
           </div>
           
-          <div className="flex justify-end mt-4">
+          <div className="bg-blue-50 rounded-lg p-3 mb-4">
+            <p className="text-sm text-blue-800">
+              <strong>Current Level:</strong> {difficultyLevelNames[difficulty as DifficultyLevel]}
+            </p>
+            <p className="text-xs text-blue-600 mt-1">
+              Higher levels include more complex vocabulary and longer sentences
+            </p>
+          </div>
+          
+          <div className="flex justify-between items-center gap-3">
+            <Button 
+              onClick={() => setIsOpen(false)}
+              variant="outline"
+              className="px-4 py-2 border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </Button>
             <Button 
               onClick={generateContentWithDifficulty}
               disabled={isGenerating}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-2 font-medium shadow-md hover:shadow-lg transition-all duration-200"
             >
               {isGenerating ? (
                 <>
-                  <span className="mr-2">Updating...</span>
-                  <RotateCw className="h-4 w-4 animate-spin" />
+                  <RotateCw className="h-4 w-4 animate-spin mr-2" />
+                  Updating...
                 </>
               ) : (
-                "OK"
+                "Apply Level"
               )}
             </Button>
           </div>
