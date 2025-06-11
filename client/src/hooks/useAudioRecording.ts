@@ -1,4 +1,11 @@
 import { useState, useRef, useCallback } from 'react';
+import { 
+  detectAudioCapabilities, 
+  getOptimalRecordingConstraints, 
+  createOptimalMediaRecorder,
+  prepareAudioForSubmission,
+  createAudioBlobUrl
+} from '@/lib/audioUtils';
 
 interface UseAudioRecordingOptions {
   onRecordingComplete?: (blob: Blob) => void;
@@ -30,22 +37,17 @@ export function useAudioRecording({
       setAudioUrl(null);
       setRecordingDuration(0);
       
-      // Get media stream with more detailed logging
-      console.log('[Recording] Requesting user media with constraints:', audioConstraints);
-      // Define mobile-friendly audio constraints
-      const mobileConstraints = {
+      // Get optimal constraints for current browser
+      const optimalConstraints = getOptimalRecordingConstraints();
+      const finalConstraints = {
         audio: {
-          ...audioConstraints,
-          // Add specific constraints for mobile devices to ensure compatibility
-          channelCount: 1, // mono
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 16000, // Match Azure's preferred sample rate
+          ...optimalConstraints,
+          ...audioConstraints, // Allow overrides
         }
       };
-      console.log('[Recording] Using mobile-friendly constraints:', mobileConstraints);
-      const stream = await navigator.mediaDevices.getUserMedia(mobileConstraints);
+      
+      console.log('[Recording] Using optimal constraints:', finalConstraints);
+      const stream = await navigator.mediaDevices.getUserMedia(finalConstraints);
       
       // Log stream details
       console.log('[Recording] Media stream obtained with tracks:', stream.getTracks().length);
@@ -56,9 +58,9 @@ export function useAudioRecording({
       
       streamRef.current = stream;
       
-      // Create media recorder with better error handling
+      // Create media recorder with optimal settings for current browser
       console.log('[Recording] Creating MediaRecorder');
-      const mediaRecorder = new MediaRecorder(stream);
+      const mediaRecorder = createOptimalMediaRecorder(stream);
       console.log('[Recording] MediaRecorder created with mimeType:', mediaRecorder.mimeType);
       mediaRecorderRef.current = mediaRecorder;
       
@@ -82,7 +84,7 @@ export function useAudioRecording({
       };
       
       // Handle recording stop with more detailed logs
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         console.log('[Recording] MediaRecorder stopped');
         
         // Validate we have chunks
@@ -95,22 +97,9 @@ export function useAudioRecording({
         }
         
         try {
-          // Ensure we're using a format compatible with our server processing
-          // Safari/iOS often uses audio/mp4, which causes issues with our server processing
-          let mimeType = mediaRecorderRef.current?.mimeType || 'audio/webm';
-          console.log(`[Recording] Original recording mime type: ${mimeType}`);
-          
-          // If we're on iOS/Safari (or any platform that doesn't support webm)
-          // Force the type to be wav-compatible for server processing
-          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-          const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-          if (isIOS || isSafari || !mimeType.includes('webm')) {
-            console.log('[Recording] Detected iOS/Safari or non-webm format, using audio/wav for compatibility');
-            mimeType = 'audio/wav';
-          }
-          
-          // Create the audio blob with the appropriate format
-          const audioBlob = new Blob(chunksRef.current, { type: mimeType });
+          // Create the audio blob with the recorded format
+          const originalMimeType = mediaRecorderRef.current?.mimeType || 'audio/webm';
+          const audioBlob = new Blob(chunksRef.current, { type: originalMimeType });
           console.log(`[Recording] Created audio blob of size: ${audioBlob.size} bytes with type: ${audioBlob.type}`);
           
           if (audioBlob.size === 0) {
@@ -121,17 +110,21 @@ export function useAudioRecording({
             return;
           }
           
-          // Create URL for local playback
-          const url = URL.createObjectURL(audioBlob);
+          // Prepare audio for server submission (with format optimization)
+          const optimizedBlob = await prepareAudioForSubmission(audioBlob);
+          console.log(`[Recording] Optimized blob size: ${optimizedBlob.size} bytes with type: ${optimizedBlob.type}`);
+          
+          // Create URL for local playback using optimized blob
+          const url = createAudioBlobUrl(optimizedBlob);
           console.log(`[Recording] Created object URL for playback: ${url.substring(0, 30)}...`);
           setAudioUrl(url);
-          setAudioBlob(audioBlob); // Store the blob in state
+          setAudioBlob(optimizedBlob); // Store the optimized blob in state
           setIsRecording(false);
           
-          // Notify parent component with the audio blob for processing
+          // Notify parent component with the optimized audio blob for processing
           if (onRecordingComplete) {
-            console.log('[Recording] Sending recording to parent component for processing');
-            onRecordingComplete(audioBlob);
+            console.log('[Recording] Sending optimized recording to parent component for processing');
+            onRecordingComplete(optimizedBlob);
           }
         } catch (error) {
           console.error('[Recording] Error processing recording:', error);

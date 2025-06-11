@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Volume2, Share2, BookmarkIcon, Snail, Check, MicIcon, StopCircleIcon, RotateCw, VolumeIcon, Ear, ChevronLeft, ChevronRight, Gauge, Star } from 'lucide-react';
+import { AudioPlaybackButton } from '@/components/AudioPlaybackButton';
 import { useReading } from '@/contexts/ReadingContext';
 import { PronunciationIssue, SuggestedExercise } from '@/lib/types';
 import { synthesizeSpeech } from '@/lib/azure';
@@ -725,14 +726,13 @@ const FeedbackPanel = () => {
                                 <RotateCw className="h-5 w-5" />
                                 Try Again
                               </Button>
-                              <Button
-                                onClick={() => playUserRecording(idx)}
+                              <AudioPlaybackButton
+                                audioUrl={issue.recordingUrl || ''}
+                                buttonText="Listen to me"
                                 variant="outline"
-                                className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0 h-12 px-6"
-                              >
-                                <VolumeIcon className="h-4 w-4" />
-                                Listen to me
-                              </Button>
+                                className="h-12 px-6"
+                                icon={<VolumeIcon className="h-4 w-4" />}
+                              />
                             </div>
                           )}
                         </div>
