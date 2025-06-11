@@ -428,7 +428,7 @@ const FeedbackPanel = () => {
 
     try {
       const isSlowMode = slowPlaybackWords[issue.id || issue.word];
-      const speed = isSlowMode ? 0.7 : 1.0;
+      const speed = isSlowMode ? 0.6 : 1.0; // Snail mode at 60% speed using Azure SSML prosody
 
       const response = await fetch("/api/speech/synthesize", {
         method: "POST",

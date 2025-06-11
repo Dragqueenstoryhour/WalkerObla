@@ -198,7 +198,7 @@ function PracticeCarousel({
   const playTTS = async (item: ProcessedItem) => {
     try {
       const state = getRecordingState(item.id);
-      const speed = state.slowPlayback ? 0.7 : 1.0;
+      const speed = state.slowPlayback ? 0.6 : 1.0; // Snail mode at 60% speed using Azure SSML prosody
 
       const response = await fetch("/api/speech/synthesize", {
         method: "POST",

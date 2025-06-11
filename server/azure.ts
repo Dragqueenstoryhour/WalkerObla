@@ -999,7 +999,7 @@ function breakIntoSyllables(word: string): string {
 export async function synthesizeSpeech(text: string, voice = "default", speed = 1.0): Promise<Buffer> {
   try {
     const AZURE_SPEECH_KEY = process.env.AZURE_SPEECH_KEY;
-    const AZURE_SPEECH_REGION = process.env.AZURE_SPEECH_REGION || "eastus";
+    const AZURE_SPEECH_REGION = process.env.AZURE_SPEECH_REGION || "westus2";
 
     if (!AZURE_SPEECH_KEY) {
       throw new Error("Azure Speech Services not configured. Please provide AZURE_SPEECH_KEY.");

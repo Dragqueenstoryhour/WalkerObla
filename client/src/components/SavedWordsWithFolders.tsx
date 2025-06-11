@@ -149,8 +149,8 @@ export function SavedWordsWithFolders() {
         },
         body: JSON.stringify({ 
           text: word,
-          voice: "alloy",
-          speed: 0.8 // Slightly slower for better comprehension
+          voice: "default",
+          speed: 0.6 // Snail mode at 60% speed using Azure SSML prosody
         }),
       });
 
