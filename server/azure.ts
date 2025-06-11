@@ -994,30 +994,15 @@ function breakIntoSyllables(word: string): string {
 }
 
 /**
- * Synthesize speech from text using Azure AI Speech with en-US-AvaNeural voice
+ * Helper function to attempt Azure Speech synthesis
  */
-export async function synthesizeSpeech(text: string, voice = "default", speed = 1.0): Promise<Buffer> {
+async function tryAzureSynthesis(text: string, speed: number, apiKey: string, region: string): Promise<Buffer | null> {
   try {
-    const AZURE_SPEECH_KEY = process.env.AZURE_SPEECH_KEY;
-    const AZURE_SPEECH_REGION = process.env.AZURE_SPEECH_REGION || "westus2";
-
-    if (!AZURE_SPEECH_KEY) {
-      throw new Error("Azure Speech Services not configured. Please provide AZURE_SPEECH_KEY.");
-    }
-
-    // Input validation
-    if (!text || text.trim().length === 0) {
-      throw new Error("Text cannot be empty for speech synthesis");
-    }
-
-    const trimmedText = text.trim().slice(0, 1000);
-    console.log(`🎤 Synthesizing speech for: "${trimmedText}" with speed: ${speed}x`);
-
     // Import Azure Speech SDK
     const sdk = await import('microsoft-cognitiveservices-speech-sdk');
     
     // Create speech config
-    const speechConfig = sdk.SpeechConfig.fromSubscription(AZURE_SPEECH_KEY, AZURE_SPEECH_REGION);
+    const speechConfig = sdk.SpeechConfig.fromSubscription(apiKey, region);
     speechConfig.speechSynthesisVoiceName = "en-US-AvaNeural"; // HD Neural voice
     speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio24Khz48KBitRateMonoMp3;
 
@@ -1028,17 +1013,27 @@ export async function synthesizeSpeech(text: string, voice = "default", speed = 
       const prosodyRate = speed <= 0.6 ? "60%" : `${Math.round(speed * 100)}%`;
       ssmlText = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
         <voice name="en-US-AvaNeural">
-          <prosody rate="${prosodyRate}">${trimmedText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</prosody>
+          <prosody rate="${prosodyRate}">${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</prosody>
         </voice>
       </speak>`;
-      console.log(`🎵 Using SSML with prosody rate: ${prosodyRate}`);
+      console.log(`🎵 Using Azure SSML with prosody rate: ${prosodyRate}`);
     } else {
-      ssmlText = trimmedText;
+      ssmlText = text;
     }
 
     return new Promise<Buffer>((resolve, reject) => {
       // Create synthesizer with null audio config to get raw audio data
       const synthesizer = new sdk.SpeechSynthesizer(speechConfig, null);
+
+      // Set a timeout for Azure synthesis
+      const timeout = setTimeout(() => {
+        try {
+          synthesizer.close();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+        reject(new Error("Azure TTS timeout"));
+      }, 10000); // 10 second timeout
 
       // Synthesize speech
       const synthesizeMethod = speed !== 1.0 ? 'speakSsmlAsync' : 'speakTextAsync';
@@ -1046,6 +1041,7 @@ export async function synthesizeSpeech(text: string, voice = "default", speed = 
       synthesizer[synthesizeMethod](
         ssmlText,
         (result: any) => {
+          clearTimeout(timeout);
           try {
             if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
               console.log(`✅ Azure TTS synthesis completed. Audio size: ${result.audioData.byteLength} bytes`);
@@ -1059,42 +1055,77 @@ export async function synthesizeSpeech(text: string, voice = "default", speed = 
               }
               
               resolve(audioBuffer);
-            } else if (result.reason === sdk.ResultReason.Canceled) {
-              const cancellation = sdk.CancellationDetails.fromResult(result);
-              const errorMessage = `Azure TTS synthesis canceled: ${cancellation.reason} - ${cancellation.errorDetails}`;
-              console.error(errorMessage);
-              reject(new Error(errorMessage));
             } else {
-              const errorMessage = `Azure TTS synthesis failed with reason: ${result.reason}`;
-              console.error(errorMessage);
-              reject(new Error(errorMessage));
+              reject(new Error(`Azure TTS synthesis failed with reason: ${result.reason}`));
             }
           } catch (processingError) {
-            console.error("Error processing Azure TTS result:", processingError);
             reject(processingError);
           } finally {
-            // Clean up synthesizer
             try {
               synthesizer.close();
             } catch (cleanupError) {
-              console.error("Error cleaning up synthesizer:", cleanupError);
+              // Ignore cleanup errors
             }
           }
         },
         (error: any) => {
-          console.error("Azure TTS synthesis error:", error);
+          clearTimeout(timeout);
           try {
             synthesizer.close();
           } catch (cleanupError) {
-            console.error("Error cleaning up synthesizer after error:", cleanupError);
+            // Ignore cleanup errors
           }
           reject(new Error(`Azure TTS synthesis failed: ${error}`));
         }
       );
     });
+  } catch (error) {
+    throw new Error(`Azure TTS initialization failed: ${error}`);
+  }
+}
+
+/**
+ * Synthesize speech from text using Azure AI Speech with en-US-AvaNeural voice
+ * Falls back to OpenAI with enhanced quality settings if Azure is unavailable
+ */
+export async function synthesizeSpeech(text: string, voice = "default", speed = 1.0): Promise<Buffer> {
+  try {
+    const AZURE_SPEECH_KEY = process.env.AZURE_SPEECH_KEY;
+    const AZURE_SPEECH_REGION = process.env.AZURE_SPEECH_REGION || "eastus";
+
+    // Input validation
+    if (!text || text.trim().length === 0) {
+      throw new Error("Text cannot be empty for speech synthesis");
+    }
+
+    const trimmedText = text.trim().slice(0, 1000);
+    console.log(`🎤 Synthesizing speech for: "${trimmedText}" with speed: ${speed}x`);
+
+    // Try Azure Speech Services first if key is available
+    if (AZURE_SPEECH_KEY) {
+      try {
+        const azureResult = await tryAzureSynthesis(trimmedText, speed, AZURE_SPEECH_KEY, AZURE_SPEECH_REGION);
+        if (azureResult) {
+          return azureResult;
+        }
+      } catch (azureError: any) {
+        console.warn("Azure Speech Services failed, using OpenAI fallback:", azureError?.message || azureError);
+        // Fall through to OpenAI fallback
+      }
+    } else {
+      console.log("No Azure Speech key configured, using OpenAI TTS");
+    }
+
+    // Fallback to OpenAI TTS with enhanced settings for better quality
+    console.log(`🔄 Using OpenAI TTS fallback with enhanced quality settings`);
+    const { generateSpeechResponse } = await import('./openai');
+    
+    // Use alloy voice which is closest to a natural female voice like AvaNeural
+    // Apply speed control for snail mode
+    return await generateSpeechResponse(trimmedText, "alloy", speed);
 
   } catch (error) {
-    console.error("Error synthesizing speech with Azure AI Speech:", error);
+    console.error("Error in speech synthesis:", error);
     throw error;
   }
 }
