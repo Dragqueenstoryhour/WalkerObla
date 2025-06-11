@@ -23,21 +23,38 @@ export function CombinedLineChart({ wordActivities, phraseActivities, readingAct
     let startDate: Date;
     
     if (timeRange === '10') {
-      // Last 10 activities (most recent)
-      const allActivities = [
-        ...wordActivities.map(a => ({ ...a, type: 'word' })),
-        ...phraseActivities.map(a => ({ ...a, type: 'phrase' })),
-        ...readingActivities.map(a => ({ ...a, type: 'reading' }))
-      ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 10);
+      // Get last 10 activities for each type, sorted by most recent
+      const recentWords = wordActivities
+        .filter(a => a.score !== null)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 10)
+        .reverse(); // Reverse to put oldest first for proper x-axis mapping
+        
+      const recentPhrases = phraseActivities
+        .filter(a => a.score !== null)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 10)
+        .reverse();
+        
+      const recentReadings = readingActivities
+        .filter(a => a.score !== null)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 10)
+        .reverse();
       
-      return allActivities.map((activity, index) => ({
-        x: index + 1,
-        wordScore: activity.type === 'word' ? (activity.score || 0) : undefined,
-        phraseScore: activity.type === 'phrase' ? (activity.score || 0) : undefined,
-        readingScore: activity.type === 'reading' ? (activity.score || 0) : undefined,
-        label: `Activity ${index + 1}`
-      }));
+      // Create data points for x=1 through x=10
+      const dataPoints = [];
+      for (let i = 1; i <= 10; i++) {
+        dataPoints.push({
+          x: i,
+          wordScore: recentWords[i-1]?.score || undefined,
+          phraseScore: recentPhrases[i-1]?.score || undefined,
+          readingScore: recentReadings[i-1]?.score || undefined,
+          label: `Position ${i}`
+        });
+      }
+      
+      return dataPoints;
     } else {
       // Last X days with daily averages
       const days = timeRange === '30' ? 30 : 90;

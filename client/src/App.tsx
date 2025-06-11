@@ -13,7 +13,7 @@ import AzureTest from "@/pages/AzureTest";
 import NewPhrases from "@/pages/NewPhrases";
 import Words from "@/pages/Words";
 import Phrases from "@/pages/Phrases";
-import MyWordsFixed from "@/pages/MyWordsFixed";
+import MyWordsComplete from "@/pages/MyWordsComplete";
 import Profile from "@/pages/Profile";
 import Animation from "@/pages/Animation";
 import AzureAnimation from "@/pages/AzureAnimation";
@@ -135,7 +135,7 @@ function Router() {
         <Route path="/azure-test" component={AzureTest} />
         <Route path="/new-phrases" component={NewPhrases} />
         <Route path="/shared-phrases/:shareId" component={NewPhrases} />
-        <Route path="/my-words" component={MyWordsFixed} />
+        <Route path="/my-words" component={MyWordsComplete} />
         <Route path="/account" component={Account} />
         <Route path="/profile" component={Profile} />
         <Route path="/animation" component={Animation} />
