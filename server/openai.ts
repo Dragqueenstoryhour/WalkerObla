@@ -233,7 +233,7 @@ function createDefaultContent(topic: string, rawContent: string): any {
   return {
     title: title,
     content: cleanContent,
-    source: "Obla"
+    source: null
   };
 }
 
@@ -386,7 +386,7 @@ export async function generateReadingContent(topic: string, difficulty: string):
       id: Date.now(),
       title: content.title,
       content: content.content,
-      source: content.source || "AI-Generated for Obla",
+      source: content.source || "",
       wordCount: Math.min(calculatedWordCount, maxWords), // Ensure word count doesn't exceed our limit
       readingTime: calculatedWordCount * 3,
       difficulty: mappedDifficulty,

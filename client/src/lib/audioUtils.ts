@@ -42,7 +42,7 @@ export function detectAudioCapabilities() {
     // Preferred format based on browser
     preferredMimeType: isIOS || isSafari 
       ? (supportedMimeTypes.includes('audio/mp4') ? 'audio/mp4' : supportedMimeTypes[0])
-      : (supportedMimeTypes.includes('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : supportedMimeTypes[0])
+      : (supportedMimeTypes.includes('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : supportedMimeTypes[0]) // Prefer opus for quality if available
   };
 }
 
@@ -51,230 +51,229 @@ export function detectAudioCapabilities() {
  */
 export function getOptimalRecordingConstraints(): MediaTrackConstraints {
   const capabilities = detectAudioCapabilities();
-  
-  return {
+  const constraints: MediaTrackConstraints = {
+    sampleRate: 16000, // Azure Speech Services optimal sample rate
+    channelCount: 1,    // Mono
     echoCancellation: true,
     noiseSuppression: true,
     autoGainControl: true,
-    channelCount: 1, // Mono for better compatibility and smaller file size
-    sampleRate: capabilities.isIOS || capabilities.isSafari ? 44100 : 16000, // iOS prefers 44.1kHz
   };
+
+  // On iOS/Safari, prefer specific audio settings
+  if (capabilities.isIOS || capabilities.isSafari) {
+    // Safari/iOS might not support advanced constraints as well, so keep it simpler
+    // Or might need specific settings for better compatibility.
+    // For now, stick to basic good quality settings.
+    constraints.sampleRate = 44100; // iOS often prefers 44.1kHz
+    constraints.channelCount = 1;
+  }
+
+  return constraints;
 }
 
 /**
- * Create a MediaRecorder with optimal settings for the current browser
+ * Create a MediaRecorder instance with optimal settings
  */
-export function createOptimalMediaRecorder(stream: MediaStream): MediaRecorder {
+export function createOptimalMediaRecorder(stream: MediaStream): MediaRecorder | null {
   const capabilities = detectAudioCapabilities();
-  
-  let recorder: MediaRecorder;
-  
-  // Try preferred format first, then fallback to supported formats
-  const formatsToTry = [
-    capabilities.preferredMimeType,
-    ...capabilities.supportedMimeTypes
-  ].filter(Boolean);
+  const options: MediaRecorderOptions = {};
 
-  for (const mimeType of formatsToTry) {
-    try {
-      if (mimeType && MediaRecorder.isTypeSupported(mimeType)) {
-        recorder = new MediaRecorder(stream, { mimeType });
-        console.log(`[AudioUtils] Created MediaRecorder with format: ${mimeType}`);
-        return recorder;
+  // Select preferred MIME type for recording
+  if (capabilities.preferredMimeType) {
+    options.mimeType = capabilities.preferredMimeType;
+    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+      console.warn(`Preferred MIME type ${options.mimeType} not supported, trying alternatives.`);
+      // Fallback to first supported type if preferred is not available
+      options.mimeType = capabilities.supportedMimeTypes[0];
+      if (!options.mimeType) {
+        console.error("No supported MIME types found for MediaRecorder.");
+        return null;
       }
-    } catch (error) {
-      console.warn(`[AudioUtils] Failed to create recorder with ${mimeType}:`, error);
+    }
+  } else {
+    console.warn("No preferred MIME type detected, MediaRecorder will try default.");
+  }
+
+  try {
+    const recorder = new MediaRecorder(stream, options);
+    console.log(`[AudioUtils] MediaRecorder created with MIME type: ${recorder.mimeType}`);
+    return recorder;
+  } catch (error) {
+    console.error("Error creating MediaRecorder:", error);
+    // If specific MIME type fails, try without it
+    try {
+      const recorder = new MediaRecorder(stream);
+      console.warn("[AudioUtils] Created MediaRecorder with default MIME type due to previous error.");
+      return recorder;
+    } catch (defaultError) {
+      console.error("Failed to create MediaRecorder even with default settings:", defaultError);
+      return null;
     }
   }
-  
-  // Final fallback - let browser choose
-  recorder = new MediaRecorder(stream);
-  console.log(`[AudioUtils] Created MediaRecorder with default format: ${recorder.mimeType}`);
-  return recorder;
 }
 
 /**
- * Convert audio blob to WAV format for maximum compatibility
- * This is crucial for Safari and iOS compatibility
+ * Convert Blob to WAV using Web Audio API for cross-browser compatibility.
+ * Especially useful for Safari/iOS which might record in unsupported formats like MP4/M4A
+ * or for ensuring consistent WAV output for server processing.
  */
-export async function convertToWav(audioBlob: Blob): Promise<Blob> {
+async function convertToWav(blob: Blob): Promise<Blob> {
   return new Promise((resolve, reject) => {
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const fileReader = new FileReader();
-      
-      fileReader.onload = async () => {
-        try {
-          const arrayBuffer = fileReader.result as ArrayBuffer;
-          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-          
-          // Convert to WAV
-          const wavBlob = audioBufferToWav(audioBuffer);
-          resolve(wavBlob);
-        } catch (error) {
-          console.error('[AudioUtils] Error converting to WAV:', error);
-          // If conversion fails, return original blob
-          resolve(audioBlob);
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const fileReader = new FileReader();
+
+    fileReader.onloadend = async () => {
+      try {
+        if (!fileReader.result || typeof fileReader.result === 'string') {
+          throw new Error("Failed to read audio blob as ArrayBuffer.");
         }
-      };
-      
-      fileReader.onerror = () => {
-        console.error('[AudioUtils] Error reading audio file for conversion');
-        resolve(audioBlob); // Return original on error
-      };
-      
-      fileReader.readAsArrayBuffer(audioBlob);
-    } catch (error) {
-      console.error('[AudioUtils] Error in WAV conversion setup:', error);
-      resolve(audioBlob); // Return original on error
-    }
+        const audioBuffer = await audioContext.decodeAudioData(fileReader.result);
+
+        // Resample to 16kHz if not already
+        const desiredSampleRate = 16000;
+        let finalBuffer = audioBuffer;
+        if (audioBuffer.rate !== desiredSampleRate) {
+          const numberOfChannels = audioBuffer.numberOfChannels;
+          const oldSampleRate = audioBuffer.sampleRate;
+          const length = audioBuffer.length * desiredSampleRate / oldSampleRate;
+          const newBuffer = audioContext.createBuffer(numberOfChannels, length, desiredSampleRate);
+
+          for (let i = 0; i < numberOfChannels; i++) {
+            const oldChannelData = audioBuffer.getChannelData(i);
+            const newChannelData = newBuffer.getChannelData(i);
+            const resampleRatio = oldSampleRate / desiredSampleRate;
+
+            for (let j = 0; j < newChannelData.length; j++) {
+              const index = Math.floor(j * resampleRatio);
+              if (index < oldChannelData.length) {
+                newChannelData[j] = oldChannelData[index];
+              }
+            }
+          }
+          finalBuffer = newBuffer;
+          console.log(`[AudioUtils] Resampled audio from ${oldSampleRate}Hz to ${desiredSampleRate}Hz.`);
+        }
+
+        const wavBlob = audioBufferToWavBlob(finalBuffer, desiredSampleRate);
+        resolve(wavBlob);
+      } catch (e) {
+        console.error("Error during WAV conversion:", e);
+        reject(e);
+      }
+    };
+
+    fileReader.onerror = (e) => {
+      console.error("FileReader error:", e);
+      reject(new Error("Failed to read audio blob."));
+    };
+
+    fileReader.readAsArrayBuffer(blob);
   });
 }
 
 /**
- * Convert AudioBuffer to WAV blob
+ * Convert AudioBuffer to WAV Blob
  */
-function audioBufferToWav(buffer: AudioBuffer): Blob {
-  const length = buffer.length;
-  const numberOfChannels = buffer.numberOfChannels;
-  const sampleRate = buffer.sampleRate;
-  const arrayBuffer = new ArrayBuffer(44 + length * numberOfChannels * 2);
-  const view = new DataView(arrayBuffer);
-  
-  // WAV header
-  const writeString = (offset: number, string: string) => {
-    for (let i = 0; i < string.length; i++) {
-      view.setUint8(offset + i, string.charCodeAt(i));
-    }
-  };
-  
-  writeString(0, 'RIFF');
-  view.setUint32(4, 36 + length * numberOfChannels * 2, true);
-  writeString(8, 'WAVE');
-  writeString(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, numberOfChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * numberOfChannels * 2, true);
-  view.setUint16(32, numberOfChannels * 2, true);
-  view.setUint16(34, 16, true);
-  writeString(36, 'data');
-  view.setUint32(40, length * numberOfChannels * 2, true);
-  
-  // Convert audio data
-  const channels = [];
-  for (let i = 0; i < numberOfChannels; i++) {
-    channels.push(buffer.getChannelData(i));
+function audioBufferToWavBlob(audioBuffer: AudioBuffer, sampleRate: number): Blob {
+  const numOfChan = audioBuffer.numberOfChannels;
+  const ambuf = audioBuffer.getChannelData(0); // Only process first channel for mono
+  const len = ambuf.length * numOfChan;
+  const buf = new Float32Array(len);
+  const dataview = new DataView(new ArrayBuffer(44 + len * 2)); // 44 is header size, 2 bytes per sample
+
+  let i = 0;
+  for (let s = 0; s < ambuf.length; s++) {
+    buf[i++] = ambuf[s];
   }
-  
-  let offset = 44;
-  for (let i = 0; i < length; i++) {
-    for (let channel = 0; channel < numberOfChannels; channel++) {
-      const sample = Math.max(-1, Math.min(1, channels[channel][i]));
-      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-      offset += 2;
+
+  function writeString(view: DataView, offset: number, s: string) {
+    for (let j = 0; j < s.length; j++) {
+      view.setUint8(offset + j, s.charCodeAt(j));
     }
   }
-  
-  return new Blob([arrayBuffer], { type: 'audio/wav' });
+
+  let offset = 0;
+  writeString(dataview, offset, 'RIFF'); offset += 4;
+  dataview.setUint32(offset, 36 + len * 2, true); offset += 4; // file size
+  writeString(dataview, offset, 'WAVE'); offset += 4;
+  writeString(dataview, offset, 'fmt '); offset += 4;
+  dataview.setUint32(offset, 16, true); offset += 4; // format chunk size
+  dataview.setUint16(offset, 1, true); offset += 2; // compression code (1 for PCM)
+  dataview.setUint16(offset, numOfChan, true); offset += 2; // number of channels
+  dataview.setUint32(offset, sampleRate, true); offset += 4; // sample rate
+  dataview.setUint32(offset, sampleRate * numOfChan * 2, true); offset += 4; // byte rate
+  dataview.setUint16(offset, numOfChan * 2, true); offset += 2; // block align
+  dataview.setUint16(offset, 16, true); offset += 2; // bits per sample
+  writeString(dataview, offset, 'data'); offset += 4;
+  dataview.setUint32(offset, len * 2, true); offset += 4; // data chunk size
+
+  for (let s = 0; s < len; s++, offset += 2) {
+    let val = buf[s] < 0 ? buf[s] * 0x8000 : buf[s] * 0x7FFF;
+    dataview.setInt16(offset, val, true);
+  }
+
+  return new Blob([dataview.buffer], { type: 'audio/wav' });
 }
 
+
 /**
- * Create an optimized audio element for playback across all browsers
+ * Prepare audio blob for server submission with format optimization
  */
-export function createOptimalAudioElement(src: string, options: AudioPlaybackOptions = {}): HTMLAudioElement {
-  const audio = new Audio();
+export async function prepareAudioForSubmission(blob: Blob): Promise<Blob> {
   const capabilities = detectAudioCapabilities();
-  
-  // Set optimal properties for cross-browser compatibility
-  audio.preload = options.preload || 'metadata';
-  audio.crossOrigin = 'anonymous';
-  
-  // iOS/Safari specific optimizations
-  if (capabilities.isIOS || capabilities.isSafari) {
-    // Safari requires user interaction before playing
-    audio.muted = false;
-    (audio as any).playsInline = true;
-    (audio as any).webkitPreservesPitch = false;
+
+  // For Safari/iOS, always convert to WAV for maximum server compatibility
+  // Also convert if the original blob type is not webm (e.g., if it's m4a from some Androids)
+  if (capabilities.isIOS || capabilities.isSafari || !blob.type.includes('webm')) {
+    console.log('[AudioUtils] Converting audio to WAV for server compatibility (Safari/iOS or non-webm source)');
+    return await convertToWav(blob);
   }
-  
-  audio.src = src;
-  
-  return audio;
+
+  // For other browsers, use original if it's webm
+  console.log('[AudioUtils] Using original audio blob for submission (likely webm)');
+  return blob;
 }
 
 /**
- * Safe audio playback with fallback handling
+ * Load an audio blob into an Audio element for playback, handling potential errors.
  */
-export async function safeAudioPlay(audioElement: HTMLAudioElement): Promise<void> {
+export function loadAudioForPlayback(audioElement: HTMLAudioElement, url: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const capabilities = detectAudioCapabilities();
-    
-    // Set up event listeners
+    audioElement.src = url;
+    audioElement.preload = 'auto'; // Load metadata and potentially entire file
+
     const onCanPlay = () => {
+      console.log('[AudioUtils] Audio ready for playback.');
       cleanup();
-      
-      const playPromise = audioElement.play();
-      
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            console.log('[AudioUtils] Audio playback started successfully');
-            resolve();
-          })
-          .catch((error) => {
-            console.error('[AudioUtils] Audio play promise rejected:', error);
-            
-            // Try fallback for mobile browsers
-            if (capabilities.isIOS || capabilities.isSafari) {
-              setTimeout(() => {
-                audioElement.play().catch((fallbackError) => {
-                  console.error('[AudioUtils] Fallback play failed:', fallbackError);
-                  reject(fallbackError);
-                });
-              }, 100);
-            } else {
-              reject(error);
-            }
-          });
-      } else {
-        // Older browsers
-        try {
-          audioElement.play();
-          resolve();
-        } catch (error) {
-          reject(error);
-        }
-      }
+      resolve();
     };
-    
-    const onError = (error: Event) => {
+
+    const onError = (e: Event) => {
+      console.error('[AudioUtils] Error loading audio:', e);
       cleanup();
-      console.error('[AudioUtils] Audio loading error:', error);
-      reject(new Error('Audio loading failed'));
+      reject(new Error('Failed to load audio for playback.'));
     };
-    
+
     const onLoadError = () => {
+      console.error('[AudioUtils] Audio loading aborted or encountered error.');
       cleanup();
-      console.error('[AudioUtils] Audio load error');
-      reject(new Error('Audio failed to load'));
+      reject(new Error('Audio loading aborted or encountered error.'));
     };
-    
+
     const cleanup = () => {
       audioElement.removeEventListener('canplay', onCanPlay);
       audioElement.removeEventListener('error', onError);
       audioElement.removeEventListener('abort', onLoadError);
     };
-    
+
     // Set up listeners
     audioElement.addEventListener('canplay', onCanPlay);
     audioElement.addEventListener('error', onError);
     audioElement.addEventListener('abort', onLoadError);
-    
+
     // Start loading
     audioElement.load();
-    
+
     // Timeout after 10 seconds
     setTimeout(() => {
       cleanup();
@@ -288,27 +287,12 @@ export async function safeAudioPlay(audioElement: HTMLAudioElement): Promise<voi
  */
 export function createAudioBlobUrl(blob: Blob): string {
   const url = URL.createObjectURL(blob);
-  
+
   // Auto-cleanup after 10 minutes to prevent memory leaks
   setTimeout(() => {
     URL.revokeObjectURL(url);
-  }, 600000);
-  
-  return url;
-}
+  }, 600000); // 10 minutes
 
-/**
- * Prepare audio blob for server submission with format optimization
- */
-export async function prepareAudioForSubmission(blob: Blob): Promise<Blob> {
-  const capabilities = detectAudioCapabilities();
-  
-  // For Safari/iOS, always convert to WAV for maximum server compatibility
-  if (capabilities.isIOS || capabilities.isSafari || !blob.type.includes('webm')) {
-    console.log('[AudioUtils] Converting audio to WAV for server compatibility');
-    return await convertToWav(blob);
-  }
-  
-  // For other browsers, use original if it's already in a good format
-  return blob;
+  console.log(`[AudioUtils] Created Blob URL: ${url}`);
+  return url;
 }
