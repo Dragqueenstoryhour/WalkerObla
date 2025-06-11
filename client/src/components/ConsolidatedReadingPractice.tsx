@@ -439,7 +439,12 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ 
-          ssml: ssmlText,      throw new Error(`Failed to synthesize speech: ${response.status}`);
+          ssml: ssmlText,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to synthesize speech: ${response.status}`);
       }
 
       const audioBlob = await response.blob();
