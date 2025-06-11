@@ -86,8 +86,6 @@ export default function Words() {
   const [pendingSaveIndex, setPendingSaveIndex] = useState<number | null>(null);
   const [slowPlaybackWords, setSlowPlaybackWords] = useState<{ [key: string]: boolean }>({});
   const [showSummary, setShowSummary] = useState(false);
-  const [showLetterModal, setShowLetterModal] = useState(false);
-  const [letterModalType, setLetterModalType] = useState<'begin' | 'include'>('begin');
 
   // Carousel state
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
@@ -128,43 +126,21 @@ export default function Words() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Carousel navigation functions
-  const goToNext = () => {
-    if (emblaApi && currentCarouselIndex < processedWords.length - 1) {
-      emblaApi.scrollNext();
-    }
-  };
-
-  const goToPrevious = () => {
-    if (emblaApi && currentCarouselIndex > 0) {
-      emblaApi.scrollPrev();
-    }
-  };
-
-  const goToSlide = (index: number) => {
-    if (emblaApi) {
-      emblaApi.scrollTo(index);
-    }
-  };
-
-  // Handle finishing practice and showing summary
-  const handleFinishPractice = () => {
-    setShowSummary(true);
-    setTimeout(() => {
-      if (emblaApi) {
-        emblaApi.scrollTo(processedWords.length);
-      }
-    }, 100);
-  };
-
-  // Reset practice session
-  const handleRestartPractice = () => {
-    setShowSummary(false);
-    setProcessedWords([]);
-    setCurrentCarouselIndex(0);
-    setCurrentlyPracticing(null);
-    setWordAssessmentResult(null);
-  };
+  // Predefined word topics
+  const wordTopics = [
+    "Commonly Used Words",
+    "Animals",
+    "Colors",
+    "Food and Drinks",
+    "Body Parts",
+    "Family Members",
+    "Weather",
+    "Numbers",
+    "Actions/Verbs",
+    "Emotions",
+    "Home and Furniture",
+    "Transportation"
+  ];
 
   // Update carousel index when slide changes
   useEffect(() => {
@@ -175,15 +151,12 @@ export default function Words() {
     }
   }, [emblaApi]);
 
-  // Auto-scroll to practice section after words are generated
-  const scrollToPracticeSection = () => {
-    setTimeout(() => {
-      const practiceSection = document.getElementById('practice-words-section');
-      if (practiceSection) {
-        practiceSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 500);
-  };
+  // Auto-load common words when the page opens
+  useEffect(() => {
+    if (!shareId) {
+      handleGenerateTopicWords("Commonly Used Words");
+    }
+  }, []);
 
   // Generate topic-based words
   const handleGenerateTopicWords = async (topic: string, customDifficulty?: string) => {
@@ -239,6 +212,16 @@ export default function Words() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Auto-scroll to practice section after words are generated
+  const scrollToPracticeSection = () => {
+    setTimeout(() => {
+      const practiceSection = document.getElementById('practice-words-section');
+      if (practiceSection) {
+        practiceSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 500);
   };
 
   // Start recording for an individual word practice
@@ -539,107 +522,8 @@ export default function Words() {
     }
   };
 
-  // Auto-load common words when the page opens
-  useEffect(() => {
-    if (!shareId) {
-      handleGenerateTopicWords("Commonly Used Words");
-    }
-  }, []);
-
-  // Load shared words if shareId is present
-  useEffect(() => {
-    const loadSharedWords = async () => {
-      if (!shareId) return;
-
-      setIsProcessing(true);
-
-      try {
-        const response = await fetch(`/api/share/${shareId}`);
-
-        if (!response.ok) {
-          throw new Error("Failed to load shared words");
-        }
-
-        const data = await response.json();
-        if (!data.collection || !data.collection.words) {
-          throw new Error("Invalid shared words data");
-        }
-
-        const sharedWords: ProcessedWord[] = data.collection.words.map((text: string, index: number) => ({
-          id: `shared-word-${index}`,
-          text,
-          status: "idle" as const,
-        }));
-
-        setProcessedWords(sharedWords);
-        setShowSharedDialog(true);
-        scrollToPracticeSection();
-      } catch (error) {
-        console.error("Error loading shared words:", error);
-        toast({
-          title: "Loading Error",
-          description: "Could not load shared words. Please check the link.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsProcessing(false);
-      }
-    };
-
-    loadSharedWords();
-  }, [shareId]);
-
-  // Handle successful authentication and save pending word
-  useEffect(() => {
-    if (isAuthenticated && pendingSaveIndex !== null) {
-      saveWordToCollection(pendingSaveIndex);
-      setPendingSaveIndex(null);
-    }
-  }, [isAuthenticated, pendingSaveIndex]);
-
-  // Auto-advance carousel when words are completed
-  useEffect(() => {
-    if (currentCarouselIndex < processedWords.length - 1) {
-      const currentWord = processedWords[currentCarouselIndex];
-      if (currentWord?.status === "complete") {
-        // Auto-advance after 2 seconds
-        const timer = setTimeout(() => {
-          goToNext();
-        }, 2000);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [processedWords, currentCarouselIndex]);
-
-  // Check if all words are complete to show summary
-  useEffect(() => {
-    if (processedWords.length > 0) {
-      const completedCount = processedWords.filter(w => w.status === "complete").length;
-      if (completedCount === processedWords.length && !showSummary) {
-        setTimeout(() => {
-          handleFinishPractice();
-        }, 1000);
-      }
-    }
-  }, [processedWords, showSummary]);
-
-  const topicOptions = [
-    "Commonly Used Words",
-    "Animals",
-    "Colors",
-    "Food and Drinks",
-    "Body Parts",
-    "Family Members",
-    "Weather",
-    "Numbers",
-    "Actions/Verbs",
-    "Emotions",
-    "Home and Furniture",
-    "Transportation"
-  ];
-
   return (
-    <div className="container mx-auto px-4 py-6 bg-green-50 min-h-screen">
+    <div className="container mx-auto px-4 py-8 bg-green-50 min-h-screen">
       {/* Shared words notification dialog */}
       <Dialog open={showSharedDialog} onOpenChange={setShowSharedDialog}>
         <DialogContent>
@@ -665,329 +549,319 @@ export default function Words() {
         </DialogContent>
       </Dialog>
 
-      {/* Generation controls */}
-      <Card className="mb-6 bg-white shadow-lg border-0">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-2xl font-bold text-[#2a5e2a] flex items-center gap-2">
-            <Mic className="h-6 w-6" />
-            Speech Practice - Words
-          </CardTitle>
-          <CardDescription className="text-[#264653]">
+      {/* Header */}
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-purple-800 mb-2">Speech Practice - Words</h1>
+          <p className="text-muted-foreground">
             Generate and practice words to improve your speech clarity and pronunciation
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-3 gap-4 items-end">
-            <div className="space-y-2">
-              <Label htmlFor="topic" className="text-sm font-medium text-[#264653]">
-                Choose Topic
-              </Label>
-              <select 
-                id="topic"
-                value={aiGenerateTopic}
-                onChange={(e) => setAiGenerateTopic(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#57cc99] focus:border-transparent"
-              >
-                {topicOptions.map((topic) => (
-                  <option key={topic} value={topic}>{topic}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#264653]">
-                Difficulty Level
-              </Label>
+          </p>
+        </div>
+
+        {/* Select Your Topic Section */}
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Select Your Topic</h2>
               <DifficultyDropdown />
             </div>
-            <Button
-              onClick={() => handleGenerateTopicWords(aiGenerateTopic)}
-              disabled={isProcessing}
-              className="bg-[#57cc99] hover:bg-[#4ade80] text-white h-10"
-            >
-              {isProcessing ? (
-                <>
-                  <RotateCw className="h-4 w-4 mr-2 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Mic className="h-4 w-4 mr-2" />
-                  Generate Words
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Practice section */}
-      {processedWords.length > 0 && (
-        <div id="practice-words-section" className="space-y-6">
-          {/* Progress indicator */}
-          <div className="bg-white rounded-lg p-4 shadow-lg border-0">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-[#264653]">Practice Progress</span>
-              <span className="text-sm text-[#264653]">
-                {currentCarouselIndex + 1} of {processedWords.length + (showSummary ? 1 : 0)}
-              </span>
+            {/* Choose a Topic Cards */}
+            <div className="mb-6">
+              <h3 className="text-md font-bold mb-3">Choose a Topic</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto">
+                {wordTopics.map((topic) => (
+                  <Card
+                    key={topic}
+                    className="cursor-pointer hover:shadow-md hover:bg-[#0F3CC9] transition-all duration-200 h-16"
+                    style={{ backgroundColor: '#1947e5' }}
+                    onClick={() => handleGenerateTopicWords(topic)}
+                  >
+                    <CardContent className="p-3 text-center flex items-center justify-center h-full">
+                      <p className="font-bold text-white text-sm">{topic}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
-            <Progress 
-              value={((currentCarouselIndex + 1) / (processedWords.length + (showSummary ? 1 : 0))) * 100} 
-              className="h-2"
-            />
-          </div>
 
-          {/* Carousel */}
-          <div className="embla" ref={emblaRef}>
-            <div className="embla__container flex">
-              {processedWords.map((word, index) => (
-                <div key={word.id} className="embla__slide flex-[0_0_100%] px-2">
-                  <Card className="bg-white shadow-lg border-0 h-full">
-                    <CardHeader className="pb-4">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg font-semibold text-[#2a5e2a]">
-                          Word {index + 1}
-                        </CardTitle>
-                        <Badge 
-                          variant={
-                            word.status === "complete" ? "default" :
-                            word.status === "recording" ? "secondary" :
-                            word.status === "assessing" ? "outline" : "outline"
-                          }
-                          className={
-                            word.status === "complete" ? "bg-green-100 text-green-800" :
-                            word.status === "recording" ? "bg-red-100 text-red-800" :
-                            word.status === "assessing" ? "bg-yellow-100 text-yellow-800" :
-                            "bg-gray-100 text-gray-800"
-                          }
-                        >
-                          {word.status === "complete" ? "Complete" :
-                           word.status === "recording" ? "Recording" :
-                           word.status === "assessing" ? "Analyzing" : "Ready"}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    
-                    <CardContent className="space-y-4">
-                      {/* Word text */}
-                      <div className="bg-[#f0f9ff] border border-[#bae6fd] rounded-lg p-4">
-                        <p className="text-3xl font-bold text-[#0c4a6e] text-center leading-relaxed">
-                          {word.text}
-                        </p>
-                      </div>
+            {/* Custom Topic Input */}
+            <div className="mb-6">
+              <p className="text-base font-medium text-purple-600 mb-3">Or enter a custom topic:</p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter a topic you'd like to practice words about..."
+                  value={aiGenerateTopic}
+                  onChange={(e) => setAiGenerateTopic(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleGenerateTopicWords(aiGenerateTopic);
+                    }
+                  }}
+                  className="flex-1"
+                  disabled={isProcessing}
+                />
+                <Button
+                  onClick={() => handleGenerateTopicWords(aiGenerateTopic)}
+                  disabled={isProcessing || !aiGenerateTopic.trim()}
+                  className="bg-[#1947E5] hover:bg-[#1537CC] text-white border-0"
+                >
+                  {isProcessing ? (
+                    <>
+                      <RotateCw className="h-4 w-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    'Generate'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-                      {/* Controls */}
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        <Button
-                          onClick={() => handleTextToSpeech(index)}
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-2"
-                        >
-                          <Volume2 className="h-4 w-4" />
-                          Listen
-                        </Button>
-                        
-                        <Button
-                          onClick={() => toggleSlowPlayback(word.id)}
-                          variant="outline"
-                          size="sm"
-                          className={`flex items-center gap-2 ${slowPlaybackWords[word.id] ? 'bg-blue-50 border-blue-300' : ''}`}
-                        >
-                          <Snail className="h-4 w-4" />
-                          {slowPlaybackWords[word.id] ? 'Normal' : 'Slow'}
-                        </Button>
+        {/* Practice section */}
+        {processedWords.length > 0 && (
+          <div id="practice-words-section" className="space-y-6">
+            {/* Progress indicator */}
+            <div className="bg-white rounded-lg p-4 shadow-lg border-0">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-[#264653]">Practice Progress</span>
+                <span className="text-sm text-[#264653]">
+                  {currentCarouselIndex + 1} of {processedWords.length}
+                </span>
+              </div>
+              <Progress 
+                value={((currentCarouselIndex + 1) / processedWords.length) * 100} 
+                className="h-2"
+              />
+            </div>
 
-                        <Button
-                          onClick={() => saveWordToCollection(index)}
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-2"
-                        >
-                          <Star className="h-4 w-4" />
-                          Save
-                        </Button>
-                      </div>
-
-                      {/* Recording section */}
-                      <div className="space-y-3">
-                        {word.status === "idle" && (
-                          <Button
-                            onClick={() => startWordPractice(index)}
-                            className="w-full bg-[#57cc99] hover:bg-[#4ade80] text-white py-3"
-                            disabled={isRecording || isProcessingRecording}
+            {/* Carousel */}
+            <div className="embla" ref={emblaRef}>
+              <div className="embla__container flex">
+                {processedWords.map((word, index) => (
+                  <div key={word.id} className="embla__slide flex-[0_0_100%] px-2">
+                    <Card className="bg-white shadow-lg border-0 h-full card-content">
+                      <CardHeader className="pb-4">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg font-semibold text-[#2a5e2a]">
+                            Word {index + 1}
+                          </CardTitle>
+                          <Badge 
+                            variant={
+                              word.status === "complete" ? "default" :
+                              word.status === "recording" ? "secondary" :
+                              word.status === "assessing" ? "outline" : "outline"
+                            }
+                            className={
+                              word.status === "complete" ? "bg-green-100 text-green-800" :
+                              word.status === "recording" ? "bg-red-100 text-red-800" :
+                              word.status === "assessing" ? "bg-yellow-100 text-yellow-800" :
+                              "bg-gray-100 text-gray-800"
+                            }
                           >
-                            <Mic className="h-5 w-5 mr-2" />
-                            Start Recording
-                          </Button>
-                        )}
+                            {word.status === "complete" ? "Complete" :
+                             word.status === "recording" ? "Recording" :
+                             word.status === "assessing" ? "Analyzing" : "Ready"}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      
+                      <CardContent className="space-y-4">
+                        {/* Word text */}
+                        <div className="bg-[#f0f9ff] border border-[#bae6fd] rounded-lg p-4">
+                          <p className="text-3xl font-bold text-[#0c4a6e] text-center leading-relaxed">
+                            {word.text}
+                          </p>
+                        </div>
 
-                        {word.status === "recording" && (
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-center space-x-4">
-                              <div className="flex items-center space-x-2">
-                                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                                <span className="text-sm font-medium text-red-600">
-                                  Recording... {Math.floor(recordingDuration)}s
+                        {/* Controls */}
+                        <div className="flex flex-wrap gap-2 justify-center">
+                          <Button
+                            onClick={() => handleTextToSpeech(index)}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-2"
+                          >
+                            <Volume2 className="h-4 w-4" />
+                            Listen
+                          </Button>
+                          
+                          <Button
+                            onClick={() => toggleSlowPlayback(word.id)}
+                            variant="outline"
+                            size="sm"
+                            className={`flex items-center gap-2 ${slowPlaybackWords[word.id] ? 'bg-blue-50 border-blue-300' : ''}`}
+                          >
+                            <Snail className="h-4 w-4" />
+                            {slowPlaybackWords[word.id] ? 'Normal' : 'Slow'}
+                          </Button>
+
+                          <Button
+                            onClick={() => saveWordToCollection(index)}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-2"
+                          >
+                            <Star className="h-4 w-4" />
+                            Save
+                          </Button>
+                        </div>
+
+                        {/* Recording section */}
+                        <div className="space-y-3">
+                          {word.status === "idle" && (
+                            <Button
+                              onClick={() => startWordPractice(index)}
+                              className="w-full bg-[#57cc99] hover:bg-[#4ade80] text-white py-3"
+                              disabled={isRecording || isProcessingRecording}
+                            >
+                              <Mic className="h-5 w-5 mr-2" />
+                              Start Recording
+                            </Button>
+                          )}
+
+                          {word.status === "recording" && (
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-center space-x-4">
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                                  <span className="text-sm font-medium text-red-600">
+                                    Recording... {Math.floor(recordingDuration)}s
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={stopWordPractice}
+                                  className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                                >
+                                  <StopCircleIcon className="h-5 w-5 mr-2" />
+                                  Stop Recording
+                                </Button>
+                                <Button
+                                  onClick={() => cancelWordPractice(index)}
+                                  variant="outline"
+                                  className="flex-1"
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {word.status === "assessing" && (
+                            <div className="text-center space-y-3">
+                              <div className="flex items-center justify-center space-x-2">
+                                <RotateCw className="h-5 w-5 animate-spin text-[#57cc99]" />
+                                <span className="text-sm font-medium text-[#264653]">
+                                  Analyzing pronunciation...
                                 </span>
                               </div>
                             </div>
-                            
-                            <div className="flex gap-2">
+                          )}
+
+                          {word.status === "complete" && word.assessmentResult && (
+                            <div className="space-y-3">
+                              {/* Assessment results */}
+                              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <div className="text-center space-y-2">
+                                  <div className="flex items-center justify-center space-x-2">
+                                    <CheckCircle className="h-5 w-5 text-green-600" />
+                                    <span className="font-semibold text-green-800">Assessment Complete</span>
+                                  </div>
+                                  
+                                  <div className="text-2xl font-bold text-green-700">
+                                    {Math.round(word.assessmentResult.pronunciationScore)}%
+                                  </div>
+                                  
+                                  <div className="grid grid-cols-2 gap-4 text-xs">
+                                    <div className="space-y-1">
+                                      <div className="font-medium text-gray-600">Accuracy</div>
+                                      <div className="font-bold text-gray-800">
+                                        {Math.round(word.assessmentResult.accuracyScore)}%
+                                      </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <div className="font-medium text-gray-600">Fluency</div>
+                                      <div className="font-bold text-gray-800">
+                                        {Math.round(word.assessmentResult.fluencyScore)}%
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Playback recording section */}
+                              {word.recordingUrl && (
+                                <div className="bg-white/80 border border-[#57cc99] rounded-md p-3 mb-4 mt-4 flex items-center justify-between">
+                                  <div className="text-sm font-medium text-[#264653]">
+                                    Listen to your recording:
+                                  </div>
+                                  <AudioPlaybackButton
+                                    audioUrl={word.recordingUrl}
+                                    buttonText="Listen to me"
+                                    variant="outline"
+                                    size="sm"
+                                    className="rounded-full p-2 shadow-md"
+                                    icon={<Volume2 className="h-5 w-5" />}
+                                  />
+                                </div>
+                              )}
+
+                              {/* Try again button */}
                               <Button
-                                onClick={stopWordPractice}
-                                className="flex-1 bg-red-500 hover:bg-red-600 text-white"
-                              >
-                                <StopCircleIcon className="h-5 w-5 mr-2" />
-                                Stop Recording
-                              </Button>
-                              <Button
-                                onClick={() => cancelWordPractice(index)}
+                                onClick={() => {
+                                  setProcessedWords(words =>
+                                    words.map((w, idx) =>
+                                      idx === index ? { ...w, status: "idle", assessmentResult: undefined, recordingUrl: undefined } : w
+                                    )
+                                  );
+                                  setWordAssessmentResult(null);
+                                }}
                                 variant="outline"
-                                className="flex-1"
+                                className="w-full"
                               >
-                                Cancel
+                                <RotateCw className="h-4 w-4 mr-2" />
+                                Try Again
                               </Button>
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-                        {word.status === "assessing" && (
-                          <div className="text-center space-y-3">
-                            <div className="flex items-center justify-center space-x-2">
-                              <RotateCw className="h-5 w-5 animate-spin text-[#57cc99]" />
-                              <span className="text-sm font-medium text-[#264653]">
-                                Analyzing pronunciation...
-                              </span>
-                            </div>
-                          </div>
-                        )}
-
-                        {word.status === "complete" && word.assessmentResult && (
-                          <div className="space-y-3">
-                            {/* Assessment results */}
-                            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                              <div className="text-center space-y-2">
-                                <div className="flex items-center justify-center space-x-2">
-                                  <CheckCircle className="h-5 w-5 text-green-600" />
-                                  <span className="font-semibold text-green-800">Assessment Complete</span>
-                                </div>
-                                
-                                <div className="text-2xl font-bold text-green-700">
-                                  {Math.round(word.assessmentResult.pronunciationScore)}%
-                                </div>
-                                
-                                <div className="grid grid-cols-2 gap-4 text-xs">
-                                  <div className="space-y-1">
-                                    <div className="font-medium text-gray-600">Accuracy</div>
-                                    <div className="font-bold text-gray-800">
-                                      {Math.round(word.assessmentResult.accuracyScore)}%
-                                    </div>
-                                  </div>
-                                  <div className="space-y-1">
-                                    <div className="font-medium text-gray-600">Fluency</div>
-                                    <div className="font-bold text-gray-800">
-                                      {Math.round(word.assessmentResult.fluencyScore)}%
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Playback recording section */}
-                            {word.recordingUrl && (
-                              <div className="bg-white/80 border border-[#57cc99] rounded-md p-3 mb-4 mt-4 flex items-center justify-between">
-                                <div className="text-sm font-medium text-[#264653]">
-                                  Listen to your recording:
-                                </div>
-                                <AudioPlaybackButton
-                                  audioUrl={word.recordingUrl}
-                                  buttonText="Listen to me"
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full p-2 shadow-md"
-                                  icon={<Volume2 className="h-5 w-5" />}
-                                />
-                              </div>
-                            )}
-
-                            {/* Try again button */}
-                            <Button
-                              onClick={() => {
-                                setProcessedWords(words =>
-                                  words.map((w, idx) =>
-                                    idx === index ? { ...w, status: "idle", assessmentResult: undefined, recordingUrl: undefined } : w
-                                  )
-                                );
-                                setWordAssessmentResult(null);
-                              }}
-                              variant="outline"
-                              className="w-full"
-                            >
-                              <RotateCw className="h-4 w-4 mr-2" />
-                              Try Again
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              ))}
-
-              {/* Summary card */}
-              {showSummary && (
-                <div className="embla__slide flex-[0_0_100%] px-2">
-                  <Card className="bg-white shadow-lg border-0 h-full">
-                    <CardHeader>
-                      <CardTitle className="text-2xl font-bold text-[#2a5e2a] text-center">
-                        Practice Complete!
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="text-center">
-                        <p className="text-lg text-[#264653] mb-4">
-                          Great job completing your word practice session!
-                        </p>
-                        <Button
-                          onClick={handleRestartPractice}
-                          className="bg-[#57cc99] hover:bg-[#4ade80] text-white"
-                        >
-                          <RotateCw className="h-4 w-4 mr-2" />
-                          Practice Again
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
+            {/* Navigation controls */}
+            <div className="flex justify-center space-x-4">
+              <Button
+                onClick={() => emblaApi?.scrollPrev()}
+                disabled={currentCarouselIndex === 0}
+                variant="outline"
+                size="sm"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+              
+              <Button
+                onClick={() => emblaApi?.scrollNext()}
+                disabled={currentCarouselIndex >= processedWords.length - 1}
+                variant="outline"
+                size="sm"
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
             </div>
           </div>
-
-          {/* Navigation controls */}
-          <div className="flex justify-center space-x-4">
-            <Button
-              onClick={goToPrevious}
-              disabled={currentCarouselIndex === 0}
-              variant="outline"
-              size="sm"
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Previous
-            </Button>
-            
-            <Button
-              onClick={goToNext}
-              disabled={currentCarouselIndex >= processedWords.length + (showSummary ? 1 : 0) - 1}
-              variant="outline"
-              size="sm"
-            >
-              Next
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

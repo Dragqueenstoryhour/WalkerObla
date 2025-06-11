@@ -54,7 +54,7 @@ import { DifficultyDropdown } from "@/components/difficulty/SimplifiedDifficulty
 import { SummaryCard } from "@/components/SummaryCard";
 import useEmblaCarousel from 'embla-carousel-react';
 
-interface ProcessedPhrase {
+interface ProcessedWord {
   id: string;
   text: string;
   phonetic?: string;
@@ -65,7 +65,7 @@ interface ProcessedPhrase {
   status: "idle" | "recording" | "assessing" | "complete";
 }
 
-export default function Phrases() {
+export default function Words() {
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
   const params = useParams();
@@ -73,18 +73,18 @@ export default function Phrases() {
   const { difficulty, setDifficulty } = useDifficulty();
 
   // State variables
-  const [aiGenerateTopic, setAiGenerateTopic] = useState("Common Phrases");
-  const [processedPhrases, setProcessedPhrases] = useState<ProcessedPhrase[]>([]);
-  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(-1);
+  const [aiGenerateTopic, setAiGenerateTopic] = useState("Commonly Used Words");
+  const [processedWords, setProcessedWords] = useState<ProcessedWord[]>([]);
+  const [currentWordIndex, setCurrentWordIndex] = useState(-1);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [savedPhraseId, setSavedPhraseId] = useState<string | null>(null);
+  const [savedWordId, setSavedWordId] = useState<string | null>(null);
   const [showSharedDialog, setShowSharedDialog] = useState(false);
   const [currentlyPracticing, setCurrentlyPracticing] = useState<string | null>(null);
   const [isProcessingRecording, setIsProcessingRecording] = useState(false);
-  const [phraseAssessmentResult, setPhraseAssessmentResult] = useState<any>(null);
+  const [wordAssessmentResult, setWordAssessmentResult] = useState<any>(null);
   const [showSignInDialog, setShowSignInDialog] = useState(false);
   const [pendingSaveIndex, setPendingSaveIndex] = useState<number | null>(null);
-  const [slowPlaybackPhrases, setSlowPlaybackPhrases] = useState<{ [key: string]: boolean }>({});
+  const [slowPlaybackWords, setSlowPlaybackWords] = useState<{ [key: string]: boolean }>({});
   const [showSummary, setShowSummary] = useState(false);
 
   // Carousel state
@@ -109,8 +109,8 @@ export default function Phrases() {
     cancelRecording,
   } = useAudioRecording({
     onRecordingComplete: (blob) => {
-      if (currentPhraseIndex >= 0) {
-        processPhraseRecording(blob, currentPhraseIndex);
+      if (currentWordIndex >= 0) {
+        processWordRecording(blob, currentWordIndex);
       }
     },
     onError: (error) => {
@@ -126,44 +126,35 @@ export default function Phrases() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Predefined phrase topics
-  const phraseTopics = [
-    "Common Phrases",
-    "Greetings",
-    "Daily Conversations",
-    "Restaurant Phrases",
-    "Shopping Phrases",
-    "Travel Phrases",
-    "Medical Phrases",
-    "Business Phrases",
-    "Emergency Phrases",
-    "Social Phrases",
-    "Phone Conversations",
-    "Weather Talk"
+  // Predefined word topics
+  const wordTopics = [
+    "Commonly Used Words",
+    "Animals",
+    "Colors",
+    "Food and Drinks",
+    "Body Parts",
+    "Family Members",
+    "Weather",
+    "Numbers",
+    "Actions/Verbs",
+    "Emotions",
+    "Home and Furniture",
+    "Transportation"
   ];
 
-  // Update carousel index when slide changes
-  useEffect(() => {
-    if (emblaApi) {
-      emblaApi.on('select', () => {
-        setCurrentCarouselIndex(emblaApi.selectedScrollSnap());
-      });
-    }
-  }, [emblaApi]);
-
-  // Auto-load common phrases when the page opens
+  // Auto-load common words when the page opens
   useEffect(() => {
     if (!shareId) {
-      handleGenerateTopicPhrases("Common Phrases");
+      handleGenerateTopicWords("Commonly Used Words");
     }
   }, []);
 
-  // Generate topic-based phrases
-  const handleGenerateTopicPhrases = async (topic: string, customDifficulty?: string) => {
+  // Generate topic-based words
+  const handleGenerateTopicWords = async (topic: string, customDifficulty?: string) => {
     if (!topic.trim()) {
       toast({
         title: "No Topic Provided",
-        description: "Please enter a topic to generate phrases.",
+        description: "Please enter a topic to generate words.",
         variant: "destructive",
       });
       return;
@@ -181,32 +172,32 @@ export default function Phrases() {
         body: JSON.stringify({ 
           topic, 
           difficulty: difficultyToUse,
-          type: "phrases"
+          type: "words"
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to generate phrases");
+        throw new Error("Failed to generate words");
       }
 
       const result = await response.json();
 
-      const newPhrases: ProcessedPhrase[] = result.phrases.map(
+      const newWords: ProcessedWord[] = result.phrases.map(
         (text: string, index: number) => ({
-          id: `phrase-${Date.now()}-topic-${index}`,
+          id: `word-${Date.now()}-topic-${index}`,
           text,
           status: "idle",
         }),
       );
 
-      setProcessedPhrases(newPhrases);
-      setCurrentPhraseIndex(0);
+      setProcessedWords(newWords);
+      setCurrentWordIndex(0);
       scrollToPracticeSection();
     } catch (error) {
-      console.error("Error generating phrases:", error);
+      console.error("Error generating words:", error);
       toast({
         title: "Generation Error",
-        description: "Failed to generate phrases. Please try again.",
+        description: "Failed to generate words. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -214,30 +205,30 @@ export default function Phrases() {
     }
   };
 
-  // Auto-scroll to practice section after phrases are generated
+  // Auto-scroll to practice section after words are generated
   const scrollToPracticeSection = () => {
     setTimeout(() => {
-      const practiceSection = document.getElementById('practice-phrases-section');
+      const practiceSection = document.getElementById('practice-words-section');
       if (practiceSection) {
         practiceSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, 500);
   };
 
-  // Start recording for an individual phrase practice
-  const startPhrasePractice = async (phraseIndex: number) => {
-    if (phraseIndex < 0 || phraseIndex >= processedPhrases.length) return;
+  // Start recording for an individual word practice
+  const startWordPractice = async (wordIndex: number) => {
+    if (wordIndex < 0 || wordIndex >= processedWords.length) return;
 
     try {
-      const phrase = processedPhrases[phraseIndex];
-      setCurrentlyPracticing(phrase.id);
-      setCurrentPhraseIndex(phraseIndex);
-      setPhraseAssessmentResult(null);
+      const word = processedWords[wordIndex];
+      setCurrentlyPracticing(word.id);
+      setCurrentWordIndex(wordIndex);
+      setWordAssessmentResult(null);
 
-      // Update the phrase status to recording
-      setProcessedPhrases((phrases) =>
-        phrases.map((p, idx) =>
-          idx === phraseIndex ? { ...p, status: "recording" } : p,
+      // Update the word status to recording
+      setProcessedWords((words) =>
+        words.map((w, idx) =>
+          idx === wordIndex ? { ...w, status: "recording" } : w,
         ),
       );
 
@@ -246,7 +237,7 @@ export default function Phrases() {
 
       toast({
         title: "Recording Started",
-        description: `Recording phrase: "${phrase.text}"`,
+        description: `Recording word: "${word.text}"`,
       });
     } catch (error) {
       console.error("Error starting recording:", error);
@@ -257,39 +248,39 @@ export default function Phrases() {
       });
       setCurrentlyPracticing(null);
 
-      // Reset phrase status
-      setProcessedPhrases((phrases) =>
-        phrases.map((p, idx) =>
-          idx === phraseIndex ? { ...p, status: "idle" } : p,
+      // Reset word status
+      setProcessedWords((words) =>
+        words.map((w, idx) =>
+          idx === wordIndex ? { ...w, status: "idle" } : w,
         ),
       );
     }
   };
 
-  // Stop recording the phrase
-  const stopPhrasePractice = () => {
+  // Stop recording the word
+  const stopWordPractice = () => {
     stopRecording();
   };
 
-  // Process phrase recording with Azure
-  const processPhraseRecording = async (audioBlob: Blob, phraseIndex: number) => {
+  // Process word recording with Azure
+  const processWordRecording = async (audioBlob: Blob, wordIndex: number) => {
     setIsProcessingRecording(true);
 
     try {
-      const phrase = processedPhrases[phraseIndex];
+      const word = processedWords[wordIndex];
 
-      // Validate phrase data
-      if (!phrase || !phrase.text || phrase.text.trim() === '') {
-        console.error('Invalid phrase data:', phrase);
-        throw new Error('No phrase text available for assessment');
+      // Validate word data
+      if (!word || !word.text || word.text.trim() === '') {
+        console.error('Invalid word data:', word);
+        throw new Error('No word text available for assessment');
       }
 
-      console.log('Processing phrase:', phrase.text);
+      console.log('Processing word:', word.text);
 
       // Update status to assessing
-      setProcessedPhrases((phrases) =>
-        phrases.map((p, idx) =>
-          idx === phraseIndex ? { ...p, status: "assessing" } : p,
+      setProcessedWords((words) =>
+        words.map((w, idx) =>
+          idx === wordIndex ? { ...w, status: "assessing" } : w,
         ),
       );
 
@@ -299,9 +290,9 @@ export default function Phrases() {
       // Send to Azure Speech for assessment
       const formData = new FormData();
       formData.append("audio", audioBlob);
-      formData.append("text", phrase.text.trim());
-      formData.append("itemType", "phrase");
-      formData.append("source", "phrases");
+      formData.append("text", word.text.trim());
+      formData.append("itemType", "word");
+      formData.append("source", "words");
 
       const response = await fetch("/api/pronunciation/assess", {
         method: "POST",
@@ -321,25 +312,25 @@ export default function Phrases() {
       }
 
       // Update with results
-      setPhraseAssessmentResult(result);
+      setWordAssessmentResult(result);
 
-      // Update in the phrases array
-      setProcessedPhrases((phrases) =>
-        phrases.map((p, idx) =>
-          idx === phraseIndex
+      // Update in the words array
+      setProcessedWords((words) =>
+        words.map((w, idx) =>
+          idx === wordIndex
             ? {
-                ...p,
+                ...w,
                 status: "complete",
                 assessmentResult: result,
                 recordingBlob: audioBlob,
                 recordingUrl,
               }
-            : p,
+            : w,
         ),
       );
 
     } catch (error) {
-      console.error("Error assessing phrase pronunciation:", error);
+      console.error("Error assessing word pronunciation:", error);
       toast({
         title: "Assessment Error",
         description: "Could not analyze your speech. Please try again.",
@@ -347,9 +338,9 @@ export default function Phrases() {
       });
 
       // Reset status to idle
-      setProcessedPhrases((phrases) =>
-        phrases.map((p, idx) =>
-          idx === phraseIndex ? { ...p, status: "idle" } : p,
+      setProcessedWords((words) =>
+        words.map((w, idx) =>
+          idx === wordIndex ? { ...w, status: "idle" } : w,
         ),
       );
     } finally {
@@ -357,16 +348,16 @@ export default function Phrases() {
     }
   };
 
-  // Cancel phrase practice
-  const cancelPhrasePractice = (phraseIndex: number) => {
+  // Cancel word practice
+  const cancelWordPractice = (wordIndex: number) => {
     // Cancel recording using the hook
     cancelRecording();
     setCurrentlyPracticing(null);
 
-    // Reset phrase status
-    setProcessedPhrases((phrases) =>
-      phrases.map((p, idx) =>
-        idx === phraseIndex ? { ...p, status: "idle" } : p,
+    // Reset word status
+    setProcessedWords((words) =>
+      words.map((w, idx) =>
+        idx === wordIndex ? { ...w, status: "idle" } : w,
       ),
     );
 
@@ -377,12 +368,12 @@ export default function Phrases() {
   };
 
   // Handle text-to-speech
-  const handleTextToSpeech = async (phraseIndex: number) => {
-    const phrase = processedPhrases[phraseIndex];
-    if (!phrase?.text) {
+  const handleTextToSpeech = async (wordIndex: number) => {
+    const word = processedWords[wordIndex];
+    if (!word?.text) {
       toast({
         title: "No Text",
-        description: "No text available for this phrase.",
+        description: "No text available for this word.",
         variant: "destructive",
       });
       return;
@@ -393,8 +384,8 @@ export default function Phrases() {
       description: "Preparing text-to-speech...",
     });
 
-    const isSlowPlayback = slowPlaybackPhrases[phrase.id] || false;
-    const textToSpeak = phrase.text;
+    const isSlowPlayback = slowPlaybackWords[word.id] || false;
+    const textToSpeak = word.text;
 
     // Construct the SSML string with Azure AI Speech native voice
     let ssmlText = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">`;
@@ -445,7 +436,7 @@ export default function Phrases() {
         audio.play().then(() => {
           toast({
             title: isSlowPlayback ? "Playing Slowly" : "Playing",
-            description: `Playing: "${phrase.text}"`,
+            description: `Playing: "${word.text}"`,
           });
         }).catch((error) => {
           toast({
@@ -472,51 +463,51 @@ export default function Phrases() {
     }
   };
 
-  // Toggle slow playback for a phrase
-  const toggleSlowPlayback = (phraseId: string) => {
-    setSlowPlaybackPhrases(prev => ({
+  // Toggle slow playback for a word
+  const toggleSlowPlayback = (wordId: string) => {
+    setSlowPlaybackWords(prev => ({
       ...prev,
-      [phraseId]: !prev[phraseId]
+      [wordId]: !prev[wordId]
     }));
   };
 
-  // Save a phrase to user's collection
-  const savePhraseToCollection = async (phraseIndex: number) => {
+  // Save a word to user's collection
+  const saveWordToCollection = async (wordIndex: number) => {
     if (!isAuthenticated) {
-      setPendingSaveIndex(phraseIndex);
+      setPendingSaveIndex(wordIndex);
       setShowSignInDialog(true);
       return;
     }
 
-    const phrase = processedPhrases[phraseIndex];
-    if (!phrase) return;
+    const word = processedWords[wordIndex];
+    if (!word) return;
 
     try {
-      const response = await fetch("/api/saved-phrases", {
+      const response = await fetch("/api/saved-words", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          phrase: phrase.text,
-          difficulty: phrase.difficulty || "beginner",
-          source: "phrases"
+          word: word.text,
+          difficulty: word.difficulty || "beginner",
+          source: "words"
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save phrase");
+        throw new Error("Failed to save word");
       }
 
       toast({
-        title: "Phrase Saved",
+        title: "Word Saved",
         description: "Added to your collection",
       });
     } catch (error) {
-      console.error("Error saving phrase:", error);
+      console.error("Error saving word:", error);
       toast({
         title: "Save Error",
-        description: "Failed to save phrase. Please try again.",
+        description: "Failed to save word. Please try again.",
         variant: "destructive",
       });
     }
@@ -524,13 +515,13 @@ export default function Phrases() {
 
   return (
     <div className="container mx-auto px-4 py-8 bg-green-50 min-h-screen">
-      {/* Shared phrases notification dialog */}
+      {/* Shared words notification dialog */}
       <Dialog open={showSharedDialog} onOpenChange={setShowSharedDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Shared Phrases Loaded</DialogTitle>
+            <DialogTitle>Shared Words Loaded</DialogTitle>
             <DialogDescription>
-              Someone shared these phrases with you. You can practice them below!
+              Someone shared these words with you. You can practice them below!
             </DialogDescription>
           </DialogHeader>
         </DialogContent>
@@ -542,7 +533,7 @@ export default function Phrases() {
           <DialogHeader>
             <DialogTitle>Sign In Required</DialogTitle>
             <DialogDescription>
-              Please sign in to save phrases to your collection.
+              Please sign in to save words to your collection.
             </DialogDescription>
           </DialogHeader>
           <AuthButtons />
@@ -552,9 +543,9 @@ export default function Phrases() {
       {/* Header */}
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-purple-800 mb-2">Speech Practice - Phrases</h1>
+          <h1 className="text-3xl font-bold text-purple-800 mb-2">Speech Practice - Words</h1>
           <p className="text-muted-foreground">
-            Generate and practice phrases to improve your speech fluency and pronunciation
+            Generate and practice words to improve your speech clarity and pronunciation
           </p>
         </div>
 
@@ -570,12 +561,12 @@ export default function Phrases() {
             <div className="mb-6">
               <h3 className="text-md font-bold mb-3">Choose a Topic</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto">
-                {phraseTopics.map((topic) => (
+                {wordTopics.map((topic) => (
                   <Card
                     key={topic}
                     className="cursor-pointer hover:shadow-md hover:bg-[#0F3CC9] transition-all duration-200 h-16"
                     style={{ backgroundColor: '#1947e5' }}
-                    onClick={() => handleGenerateTopicPhrases(topic)}
+                    onClick={() => handleGenerateTopicWords(topic)}
                   >
                     <CardContent className="p-3 text-center flex items-center justify-center h-full">
                       <p className="font-bold text-white text-sm">{topic}</p>
@@ -590,19 +581,19 @@ export default function Phrases() {
               <p className="text-base font-medium text-purple-600 mb-3">Or enter a custom topic:</p>
               <div className="flex gap-2">
                 <Input
-                  placeholder="Enter a topic you'd like to practice phrases about..."
+                  placeholder="Enter a topic you'd like to practice words about..."
                   value={aiGenerateTopic}
                   onChange={(e) => setAiGenerateTopic(e.target.value)}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
-                      handleGenerateTopicPhrases(aiGenerateTopic);
+                      handleGenerateTopicWords(aiGenerateTopic);
                     }
                   }}
                   className="flex-1"
                   disabled={isProcessing}
                 />
                 <Button
-                  onClick={() => handleGenerateTopicPhrases(aiGenerateTopic)}
+                  onClick={() => handleGenerateTopicWords(aiGenerateTopic)}
                   disabled={isProcessing || !aiGenerateTopic.trim()}
                   className="bg-[#1947E5] hover:bg-[#1537CC] text-white border-0"
                 >
@@ -621,18 +612,18 @@ export default function Phrases() {
         </Card>
 
         {/* Practice section */}
-        {processedPhrases.length > 0 && (
-          <div id="practice-phrases-section" className="space-y-6">
+        {processedWords.length > 0 && (
+          <div id="practice-words-section" className="space-y-6">
             {/* Progress indicator */}
             <div className="bg-white rounded-lg p-4 shadow-lg border-0">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-[#264653]">Practice Progress</span>
                 <span className="text-sm text-[#264653]">
-                  {currentCarouselIndex + 1} of {processedPhrases.length}
+                  {currentCarouselIndex + 1} of {processedWords.length}
                 </span>
               </div>
               <Progress 
-                value={((currentCarouselIndex + 1) / processedPhrases.length) * 100} 
+                value={((currentCarouselIndex + 1) / processedWords.length) * 100} 
                 className="h-2"
               />
             </div>
@@ -640,39 +631,39 @@ export default function Phrases() {
             {/* Carousel */}
             <div className="embla" ref={emblaRef}>
               <div className="embla__container flex">
-                {processedPhrases.map((phrase, index) => (
-                  <div key={phrase.id} className="embla__slide flex-[0_0_100%] px-2">
+                {processedWords.map((word, index) => (
+                  <div key={word.id} className="embla__slide flex-[0_0_100%] px-2">
                     <Card className="bg-white shadow-lg border-0 h-full card-content">
                       <CardHeader className="pb-4">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-lg font-semibold text-[#2a5e2a]">
-                            Phrase {index + 1}
+                            Word {index + 1}
                           </CardTitle>
                           <Badge 
                             variant={
-                              phrase.status === "complete" ? "default" :
-                              phrase.status === "recording" ? "secondary" :
-                              phrase.status === "assessing" ? "outline" : "outline"
+                              word.status === "complete" ? "default" :
+                              word.status === "recording" ? "secondary" :
+                              word.status === "assessing" ? "outline" : "outline"
                             }
                             className={
-                              phrase.status === "complete" ? "bg-green-100 text-green-800" :
-                              phrase.status === "recording" ? "bg-red-100 text-red-800" :
-                              phrase.status === "assessing" ? "bg-yellow-100 text-yellow-800" :
+                              word.status === "complete" ? "bg-green-100 text-green-800" :
+                              word.status === "recording" ? "bg-red-100 text-red-800" :
+                              word.status === "assessing" ? "bg-yellow-100 text-yellow-800" :
                               "bg-gray-100 text-gray-800"
                             }
                           >
-                            {phrase.status === "complete" ? "Complete" :
-                             phrase.status === "recording" ? "Recording" :
-                             phrase.status === "assessing" ? "Analyzing" : "Ready"}
+                            {word.status === "complete" ? "Complete" :
+                             word.status === "recording" ? "Recording" :
+                             word.status === "assessing" ? "Analyzing" : "Ready"}
                           </Badge>
                         </div>
                       </CardHeader>
                       
                       <CardContent className="space-y-4">
-                        {/* Phrase text */}
+                        {/* Word text */}
                         <div className="bg-[#f0f9ff] border border-[#bae6fd] rounded-lg p-4">
-                          <p className="text-2xl font-bold text-[#0c4a6e] text-center leading-relaxed">
-                            {phrase.text}
+                          <p className="text-3xl font-bold text-[#0c4a6e] text-center leading-relaxed">
+                            {word.text}
                           </p>
                         </div>
 
@@ -689,17 +680,17 @@ export default function Phrases() {
                           </Button>
                           
                           <Button
-                            onClick={() => toggleSlowPlayback(phrase.id)}
+                            onClick={() => toggleSlowPlayback(word.id)}
                             variant="outline"
                             size="sm"
-                            className={`flex items-center gap-2 ${slowPlaybackPhrases[phrase.id] ? 'bg-blue-50 border-blue-300' : ''}`}
+                            className={`flex items-center gap-2 ${slowPlaybackWords[word.id] ? 'bg-blue-50 border-blue-300' : ''}`}
                           >
                             <Snail className="h-4 w-4" />
-                            {slowPlaybackPhrases[phrase.id] ? 'Normal' : 'Slow'}
+                            {slowPlaybackWords[word.id] ? 'Normal' : 'Slow'}
                           </Button>
 
                           <Button
-                            onClick={() => savePhraseToCollection(index)}
+                            onClick={() => saveWordToCollection(index)}
                             variant="outline"
                             size="sm"
                             className="flex items-center gap-2"
@@ -711,9 +702,9 @@ export default function Phrases() {
 
                         {/* Recording section */}
                         <div className="space-y-3">
-                          {phrase.status === "idle" && (
+                          {word.status === "idle" && (
                             <Button
-                              onClick={() => startPhrasePractice(index)}
+                              onClick={() => startWordPractice(index)}
                               className="w-full bg-[#57cc99] hover:bg-[#4ade80] text-white py-3"
                               disabled={isRecording || isProcessingRecording}
                             >
@@ -722,7 +713,7 @@ export default function Phrases() {
                             </Button>
                           )}
 
-                          {phrase.status === "recording" && (
+                          {word.status === "recording" && (
                             <div className="space-y-3">
                               <div className="flex items-center justify-center space-x-4">
                                 <div className="flex items-center space-x-2">
@@ -735,14 +726,14 @@ export default function Phrases() {
                               
                               <div className="flex gap-2">
                                 <Button
-                                  onClick={stopPhrasePractice}
+                                  onClick={stopWordPractice}
                                   className="flex-1 bg-red-500 hover:bg-red-600 text-white"
                                 >
                                   <StopCircleIcon className="h-5 w-5 mr-2" />
                                   Stop Recording
                                 </Button>
                                 <Button
-                                  onClick={() => cancelPhrasePractice(index)}
+                                  onClick={() => cancelWordPractice(index)}
                                   variant="outline"
                                   className="flex-1"
                                 >
@@ -752,7 +743,7 @@ export default function Phrases() {
                             </div>
                           )}
 
-                          {phrase.status === "assessing" && (
+                          {word.status === "assessing" && (
                             <div className="text-center space-y-3">
                               <div className="flex items-center justify-center space-x-2">
                                 <RotateCw className="h-5 w-5 animate-spin text-[#57cc99]" />
@@ -763,7 +754,7 @@ export default function Phrases() {
                             </div>
                           )}
 
-                          {phrase.status === "complete" && phrase.assessmentResult && (
+                          {word.status === "complete" && word.assessmentResult && (
                             <div className="space-y-3">
                               {/* Assessment results */}
                               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -774,20 +765,20 @@ export default function Phrases() {
                                   </div>
                                   
                                   <div className="text-2xl font-bold text-green-700">
-                                    {Math.round(phrase.assessmentResult.pronunciationScore)}%
+                                    {Math.round(word.assessmentResult.pronunciationScore)}%
                                   </div>
                                   
                                   <div className="grid grid-cols-2 gap-4 text-xs">
                                     <div className="space-y-1">
                                       <div className="font-medium text-gray-600">Accuracy</div>
                                       <div className="font-bold text-gray-800">
-                                        {Math.round(phrase.assessmentResult.accuracyScore)}%
+                                        {Math.round(word.assessmentResult.accuracyScore)}%
                                       </div>
                                     </div>
                                     <div className="space-y-1">
                                       <div className="font-medium text-gray-600">Fluency</div>
                                       <div className="font-bold text-gray-800">
-                                        {Math.round(phrase.assessmentResult.fluencyScore)}%
+                                        {Math.round(word.assessmentResult.fluencyScore)}%
                                       </div>
                                     </div>
                                   </div>
@@ -795,13 +786,13 @@ export default function Phrases() {
                               </div>
 
                               {/* Playback recording section */}
-                              {phrase.recordingUrl && (
+                              {word.recordingUrl && (
                                 <div className="bg-white/80 border border-[#57cc99] rounded-md p-3 mb-4 mt-4 flex items-center justify-between">
                                   <div className="text-sm font-medium text-[#264653]">
                                     Listen to your recording:
                                   </div>
                                   <AudioPlaybackButton
-                                    audioUrl={phrase.recordingUrl}
+                                    audioUrl={word.recordingUrl}
                                     buttonText="Listen to me"
                                     variant="outline"
                                     size="sm"
@@ -814,12 +805,12 @@ export default function Phrases() {
                               {/* Try again button */}
                               <Button
                                 onClick={() => {
-                                  setProcessedPhrases(phrases =>
-                                    phrases.map((p, idx) =>
-                                      idx === index ? { ...p, status: "idle", assessmentResult: undefined, recordingUrl: undefined } : p
+                                  setProcessedWords(words =>
+                                    words.map((w, idx) =>
+                                      idx === index ? { ...w, status: "idle", assessmentResult: undefined, recordingUrl: undefined } : w
                                     )
                                   );
-                                  setPhraseAssessmentResult(null);
+                                  setWordAssessmentResult(null);
                                 }}
                                 variant="outline"
                                 className="w-full"
@@ -851,7 +842,7 @@ export default function Phrases() {
               
               <Button
                 onClick={() => emblaApi?.scrollNext()}
-                disabled={currentCarouselIndex >= processedPhrases.length - 1}
+                disabled={currentCarouselIndex >= processedWords.length - 1}
                 variant="outline"
                 size="sm"
               >

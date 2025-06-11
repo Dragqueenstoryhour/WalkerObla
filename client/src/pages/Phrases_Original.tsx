@@ -142,15 +142,6 @@ export default function Phrases() {
     "Weather Talk"
   ];
 
-  // Update carousel index when slide changes
-  useEffect(() => {
-    if (emblaApi) {
-      emblaApi.on('select', () => {
-        setCurrentCarouselIndex(emblaApi.selectedScrollSnap());
-      });
-    }
-  }, [emblaApi]);
-
   // Auto-load common phrases when the page opens
   useEffect(() => {
     if (!shareId) {
