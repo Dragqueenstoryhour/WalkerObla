@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
+import useAudioRecording from "@/hooks/useAudioRecording";
 import { AuthButtons } from "@/components/AuthButtons";
 
 import {
@@ -78,7 +79,6 @@ export default function Phrases() {
   const [savedPhraseId, setSavedPhraseId] = useState<string | null>(null);
   const [showSharedDialog, setShowSharedDialog] = useState(false);
   const [currentlyPracticing, setCurrentlyPracticing] = useState<string | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
   const [isProcessingRecording, setIsProcessingRecording] = useState(false);
   const [phraseAssessmentResult, setPhraseAssessmentResult] = useState<any>(null);
   const [showSignInDialog, setShowSignInDialog] = useState(false);
@@ -97,10 +97,32 @@ export default function Phrases() {
     inViewThreshold: 0.7
   });
 
-  // Refs for media recording
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  // Use audio recording hook for consistent recording management
+  const {
+    isRecording,
+    recordingDuration,
+    audioUrl,
+    audioBlob,
+    startRecording,
+    stopRecording,
+    cancelRecording,
+  } = useAudioRecording({
+    onRecordingComplete: (blob) => {
+      if (currentPhraseIndex >= 0) {
+        processPhraseRecording(blob, currentPhraseIndex);
+      }
+    },
+    onError: (error) => {
+      console.error("Recording error:", error);
+      toast({
+        title: "Recording Error",
+        description: "Could not access microphone. Please check your browser permissions.",
+        variant: "destructive",
+      });
+      setCurrentlyPracticing(null);
+    },
+  });
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Carousel navigation functions
@@ -226,7 +248,6 @@ export default function Phrases() {
       setCurrentlyPracticing(phrase.id);
       setCurrentPhraseIndex(phraseIndex);
       setPhraseAssessmentResult(null);
-      chunksRef.current = [];
 
       // Update the phrase status to recording
       setProcessedPhrases((phrases) =>
@@ -235,58 +256,13 @@ export default function Phrases() {
         ),
       );
 
-      // Get microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
+      // Start recording using the hook
+      await startRecording();
 
-      // Create media recorder
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-
-      // Set up event handlers
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunksRef.current.push(e.data);
-        }
-      };
-
-      // Handle recording complete
-      mediaRecorder.onstop = async () => {
-        // Clean up the stream properly
-        if (streamRef.current) {
-          const tracks = streamRef.current.getTracks();
-          tracks.forEach((track) => track.stop());
-          streamRef.current = null;
-        }
-
-        try {
-          // Create audio blob
-          const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
-
-          // Process the phrase recording
-          await processPhraseRecording(audioBlob, phraseIndex);
-        } catch (error) {
-          console.error("Error processing phrase recording:", error);
-          toast({
-            title: "Recording Error",
-            description: "Could not process the recording. Please try again.",
-            variant: "destructive",
-          });
-          setIsRecording(false);
-          setIsProcessingRecording(false);
-
-          // Reset phrase status
-          setProcessedPhrases((phrases) =>
-            phrases.map((p, idx) =>
-              idx === phraseIndex ? { ...p, status: "idle" } : p,
-            ),
-          );
-        }
-      };
-
-      // Start recording
-      mediaRecorder.start(100);
-      setIsRecording(true);
+      toast({
+        title: "Recording Started",
+        description: `Recording phrase: "${phrase.text.substring(0, 20)}${phrase.text.length > 20 ? "..." : ""}"`,
+      });
     } catch (error) {
       console.error("Error starting recording:", error);
       toast({
@@ -307,20 +283,7 @@ export default function Phrases() {
 
   // Stop recording the phrase
   const stopPhrasePractice = () => {
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state !== "inactive"
-    ) {
-      mediaRecorderRef.current.stop();
-    }
-
-    // Make sure we clean up streams even if recorder fails
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-
-    setIsRecording(false);
+    stopRecording();
   };
 
   // Process phrase recording with Azure
@@ -412,21 +375,8 @@ export default function Phrases() {
 
   // Cancel phrase practice
   const cancelPhrasePractice = (phraseIndex: number) => {
-    // Stop any ongoing recording
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state !== "inactive"
-    ) {
-      mediaRecorderRef.current.stop();
-    }
-
-    // Make sure we clean up streams
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-
-    setIsRecording(false);
+    // Cancel recording using the hook
+    cancelRecording();
     setCurrentlyPracticing(null);
 
     // Reset phrase status
@@ -665,20 +615,6 @@ export default function Phrases() {
     if (!shareId) {
       handleGenerateTopicPhrases("Common Phrases");
     }
-
-    // Cleanup function
-    return () => {
-      if (
-        mediaRecorderRef.current &&
-        mediaRecorderRef.current.state !== "inactive"
-      ) {
-        mediaRecorderRef.current.stop();
-      }
-
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
-    };
   }, []);
 
   // Load shared phrases if shareId is present
