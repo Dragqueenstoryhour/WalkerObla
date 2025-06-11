@@ -796,7 +796,7 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
             {/* Responsive Controls Layout */}
             <div className="space-y-4 sm:space-y-0">
               {/* First Row: Recording Controls */}
-              <div className="flex justify-center">
+              <div className="flex justify-center my-4">
                 {phrase.status === "idle" && (
                   <Button
                     onClick={startPhrasePractice}
@@ -827,7 +827,7 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
               </div>
 
               {/* Second Row: Hear and Slow Switch */}
-              <div className="flex justify-center items-center gap-2">
+              <div className="flex justify-center items-center gap-2 my-4">
                 <Button
                   onClick={handleTextToSpeech}
                   variant="outline"
@@ -857,7 +857,7 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
               </div>
 
               {/* Third Row: New Content Button */}
-              <div className="flex justify-center">
+              <div className="flex justify-center my-4">
                 <Button
                   onClick={generateNewContent}
                   disabled={isGenerating}
