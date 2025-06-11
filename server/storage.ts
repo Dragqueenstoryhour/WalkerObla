@@ -601,6 +601,16 @@ export class DatabaseStorage implements IStorage {
       readingStats: calculateStats(readingActivities)
     };
   }
+
+  // Health check for deployment readiness
+  async healthCheck(): Promise<void> {
+    try {
+      // Simple database connectivity test
+      await db.select().from(users).limit(1);
+    } catch (error) {
+      throw new Error(`Database health check failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
