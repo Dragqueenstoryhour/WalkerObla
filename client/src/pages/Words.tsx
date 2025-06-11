@@ -10,6 +10,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import useAudioRecording from "@/hooks/useAudioRecording";
 import { AuthButtons } from "@/components/AuthButtons";
+import { AudioPlaybackButton } from "@/components/AudioPlaybackButton";
 
 import {
   Card,
@@ -26,7 +27,6 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { PronunciationAssessmentResult } from "@/lib/types";
-import { AudioPlaybackButton } from "@/components/AudioPlaybackButton";
 import {
   MicIcon,
   StopCircleIcon,
@@ -51,7 +51,6 @@ import {
 } from "lucide-react";
 import { useDifficulty } from "@/contexts/DifficultyContext";
 import { DifficultyDropdown } from "@/components/difficulty/SimplifiedDifficultySelector";
-import { SaveWordButton } from "@/components/SaveWordButton";
 import { SummaryCard } from "@/components/SummaryCard";
 import useEmblaCarousel from 'embla-carousel-react';
 
@@ -151,7 +150,6 @@ export default function Words() {
   // Handle finishing practice and showing summary
   const handleFinishPractice = () => {
     setShowSummary(true);
-    // Add summary card to the carousel by scrolling to the last position
     setTimeout(() => {
       if (emblaApi) {
         emblaApi.scrollTo(processedWords.length);
@@ -220,31 +218,7 @@ export default function Words() {
 
       const result = await response.json();
 
-      // Process results to ensure we only have single words
-      let processedItems = result.phrases.map((item: string) => {
-        const words = item.trim().split(/\s+/);
-        return words[0] || item;
-      });
-      
-      // Filter out articles and very short words
-      const articlesAndPrepositions = ['a', 'an', 'the', 'in', 'on', 'at', 'by', 'for', 'with', 'to', 'from'];
-      processedItems = processedItems.filter((word: string) => 
-        !articlesAndPrepositions.includes(word.toLowerCase()) && 
-        word.length > 1
-      );
-      
-      // Remove duplicates
-      const uniqueWords: string[] = [];
-      processedItems = processedItems.filter((word: string) => {
-        const wordLower = word.toLowerCase();
-        if (!uniqueWords.includes(wordLower)) {
-          uniqueWords.push(wordLower);
-          return true;
-        }
-        return false;
-      });
-
-      const newWords: ProcessedWord[] = processedItems.map(
+      const newWords: ProcessedWord[] = result.phrases.map(
         (text: string, index: number) => ({
           id: `word-${Date.now()}-topic-${index}`,
           text,
@@ -291,55 +265,6 @@ export default function Words() {
         title: "Recording Started",
         description: `Recording word: "${word.text}"`,
       });
-
-      // Create media recorder
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-
-      // Set up event handlers
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunksRef.current.push(e.data);
-        }
-      };
-
-      // Handle recording complete
-      mediaRecorder.onstop = async () => {
-        // Clean up the stream properly
-        if (streamRef.current) {
-          const tracks = streamRef.current.getTracks();
-          tracks.forEach((track) => track.stop());
-          streamRef.current = null;
-        }
-
-        try {
-          // Create audio blob
-          const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
-
-          // Process the word recording
-          await processWordRecording(audioBlob, wordIndex);
-        } catch (error) {
-          console.error("Error processing word recording:", error);
-          toast({
-            title: "Recording Error",
-            description: "Could not process the recording. Please try again.",
-            variant: "destructive",
-          });
-          setIsRecording(false);
-          setIsProcessingRecording(false);
-
-          // Reset word status
-          setProcessedWords((words) =>
-            words.map((w, idx) =>
-              idx === wordIndex ? { ...w, status: "idle" } : w,
-            ),
-          );
-        }
-      };
-
-      // Start recording
-      mediaRecorder.start(100);
-      setIsRecording(true);
     } catch (error) {
       console.error("Error starting recording:", error);
       toast({
@@ -360,20 +285,7 @@ export default function Words() {
 
   // Stop recording the word
   const stopWordPractice = () => {
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state !== "inactive"
-    ) {
-      mediaRecorderRef.current.stop();
-    }
-
-    // Make sure we clean up streams even if recorder fails
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-
-    setIsRecording(false);
+    stopRecording();
   };
 
   // Process word recording with Azure
@@ -383,6 +295,14 @@ export default function Words() {
     try {
       const word = processedWords[wordIndex];
 
+      // Validate word data
+      if (!word || !word.text || word.text.trim() === '') {
+        console.error('Invalid word data:', word);
+        throw new Error('No word text available for assessment');
+      }
+
+      console.log('Processing word:', word.text);
+
       // Update status to assessing
       setProcessedWords((words) =>
         words.map((w, idx) =>
@@ -390,18 +310,15 @@ export default function Words() {
         ),
       );
 
-
-
       // Create a URL for the recording
       const recordingUrl = URL.createObjectURL(audioBlob);
 
       // Send to Azure Speech for assessment
       const formData = new FormData();
       formData.append("audio", audioBlob);
-      formData.append("text", word.text);
+      formData.append("text", word.text.trim());
       formData.append("itemType", "word");
-      formData.append("source", "practice");
-      formData.append("difficulty", word.difficulty || "medium");
+      formData.append("source", "words");
 
       const response = await fetch("/api/pronunciation/assess", {
         method: "POST",
@@ -438,7 +355,6 @@ export default function Words() {
         ),
       );
 
-
     } catch (error) {
       console.error("Error assessing word pronunciation:", error);
       toast({
@@ -460,21 +376,8 @@ export default function Words() {
 
   // Cancel word practice
   const cancelWordPractice = (wordIndex: number) => {
-    // Stop any ongoing recording
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state !== "inactive"
-    ) {
-      mediaRecorderRef.current.stop();
-    }
-
-    // Make sure we clean up streams
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-
-    setIsRecording(false);
+    // Cancel recording using the hook
+    cancelRecording();
     setCurrentlyPracticing(null);
 
     // Reset word status
@@ -546,16 +449,13 @@ export default function Words() {
       }
 
       const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
 
-      audio.onerror = () => {
-        toast({
-          title: "Playback Error",
-          description: "Could not play the audio. Please try again.",
-          variant: "destructive",
-        });
-        URL.revokeObjectURL(audioUrl);
-      };
+      loadingToast.dismiss?.();
+
+      // Enhanced audio element for mobile Safari compatibility
+      const audio = new Audio();
+      audio.preload = 'auto';
+      audio.crossOrigin = 'anonymous';
 
       audio.oncanplaythrough = () => {
         loadingToast.dismiss?.();
@@ -589,72 +489,7 @@ export default function Words() {
     }
   };
 
-  // Play back user's recording with enhanced mobile compatibility
-  const playUserRecording = async (wordIndex: number) => {
-    const word = processedWords[wordIndex];
-    if (!word?.recordingUrl) return;
-
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-
-    try {
-      // Enhanced audio element for mobile Safari compatibility
-      const audio = new Audio();
-      audio.preload = 'auto';
-      audio.crossOrigin = 'anonymous';
-      
-      audio.onerror = (e) => {
-        console.error('Recording playback error:', e);
-        toast({
-          title: "Playback Error",
-          description: "Could not play your recording.",
-          variant: "destructive",
-        });
-      };
-
-      const playAudio = () => {
-        const playPromise = audio.play();
-        
-        if (playPromise !== undefined) {
-          playPromise.then(() => {
-            console.log('Recording playback started successfully');
-          }).catch((error) => {
-            console.error('Audio play promise rejected:', error);
-            
-            // Fallback for mobile browsers
-            const fallbackAudio = new Audio(word.recordingUrl || '');
-            fallbackAudio.play().catch(fallbackError => {
-              console.error('Fallback audio play failed:', fallbackError);
-              toast({
-                title: "Playback Error",
-                description: "Could not play your recording.",
-                variant: "destructive",
-              });
-            });
-          });
-        }
-      };
-
-      audio.oncanplay = playAudio;
-      audio.onloadeddata = playAudio;
-      
-      audio.src = word.recordingUrl || '';
-      audio.load();
-      audioRef.current = audio;
-      
-    } catch (error) {
-      console.error("Error setting up recording playback:", error);
-      toast({
-        title: "Playback Error",
-        description: "Could not play your recording.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Toggle slow playback
+  // Toggle slow playback for a word
   const toggleSlowPlayback = (wordId: string) => {
     setSlowPlaybackWords(prev => ({
       ...prev,
@@ -662,8 +497,8 @@ export default function Words() {
     }));
   };
 
-  // Save word to collection
-  const handleSaveWord = async (wordIndex: number) => {
+  // Save a word to user's collection
+  const saveWordToCollection = async (wordIndex: number) => {
     if (!isAuthenticated) {
       setPendingSaveIndex(wordIndex);
       setShowSignInDialog(true);
@@ -674,25 +509,21 @@ export default function Words() {
     if (!word) return;
 
     try {
-      const response = await fetch("/api/phrases/save", {
+      const response = await fetch("/api/saved-words", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          phrase: word.text,
-          phonetic: word.phonetic || null,
-          difficulty: word.difficulty || null,
-          assessmentResults: word.assessmentResult ? JSON.stringify(word.assessmentResult) : null,
-          source: "words",
-          sourceId: shareId || null,
+          word: word.text,
+          difficulty: word.difficulty || "beginner",
+          source: "words"
         }),
       });
 
       if (!response.ok) {
         throw new Error("Failed to save word");
       }
-
-      setSavedWordId(word.id);
-      setTimeout(() => setSavedWordId(null), 2000);
 
       toast({
         title: "Word Saved",
@@ -708,25 +539,11 @@ export default function Words() {
     }
   };
 
-  // Auto-load commonly used words when the page opens
+  // Auto-load common words when the page opens
   useEffect(() => {
     if (!shareId) {
       handleGenerateTopicWords("Commonly Used Words");
     }
-
-    // Cleanup function
-    return () => {
-      if (
-        mediaRecorderRef.current &&
-        mediaRecorderRef.current.state !== "inactive"
-      ) {
-        mediaRecorderRef.current.stop();
-      }
-
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
-    };
   }, []);
 
   // Load shared words if shareId is present
@@ -744,56 +561,24 @@ export default function Words() {
         }
 
         const data = await response.json();
-        if (!data.collection || !data.collection.phrases) {
+        if (!data.collection || !data.collection.words) {
           throw new Error("Invalid shared words data");
         }
 
-        let wordsData;
-        try {
-          wordsData =
-            typeof data.collection.phrases === "string"
-              ? JSON.parse(data.collection.phrases)
-              : data.collection.phrases;
+        const sharedWords: ProcessedWord[] = data.collection.words.map((text: string, index: number) => ({
+          id: `shared-word-${index}`,
+          text,
+          status: "idle" as const,
+        }));
 
-          if (!Array.isArray(wordsData)) {
-            wordsData = [wordsData];
-          }
-        } catch (parseError) {
-          console.error("Error parsing words data:", parseError);
-          throw new Error("Invalid shared words format");
-        }
-
-        const newWords: ProcessedWord[] = wordsData.map(
-          (word: any, index: number) => ({
-            id: `shared-${Date.now()}-${index}`,
-            text: word.text || "",
-            phonetic: word.phonetic || undefined,
-            difficulty: word.difficulty || undefined,
-            status: "idle",
-          }),
-        );
-
-        if (newWords.length > 0) {
-          console.log("Loaded shared words:", newWords);
-          setProcessedWords(newWords);
-          setCurrentWordIndex(0);
-          setShowSharedDialog(true);
-
-          toast({
-            title: "Shared Words Loaded",
-            description: `Loaded ${newWords.length} shared words for practice.`,
-          });
-        } else {
-          throw new Error("No words found in this shared collection");
-        }
+        setProcessedWords(sharedWords);
+        setShowSharedDialog(true);
+        scrollToPracticeSection();
       } catch (error) {
         console.error("Error loading shared words:", error);
         toast({
-          title: "Error Loading Shared Words",
-          description:
-            error instanceof Error
-              ? error.message
-              : "Failed to load shared words",
+          title: "Loading Error",
+          description: "Could not load shared words. Please check the link.",
           variant: "destructive",
         });
       } finally {
@@ -802,82 +587,55 @@ export default function Words() {
     };
 
     loadSharedWords();
-  }, [shareId, toast]);
-
-  // Auto-load commonly used words with delay for smooth startup
-  useEffect(() => {
-    // Only if we're not loading shared words
-    if (!shareId) {
-      // Add a small delay to ensure smooth startup
-      const timer = setTimeout(() => {
-        handleGenerateTopicWords("Commonly Used Words");
-      }, 1500);
-      
-      return () => clearTimeout(timer);
-    }
   }, [shareId]);
 
-  // Cleanup function for recording sessions
+  // Handle successful authentication and save pending word
   useEffect(() => {
-    // Cleanup function to handle any lingering recording sessions
-    return () => {
-      if (
-        mediaRecorderRef.current &&
-        mediaRecorderRef.current.state !== "inactive"
-      ) {
-        mediaRecorderRef.current.stop();
-      }
-
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, []); // Empty dependency array to run once on mount
-
-  // Handle letter selection for word generation
-  const handleLetterSelection = async (letter: string) => {
-    setShowLetterModal(false);
-    setIsProcessing(true);
-    
-    try {
-      const topicQuery = letterModalType === 'begin' 
-        ? `words that begin with ${letter}` 
-        : `words that include the letter ${letter}`;
-      
-      setAiGenerateTopic(topicQuery);
-      await handleGenerateTopicWords(topicQuery);
-    } catch (error) {
-      console.error("Error generating letter-based words:", error);
-      toast({
-        title: "Error",
-        description: "Failed to generate words. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
+    if (isAuthenticated && pendingSaveIndex !== null) {
+      saveWordToCollection(pendingSaveIndex);
+      setPendingSaveIndex(null);
     }
-  };
+  }, [isAuthenticated, pendingSaveIndex]);
+
+  // Auto-advance carousel when words are completed
+  useEffect(() => {
+    if (currentCarouselIndex < processedWords.length - 1) {
+      const currentWord = processedWords[currentCarouselIndex];
+      if (currentWord?.status === "complete") {
+        // Auto-advance after 2 seconds
+        const timer = setTimeout(() => {
+          goToNext();
+        }, 2000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [processedWords, currentCarouselIndex]);
+
+  // Check if all words are complete to show summary
+  useEffect(() => {
+    if (processedWords.length > 0) {
+      const completedCount = processedWords.filter(w => w.status === "complete").length;
+      if (completedCount === processedWords.length && !showSummary) {
+        setTimeout(() => {
+          handleFinishPractice();
+        }, 1000);
+      }
+    }
+  }, [processedWords, showSummary]);
 
   const topicOptions = [
     "Commonly Used Words",
-    "Household Items",
-    "Food and Drinks",
-    "Family Members",
-    "Body Parts",
-    "Colors",
-    "Numbers",
-    "Weather",
-    "Transportation",
     "Animals",
-    "Words that Begin with..",
-    "Words that Include.."
-  ];
-
-  // Letter options for letter-based word generation
-  const letterOptions = [
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-    'St', 'Tr', 'Br', 'Cl', 'Fl', 'Pl', 'Sp', 'Th', 'Ch', 'Sh'
+    "Colors",
+    "Food and Drinks",
+    "Body Parts",
+    "Family Members",
+    "Weather",
+    "Numbers",
+    "Actions/Verbs",
+    "Emotions",
+    "Home and Furniture",
+    "Transportation"
   ];
 
   return (
@@ -886,22 +644,14 @@ export default function Words() {
       <Dialog open={showSharedDialog} onOpenChange={setShowSharedDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              You've been sent these words for practice
-            </DialogTitle>
+            <DialogTitle>Shared Words Loaded</DialogTitle>
             <DialogDescription>
-              Someone has shared a set of words with you to practice your
-              pronunciation. These words have been loaded and are ready for
-              you to start practicing.
+              Someone shared these words with you. You can practice them below!
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end">
-            <Button onClick={() => setShowSharedDialog(false)}>
-              Get Started
-            </Button>
-          </div>
         </DialogContent>
       </Dialog>
+
       {/* Sign in dialog */}
       <Dialog open={showSignInDialog} onOpenChange={setShowSignInDialog}>
         <DialogContent>
@@ -911,312 +661,333 @@ export default function Words() {
               Please sign in to save words to your collection.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-4">
-            <AuthButtons />
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowSignInDialog(false);
-                setPendingSaveIndex(null);
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
+          <AuthButtons />
         </DialogContent>
       </Dialog>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">Practice Words</h1>
-        <DifficultyDropdown onConfirm={async (newDifficulty) => {
-          setDifficulty(newDifficulty as any);
-          await handleGenerateTopicWords(aiGenerateTopic, newDifficulty);
-        }} />
-      </div>
-      {/* Topic Selection */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Choose a Topic</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
-          {topicOptions.map((topic) => (
-            <Card
-              key={topic}
-              className={`cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 ${
-                aiGenerateTopic === topic 
-                  ? 'ring-2 ring-blue-500 shadow-md' 
-                  : 'hover:bg-[#0F3CC9]'
-              } ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
-              style={{ backgroundColor: '#1947e5' }}
-              onClick={() => {
-                if (topic === "Words that Begin with..") {
-                  setLetterModalType('begin');
-                  setShowLetterModal(true);
-                } else if (topic === "Words that Include..") {
-                  setLetterModalType('include');
-                  setShowLetterModal(true);
-                } else {
-                  setAiGenerateTopic(topic);
-                  handleGenerateTopicWords(topic);
-                }
-              }}
-            >
-              <CardContent className="p-4 text-center">
-                <p className="font-bold text-white">{topic}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
 
-        {/* Custom Topic Input */}
-        <div className="mt-6">
-          <Label htmlFor="custom-topic" className="text-base font-medium text-purple-600">
-            Or enter a custom topic:
-          </Label>
-          <div className="flex gap-2 mt-2">
-            <Input
-              id="custom-topic"
-              value={aiGenerateTopic}
-              onChange={(e) => setAiGenerateTopic(e.target.value)}
-              placeholder="Type any topic (e.g., 'Kitchen utensils', 'Sports equipment')"
-              className="flex-1"
-              disabled={isProcessing}
-            />
+      {/* Generation controls */}
+      <Card className="mb-6 bg-white shadow-lg border-0">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-2xl font-bold text-[#2a5e2a] flex items-center gap-2">
+            <Mic className="h-6 w-6" />
+            Speech Practice - Words
+          </CardTitle>
+          <CardDescription className="text-[#264653]">
+            Generate and practice words to improve your speech clarity and pronunciation
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid md:grid-cols-3 gap-4 items-end">
+            <div className="space-y-2">
+              <Label htmlFor="topic" className="text-sm font-medium text-[#264653]">
+                Choose Topic
+              </Label>
+              <select 
+                id="topic"
+                value={aiGenerateTopic}
+                onChange={(e) => setAiGenerateTopic(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#57cc99] focus:border-transparent"
+              >
+                {topicOptions.map((topic) => (
+                  <option key={topic} value={topic}>{topic}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-[#264653]">
+                Difficulty Level
+              </Label>
+              <DifficultyDropdown />
+            </div>
             <Button
               onClick={() => handleGenerateTopicWords(aiGenerateTopic)}
-              disabled={isProcessing || !aiGenerateTopic.trim()}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-6 py-2 transition-all duration-300 hover:scale-105"
+              disabled={isProcessing}
+              className="bg-[#57cc99] hover:bg-[#4ade80] text-white h-10"
             >
               {isProcessing ? (
-                <RotateCw className="h-4 w-4 animate-spin" />
+                <>
+                  <RotateCw className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
               ) : (
-                "Generate"
+                <>
+                  <Mic className="h-4 w-4 mr-2" />
+                  Generate Words
+                </>
               )}
             </Button>
           </div>
-        </div>
-      </div>
-      {/* Practice Section */}
+        </CardContent>
+      </Card>
+
+      {/* Practice section */}
       {processedWords.length > 0 && (
-        <div id="practice-words-section" className="mb-8">
-          <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Practice Words</h2>
-          
-          {/* Carousel for words */}
-          <div className="embla overflow-hidden w-full max-w-7xl mx-auto" ref={emblaRef}>
+        <div id="practice-words-section" className="space-y-6">
+          {/* Progress indicator */}
+          <div className="bg-white rounded-lg p-4 shadow-lg border-0">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-[#264653]">Practice Progress</span>
+              <span className="text-sm text-[#264653]">
+                {currentCarouselIndex + 1} of {processedWords.length + (showSummary ? 1 : 0)}
+              </span>
+            </div>
+            <Progress 
+              value={((currentCarouselIndex + 1) / (processedWords.length + (showSummary ? 1 : 0))) * 100} 
+              className="h-2"
+            />
+          </div>
+
+          {/* Carousel */}
+          <div className="embla" ref={emblaRef}>
             <div className="embla__container flex">
-              {processedWords.map((word, idx) => (
-                <div key={word.id} className={`embla__slide flex-shrink-0 w-full sm:w-[90%] md:w-[80%] lg:w-[70%] xl:w-[60%] 2xl:w-[50%] px-4 sm:px-6 md:px-8 ${idx === currentCarouselIndex ? 'is-in-view' : ''}`}>
-                  <Card className="h-full card-content" style={{ backgroundColor: '#1947E5' }}>
-                    <CardHeader className="text-center">
-                      <CardTitle className="text-3xl font-bold text-white">{word.text}</CardTitle>
-                      {word.phonetic && (
-                        <CardDescription className="text-lg text-muted-foreground">
-                          {word.phonetic}
-                        </CardDescription>
-                      )}
+              {processedWords.map((word, index) => (
+                <div key={word.id} className="embla__slide flex-[0_0_100%] px-2">
+                  <Card className="bg-white shadow-lg border-0 h-full">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg font-semibold text-[#2a5e2a]">
+                          Word {index + 1}
+                        </CardTitle>
+                        <Badge 
+                          variant={
+                            word.status === "complete" ? "default" :
+                            word.status === "recording" ? "secondary" :
+                            word.status === "assessing" ? "outline" : "outline"
+                          }
+                          className={
+                            word.status === "complete" ? "bg-green-100 text-green-800" :
+                            word.status === "recording" ? "bg-red-100 text-red-800" :
+                            word.status === "assessing" ? "bg-yellow-100 text-yellow-800" :
+                            "bg-gray-100 text-gray-800"
+                          }
+                        >
+                          {word.status === "complete" ? "Complete" :
+                           word.status === "recording" ? "Recording" :
+                           word.status === "assessing" ? "Analyzing" : "Ready"}
+                        </Badge>
+                      </div>
                     </CardHeader>
                     
                     <CardContent className="space-y-4">
-                      {/* Recording Controls */}
-                      <div className="flex justify-center gap-2">
+                      {/* Word text */}
+                      <div className="bg-[#f0f9ff] border border-[#bae6fd] rounded-lg p-4">
+                        <p className="text-3xl font-bold text-[#0c4a6e] text-center leading-relaxed">
+                          {word.text}
+                        </p>
+                      </div>
+
+                      {/* Controls */}
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        <Button
+                          onClick={() => handleTextToSpeech(index)}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2"
+                        >
+                          <Volume2 className="h-4 w-4" />
+                          Listen
+                        </Button>
+                        
+                        <Button
+                          onClick={() => toggleSlowPlayback(word.id)}
+                          variant="outline"
+                          size="sm"
+                          className={`flex items-center gap-2 ${slowPlaybackWords[word.id] ? 'bg-blue-50 border-blue-300' : ''}`}
+                        >
+                          <Snail className="h-4 w-4" />
+                          {slowPlaybackWords[word.id] ? 'Normal' : 'Slow'}
+                        </Button>
+
+                        <Button
+                          onClick={() => saveWordToCollection(index)}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2"
+                        >
+                          <Star className="h-4 w-4" />
+                          Save
+                        </Button>
+                      </div>
+
+                      {/* Recording section */}
+                      <div className="space-y-3">
                         {word.status === "idle" && (
                           <Button
-                            onClick={() => startWordPractice(idx)}
-                            className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 font-bold text-base h-12 px-6"
+                            onClick={() => startWordPractice(index)}
+                            className="w-full bg-[#57cc99] hover:bg-[#4ade80] text-white py-3"
                             disabled={isRecording || isProcessingRecording}
                           >
-                            <MicIcon className="h-5 w-5" />
+                            <Mic className="h-5 w-5 mr-2" />
                             Start Recording
                           </Button>
                         )}
-                        
+
                         {word.status === "recording" && (
-                          <Button
-                            onClick={() => stopWordPractice()}
-                            variant="destructive"
-                            className="flex items-center gap-2"
-                          >
-                            <StopCircleIcon className="h-4 w-4" />
-                            Stop Recording
-                          </Button>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-center space-x-4">
+                              <div className="flex items-center space-x-2">
+                                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                                <span className="text-sm font-medium text-red-600">
+                                  Recording... {Math.floor(recordingDuration)}s
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={stopWordPractice}
+                                className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                              >
+                                <StopCircleIcon className="h-5 w-5 mr-2" />
+                                Stop Recording
+                              </Button>
+                              <Button
+                                onClick={() => cancelWordPractice(index)}
+                                variant="outline"
+                                className="flex-1"
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
                         )}
-                        
+
                         {word.status === "assessing" && (
-                          <Button disabled className="flex items-center gap-2">
-                            <RotateCw className="h-4 w-4 animate-spin" />
-                            Analyzing...
-                          </Button>
+                          <div className="text-center space-y-3">
+                            <div className="flex items-center justify-center space-x-2">
+                              <RotateCw className="h-5 w-5 animate-spin text-[#57cc99]" />
+                              <span className="text-sm font-medium text-[#264653]">
+                                Analyzing pronunciation...
+                              </span>
+                            </div>
+                          </div>
                         )}
-                        
-                        {word.status === "complete" && (
-                          <div className="flex gap-2">
+
+                        {word.status === "complete" && word.assessmentResult && (
+                          <div className="space-y-3">
+                            {/* Assessment results */}
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                              <div className="text-center space-y-2">
+                                <div className="flex items-center justify-center space-x-2">
+                                  <CheckCircle className="h-5 w-5 text-green-600" />
+                                  <span className="font-semibold text-green-800">Assessment Complete</span>
+                                </div>
+                                
+                                <div className="text-2xl font-bold text-green-700">
+                                  {Math.round(word.assessmentResult.pronunciationScore)}%
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-4 text-xs">
+                                  <div className="space-y-1">
+                                    <div className="font-medium text-gray-600">Accuracy</div>
+                                    <div className="font-bold text-gray-800">
+                                      {Math.round(word.assessmentResult.accuracyScore)}%
+                                    </div>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <div className="font-medium text-gray-600">Fluency</div>
+                                    <div className="font-bold text-gray-800">
+                                      {Math.round(word.assessmentResult.fluencyScore)}%
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Playback recording section */}
+                            {word.recordingUrl && (
+                              <div className="bg-white/80 border border-[#57cc99] rounded-md p-3 mb-4 mt-4 flex items-center justify-between">
+                                <div className="text-sm font-medium text-[#264653]">
+                                  Listen to your recording:
+                                </div>
+                                <AudioPlaybackButton
+                                  audioUrl={word.recordingUrl}
+                                  buttonText="Listen to me"
+                                  variant="outline"
+                                  size="sm"
+                                  className="rounded-full p-2 shadow-md"
+                                  icon={<Volume2 className="h-5 w-5" />}
+                                />
+                              </div>
+                            )}
+
+                            {/* Try again button */}
                             <Button
-                              onClick={() => startWordPractice(idx)}
-                              className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 font-bold text-base h-12 px-6"
+                              onClick={() => {
+                                setProcessedWords(words =>
+                                  words.map((w, idx) =>
+                                    idx === index ? { ...w, status: "idle", assessmentResult: undefined, recordingUrl: undefined } : w
+                                  )
+                                );
+                                setWordAssessmentResult(null);
+                              }}
+                              variant="outline"
+                              className="w-full"
                             >
-                              <RotateCw className="h-5 w-5" />
+                              <RotateCw className="h-4 w-4 mr-2" />
                               Try Again
                             </Button>
-                            <AudioPlaybackButton
-                              audioUrl={word.recordingUrl || ''}
-                              buttonText="Listen to me"
-                              variant="outline"
-                              className="h-12 px-6"
-                              icon={<VolumeIcon className="h-4 w-4" />}
-                            />
                           </div>
                         )}
                       </div>
-
-                      {/* Text-to-Speech and Slow Switch */}
-                      <div className="flex justify-center gap-2">
-                        <Button
-                          onClick={() => handleTextToSpeech(idx)}
-                          variant="outline"
-                          className="justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-white hover:bg-[#FF7F7C] h-10 px-4 py-2 flex items-center gap-2 bg-[#FF9692] border-0"
-                        >
-                          <Ear className="h-4 w-4" />
-                          Hear
-                        </Button>
-                        <button
-                          onClick={() => toggleSlowPlayback(word.id)}
-                          className={`relative inline-flex h-10 w-16 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                            slowPlaybackWords[word.id] ? 'bg-[#FFE8E8]' : 'bg-gray-300'
-                          }`}
-                          role="switch"
-                          aria-checked={slowPlaybackWords[word.id]}
-                          aria-label="Toggle slow playback"
-                        >
-                          <span
-                            className={`inline-flex h-8 w-8 transform rounded-full bg-white transition-transform duration-200 ease-in-out items-center justify-center ${
-                              slowPlaybackWords[word.id] ? 'translate-x-8' : 'translate-x-1'
-                            }`}
-                          >
-                            <Snail className="w-3 h-3 text-gray-600" />
-                          </span>
-                        </button>
-                      </div>
-
-                      {/* Save Button Row */}
-                      <div className="flex justify-center">
-                        <SaveWordButton 
-                          word={word.text}
-                          variant="outline"
-                          size="default"
-                        />
-                      </div>
-
-                      {/* Assessment Results */}
-                      {word.assessmentResult && (
-                        <div className="text-center space-y-2">
-                          <div className="flex items-center justify-center gap-2">
-                            <Gauge className="h-5 w-5 text-white" />
-                            <span className="text-lg font-semibold text-white">
-                              {word.assessmentResult.pronunciationScore.toFixed(1)}%
-                            </span>
-                          </div>
-                          <div className="flex justify-center gap-1">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Star
-                                key={star}
-                                className={`h-4 w-4 ${
-                                  word.assessmentResult && star <= Math.round(word.assessmentResult.pronunciationScore / 20)
-                                    ? "text-yellow-500 fill-current"
-                                    : "text-gray-300"
-                                }`}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
                 </div>
               ))}
-              
-              {/* Summary Card */}
+
+              {/* Summary card */}
               {showSummary && (
-                <div className="embla__slide flex-shrink-0 w-full mx-2 flex justify-center">
-                  <SummaryCard
-                    assessmentResults={processedWords.map(word => word.assessmentResult).filter(Boolean)}
-                    type="words"
-                    onRestart={handleRestartPractice}
-                  />
+                <div className="embla__slide flex-[0_0_100%] px-2">
+                  <Card className="bg-white shadow-lg border-0 h-full">
+                    <CardHeader>
+                      <CardTitle className="text-2xl font-bold text-[#2a5e2a] text-center">
+                        Practice Complete!
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="text-center">
+                        <p className="text-lg text-[#264653] mb-4">
+                          Great job completing your word practice session!
+                        </p>
+                        <Button
+                          onClick={handleRestartPractice}
+                          className="bg-[#57cc99] hover:bg-[#4ade80] text-white"
+                        >
+                          <RotateCw className="h-4 w-4 mr-2" />
+                          Practice Again
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Carousel Navigation */}
-          {processedWords.length > 1 && (
-            <div className="flex justify-center gap-4 mt-4">
-              <Button
-                onClick={goToPrevious}
-                variant="outline"
-                disabled={currentCarouselIndex === 0}
-                className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 transition-all duration-300 hover:scale-105"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              <span className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 rounded-lg">
-                <span className="font-semibold text-gray-700">{showSummary ? processedWords.length + 1 : currentCarouselIndex + 1}</span>
-                <span className="text-gray-500">of</span>
-                <span className="font-semibold text-gray-700">{showSummary ? processedWords.length + 1 : processedWords.length}</span>
-              </span>
-              {/* Show Finish button on 8th card, Next button otherwise */}
-              {currentCarouselIndex === processedWords.length - 1 && processedWords.length === 8 && !showSummary ? (
-                <Button
-                  onClick={handleFinishPractice}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 transition-all duration-300 hover:scale-105 font-semibold"
-                >
-                  <Flag className="h-4 w-4" />
-                  Finish
-                </Button>
-              ) : (
-                <Button
-                  onClick={goToNext}
-                  variant="outline"
-                  disabled={currentCarouselIndex === processedWords.length - 1 || showSummary}
-                  className={`transition-all duration-300 hover:scale-105 ${
-                    currentCarouselIndex === processedWords.length - 1 || showSummary
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0'
-                  }`}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          )}
+          {/* Navigation controls */}
+          <div className="flex justify-center space-x-4">
+            <Button
+              onClick={goToPrevious}
+              disabled={currentCarouselIndex === 0}
+              variant="outline"
+              size="sm"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            
+            <Button
+              onClick={goToNext}
+              disabled={currentCarouselIndex >= processedWords.length + (showSummary ? 1 : 0) - 1}
+              variant="outline"
+              size="sm"
+            >
+              Next
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
         </div>
       )}
-      {/* Letter Selection Modal */}
-      <Dialog open={showLetterModal} onOpenChange={setShowLetterModal}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {letterModalType === 'begin' ? 'Words that Begin with...' : 'Words that Include...'}
-            </DialogTitle>
-            <DialogDescription>
-              {letterModalType === 'begin' 
-                ? 'Choose a letter to practice words that start with that letter.'
-                : 'Choose a letter to practice words that contain that letter.'
-              }
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-6 gap-2 p-4">
-            {letterOptions.map((letter) => (
-              <Button
-                key={letter}
-                onClick={() => handleLetterSelection(letter)}
-                variant="outline"
-                className="h-12 text-lg font-semibold bg-[#1947e5] hover:bg-[#0F3CC9] text-white border-gray-300 transition-colors"
-              >
-                {letter}
-              </Button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

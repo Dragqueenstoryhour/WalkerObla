@@ -9,6 +9,7 @@ import { PronunciationIssue, SuggestedExercise } from '@/lib/types';
 import { synthesizeSpeech } from '@/lib/azure';
 import { useToast } from '@/hooks/use-toast';
 import { submitReadingRecording } from '@/lib/azure';
+import useAudioRecording from '@/hooks/useAudioRecording';
 import useEmblaCarousel from 'embla-carousel-react';
 
 // Helper function to get phonetic display from API
@@ -35,7 +36,6 @@ const FeedbackPanel = () => {
   );
   const [pronunciationIssues, setPronunciationIssues] = useState<PronunciationIssue[]>([]);
   const [currentlyPracticing, setCurrentlyPracticing] = useState<string | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
   const [wordAssessmentResult, setWordAssessmentResult] = useState<any>(null);
   const [isProcessingWord, setIsProcessingWord] = useState(false);
   const [isSlowMode, setIsSlowMode] = useState(false);
@@ -46,10 +46,32 @@ const FeedbackPanel = () => {
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
   const [slowPlaybackWords, setSlowPlaybackWords] = useState<Record<string, boolean>>({});
 
-  // Refs for media recording
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  // Use audio recording hook for consistent recording management
+  const {
+    isRecording,
+    recordingDuration,
+    audioUrl,
+    audioBlob,
+    startRecording,
+    stopRecording,
+    cancelRecording,
+  } = useAudioRecording({
+    onRecordingComplete: (blob) => {
+      if (currentlyPracticing) {
+        handleWordAssessment(blob, currentlyPracticing);
+      }
+    },
+    onError: (error) => {
+      console.error("Recording error:", error);
+      toast({
+        title: "Recording Error",
+        description: "Could not access microphone. Please check your browser permissions.",
+        variant: "destructive",
+      });
+      setCurrentlyPracticing(null);
+    },
+  });
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Carousel navigation functions
