@@ -857,7 +857,7 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
               </div>
 
               {/* Third Row: New Content Button */}
-              <div className="flex justify-center my-4">
+              <div className="flex justify-center my-4 mt-4">
                 <Button
                   onClick={generateNewContent}
                   disabled={isGenerating}
