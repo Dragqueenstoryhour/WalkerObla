@@ -219,11 +219,7 @@ function PracticeCarousel({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ssml: ssmlText,
-        }),
-      });
-
-      if (!response.ok) throw new Error("Failed to generate speech");
+          ssml: ssmlTextow new Error("Failed to generate speech");
 
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
