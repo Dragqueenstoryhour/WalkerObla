@@ -478,139 +478,110 @@ const FeedbackPanel = () => {
                 <div className="embla__container flex">
                   {pronunciationIssues.map((issue, index) => (
                     <div key={issue.id} className="embla__slide flex-[0_0_100%] px-2">
-                      <Card className="bg-white shadow-sm border h-full">
-                        <CardContent className="p-4">
-                          <div className="space-y-3">
-                            {/* Word display */}
-                            <div className="text-center">
-                              <div className="text-2xl font-bold text-gray-800 mb-1">
-                                {issue.word}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {issue.phonetic}
-                              </div>
-                              <div className="text-xs text-gray-400 mt-1">
-                                Current score: {Math.round(issue.score)}%
-                              </div>
-                            </div>
-
-                            {/* Controls */}
-                            <div className="flex flex-wrap gap-2 justify-center">
+                      <Card className="h-full shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
+                        <CardHeader className="text-center">
+                          <CardTitle className="text-3xl font-bold text-white">{issue.word}</CardTitle>
+                          <div className="text-sm text-white/80 mt-2">
+                            {issue.phonetic}
+                          </div>
+                          <div className="text-xs text-white/60 mt-1">
+                            Current score: {Math.round(issue.score)}%
+                          </div>
+                        </CardHeader>
+                        
+                        <CardContent className="space-y-4">
+                          {/* Recording Controls */}
+                          <div className="flex justify-center gap-2">
+                            {issue.status === "idle" && (
                               <Button
-                                onClick={() => handleTextToSpeech(index)}
-                                variant="outline"
-                                size="sm"
+                                onClick={() => startWordPractice(index)}
+                                className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
+                                disabled={isRecording || isProcessingWord}
+                              >
+                                <MicIcon className="h-5 w-5" />
+                                Practice This Word
+                              </Button>
+                            )}
+
+                            {issue.status === "recording" && (
+                              <Button
+                                onClick={stopWordPractice}
+                                variant="destructive"
                                 className="flex items-center gap-2"
                               >
-                                <Volume2 className="h-4 w-4" />
-                                Listen
+                                <StopCircleIcon className="h-4 w-4" />
+                                Stop Recording
                               </Button>
-                              
-                              <Button
-                                onClick={() => toggleSlowPlayback(issue.word)}
-                                variant="outline"
-                                size="sm"
-                                className={`flex items-center gap-2 ${slowPlaybackWords[issue.word] ? 'bg-blue-50 border-blue-300' : ''}`}
-                              >
-                                <Snail className="h-4 w-4" />
-                                {slowPlaybackWords[issue.word] ? 'Normal' : 'Slow'}
-                              </Button>
+                            )}
 
-                              <Button
-                                onClick={() => saveWordToCollection(issue.word)}
-                                variant="outline"
-                                size="sm"
-                                className="flex items-center gap-2"
-                              >
-                                <Star className="h-4 w-4" />
-                                Save
+                            {issue.status === "assessing" && (
+                              <Button disabled className="flex items-center gap-2">
+                                <RotateCw className="h-4 w-4 animate-spin" />
+                                Analyzing...
                               </Button>
-                            </div>
+                            )}
 
-                            {/* Recording section */}
-                            <div className="space-y-2">
-                              {issue.status === "idle" && (
+                            {issue.status === "complete" && (
+                              <div className="flex gap-2">
                                 <Button
-                                  onClick={() => startWordPractice(index)}
-                                  className="w-full bg-green-500 hover:bg-green-600 text-white"
-                                  disabled={isRecording || isProcessingWord}
+                                  onClick={() => {
+                                    setPronunciationIssues(issues =>
+                                      issues.map((w, idx) =>
+                                        idx === index ? { ...w, status: "idle" } : w
+                                      )
+                                    );
+                                    setWordAssessmentResult(null);
+                                  }}
+                                  className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
                                 >
-                                  <MicIcon className="h-4 w-4 mr-2" />
-                                  Practice This Word
+                                  <RotateCw className="h-5 w-5" />
+                                  Try Again
                                 </Button>
-                              )}
+                                {wordAssessmentResult && (
+                                  <div className="flex items-center px-3 py-2 bg-green-500 text-white rounded-md">
+                                    <Check className="h-4 w-4 mr-2" />
+                                    {Math.round(wordAssessmentResult.pronunciationScore)}%
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
 
-                              {issue.status === "recording" && (
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-center space-x-2">
-                                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                                    <span className="text-sm font-medium text-red-600">
-                                      Recording... {Math.floor(recordingDuration)}s
-                                    </span>
-                                  </div>
-                                  
-                                  <div className="flex gap-2">
-                                    <Button
-                                      onClick={stopWordPractice}
-                                      className="flex-1 bg-red-500 hover:bg-red-600 text-white"
-                                    >
-                                      <StopCircleIcon className="h-4 w-4 mr-2" />
-                                      Stop
-                                    </Button>
-                                    <Button
-                                      onClick={() => cancelWordPractice(index)}
-                                      variant="outline"
-                                      className="flex-1"
-                                    >
-                                      Cancel
-                                    </Button>
-                                  </div>
-                                </div>
-                              )}
-
-                              {issue.status === "assessing" && (
-                                <div className="text-center space-y-2">
-                                  <div className="flex items-center justify-center space-x-2">
-                                    <RotateCw className="h-4 w-4 animate-spin text-blue-500" />
-                                    <span className="text-sm font-medium text-gray-600">
-                                      Analyzing pronunciation...
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
-
-                              {issue.status === "complete" && (
-                                <div className="space-y-2">
-                                  <div className="bg-green-50 border border-green-200 rounded p-3 text-center">
-                                    <Check className="h-5 w-5 text-green-600 mx-auto mb-1" />
-                                    <div className="text-sm font-medium text-green-800">
-                                      Practice Complete!
-                                    </div>
-                                    {wordAssessmentResult && (
-                                      <div className="text-lg font-bold text-green-700 mt-1">
-                                        {Math.round(wordAssessmentResult.pronunciationScore)}%
-                                      </div>
-                                    )}
-                                  </div>
-                                  
-                                  <Button
-                                    onClick={() => {
-                                      setPronunciationIssues(issues =>
-                                        issues.map((w, idx) =>
-                                          idx === index ? { ...w, status: "idle" } : w
-                                        )
-                                      );
-                                      setWordAssessmentResult(null);
-                                    }}
-                                    variant="outline"
-                                    className="w-full"
-                                  >
-                                    <RotateCw className="h-4 w-4 mr-2" />
-                                    Try Again
-                                  </Button>
-                                </div>
-                              )}
-                            </div>
+                          {/* Hear and Slow Switch + Save */}
+                          <div className="flex justify-center gap-2">
+                            <Button
+                              onClick={() => handleTextToSpeech(index)}
+                              variant="outline"
+                              className="h-10 px-4 bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0"
+                            >
+                              <Ear className="h-4 w-4 mr-1" />
+                              Hear
+                            </Button>
+                            <button
+                              onClick={() => toggleSlowPlayback(issue.word)}
+                              className={`relative inline-flex h-10 w-16 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                                slowPlaybackWords[issue.word] ? 'bg-[#FFE8E8]' : 'bg-gray-300'
+                              }`}
+                              role="switch"
+                              aria-checked={slowPlaybackWords[issue.word]}
+                              aria-label="Toggle slow playback"
+                            >
+                              <span
+                                className={`inline-flex h-8 w-8 transform rounded-full bg-white transition-transform duration-200 ease-in-out items-center justify-center ${
+                                  slowPlaybackWords[issue.word] ? 'translate-x-8' : 'translate-x-1'
+                                }`}
+                              >
+                                <Snail className="h-3 w-3 text-gray-600" />
+                              </span>
+                            </button>
+                            <Button
+                              onClick={() => saveWordToCollection(issue.word)}
+                              variant="outline"
+                              className="h-10 px-4 bg-[#6366F1] hover:bg-[#5855EB] text-white border-0"
+                            >
+                              <Star className="h-4 w-4 mr-1" />
+                              Save
+                            </Button>
                           </div>
                         </CardContent>
                       </Card>
