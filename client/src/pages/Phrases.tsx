@@ -78,6 +78,7 @@ export default function Phrases() {
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(-1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [savedPhraseId, setSavedPhraseId] = useState<string | null>(null);
+  const [savedPhrases, setSavedPhrases] = useState<Set<string>>(new Set());
   const [showSharedDialog, setShowSharedDialog] = useState(false);
   const [currentlyPracticing, setCurrentlyPracticing] = useState<string | null>(null);
   const [isProcessingRecording, setIsProcessingRecording] = useState(false);
@@ -489,7 +490,7 @@ export default function Phrases() {
     }
 
     const phrase = processedPhrases[phraseIndex];
-    if (!phrase) return;
+    if (!phrase || savedPhrases.has(phrase.text)) return;
 
     try {
       const response = await fetch("/api/saved-phrases", {
@@ -508,17 +509,9 @@ export default function Phrases() {
         throw new Error("Failed to save phrase");
       }
 
-      toast({
-        title: "Phrase Saved",
-        description: "Added to your collection",
-      });
+      setSavedPhrases(prev => new Set([...prev, phrase.text]));
     } catch (error) {
       console.error("Error saving phrase:", error);
-      toast({
-        title: "Save Error",
-        description: "Failed to save phrase. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 

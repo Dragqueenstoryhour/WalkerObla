@@ -481,7 +481,7 @@ export default function Words() {
     }
 
     const word = processedWords[wordIndex];
-    if (!word) return;
+    if (!word || savedWords.has(word.text)) return;
 
     try {
       const response = await fetch("/api/saved-words", {
@@ -500,17 +500,9 @@ export default function Words() {
         throw new Error("Failed to save word");
       }
 
-      toast({
-        title: "Word Saved",
-        description: "Added to your collection",
-      });
+      setSavedWords(prev => new Set([...prev, word.text]));
     } catch (error) {
       console.error("Error saving word:", error);
-      toast({
-        title: "Save Error",
-        description: "Failed to save word. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 

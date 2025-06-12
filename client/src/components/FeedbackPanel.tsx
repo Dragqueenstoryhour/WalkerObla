@@ -257,15 +257,36 @@ const FeedbackPanel = () => {
 
   // Stop recording the word
   const stopWordPractice = async () => {
+    if (!isRecording || !currentlyPracticing) {
+      console.warn("No active recording to stop");
+      return;
+    }
+
     try {
+      // Update status to assessing immediately
+      const wordIndex = pronunciationIssues.findIndex(issue => issue.word === currentlyPracticing);
+      if (wordIndex !== -1) {
+        setPronunciationIssues((issues) =>
+          issues.map((w, idx) =>
+            idx === wordIndex ? { ...w, status: "assessing" } : w,
+          ),
+        );
+      }
+
       await stopRecording();
     } catch (error) {
       console.error("Error stopping recording:", error);
-      toast({
-        title: "Recording Error",
-        description: "Failed to stop recording. Please try again.",
-        variant: "destructive",
-      });
+      setCurrentlyPracticing(null);
+      
+      // Reset status to idle on error
+      const wordIndex = pronunciationIssues.findIndex(issue => issue.word === currentlyPracticing);
+      if (wordIndex !== -1) {
+        setPronunciationIssues((issues) =>
+          issues.map((w, idx) =>
+            idx === wordIndex ? { ...w, status: "idle" } : w,
+          ),
+        );
+      }
     }
   };
 
