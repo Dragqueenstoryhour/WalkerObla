@@ -58,7 +58,10 @@ const FeedbackPanel = () => {
   } = useAudioRecording({
     onRecordingComplete: (blob) => {
       if (currentlyPracticing) {
-        handleWordAssessment(blob, currentlyPracticing);
+        const wordIndex = pronunciationIssues.findIndex(issue => issue.word === currentlyPracticing);
+        if (wordIndex !== -1) {
+          processWordRecording(blob, wordIndex);
+        }
       }
     },
     onError: (error) => {
@@ -228,6 +231,7 @@ const FeedbackPanel = () => {
     try {
       const issue = pronunciationIssues[wordIndex];
       setCurrentlyPracticing(issue.word);
+      setWordAssessmentResult(null);
 
       // Update the issue status to recording
       setPronunciationIssues((issues) =>
@@ -238,18 +242,8 @@ const FeedbackPanel = () => {
 
       // Start recording using the hook
       await startRecording();
-
-      toast({
-        title: "Recording Started",
-        description: `Recording word: "${issue.word}"`,
-      });
     } catch (error) {
       console.error("Error starting recording:", error);
-      toast({
-        title: "Microphone Error",
-        description: "Could not access the microphone. Please check permissions.",
-        variant: "destructive",
-      });
       setCurrentlyPracticing(null);
 
       // Reset issue status

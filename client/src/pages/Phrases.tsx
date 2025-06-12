@@ -734,7 +734,7 @@ export default function Phrases() {
                             variant="outline"
                             className="h-10 px-4 bg-[#6366F1] hover:bg-[#5855EB] text-white border-0"
                           >
-                            <Star className="h-4 w-4 mr-1" />
+                            <Star className={`h-4 w-4 mr-1 ${savedPhrases.has(processedPhrases[index]?.text) ? 'fill-white' : ''}`} />
                             Save
                           </Button>
                         </div>

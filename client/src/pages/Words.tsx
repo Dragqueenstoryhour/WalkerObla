@@ -78,6 +78,7 @@ export default function Words() {
   const [currentWordIndex, setCurrentWordIndex] = useState(-1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [savedWordId, setSavedWordId] = useState<string | null>(null);
+  const [savedWords, setSavedWords] = useState<Set<string>>(new Set());
   const [showSharedDialog, setShowSharedDialog] = useState(false);
   const [currentlyPracticing, setCurrentlyPracticing] = useState<string | null>(null);
   const [isProcessingRecording, setIsProcessingRecording] = useState(false);
@@ -725,7 +726,7 @@ export default function Words() {
                             variant="outline"
                             className="h-10 px-4 bg-[#6366F1] hover:bg-[#5855EB] text-white border-0"
                           >
-                            <Star className="h-4 w-4 mr-1" />
+                            <Star className={`h-4 w-4 mr-1 ${savedWords.has(processedWords[index]?.text) ? 'fill-white' : ''}`} />
                             Save
                           </Button>
                         </div>
