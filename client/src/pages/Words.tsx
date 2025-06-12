@@ -884,26 +884,18 @@ export default function Words() {
           
           <div className="flex items-start space-x-6">
             {/* Animation display - left aligned */}
-            <div className="relative w-48 h-48 bg-blue-100 rounded-lg overflow-hidden border-2 border-blue-200 flex-shrink-0">
-              <img
-                key={currentVisemeId}
-                src={visemeImages[currentVisemeId as keyof typeof visemeImages]}
-                alt={`Lip animation frame ${currentVisemeId}`}
-                className="w-full h-full object-cover shadow-lg"
-                style={{
-                  opacity: 1,
-                  transform: isPlayingVisemes ? 'scale(1.01)' : 'scale(1)',
-                  transition: 'transform 0.1s ease-out',
-                  filter: isPlayingVisemes ? 'brightness(1.05)' : 'brightness(1)'
-                }}
-                onLoad={() => {
-                  console.log(`Viseme image loaded: ${currentVisemeId}`);
-                }}
-                onError={(e) => {
-                  console.error(`Failed to load viseme image ${currentVisemeId}:`, e);
-                }}
-              />
-
+            <div 
+              className="relative w-48 h-48 rounded-lg overflow-hidden border-2 border-blue-200 flex-shrink-0 bg-cover bg-center bg-no-repeat"
+              style={{
+                backgroundImage: `url(${visemeImages[currentVisemeId as keyof typeof visemeImages]})`,
+                transform: isPlayingVisemes ? 'scale(1.01)' : 'scale(1)',
+                transition: 'transform 0.1s ease-out',
+                filter: isPlayingVisemes ? 'brightness(1.05)' : 'brightness(1)',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat'
+              }}
+            >
               {/* Loading overlay */}
               {isGeneratingVisemes && (
                 <div className="absolute inset-0 bg-blue-900 bg-opacity-50 flex items-center justify-center">
