@@ -240,6 +240,7 @@ export default function Phrases() {
       const phrase = processedPhrases[phraseIndex];
       setCurrentlyPracticing(phrase.id);
       setCurrentPhraseIndex(phraseIndex);
+      currentPhraseIndexRef.current = phraseIndex; // Set ref to ensure accurate callback execution
       setPhraseAssessmentResult(null);
 
       // Update the phrase status to recording
@@ -264,6 +265,7 @@ export default function Phrases() {
         variant: "destructive",
       });
       setCurrentlyPracticing(null);
+      currentPhraseIndexRef.current = -1; // Reset ref on error
 
       // Reset phrase status
       setProcessedPhrases((phrases) =>
@@ -370,6 +372,7 @@ export default function Phrases() {
     // Cancel recording using the hook
     cancelRecording();
     setCurrentlyPracticing(null);
+    currentPhraseIndexRef.current = -1; // Reset ref on cancel
 
     // Reset phrase status
     setProcessedPhrases((phrases) =>
