@@ -48,10 +48,12 @@ import {
   Snail,
   Flag,
   Ear,
+  Eye,
 } from "lucide-react";
 import { useDifficulty } from "@/contexts/DifficultyContext";
 import { DifficultyDropdown } from "@/components/difficulty/SimplifiedDifficultySelector";
 import { SummaryCard } from "@/components/SummaryCard";
+import { VisemePopup } from "@/components/VisemePopup";
 import useEmblaCarousel from 'embla-carousel-react';
 
 interface ProcessedWord {
@@ -88,6 +90,8 @@ export default function Words() {
   const [showSummary, setShowSummary] = useState(false);
   const [showLetterModal, setShowLetterModal] = useState(false);
   const [letterModalType, setLetterModalType] = useState<'begin' | 'include'>('begin');
+  const [showVisemePopup, setShowVisemePopup] = useState(false);
+  const [visemeText, setVisemeText] = useState("");
 
   // Carousel state
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
@@ -497,6 +501,12 @@ export default function Words() {
     }));
   };
 
+  // Handle opening viseme popup
+  const handleSeeViseme = (text: string) => {
+    setVisemeText(text);
+    setShowVisemePopup(true);
+  };
+
   // Save a word to user's collection
   const saveWordToCollection = async (wordIndex: number) => {
     if (!isAuthenticated) {
@@ -777,6 +787,7 @@ export default function Words() {
                       </div>
 
                       {/* Controls */}
+                      {/* First row: Listen, Slow, and See buttons */}
                       <div className="flex flex-wrap gap-2 justify-center">
                         <Button
                           onClick={() => handleTextToSpeech(index)}
@@ -798,6 +809,19 @@ export default function Words() {
                           {slowPlaybackWords[word.id] ? 'Normal' : 'Slow'}
                         </Button>
 
+                        <Button
+                          onClick={() => handleSeeViseme(word.text)}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2"
+                        >
+                          <Eye className="h-4 w-4" />
+                          See
+                        </Button>
+                      </div>
+
+                      {/* Second row: Save button */}
+                      <div className="flex justify-center mt-2">
                         <Button
                           onClick={() => saveWordToCollection(index)}
                           variant="outline"
@@ -988,6 +1012,14 @@ export default function Words() {
           </div>
         </div>
       )}
+
+      {/* Viseme Animation Popup */}
+      <VisemePopup
+        isOpen={showVisemePopup}
+        onClose={() => setShowVisemePopup(false)}
+        text={visemeText}
+        speed={0.6}
+      />
     </div>
   );
 }
