@@ -479,7 +479,7 @@ const FeedbackPanel = () => {
         throw new Error("Failed to save word");
       }
 
-      setSavedWords(prev => new Set([...prev, word]));
+      setSavedWords(prev => new Set(Array.from(prev).concat(word)));
     } catch (error) {
       console.error("Error saving word:", error);
     }
@@ -491,7 +491,8 @@ const FeedbackPanel = () => {
 
     return pronunciationIssues.slice(0, 3).map((issue, index) => ({
       id: `exercise-${index}`,
-      type: 'word_practice',
+      title: `Practice "${issue.word}"`,
+      type: 'word_practice' as const,
       word: issue.word,
       description: `Practice pronouncing "${issue.word}" clearly`,
       difficulty: issue.score < 50 ? 'hard' : issue.score < 75 ? 'medium' : 'easy'
@@ -616,27 +617,54 @@ const FeedbackPanel = () => {
                             )}
 
                             {issue.status === "complete" && (
-                              <div className="flex gap-2">
-                                <Button
-                                  onClick={() => {
-                                    setPronunciationIssues(issues =>
-                                      issues.map((w, idx) =>
-                                        idx === index ? { ...w, status: "idle" } : w
-                                      )
-                                    );
-                                    setWordAssessmentResult(null);
-                                  }}
-                                  className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
-                                >
-                                  <RotateCw className="h-5 w-5" />
-                                  Try Again
-                                </Button>
-                                {wordAssessmentResult && (
-                                  <div className="flex items-center px-3 py-2 bg-green-500 text-white rounded-md">
-                                    <Check className="h-4 w-4 mr-2" />
-                                    {Math.round(wordAssessmentResult.pronunciationScore)}%
+                              <div className="space-y-4">
+                                {/* Score Display */}
+                                {issue.assessmentResult && (
+                                  <div className="flex justify-center">
+                                    <div className="flex items-center px-4 py-2 bg-green-500 text-white rounded-md">
+                                      <Check className="h-4 w-4 mr-2" />
+                                      Score: {Math.round(issue.assessmentResult.pronunciationScore)}%
+                                    </div>
                                   </div>
                                 )}
+                                
+                                {/* Action Buttons */}
+                                <div className="flex justify-center gap-2">
+                                  <Button
+                                    onClick={() => {
+                                      setPronunciationIssues(issues =>
+                                        issues.map((w, idx) =>
+                                          idx === index ? { ...w, status: "idle" } : w
+                                        )
+                                      );
+                                      setWordAssessmentResult(null);
+                                    }}
+                                    className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
+                                  >
+                                    <RotateCw className="h-5 w-5" />
+                                    Try Again
+                                  </Button>
+                                  
+                                  {issue.recordingUrl && (
+                                    <Button
+                                      onClick={() => {
+                                        const audio = new Audio(issue.recordingUrl);
+                                        audio.play().catch(error => {
+                                          console.error('Error playing recording:', error);
+                                          toast({
+                                            title: "Playback Error",
+                                            description: "Could not play your recording. Please try again.",
+                                            variant: "destructive",
+                                          });
+                                        });
+                                      }}
+                                      className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
+                                    >
+                                      <Volume2 className="h-5 w-5" />
+                                      Listen to Me
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
                             )}
                           </div>

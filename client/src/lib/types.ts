@@ -42,9 +42,12 @@ export interface PronunciationIssue {
 }
 
 export interface SuggestedExercise {
+  id: string;
   title: string;
   description: string;
-  type: 'pronunciation' | 'fluency' | 'rhythm';
+  type: 'pronunciation' | 'fluency' | 'rhythm' | 'word_practice';
+  word?: string;
+  difficulty?: string;
 }
 
 export interface Settings {
