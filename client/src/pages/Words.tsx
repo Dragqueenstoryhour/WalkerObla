@@ -751,11 +751,6 @@ export default function Words() {
 
     } catch (error) {
       console.error("Error generating visemes:", error);
-      toast({
-        title: "Animation Error",
-        description: "Failed to generate lip animation. Please try again.",
-        variant: "destructive",
-      });
       setShowVisemeDialog(false);
     } finally {
       setIsGeneratingVisemes(false);
@@ -765,11 +760,6 @@ export default function Words() {
   // Play viseme animation with comprehensive error handling
   const playVisemeAnimation = async () => {
     if (!visemeAudioRef.current || !visemeData.length || !visemeAudioUrl) {
-      toast({
-        title: "Error",
-        description: "No animation data available",
-        variant: "destructive",
-      });
       return;
     }
 
