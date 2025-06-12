@@ -27,6 +27,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { PronunciationAssessmentResult } from "@/lib/types";
+import { queryClient } from "@/lib/queryClient";
 import {
   MicIcon,
   StopCircleIcon,
@@ -519,7 +520,14 @@ export default function Phrases() {
         throw new Error("Failed to save phrase");
       }
 
-      setSavedPhrases(prev => new Set([...prev, phrase.text]));
+      setSavedPhrases(prev => {
+        const newSet = new Set(prev);
+        newSet.add(phrase.text);
+        return newSet;
+      });
+      
+      // Invalidate the saved phrases query to refresh My Journey
+      queryClient.invalidateQueries({ queryKey: ['/api/user/saved-phrases'] });
       
       toast({
         title: "Phrase Saved",
