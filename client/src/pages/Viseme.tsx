@@ -172,9 +172,8 @@ export default function Viseme() {
     setIsPlaying(true);
     setCurrentVisemeId(0); // Start with neutral position
 
-    // Set audio playback rate based on speed slider
-    const speedMultiplier = speed[0] / 100;
-    audioRef.current.playbackRate = speedMultiplier;
+    // Don't adjust playback rate - speed is already applied during audio generation
+    audioRef.current.playbackRate = 1.0;
     audioRef.current.currentTime = 0;
     
     const playPromise = audioRef.current.play();
@@ -182,7 +181,7 @@ export default function Viseme() {
     if (playPromise !== undefined) {
       playPromise.then(() => {
         // Audio started successfully, now sync visemes
-        // Use original timing since audio playback rate handles the speed
+        // Since audio speed is pre-applied during generation, use original timing
         visemeData.forEach((viseme, index) => {
           const timeout = setTimeout(() => {
             setCurrentVisemeId(viseme.visemeId);
@@ -196,7 +195,7 @@ export default function Viseme() {
         if (lastViseme) {
           const finalTimeout = setTimeout(() => {
             setCurrentVisemeId(0);
-          }, lastViseme.audioOffset + 300); // Add 300ms buffer
+          }, lastViseme.audioOffset + 200); // Shorter buffer since timing is more precise
           
           animationTimeoutsRef.current.push(finalTimeout);
         }

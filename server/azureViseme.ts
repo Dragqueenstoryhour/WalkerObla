@@ -339,8 +339,18 @@ export async function generateSpeechWithVisemes(
     const durationMs = (audioBuffer.length / (16000 * 2)) * 1000;
     console.log(`Audio generated successfully. Duration: ${durationMs}ms, Buffer size: ${audioBuffer.length} bytes`);
     
-    // Generate visemes based on text analysis and audio duration
+    // Generate visemes based on text analysis and actual audio duration
     const visemes = generateBasicVisemes(text, durationMs);
+    
+    // Scale viseme timing to match the actual audio duration
+    if (visemes.length > 0) {
+      const maxOriginalOffset = Math.max(...visemes.map(v => v.audioOffset));
+      const scalingFactor = durationMs / maxOriginalOffset;
+      
+      visemes.forEach(viseme => {
+        viseme.audioOffset = viseme.audioOffset * scalingFactor;
+      });
+    }
     
     console.log(`Generated ${visemes.length} visemes for lip sync animation`);
     
