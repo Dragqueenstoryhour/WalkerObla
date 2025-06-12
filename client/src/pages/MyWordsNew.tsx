@@ -650,7 +650,7 @@ export default function MyWords() {
         difficulty: (p.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
         status: "idle" as const,
         source: p.source || 'words' // Ensure source is carried over with fallback
-      }));
+      } as ProcessedItem));
 
       const phrasesOnly = phrases.filter(p => p.source === 'phrases' || p.source === 'phrase_practice').map(p => ({
         id: `phrase-${p.id}`,
@@ -659,7 +659,7 @@ export default function MyWords() {
         difficulty: (p.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
         status: "idle" as const,
         source: p.source || 'phrases' // Ensure source is carried over with fallback
-      }));
+      } as ProcessedItem));
 
       const readings = phrases.filter(p => p.source === 'reader_content' || p.source === 'reading').map(p => ({
         id: `reading-${p.id}`,
@@ -668,7 +668,7 @@ export default function MyWords() {
         difficulty: (p.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
         status: "idle" as const,
         source: p.source || 'reading' // Ensure source is carried over with fallback
-      }));
+      } as ProcessedItem));
 
       // Shuffle each category
       setShuffledWords([...words].sort(() => Math.random() - 0.5));
