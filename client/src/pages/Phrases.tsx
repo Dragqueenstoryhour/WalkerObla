@@ -110,8 +110,13 @@ export default function Phrases() {
     cancelRecording,
   } = useAudioRecording({
     onRecordingComplete: (blob) => {
-      if (currentPhraseIndex >= 0) {
-        processPhraseRecording(blob, currentPhraseIndex);
+      // Use a ref to get the current phrase index to avoid stale closure
+      const currentIndex = currentPhraseIndexRef.current;
+      if (currentIndex >= 0 && currentIndex < processedPhrases.length) {
+        processPhraseRecording(blob, currentIndex);
+      } else {
+        console.warn("Invalid phrase index when recording completed:", currentIndex);
+        setIsProcessingRecording(false);
       }
     },
     onError: (error) => {
@@ -122,10 +127,12 @@ export default function Phrases() {
         variant: "destructive",
       });
       setCurrentlyPracticing(null);
+      setIsProcessingRecording(false);
     },
   });
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const currentPhraseIndexRef = useRef<number>(-1);
 
   // Predefined phrase topics
   const phraseTopics = [

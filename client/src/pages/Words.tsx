@@ -197,8 +197,13 @@ export default function Words() {
     cancelRecording,
   } = useAudioRecording({
     onRecordingComplete: (blob) => {
-      if (currentWordIndex >= 0) {
-        processWordRecording(blob, currentWordIndex);
+      // Use a ref to get the current word index to avoid stale closure
+      const currentIndex = currentWordIndexRef.current;
+      if (currentIndex >= 0 && currentIndex < processedWords.length) {
+        processWordRecording(blob, currentIndex);
+      } else {
+        console.warn("Invalid word index when recording completed:", currentIndex);
+        setIsProcessingRecording(false);
       }
     },
     onError: (error) => {
@@ -209,6 +214,7 @@ export default function Words() {
         variant: "destructive",
       });
       setCurrentlyPracticing(null);
+      setIsProcessingRecording(false);
     },
   });
 
@@ -216,6 +222,7 @@ export default function Words() {
   const visemeAudioRef = useRef<HTMLAudioElement | null>(null);
   const animationTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const currentWordIndexRef = useRef<number>(-1);
 
   // Predefined word topics
   const wordTopics = [
@@ -403,6 +410,7 @@ export default function Words() {
       const word = processedWords[wordIndex];
       setCurrentlyPracticing(word.id);
       setCurrentWordIndex(wordIndex);
+      currentWordIndexRef.current = wordIndex; // Set ref to ensure accurate callback execution
       setWordAssessmentResult(null);
 
       // Update the word status to recording
@@ -427,6 +435,7 @@ export default function Words() {
         variant: "destructive",
       });
       setCurrentlyPracticing(null);
+      currentWordIndexRef.current = -1; // Reset ref on error
 
       // Reset word status
       setProcessedWords((words) =>
@@ -546,6 +555,7 @@ export default function Words() {
     // Cancel recording using the hook
     cancelRecording();
     setCurrentlyPracticing(null);
+    currentWordIndexRef.current = -1; // Reset ref on cancel
 
     // Reset word status
     setProcessedWords((words) =>
