@@ -287,6 +287,9 @@ export async function generateSpeechWithVisemes(
   // Set the voice name
   speechConfig.speechSynthesisVoiceName = voice;
   
+  // Set audio format to WAV for better browser compatibility
+  speechConfig.speechSynthesisOutputFormat = speechsdk.SpeechSynthesisOutputFormat.Riff16Khz16BitMonoPcm;
+  
   // Enable viseme events
   speechConfig.setProperty(speechsdk.PropertyId.SpeechServiceResponse_RequestSentenceBoundary, "true");
   
@@ -340,8 +343,21 @@ export async function generateSpeechWithVisemes(
 
     // Event for when synthesis is completed
     synthesizer.synthesisCompleted = (s, e) => {
-      // Calculate the total duration from the audio data
-      durationMs = e.result.audioDuration / 10000; // Convert 100-nanosecond units to milliseconds
+      try {
+        // Calculate the total duration from the audio data
+        if (e.result.audioDuration) {
+          durationMs = e.result.audioDuration / 10000; // Convert 100-nanosecond units to milliseconds
+        } else {
+          // Calculate duration from audio buffer if audioDuration is not available
+          // For 16kHz 16-bit mono PCM: duration = bytes / (16000 * 2)
+          if (audioData && audioData.length > 0) {
+            durationMs = (audioData.length / (16000 * 2)) * 1000;
+          }
+        }
+        console.log(`Audio synthesis completed. Duration: ${durationMs}ms, Buffer size: ${audioData?.length || 0} bytes`);
+      } catch (error) {
+        console.error('Error calculating audio duration:', error);
+      }
     };
     
     // Start the synthesis

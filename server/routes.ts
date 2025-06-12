@@ -697,7 +697,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`✅ Generated ${visemeData.visemes.length} visemes with ${visemeData.duration.toFixed(2)}s duration`);
       
-      res.json(visemeData);
+      // Convert the audio buffer to base64 for easier transport
+      const audioBase64 = visemeData.audioBuffer.toString('base64');
+      
+      res.json({
+        visemes: visemeData.visemes,
+        audioBuffer: audioBase64,
+        duration: visemeData.duration
+      });
     } catch (error) {
       console.error('Viseme generation error:', error);
       res.status(500).json({ 

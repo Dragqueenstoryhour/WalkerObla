@@ -62,7 +62,7 @@ interface VisemeData {
 
 interface VisemeResponse {
   visemes: VisemeData[];
-  audioBuffer: ArrayBuffer;
+  audioBuffer: string; // base64 encoded audio data
   duration: number;
 }
 
@@ -123,8 +123,14 @@ export default function Viseme() {
 
       const data: VisemeResponse = await response.json();
       
-      // Create audio URL from buffer
-      const audioBlob = new Blob([new Uint8Array(data.audioBuffer)], { type: "audio/wav" });
+      // Convert base64 audio data to blob URL
+      const binaryString = atob(data.audioBuffer);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      const audioBlob = new Blob([bytes.buffer], { type: "audio/wav" });
       const url = URL.createObjectURL(audioBlob);
       setAudioUrl(url);
       setVisemeData(data.visemes);
@@ -162,29 +168,69 @@ export default function Viseme() {
     setIsPlaying(true);
     setCurrentVisemeId(0); // Start with neutral position
 
-    // Schedule viseme changes based on audio offsets
-    visemeData.forEach((viseme) => {
-      const timeoutMs = viseme.audioOffset / 10000; // Convert from ticks to milliseconds
-      
-      const timeout = setTimeout(() => {
-        setCurrentVisemeId(viseme.visemeId);
-      }, timeoutMs);
-      
-      animationTimeoutsRef.current.push(timeout);
-    });
-
-    // Play audio
+    // Play audio first
     audioRef.current.currentTime = 0;
-    audioRef.current.play();
+    const playPromise = audioRef.current.play();
+
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        // Audio started successfully, now sync visemes
+        const startTime = Date.now();
+        
+        // Schedule viseme changes based on audio offsets
+        visemeData.forEach((viseme, index) => {
+          const timeoutMs = viseme.audioOffset; // Already in milliseconds
+          
+          const timeout = setTimeout(() => {
+            setCurrentVisemeId(viseme.visemeId);
+          }, timeoutMs);
+          
+          animationTimeoutsRef.current.push(timeout);
+        });
+
+        // Add a final timeout to return to neutral after the last viseme
+        const lastViseme = visemeData[visemeData.length - 1];
+        if (lastViseme) {
+          const finalTimeout = setTimeout(() => {
+            setCurrentVisemeId(0);
+          }, lastViseme.audioOffset + 500); // Add 500ms buffer
+          
+          animationTimeoutsRef.current.push(finalTimeout);
+        }
+      }).catch((error) => {
+        console.error("Audio playback failed:", error);
+        setIsPlaying(false);
+        toast({
+          title: "Audio Error",
+          description: "Failed to play audio. The audio format may not be supported.",
+          variant: "destructive",
+        });
+      });
+    }
 
     // Handle audio end
     const handleAudioEnd = () => {
       setIsPlaying(false);
       setCurrentVisemeId(0); // Return to neutral
       audioRef.current?.removeEventListener("ended", handleAudioEnd);
+      audioRef.current?.removeEventListener("error", handleAudioError);
+    };
+
+    const handleAudioError = (e: Event) => {
+      console.error("Audio error:", e);
+      setIsPlaying(false);
+      setCurrentVisemeId(0);
+      toast({
+        title: "Audio Error",
+        description: "Audio playback encountered an error.",
+        variant: "destructive",
+      });
+      audioRef.current?.removeEventListener("ended", handleAudioEnd);
+      audioRef.current?.removeEventListener("error", handleAudioError);
     };
 
     audioRef.current.addEventListener("ended", handleAudioEnd);
+    audioRef.current.addEventListener("error", handleAudioError);
   };
 
   const stopAnimation = () => {
@@ -293,15 +339,19 @@ export default function Viseme() {
             <CardTitle>Lip Animation</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col items-center">
-            <div className="relative w-64 h-64 mb-4">
+            <div className="relative w-64 h-64 mb-4 bg-gray-100 rounded-lg overflow-hidden">
               <img
                 src={visemeImages[currentVisemeId as keyof typeof visemeImages]}
                 alt={`Viseme ${currentVisemeId}`}
-                className="w-full h-full object-cover rounded-lg shadow-lg transition-opacity duration-100"
+                className="w-full h-full object-cover shadow-lg"
                 style={{
                   opacity: 1,
-                  transform: isPlaying ? 'scale(1.02)' : 'scale(1)',
-                  transition: 'opacity 0.1s ease-in-out, transform 0.3s ease-in-out'
+                  transform: isPlaying ? 'scale(1.01)' : 'scale(1)',
+                  transition: 'all 0.08s ease-out',
+                  filter: isPlaying ? 'brightness(1.05)' : 'brightness(1)'
+                }}
+                onLoad={() => {
+                  // Ensure smooth transitions by preloading
                 }}
               />
               

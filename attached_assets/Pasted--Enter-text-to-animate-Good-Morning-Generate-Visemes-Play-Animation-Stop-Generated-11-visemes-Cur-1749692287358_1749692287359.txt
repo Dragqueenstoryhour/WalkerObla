@@ -1,0 +1,49 @@
+
+Enter text to animate:
+Good Morning
+Generate Visemes
+Play Animation
+Stop
+Generated: 11 visemes
+
+Current Viseme ID: 0
+
+▶ Animation playing...
+
+Lip Animation
+Viseme 0Viseme 0
+Animation playing
+
+Viseme Sequence Preview
+Viseme 00
+Viseme 2020
+Viseme 44
+Viseme 1919
+Viseme 2121
+Viseme 33
+Viseme 1313
+Viseme 1919
+Viseme 66
+Viseme 2020
+Viseme 00
+[plugin:runtime-error-plugin] The element has no supported sources.
+    at <anonymous> (/home/runner/workspace/node_modules/@replit/vite-plugin-runtime-error-modal/src/index.ts:29:37)
+    at <anonymous> (/home/runner/workspace/node_modules/vite/dist/node/chunks/dep-CHZK6zbr.js:59415:39)
+    at Set.forEach (<anonymous>)
+    at WebSocket.<anonymous> (/home/runner/workspace/node_modules/vite/dist/node/chunks/dep-CHZK6zbr.js:59415:17)
+    at WebSocket.emit (node:events:518:28)
+    at Receiver.receiverOnMessage (/home/runner/workspace/node_modules/vite/dist/node/chunks/dep-CHZK6zbr.js:58409:22)
+    at Receiver.emit (node:events:518:28)
+    at Receiver.dataMessage (/home/runner/workspace/node_modules/vite/dist/node/chunks/dep-CHZK6zbr.js:55989:14)
+    at Receiver.getData (/home/runner/workspace/node_modules/vite/dist/node/chunks/dep-CHZK6zbr.js:55889:10)
+    at Receiver.startLoop (/home/runner/workspace/node_modules/vite/dist/node/chunks/dep-CHZK6zbr.js:55560:16)
+    at Receiver._write (/home/runner/workspace/node_modules/vite/dist/node/chunks/dep-CHZK6zbr.js:55487:10)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Socket.socketOnData (/home/runner/workspace/node_modules/vite/dist/node/chunks/dep-CHZK6zbr.js:58544:37)
+    at Socket.emit (node:events:518:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at TCP.onStreamRead (node:internal/stream_base_commons:191:23
