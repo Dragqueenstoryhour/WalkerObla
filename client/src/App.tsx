@@ -17,6 +17,7 @@ import MyWordsNew from "@/pages/MyWordsNew";
 import Profile from "@/pages/Profile";
 import Animation from "@/pages/Animation";
 import AzureAnimation from "@/pages/AzureAnimation";
+import Viseme from "@/pages/Viseme";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ReadingProvider } from "./contexts/ReadingContext";
 import { GameProvider } from "./contexts/GameContext";
@@ -140,6 +141,7 @@ function Router() {
         <Route path="/profile" component={Profile} />
         <Route path="/animation" component={Animation} />
         <Route path="/azure-animation" component={AzureAnimation} />
+        <Route path="/viseme" component={Viseme} />
         <Route component={NotFound} />
       </Switch>
     </>

@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { assessPronunciation, synthesizeSpeech, synthesizeSpeechFromSSML, getWordPronunciation } from "./azure";
+import { generateSpeechWithVisemes } from "./azureViseme";
 import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases, generateSampleContent, generateSpeechResponse } from "./openai";
 import multer from "multer";
 import { z } from "zod";
@@ -674,6 +675,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error saving phrase:", error);
       res.status(500).json({ message: "Failed to save phrase" });
+    }
+  });
+
+  // Viseme generation endpoint
+  app.post('/api/visemes/generate', async (req, res) => {
+    try {
+      const { text, voice, format } = req.body;
+      
+      if (!text) {
+        return res.status(400).json({ error: 'Text is required' });
+      }
+
+      console.log(`🎭 Generating visemes for text: "${text}"`);
+      
+      const visemeData = await generateSpeechWithVisemes(
+        text,
+        voice || "en-US-AriaNeural",
+        format || "svg"
+      );
+      
+      console.log(`✅ Generated ${visemeData.visemes.length} visemes with ${visemeData.duration.toFixed(2)}s duration`);
+      
+      res.json(visemeData);
+    } catch (error) {
+      console.error('Viseme generation error:', error);
+      res.status(500).json({ 
+        error: 'Viseme generation failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
