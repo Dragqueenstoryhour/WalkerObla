@@ -291,6 +291,11 @@ export async function generateSpeechWithVisemes(
   // Set audio format to WAV for better browser compatibility
   speechConfig.speechSynthesisOutputFormat = speechsdk.SpeechSynthesisOutputFormat.Riff16Khz16BitMonoPcm;
   
+  // Configure connection settings for better reliability
+  speechConfig.setProperty(speechsdk.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "5000");
+  speechConfig.setProperty(speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "1000");
+  speechConfig.setProperty(speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, "1000");
+  
   // Enable viseme events
   speechConfig.setProperty(speechsdk.PropertyId.SpeechServiceResponse_RequestSentenceBoundary, "true");
   
@@ -361,49 +366,52 @@ export async function generateSpeechWithVisemes(
       }
     };
     
-    // Create SSML with speed control
-    const ssml = `
-      <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
-        <voice name="${voice}">
-          <prosody rate="${speed}x">${text}</prosody>
-        </voice>
-      </speak>
-    `.trim();
+    // For now, use plain text synthesis to ensure stability
+    // Speed control will be implemented via playback rate adjustment in frontend
+    console.log(`Synthesizing text: "${text}" (speed control handled on frontend)`);
+    
+    const attemptSynthesis = () => {
+      synthesizer.speakTextAsync(
+        text,
+        handleResult,
+        handleError
+      );
+    };
 
-    // Start the synthesis with SSML
-    synthesizer.speakSsmlAsync(
-      ssml,
-      result => {
-        if (result.reason === speechsdk.ResultReason.SynthesizingAudioCompleted) {
-          // Sort visemes by audio offset
-          visemes.sort((a, b) => a.audioOffset - b.audioOffset);
-          
-          if (!audioData || !audioReceived) {
-            reject(new Error("No audio data received from Azure Speech service"));
-            return;
-          }
-          
-          // Return the consolidated data
-          resolve({
-            visemes,
-            audioBuffer: audioData,
-            duration: durationMs / 1000 // Convert to seconds for frontend
-          });
-        } else {
-          const error = `Speech synthesis failed: ${result.reason}`;
-          console.error(error);
-          reject(new Error(error));
+    const handleResult = (result: any) => {
+      if (result.reason === speechsdk.ResultReason.SynthesizingAudioCompleted) {
+        // Sort visemes by audio offset
+        visemes.sort((a, b) => a.audioOffset - b.audioOffset);
+        
+        if (!audioData || !audioReceived) {
+          reject(new Error("No audio data received from Azure Speech service"));
+          return;
         }
         
-        // Clean up
-        synthesizer.close();
-      },
-      error => {
-        console.error(`Error synthesizing speech: ${error}`);
-        synthesizer.close();
-        reject(error);
+        // Return the consolidated data
+        resolve({
+          visemes,
+          audioBuffer: audioData,
+          duration: durationMs / 1000 // Convert to seconds for frontend
+        });
+      } else {
+        const error = `Speech synthesis failed: ${result.reason}`;
+        console.error(error, result);
+        reject(new Error(error));
       }
-    );
+      
+      // Clean up
+      synthesizer.close();
+    };
+
+    const handleError = (error: any) => {
+      console.error(`Error synthesizing speech:`, error);
+      synthesizer.close();
+      reject(new Error(`Speech synthesis error: ${error.toString()}`));
+    };
+
+    // Start synthesis
+    attemptSynthesis();
   });
 }
 

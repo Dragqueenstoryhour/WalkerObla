@@ -172,24 +172,21 @@ export default function Viseme() {
     setIsPlaying(true);
     setCurrentVisemeId(0); // Start with neutral position
 
-    // Play audio first
+    // Set audio playback rate based on speed slider
+    const speedMultiplier = speed[0] / 100;
+    audioRef.current.playbackRate = speedMultiplier;
     audioRef.current.currentTime = 0;
+    
     const playPromise = audioRef.current.play();
 
     if (playPromise !== undefined) {
       playPromise.then(() => {
         // Audio started successfully, now sync visemes
-        const startTime = Date.now();
-        
-        // Schedule viseme changes based on audio offsets, accounting for speed
-        const speedMultiplier = speed[0] / 100;
+        // Use original timing since audio playback rate handles the speed
         visemeData.forEach((viseme, index) => {
-          // Adjust timing based on speed - slower speeds need longer delays
-          const adjustedTimeoutMs = viseme.audioOffset / speedMultiplier;
-          
           const timeout = setTimeout(() => {
             setCurrentVisemeId(viseme.visemeId);
-          }, adjustedTimeoutMs);
+          }, viseme.audioOffset);
           
           animationTimeoutsRef.current.push(timeout);
         });
@@ -199,7 +196,7 @@ export default function Viseme() {
         if (lastViseme) {
           const finalTimeout = setTimeout(() => {
             setCurrentVisemeId(0);
-          }, lastViseme.audioOffset + 500); // Add 500ms buffer
+          }, lastViseme.audioOffset + 300); // Add 300ms buffer
           
           animationTimeoutsRef.current.push(finalTimeout);
         }
