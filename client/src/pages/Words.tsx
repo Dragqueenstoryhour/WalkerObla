@@ -142,15 +142,6 @@ export default function Words() {
     "Transportation"
   ];
 
-  // Update carousel index when slide changes
-  useEffect(() => {
-    if (emblaApi) {
-      emblaApi.on('select', () => {
-        setCurrentCarouselIndex(emblaApi.selectedScrollSnap());
-      });
-    }
-  }, [emblaApi]);
-
   // Auto-load common words when the page opens
   useEffect(() => {
     if (!shareId) {
@@ -642,69 +633,99 @@ export default function Words() {
               <div className="embla__container flex">
                 {processedWords.map((word, index) => (
                   <div key={word.id} className="embla__slide flex-[0_0_100%] px-2">
-                    <Card className="bg-white shadow-lg border-0 h-full card-content">
-                      <CardHeader className="pb-4">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg font-semibold text-[#2a5e2a]">
-                            Word {index + 1}
-                          </CardTitle>
-                          <Badge 
-                            variant={
-                              word.status === "complete" ? "default" :
-                              word.status === "recording" ? "secondary" :
-                              word.status === "assessing" ? "outline" : "outline"
-                            }
-                            className={
-                              word.status === "complete" ? "bg-green-100 text-green-800" :
-                              word.status === "recording" ? "bg-red-100 text-red-800" :
-                              word.status === "assessing" ? "bg-yellow-100 text-yellow-800" :
-                              "bg-gray-100 text-gray-800"
-                            }
-                          >
-                            {word.status === "complete" ? "Complete" :
-                             word.status === "recording" ? "Recording" :
-                             word.status === "assessing" ? "Analyzing" : "Ready"}
-                          </Badge>
-                        </div>
+                    <Card className="h-full shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
+                      <CardHeader className="text-center">
+                        <CardTitle className="text-3xl font-bold text-white">{word.text}</CardTitle>
                       </CardHeader>
                       
                       <CardContent className="space-y-4">
-                        {/* Word text */}
-                        <div className="bg-[#f0f9ff] border border-[#bae6fd] rounded-lg p-4">
-                          <p className="text-3xl font-bold text-[#0c4a6e] text-center leading-relaxed">
-                            {word.text}
-                          </p>
+                        {/* Recording Controls */}
+                        <div className="flex justify-center gap-2">
+                          {word.status === "idle" && (
+                            <Button
+                              onClick={() => startWordPractice(index)}
+                              className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
+                              disabled={isRecording || isProcessingRecording}
+                            >
+                              <Mic className="h-5 w-5" />
+                              Start Recording
+                            </Button>
+                          )}
+
+                          {word.status === "recording" && (
+                            <Button
+                              onClick={stopWordPractice}
+                              variant="destructive"
+                              className="flex items-center gap-2"
+                            >
+                              <StopCircleIcon className="h-4 w-4" />
+                              Stop Recording
+                            </Button>
+                          )}
+
+                          {word.status === "assessing" && (
+                            <Button disabled className="flex items-center gap-2">
+                              <RotateCw className="h-4 w-4 animate-spin" />
+                              Analyzing...
+                            </Button>
+                          )}
+
+                          {word.status === "complete" && (
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={() => startWordPractice(index)}
+                                className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
+                              >
+                                <RotateCw className="h-5 w-5" />
+                                Try Again
+                              </Button>
+                              {word.recordingUrl && (
+                                <AudioPlaybackButton
+                                  audioUrl={word.recordingUrl}
+                                  buttonText="Listen to me"
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0"
+                                  icon={<Volume2 className="h-4 w-4" />}
+                                />
+                              )}
+                            </div>
+                          )}
                         </div>
 
-                        {/* Controls */}
-                        <div className="flex flex-wrap gap-2 justify-center">
+                        {/* Hear and Slow Switch + Save */}
+                        <div className="flex justify-center gap-2">
                           <Button
                             onClick={() => handleTextToSpeech(index)}
                             variant="outline"
-                            size="sm"
-                            className="flex items-center gap-2"
+                            className="h-10 px-4 bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0"
                           >
-                            <Volume2 className="h-4 w-4" />
-                            Listen
+                            <Ear className="h-4 w-4 mr-1" />
+                            Hear
                           </Button>
-                          
-                          <Button
+                          <button
                             onClick={() => toggleSlowPlayback(word.id)}
-                            variant="outline"
-                            size="sm"
-                            className={`flex items-center gap-2 ${slowPlaybackWords[word.id] ? 'bg-blue-50 border-blue-300' : ''}`}
+                            className={`relative inline-flex h-10 w-16 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                              slowPlaybackWords[word.id] ? 'bg-[#FFE8E8]' : 'bg-gray-300'
+                            }`}
+                            role="switch"
+                            aria-checked={slowPlaybackWords[word.id]}
+                            aria-label="Toggle slow playback"
                           >
-                            <Snail className="h-4 w-4" />
-                            {slowPlaybackWords[word.id] ? 'Normal' : 'Slow'}
-                          </Button>
-
+                            <span
+                              className={`inline-flex h-8 w-8 transform rounded-full bg-white transition-transform duration-200 ease-in-out items-center justify-center ${
+                                slowPlaybackWords[word.id] ? 'translate-x-8' : 'translate-x-1'
+                              }`}
+                            >
+                              <Snail className="h-3 w-3 text-gray-600" />
+                            </span>
+                          </button>
                           <Button
                             onClick={() => saveWordToCollection(index)}
                             variant="outline"
-                            size="sm"
-                            className="flex items-center gap-2"
+                            className="h-10 px-4 bg-[#6366F1] hover:bg-[#5855EB] text-white border-0"
                           >
-                            <Star className="h-4 w-4" />
+                            <Star className="h-4 w-4 mr-1" />
                             Save
                           </Button>
                         </div>
