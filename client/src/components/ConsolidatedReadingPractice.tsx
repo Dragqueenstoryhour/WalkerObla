@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useDifficulty, mapDifficultyToServer, DifficultyLevel } from '@/contexts/DifficultyContext';
 import useEnhancedVoice from '@/hooks/useEnhancedVoice';
 import { PronunciationAssessmentResult } from '@/lib/types';
+import { queryClient } from '@/lib/queryClient';
 
 interface ConsolidatedReadingPracticeProps {
   onAssessmentReceived?: (assessment: PronunciationAssessmentResult) => void;
@@ -594,6 +595,9 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
       }
 
       setIsSaved(true);
+      
+      // Invalidate the saved phrases query to refresh My Journey
+      queryClient.invalidateQueries({ queryKey: ['/api/user/saved-phrases'] });
     } catch (error) {
       console.error('Error saving reading:', error);
     }
