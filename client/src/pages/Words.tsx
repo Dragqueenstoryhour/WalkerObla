@@ -48,7 +48,59 @@ import {
   Snail,
   Flag,
   Ear,
+  Eye,
+  Play,
+  Square,
 } from "lucide-react";
+
+// Import viseme images
+import viseme0 from "@/assets/Visemes/viseme-id-0.jpg";
+import viseme1 from "@/assets/Visemes/viseme-id-1.jpg";
+import viseme2 from "@/assets/Visemes/viseme-id-2.jpg";
+import viseme3 from "@/assets/Visemes/viseme-id-3.jpg";
+import viseme4 from "@/assets/Visemes/viseme-id-4.jpg";
+import viseme5 from "@/assets/Visemes/viseme-id-5.jpg";
+import viseme6 from "@/assets/Visemes/viseme-id-6.jpg";
+import viseme7 from "@/assets/Visemes/viseme-id-7.jpg";
+import viseme8 from "@/assets/Visemes/viseme-id-8.jpg";
+import viseme9 from "@/assets/Visemes/viseme-id-9.jpg";
+import viseme10 from "@/assets/Visemes/viseme-id-10.jpg";
+import viseme11 from "@/assets/Visemes/viseme-id-11.jpg";
+import viseme12 from "@/assets/Visemes/viseme-id-12.jpg";
+import viseme13 from "@/assets/Visemes/viseme-id-13.jpg";
+import viseme14 from "@/assets/Visemes/viseme-id-14.jpg";
+import viseme15 from "@/assets/Visemes/viseme-id-15.jpg";
+import viseme16 from "@/assets/Visemes/viseme-id-16.jpg";
+import viseme17 from "@/assets/Visemes/viseme-id-17.jpg";
+import viseme18 from "@/assets/Visemes/viseme-id-18.jpg";
+import viseme19 from "@/assets/Visemes/viseme-id-19.jpg";
+import viseme20 from "@/assets/Visemes/viseme-id-20.jpg";
+import viseme21 from "@/assets/Visemes/viseme-id-21.jpg";
+
+const visemeImages = {
+  0: viseme0,
+  1: viseme1,
+  2: viseme2,
+  3: viseme3,
+  4: viseme4,
+  5: viseme5,
+  6: viseme6,
+  7: viseme7,
+  8: viseme8,
+  9: viseme9,
+  10: viseme10,
+  11: viseme11,
+  12: viseme12,
+  13: viseme13,
+  14: viseme14,
+  15: viseme15,
+  16: viseme16,
+  17: viseme17,
+  18: viseme18,
+  19: viseme19,
+  20: viseme20,
+  21: viseme21,
+};
 import { useDifficulty } from "@/contexts/DifficultyContext";
 import { DifficultyDropdown } from "@/components/difficulty/SimplifiedDifficultySelector";
 import { SummaryCard } from "@/components/SummaryCard";
@@ -63,6 +115,18 @@ interface ProcessedWord {
   recordingBlob?: Blob;
   assessmentResult?: PronunciationAssessmentResult;
   status: "idle" | "recording" | "assessing" | "complete";
+}
+
+interface VisemeData {
+  visemeId: number;
+  audioOffset: number;
+  animation?: string;
+}
+
+interface VisemeResponse {
+  visemes: VisemeData[];
+  audioBuffer: string; // base64 encoded audio data
+  duration: number;
 }
 
 export default function Words() {
@@ -87,6 +151,15 @@ export default function Words() {
   const [pendingSaveIndex, setPendingSaveIndex] = useState<number | null>(null);
   const [slowPlaybackWords, setSlowPlaybackWords] = useState<{ [key: string]: boolean }>({});
   const [showSummary, setShowSummary] = useState(false);
+
+  // Viseme animation state
+  const [showVisemeDialog, setShowVisemeDialog] = useState(false);
+  const [isGeneratingVisemes, setIsGeneratingVisemes] = useState(false);
+  const [isPlayingVisemes, setIsPlayingVisemes] = useState(false);
+  const [currentVisemeId, setCurrentVisemeId] = useState(0);
+  const [visemeData, setVisemeData] = useState<VisemeData[]>([]);
+  const [visemeAudioUrl, setVisemeAudioUrl] = useState<string>("");
+  const [currentVisemeWord, setCurrentVisemeWord] = useState<string>("");
 
   // Carousel state
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
@@ -126,6 +199,8 @@ export default function Words() {
   });
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const visemeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const animationTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
 
   // Predefined word topics
   const wordTopics = [
@@ -142,6 +217,21 @@ export default function Words() {
     "Home and Furniture",
     "Transportation"
   ];
+
+  // Preload viseme images for smooth transitions
+  useEffect(() => {
+    Object.values(visemeImages).forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, []);
+
+  // Clear animation timeouts when component unmounts
+  useEffect(() => {
+    return () => {
+      animationTimeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
 
   // Auto-load common words when the page opens
   useEffect(() => {
@@ -472,6 +562,153 @@ export default function Words() {
     }));
   };
 
+  // Generate viseme animation for a word
+  const generateVisemeAnimation = async (word: string) => {
+    if (!word.trim()) {
+      toast({
+        title: "Error",
+        description: "No word provided for animation",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGeneratingVisemes(true);
+    setCurrentVisemeWord(word);
+    setShowVisemeDialog(true);
+
+    try {
+      const response = await fetch("/api/visemes/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text: word.trim(),
+          voice: "en-US-AriaNeural",
+          format: "svg",
+          speed: 0.65 // 65% speed for slow demonstration
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate visemes: ${response.statusText}`);
+      }
+
+      const data: VisemeResponse = await response.json();
+
+      // Convert base64 audio data to blob URL
+      const binaryString = atob(data.audioBuffer);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      const audioBlob = new Blob([bytes.buffer], { type: "audio/wav" });
+      const url = URL.createObjectURL(audioBlob);
+      setVisemeAudioUrl(url);
+      setVisemeData(data.visemes);
+
+      // Auto-play the animation
+      setTimeout(() => {
+        playVisemeAnimation();
+      }, 500);
+
+    } catch (error) {
+      console.error("Error generating visemes:", error);
+      toast({
+        title: "Animation Error",
+        description: "Failed to generate lip animation. Please try again.",
+        variant: "destructive",
+      });
+      setShowVisemeDialog(false);
+    } finally {
+      setIsGeneratingVisemes(false);
+    }
+  };
+
+  // Play viseme animation
+  const playVisemeAnimation = () => {
+    if (!visemeAudioRef.current || !visemeData.length || !visemeAudioUrl) {
+      toast({
+        title: "Error",
+        description: "No animation data available",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Clear any existing timeouts
+    animationTimeoutsRef.current.forEach(clearTimeout);
+    animationTimeoutsRef.current = [];
+
+    setIsPlayingVisemes(true);
+    setCurrentVisemeId(0);
+
+    visemeAudioRef.current.playbackRate = 1.0;
+    visemeAudioRef.current.currentTime = 0;
+
+    const playPromise = visemeAudioRef.current.play();
+
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        // Sync visemes with audio
+        visemeData.forEach((viseme) => {
+          const timeout = setTimeout(() => {
+            setCurrentVisemeId(viseme.visemeId);
+          }, viseme.audioOffset);
+
+          animationTimeoutsRef.current.push(timeout);
+        });
+      }).catch((error) => {
+        console.error("Audio playback failed:", error);
+        setIsPlayingVisemes(false);
+        toast({
+          title: "Audio Error",
+          description: "Failed to play audio for animation",
+          variant: "destructive",
+        });
+      });
+    }
+
+    // Handle audio end
+    const handleAudioEnd = () => {
+      setIsPlayingVisemes(false);
+      setCurrentVisemeId(0);
+      visemeAudioRef.current?.removeEventListener("ended", handleAudioEnd);
+      visemeAudioRef.current?.removeEventListener("error", handleAudioError);
+    };
+
+    const handleAudioError = () => {
+      setIsPlayingVisemes(false);
+      setCurrentVisemeId(0);
+      toast({
+        title: "Audio Error",
+        description: "Animation playback encountered an error",
+        variant: "destructive",
+      });
+      visemeAudioRef.current?.removeEventListener("ended", handleAudioEnd);
+      visemeAudioRef.current?.removeEventListener("error", handleAudioError);
+    };
+
+    visemeAudioRef.current.addEventListener("ended", handleAudioEnd);
+    visemeAudioRef.current.addEventListener("error", handleAudioError);
+  };
+
+  // Stop viseme animation
+  const stopVisemeAnimation = () => {
+    animationTimeoutsRef.current.forEach(clearTimeout);
+    animationTimeoutsRef.current = [];
+
+    if (visemeAudioRef.current) {
+      visemeAudioRef.current.pause();
+      visemeAudioRef.current.currentTime = 0;
+    }
+
+    setIsPlayingVisemes(false);
+    setCurrentVisemeId(0);
+  };
+
   // Save a word to user's collection
   const saveWordToCollection = async (wordIndex: number) => {
     if (!isAuthenticated) {
@@ -686,7 +923,7 @@ export default function Words() {
                           )}
                         </div>
 
-                        {/* Hear and Slow Switch + Save */}
+                        {/* Hear, Slow Switch + See */}
                         <div className="flex justify-center gap-2">
                           <Button
                             onClick={() => handleTextToSpeech(index)}
@@ -713,6 +950,18 @@ export default function Words() {
                               <Snail className="h-3 w-3 text-gray-600" />
                             </span>
                           </button>
+                          <Button
+                            onClick={() => generateVisemeAnimation(word.text)}
+                            variant="outline"
+                            className="h-10 px-4 bg-[#8B5A8C] hover:bg-[#7A4B7B] text-white border-0"
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            See
+                          </Button>
+                        </div>
+
+                        {/* Save button in new row */}
+                        <div className="flex justify-center mt-2">
                           <Button
                             onClick={() => saveWordToCollection(index)}
                             variant="outline"
