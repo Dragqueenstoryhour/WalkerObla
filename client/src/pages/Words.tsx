@@ -301,6 +301,10 @@ export default function Words() {
 
     setProcessedWords(alphabetWords);
     setCurrentWordIndex(0);
+    setCurrentCarouselIndex(0);
+    if (emblaApi) {
+      emblaApi.scrollTo(0);
+    }
     scrollToPracticeSection();
   };
 
@@ -364,6 +368,10 @@ export default function Words() {
 
       setProcessedWords(newWords);
       setCurrentWordIndex(0);
+      setCurrentCarouselIndex(0);
+      if (emblaApi) {
+        emblaApi.scrollTo(0);
+      }
       scrollToPracticeSection();
     } catch (error) {
       console.error("Error generating words:", error);
@@ -1247,15 +1255,9 @@ export default function Words() {
           <div id="practice-words-section" className="space-y-6">
             {/* Progress indicator */}
             <div className="bg-white rounded-lg p-4 shadow-lg border-0">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-[#264653]">Practice Progress</span>
-                <span className="text-sm text-[#264653]">
-                  {currentCarouselIndex + 1} of {processedWords.length}
-                </span>
-              </div>
               <Progress 
                 value={((currentCarouselIndex + 1) / processedWords.length) * 100} 
-                className="h-2"
+                className="h-2 [&>div]:bg-[#1947e5]"
               />
             </div>
 
