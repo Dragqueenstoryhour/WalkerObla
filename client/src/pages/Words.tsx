@@ -160,6 +160,7 @@ export default function Words() {
   const [visemeData, setVisemeData] = useState<VisemeData[]>([]);
   const [visemeAudioUrl, setVisemeAudioUrl] = useState<string>("");
   const [currentVisemeWord, setCurrentVisemeWord] = useState<string>("");
+  const [forceImageUpdate, setForceImageUpdate] = useState(0);
 
   // Carousel state
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
@@ -645,6 +646,9 @@ export default function Words() {
     setIsPlayingVisemes(true);
     setCurrentVisemeId(0);
 
+    console.log("Starting viseme animation with", visemeData.length, "visemes");
+    console.log("Viseme data:", visemeData.map(v => ({ id: v.visemeId, offset: v.audioOffset })));
+
     visemeAudioRef.current.playbackRate = 1.0;
     visemeAudioRef.current.currentTime = 0;
 
@@ -652,14 +656,33 @@ export default function Words() {
 
     if (playPromise !== undefined) {
       playPromise.then(() => {
-        // Sync visemes with audio
-        visemeData.forEach((viseme) => {
+        console.log("Audio started playing, scheduling viseme changes");
+        
+        // Schedule viseme changes with enhanced logging and error handling
+        visemeData.forEach((viseme, index) => {
           const timeout = setTimeout(() => {
-            setCurrentVisemeId(viseme.visemeId);
+            console.log(`Changing to viseme ${viseme.visemeId} at offset ${viseme.audioOffset}ms (index: ${index})`);
+            setCurrentVisemeId(prevId => {
+              if (prevId !== viseme.visemeId) {
+                console.log(`Viseme changed: ${prevId} -> ${viseme.visemeId}`);
+                setForceImageUpdate(prev => prev + 1); // Force image re-render
+                return viseme.visemeId;
+              }
+              return prevId;
+            });
           }, viseme.audioOffset);
 
           animationTimeoutsRef.current.push(timeout);
         });
+
+        // Add a final timeout to return to neutral position
+        const finalTimeout = setTimeout(() => {
+          console.log("Animation complete, returning to neutral");
+          setCurrentVisemeId(0);
+        }, Math.max(...visemeData.map(v => v.audioOffset)) + 200);
+        
+        animationTimeoutsRef.current.push(finalTimeout);
+
       }).catch((error) => {
         console.error("Audio playback failed:", error);
         setIsPlayingVisemes(false);
@@ -673,13 +696,15 @@ export default function Words() {
 
     // Handle audio end
     const handleAudioEnd = () => {
+      console.log("Audio ended");
       setIsPlayingVisemes(false);
       setCurrentVisemeId(0);
       visemeAudioRef.current?.removeEventListener("ended", handleAudioEnd);
       visemeAudioRef.current?.removeEventListener("error", handleAudioError);
     };
 
-    const handleAudioError = () => {
+    const handleAudioError = (e: Event) => {
+      console.error("Audio error:", e);
       setIsPlayingVisemes(false);
       setCurrentVisemeId(0);
       toast({
@@ -776,32 +801,42 @@ export default function Words() {
 
       {/* Viseme animation dialog */}
       <Dialog open={showVisemeDialog} onOpenChange={setShowVisemeDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-blue-50 border-blue-200">
           <DialogHeader>
-            <DialogTitle>Lip Animation - "{currentVisemeWord}"</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-white bg-blue-600 -mx-6 -mt-6 px-6 py-4 mb-4">
+              Lip Animation - "{currentVisemeWord}"
+            </DialogTitle>
+            <DialogDescription className="text-blue-800 font-medium">
               Watch how to pronounce this word with slow lip movements.
             </DialogDescription>
           </DialogHeader>
           
           <div className="flex flex-col items-center space-y-4">
             {/* Animation display */}
-            <div className="relative w-48 h-48 bg-gray-100 rounded-lg overflow-hidden">
+            <div className="relative w-48 h-48 bg-blue-100 rounded-lg overflow-hidden border-2 border-blue-200">
               <img
+                key={`viseme-${currentVisemeId}-${forceImageUpdate}`}
                 src={visemeImages[currentVisemeId as keyof typeof visemeImages]}
-                alt={`Viseme ${currentVisemeId}`}
+                alt={`Lip animation frame ${currentVisemeId}`}
                 className="w-full h-full object-cover shadow-lg"
                 style={{
                   opacity: 1,
                   transform: isPlayingVisemes ? 'scale(1.01)' : 'scale(1)',
-                  transition: 'all 0.08s ease-out',
-                  filter: isPlayingVisemes ? 'brightness(1.05)' : 'brightness(1)'
+                  transition: 'transform 0.08s ease-out',
+                  filter: isPlayingVisemes ? 'brightness(1.05)' : 'brightness(1)',
+                  imageRendering: 'crisp-edges'
+                }}
+                onLoad={() => {
+                  console.log(`Viseme image loaded: ${currentVisemeId} - ${visemeImages[currentVisemeId as keyof typeof visemeImages]}`);
+                }}
+                onError={(e) => {
+                  console.error(`Failed to load viseme image ${currentVisemeId}:`, e);
                 }}
               />
 
               {/* Loading overlay */}
               {isGeneratingVisemes && (
-                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                <div className="absolute inset-0 bg-blue-900 bg-opacity-50 flex items-center justify-center">
                   <div className="text-white text-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
                     <p className="text-sm">Generating animation...</p>
@@ -809,22 +844,30 @@ export default function Words() {
                 </div>
               )}
 
-              {/* Viseme indicator */}
-              <div className="absolute bottom-2 left-2 bg-black bg-opacity-75 text-white px-2 py-1 rounded text-sm">
-                Viseme {currentVisemeId}
-              </div>
+              {/* Speech bubble when playing */}
+              {isPlayingVisemes && (
+                <div className="absolute top-4 right-4 transform translate-x-full">
+                  <div className="relative bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-lg">
+                    "{currentVisemeWord}"
+                    {/* Speech bubble pointer */}
+                    <div className="absolute left-0 top-1/2 transform -translate-x-full -translate-y-1/2">
+                      <div className="w-0 h-0 border-t-[8px] border-t-transparent border-b-[8px] border-b-transparent border-r-[12px] border-r-blue-600"></div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Status */}
             <div className="text-center">
               {isGeneratingVisemes && (
-                <p className="text-blue-600 font-medium">Generating animation...</p>
+                <p className="text-blue-700 font-medium">Generating animation...</p>
               )}
               {isPlayingVisemes && (
-                <p className="text-green-600 font-medium">Animation playing</p>
+                <p className="text-blue-700 font-medium">Animation playing</p>
               )}
               {!isGeneratingVisemes && !isPlayingVisemes && visemeData.length > 0 && (
-                <p className="text-gray-600">Ready to replay</p>
+                <p className="text-blue-600">Ready to replay</p>
               )}
             </div>
 
@@ -835,7 +878,7 @@ export default function Words() {
                   onClick={playVisemeAnimation}
                   disabled={isPlayingVisemes}
                   variant="default"
-                  className="flex-1"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
                 >
                   <Play className="h-4 w-4 mr-2" />
                   Replay
@@ -844,7 +887,7 @@ export default function Words() {
                   onClick={stopVisemeAnimation}
                   disabled={!isPlayingVisemes}
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
                 >
                   <Square className="h-4 w-4 mr-2" />
                   Stop
@@ -1048,7 +1091,7 @@ export default function Words() {
                           <Button
                             onClick={() => generateVisemeAnimation(word.text)}
                             variant="outline"
-                            className="h-10 px-4 bg-[#8B5A8C] hover:bg-[#7A4B7B] text-white border-0"
+                            className="h-10 px-4 bg-[#F59E0B] hover:bg-[#D97706] text-white border-0"
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             See
