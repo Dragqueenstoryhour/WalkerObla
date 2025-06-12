@@ -268,151 +268,91 @@ function generateVisemeBlendShapes(visemeId: number): string {
  * @param voice The voice to use (e.g., "en-US-AriaNeural")
  * @param format The format of viseme animation data ("svg" for 2D or "blendshapes" for 3D)
  */
+/**
+ * Generate basic viseme sequence from text analysis
+ */
+function generateBasicVisemes(text: string, audioDurationMs: number): VisemeAnimationData[] {
+  const words = text.toLowerCase().split(/\s+/);
+  const visemes: VisemeAnimationData[] = [];
+  const timePerWord = audioDurationMs / words.length;
+  
+  // Simple phoneme to viseme mapping
+  const phonemeToViseme: { [key: string]: number } = {
+    'silence': 0, 'p': 21, 'b': 21, 'm': 21, 'f': 18, 'v': 18,
+    'th': 17, 'dh': 17, 't': 19, 'd': 19, 'n': 19, 's': 15, 'z': 15,
+    'sh': 16, 'zh': 16, 'ch': 16, 'j': 16, 'k': 20, 'g': 20, 'ng': 20,
+    'l': 14, 'r': 13, 'y': 6, 'w': 7, 'h': 12, 'aa': 2, 'ae': 1,
+    'ah': 1, 'ao': 8, 'aw': 9, 'ay': 11, 'eh': 1, 'er': 13, 'ey': 6,
+    'ih': 6, 'iy': 6, 'ow': 8, 'oy': 10, 'uh': 7, 'uw': 7
+  };
+  
+  words.forEach((word, wordIndex) => {
+    const wordStartTime = wordIndex * timePerWord;
+    const chars = word.split('');
+    
+    chars.forEach((char, charIndex) => {
+      const charTime = wordStartTime + (charIndex * (timePerWord / chars.length));
+      let visemeId = 0;
+      
+      // Basic character to viseme mapping
+      switch (char) {
+        case 'p': case 'b': case 'm': visemeId = 21; break;
+        case 'f': case 'v': visemeId = 18; break;
+        case 't': case 'd': case 'n': visemeId = 19; break;
+        case 's': case 'z': visemeId = 15; break;
+        case 'k': case 'g': visemeId = 20; break;
+        case 'l': visemeId = 14; break;
+        case 'r': visemeId = 13; break;
+        case 'w': visemeId = 7; break;
+        case 'o': case 'u': visemeId = 8; break;
+        case 'a': case 'e': visemeId = 1; break;
+        case 'i': case 'y': visemeId = 6; break;
+        default: visemeId = 0;
+      }
+      
+      visemes.push({
+        visemeId,
+        audioOffset: charTime,
+        animation: generateVisemeSvg(visemeId) // Using SVG format for consistency
+      });
+    });
+  });
+  
+  return visemes;
+}
+
 export async function generateSpeechWithVisemes(
   text: string,
   voice = "en-US-GuyNeural",
   format: "svg" | "blendshapes" = "blendshapes",
   speed = 1.0
 ): Promise<ConsolidatedVisemeData> {
-  // Validate the Azure key
-  if (!process.env.AZURE_SPEECH_KEY || !process.env.AZURE_SPEECH_REGION) {
-    throw new Error("Azure Speech credentials not found. Please set AZURE_SPEECH_KEY and AZURE_SPEECH_REGION");
+  try {
+    // Use the existing working Azure synthesis from azure.ts
+    const { synthesizeSpeech } = await import('./azure');
+    console.log(`Generating speech and visemes for: "${text}"`);
+    
+    // Generate audio using the working Azure implementation
+    const audioBuffer = await synthesizeSpeech(text, voice, speed);
+    
+    // Calculate audio duration (for 16kHz 16-bit mono PCM)
+    const durationMs = (audioBuffer.length / (16000 * 2)) * 1000;
+    console.log(`Audio generated successfully. Duration: ${durationMs}ms, Buffer size: ${audioBuffer.length} bytes`);
+    
+    // Generate visemes based on text analysis and audio duration
+    const visemes = generateBasicVisemes(text, durationMs);
+    
+    console.log(`Generated ${visemes.length} visemes for lip sync animation`);
+    
+    return {
+      visemes,
+      audioBuffer,
+      duration: durationMs / 1000 // Convert to seconds
+    };
+  } catch (error) {
+    console.error('Error in generateSpeechWithVisemes:', error);
+    throw new Error(`Failed to generate speech with visemes: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-
-  // Create Azure Speech Config with credentials
-  const speechConfig = speechsdk.SpeechConfig.fromSubscription(
-    process.env.AZURE_SPEECH_KEY, 
-    process.env.AZURE_SPEECH_REGION
-  );
-  
-  // Set the voice name
-  speechConfig.speechSynthesisVoiceName = voice;
-  
-  // Set audio format to WAV for better browser compatibility
-  speechConfig.speechSynthesisOutputFormat = speechsdk.SpeechSynthesisOutputFormat.Riff16Khz16BitMonoPcm;
-  
-  // Configure connection settings for better reliability
-  speechConfig.setProperty(speechsdk.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "5000");
-  speechConfig.setProperty(speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "1000");
-  speechConfig.setProperty(speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, "1000");
-  
-  // Enable viseme events
-  speechConfig.setProperty(speechsdk.PropertyId.SpeechServiceResponse_RequestSentenceBoundary, "true");
-  
-  // Create a synthesizer instance
-  const synthesizer = new speechsdk.SpeechSynthesizer(speechConfig);
-  
-  // Keep track of the audio and viseme data
-  const visemes: VisemeAnimationData[] = [];
-  let audioData: Buffer | undefined = undefined;
-  let audioReceived = false;
-  let durationMs = 0;
-  
-  // Register viseme event handler
-  synthesizer.visemeReceived = (s, e) => {
-    // Extract offset and viseme ID
-    const visemeId = e.visemeId;
-    const audioOffset = e.audioOffset / 10000; // Convert 100-nanosecond units to milliseconds
-    
-    // Map viseme ID to animation data
-    const animation = format === "svg"
-      ? generateVisemeSvg(visemeId)
-      : generateVisemeBlendShapes(visemeId);
-    
-    visemes.push({
-      visemeId,
-      audioOffset,
-      animation
-    });
-  };
-  
-  return new Promise<ConsolidatedVisemeData>((resolve, reject) => {
-    // Set up event to capture audio data
-    synthesizer.synthesizing = (s, e) => {
-      try {
-        if (e.result.reason === speechsdk.ResultReason.SynthesizingAudio) {
-          // The event contains audio data
-          const audioBuffer = Buffer.from(e.result.audioData);
-          if (audioData) {
-            // Append to existing buffer
-            audioData = Buffer.concat([audioData, audioBuffer]);
-          } else {
-            // First chunk
-            audioData = audioBuffer;
-          }
-          audioReceived = true;
-        }
-      } catch (error) {
-        console.error('Error processing audio data:', error);
-      }
-    };
-
-    // Event for when synthesis is completed
-    synthesizer.synthesisCompleted = (s, e) => {
-      try {
-        // Calculate the total duration from the audio data
-        if (e.result.audioDuration) {
-          durationMs = e.result.audioDuration / 10000; // Convert 100-nanosecond units to milliseconds
-        } else {
-          // Calculate duration from audio buffer if audioDuration is not available
-          // For 16kHz 16-bit mono PCM: duration = bytes / (16000 * 2)
-          if (audioData && audioData.length > 0) {
-            durationMs = (audioData.length / (16000 * 2)) * 1000;
-          }
-        }
-        console.log(`Audio synthesis completed. Duration: ${durationMs}ms, Buffer size: ${audioData?.length || 0} bytes`);
-      } catch (error) {
-        console.error('Error calculating audio duration:', error);
-      }
-    };
-    
-    // For now, use plain text synthesis to ensure stability
-    // Speed control will be implemented via playback rate adjustment in frontend
-    console.log(`Synthesizing text: "${text}" (speed control handled on frontend)`);
-    
-    const attemptSynthesis = () => {
-      synthesizer.speakTextAsync(
-        text,
-        handleResult,
-        handleError
-      );
-    };
-
-    const handleResult = (result: any) => {
-      if (result.reason === speechsdk.ResultReason.SynthesizingAudioCompleted) {
-        // Sort visemes by audio offset
-        visemes.sort((a, b) => a.audioOffset - b.audioOffset);
-        
-        if (!audioData || !audioReceived) {
-          reject(new Error("No audio data received from Azure Speech service"));
-          return;
-        }
-        
-        // Return the consolidated data
-        resolve({
-          visemes,
-          audioBuffer: audioData,
-          duration: durationMs / 1000 // Convert to seconds for frontend
-        });
-      } else {
-        const error = `Speech synthesis failed: ${result.reason}`;
-        console.error(error, result);
-        reject(new Error(error));
-      }
-      
-      // Clean up
-      synthesizer.close();
-    };
-
-    const handleError = (error: any) => {
-      console.error(`Error synthesizing speech:`, error);
-      synthesizer.close();
-      reject(new Error(`Speech synthesis error: ${error.toString()}`));
-    };
-
-    // Start synthesis
-    attemptSynthesis();
-  });
 }
 
 /**
