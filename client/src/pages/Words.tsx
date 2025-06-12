@@ -737,7 +737,11 @@ export default function Words() {
         throw new Error("Failed to save word");
       }
 
-      setSavedWords(prev => new Set([...prev, word.text]));
+      setSavedWords(prev => {
+        const newSet = new Set(prev);
+        newSet.add(word.text);
+        return newSet;
+      });
     } catch (error) {
       console.error("Error saving word:", error);
     }
@@ -767,6 +771,97 @@ export default function Words() {
             </DialogDescription>
           </DialogHeader>
           <AuthButtons />
+        </DialogContent>
+      </Dialog>
+
+      {/* Viseme animation dialog */}
+      <Dialog open={showVisemeDialog} onOpenChange={setShowVisemeDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Lip Animation - "{currentVisemeWord}"</DialogTitle>
+            <DialogDescription>
+              Watch how to pronounce this word with slow lip movements.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex flex-col items-center space-y-4">
+            {/* Animation display */}
+            <div className="relative w-48 h-48 bg-gray-100 rounded-lg overflow-hidden">
+              <img
+                src={visemeImages[currentVisemeId as keyof typeof visemeImages]}
+                alt={`Viseme ${currentVisemeId}`}
+                className="w-full h-full object-cover shadow-lg"
+                style={{
+                  opacity: 1,
+                  transform: isPlayingVisemes ? 'scale(1.01)' : 'scale(1)',
+                  transition: 'all 0.08s ease-out',
+                  filter: isPlayingVisemes ? 'brightness(1.05)' : 'brightness(1)'
+                }}
+              />
+
+              {/* Loading overlay */}
+              {isGeneratingVisemes && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                  <div className="text-white text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                    <p className="text-sm">Generating animation...</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Viseme indicator */}
+              <div className="absolute bottom-2 left-2 bg-black bg-opacity-75 text-white px-2 py-1 rounded text-sm">
+                Viseme {currentVisemeId}
+              </div>
+            </div>
+
+            {/* Status */}
+            <div className="text-center">
+              {isGeneratingVisemes && (
+                <p className="text-blue-600 font-medium">Generating animation...</p>
+              )}
+              {isPlayingVisemes && (
+                <p className="text-green-600 font-medium">Animation playing</p>
+              )}
+              {!isGeneratingVisemes && !isPlayingVisemes && visemeData.length > 0 && (
+                <p className="text-gray-600">Ready to replay</p>
+              )}
+            </div>
+
+            {/* Control buttons */}
+            {visemeData.length > 0 && !isGeneratingVisemes && (
+              <div className="flex gap-2">
+                <Button
+                  onClick={playVisemeAnimation}
+                  disabled={isPlayingVisemes}
+                  variant="default"
+                  className="flex-1"
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Replay
+                </Button>
+                <Button
+                  onClick={stopVisemeAnimation}
+                  disabled={!isPlayingVisemes}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <Square className="h-4 w-4 mr-2" />
+                  Stop
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Hidden audio element for viseme playback */}
+          {visemeAudioUrl && (
+            <audio
+              ref={visemeAudioRef}
+              src={visemeAudioUrl}
+              preload="auto"
+              style={{ display: 'none' }}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
