@@ -642,194 +642,104 @@ export default function Phrases() {
               <div className="embla__container flex">
                 {processedPhrases.map((phrase, index) => (
                   <div key={phrase.id} className="embla__slide flex-[0_0_100%] px-2">
-                    <Card className="bg-white shadow-lg border-0 h-full card-content">
-                      <CardHeader className="pb-4">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg font-semibold text-[#2a5e2a]">
-                            Phrase {index + 1}
-                          </CardTitle>
-                          <Badge 
-                            variant={
-                              phrase.status === "complete" ? "default" :
-                              phrase.status === "recording" ? "secondary" :
-                              phrase.status === "assessing" ? "outline" : "outline"
-                            }
-                            className={
-                              phrase.status === "complete" ? "bg-green-100 text-green-800" :
-                              phrase.status === "recording" ? "bg-red-100 text-red-800" :
-                              phrase.status === "assessing" ? "bg-yellow-100 text-yellow-800" :
-                              "bg-gray-100 text-gray-800"
-                            }
-                          >
-                            {phrase.status === "complete" ? "Complete" :
-                             phrase.status === "recording" ? "Recording" :
-                             phrase.status === "assessing" ? "Analyzing" : "Ready"}
-                          </Badge>
-                        </div>
+                    <Card className="h-full shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
+                      <CardHeader className="text-center">
+                        <CardTitle className="text-3xl font-bold text-white">{phrase.text}</CardTitle>
                       </CardHeader>
                       
                       <CardContent className="space-y-4">
-                        {/* Phrase text */}
-                        <div className="bg-[#f0f9ff] border border-[#bae6fd] rounded-lg p-4">
-                          <p className="text-2xl font-bold text-[#0c4a6e] text-center leading-relaxed">
-                            {phrase.text}
-                          </p>
-                        </div>
-
-                        {/* Controls */}
-                        <div className="flex flex-wrap gap-2 justify-center">
-                          <Button
-                            onClick={() => handleTextToSpeech(index)}
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-2"
-                          >
-                            <Volume2 className="h-4 w-4" />
-                            Listen
-                          </Button>
-                          
-                          <Button
-                            onClick={() => toggleSlowPlayback(phrase.id)}
-                            variant="outline"
-                            size="sm"
-                            className={`flex items-center gap-2 ${slowPlaybackPhrases[phrase.id] ? 'bg-blue-50 border-blue-300' : ''}`}
-                          >
-                            <Snail className="h-4 w-4" />
-                            {slowPlaybackPhrases[phrase.id] ? 'Normal' : 'Slow'}
-                          </Button>
-
-                          <Button
-                            onClick={() => savePhraseToCollection(index)}
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-2"
-                          >
-                            <Star className="h-4 w-4" />
-                            Save
-                          </Button>
-                        </div>
-
-                        {/* Recording section */}
-                        <div className="space-y-3">
+                        {/* Recording Controls */}
+                        <div className="flex justify-center gap-2">
                           {phrase.status === "idle" && (
                             <Button
                               onClick={() => startPhrasePractice(index)}
-                              className="w-full bg-[#57cc99] hover:bg-[#4ade80] text-white py-3"
+                              className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
                               disabled={isRecording || isProcessingRecording}
                             >
-                              <Mic className="h-5 w-5 mr-2" />
+                              <Mic className="h-5 w-5" />
                               Start Recording
                             </Button>
                           )}
 
                           {phrase.status === "recording" && (
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-center space-x-4">
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                                  <span className="text-sm font-medium text-red-600">
-                                    Recording... {Math.floor(recordingDuration)}s
-                                  </span>
-                                </div>
-                              </div>
-                              
-                              <div className="flex gap-2">
-                                <Button
-                                  onClick={stopPhrasePractice}
-                                  className="flex-1 bg-red-500 hover:bg-red-600 text-white"
-                                >
-                                  <StopCircleIcon className="h-5 w-5 mr-2" />
-                                  Stop Recording
-                                </Button>
-                                <Button
-                                  onClick={() => cancelPhrasePractice(index)}
-                                  variant="outline"
-                                  className="flex-1"
-                                >
-                                  Cancel
-                                </Button>
-                              </div>
-                            </div>
+                            <Button
+                              onClick={stopPhrasePractice}
+                              variant="destructive"
+                              className="flex items-center gap-2"
+                            >
+                              <StopCircleIcon className="h-4 w-4" />
+                              Stop Recording
+                            </Button>
                           )}
 
                           {phrase.status === "assessing" && (
-                            <div className="text-center space-y-3">
-                              <div className="flex items-center justify-center space-x-2">
-                                <RotateCw className="h-5 w-5 animate-spin text-[#57cc99]" />
-                                <span className="text-sm font-medium text-[#264653]">
-                                  Analyzing pronunciation...
-                                </span>
-                              </div>
-                            </div>
+                            <Button disabled className="flex items-center gap-2">
+                              <RotateCw className="h-4 w-4 animate-spin" />
+                              Analyzing...
+                            </Button>
                           )}
 
-                          {phrase.status === "complete" && phrase.assessmentResult && (
-                            <div className="space-y-3">
-                              {/* Assessment results */}
-                              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                <div className="text-center space-y-2">
-                                  <div className="flex items-center justify-center space-x-2">
-                                    <CheckCircle className="h-5 w-5 text-green-600" />
-                                    <span className="font-semibold text-green-800">Assessment Complete</span>
-                                  </div>
-                                  
-                                  <div className="text-2xl font-bold text-green-700">
-                                    {Math.round(phrase.assessmentResult.pronunciationScore)}%
-                                  </div>
-                                  
-                                  <div className="grid grid-cols-2 gap-4 text-xs">
-                                    <div className="space-y-1">
-                                      <div className="font-medium text-gray-600">Accuracy</div>
-                                      <div className="font-bold text-gray-800">
-                                        {Math.round(phrase.assessmentResult.accuracyScore)}%
-                                      </div>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <div className="font-medium text-gray-600">Fluency</div>
-                                      <div className="font-bold text-gray-800">
-                                        {Math.round(phrase.assessmentResult.fluencyScore)}%
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Playback recording section */}
-                              {phrase.recordingUrl && (
-                                <div className="bg-white/80 border border-[#57cc99] rounded-md p-3 mb-4 mt-4 flex items-center justify-between">
-                                  <div className="text-sm font-medium text-[#264653]">
-                                    Listen to your recording:
-                                  </div>
-                                  <AudioPlaybackButton
-                                    audioUrl={phrase.recordingUrl}
-                                    buttonText="Listen to me"
-                                    variant="outline"
-                                    size="sm"
-                                    className="rounded-full p-2 shadow-md"
-                                    icon={<Volume2 className="h-5 w-5" />}
-                                  />
-                                </div>
-                              )}
-
-                              {/* Try again button */}
+                          {phrase.status === "complete" && (
+                            <div className="flex gap-2">
                               <Button
-                                onClick={() => {
-                                  setProcessedPhrases(phrases =>
-                                    phrases.map((p, idx) =>
-                                      idx === index ? { ...p, status: "idle", assessmentResult: undefined, recordingUrl: undefined } : p
-                                    )
-                                  );
-                                  setPhraseAssessmentResult(null);
-                                }}
-                                variant="outline"
-                                className="w-full"
+                                onClick={() => startPhrasePractice(index)}
+                                className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
                               >
-                                <RotateCw className="h-4 w-4 mr-2" />
+                                <RotateCw className="h-5 w-5" />
                                 Try Again
                               </Button>
+                              {phrase.recordingUrl && (
+                                <AudioPlaybackButton
+                                  audioUrl={phrase.recordingUrl}
+                                  buttonText="Listen to me"
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0"
+                                  icon={<Volume2 className="h-4 w-4" />}
+                                />
+                              )}
                             </div>
                           )}
                         </div>
+
+                        {/* Hear and Slow Switch + Save */}
+                        <div className="flex justify-center gap-2">
+                          <Button
+                            onClick={() => handleTextToSpeech(index)}
+                            variant="outline"
+                            className="h-10 px-4 bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0"
+                          >
+                            <Ear className="h-4 w-4 mr-1" />
+                            Hear
+                          </Button>
+                          <button
+                            onClick={() => toggleSlowPlayback(phrase.id)}
+                            className={`relative inline-flex h-10 w-16 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                              slowPlaybackPhrases[phrase.id] ? 'bg-[#FFE8E8]' : 'bg-gray-300'
+                            }`}
+                            role="switch"
+                            aria-checked={slowPlaybackPhrases[phrase.id]}
+                            aria-label="Toggle slow playback"
+                          >
+                            <span
+                              className={`inline-flex h-8 w-8 transform rounded-full bg-white transition-transform duration-200 ease-in-out items-center justify-center ${
+                                slowPlaybackPhrases[phrase.id] ? 'translate-x-8' : 'translate-x-1'
+                              }`}
+                            >
+                              <Snail className="h-3 w-3 text-gray-600" />
+                            </span>
+                          </button>
+                          <Button
+                            onClick={() => savePhraseToCollection(index)}
+                            variant="outline"
+                            className="h-10 px-4 bg-[#6366F1] hover:bg-[#5855EB] text-white border-0"
+                          >
+                            <Star className="h-4 w-4 mr-1" />
+                            Save
+                          </Button>
+                        </div>
+
+
                       </CardContent>
                     </Card>
                   </div>
