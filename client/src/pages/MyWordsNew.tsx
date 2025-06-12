@@ -455,13 +455,97 @@ function PracticeCarousel({
             </div>
 
 
-            {/* Assessment Results */}
+            {/* Assessment Results - Comprehensive Bar Chart Display */}
             {currentItem.status === "complete" && currentItem.assessmentResult && (
-              <div className="text-center space-y-2">
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-lg font-semibold text-white">
-                    {currentItem.assessmentResult.pronunciationScore.toFixed(1)}%
-                  </span>
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 space-y-3">
+                <h4 className="text-center text-white font-semibold mb-3">Your Results</h4>
+                
+                {/* Pronunciation Score */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-white/90 font-medium">Pronunciation</span>
+                    <span className="text-sm text-white font-semibold">
+                      {Math.round(currentItem.assessmentResult.pronunciationScore || 0)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-white/20 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-500 ${
+                        (currentItem.assessmentResult.pronunciationScore || 0) >= 80
+                          ? 'bg-green-400'
+                          : (currentItem.assessmentResult.pronunciationScore || 0) >= 60
+                          ? 'bg-yellow-400'
+                          : 'bg-red-400'
+                      }`}
+                      style={{ width: `${Math.min(100, Math.max(0, currentItem.assessmentResult.pronunciationScore || 0))}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Accuracy Score */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-white/90 font-medium">Accuracy</span>
+                    <span className="text-sm text-white font-semibold">
+                      {Math.round(currentItem.assessmentResult.accuracyScore || 0)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-white/20 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-500 ${
+                        (currentItem.assessmentResult.accuracyScore || 0) >= 80
+                          ? 'bg-green-400'
+                          : (currentItem.assessmentResult.accuracyScore || 0) >= 60
+                          ? 'bg-yellow-400'
+                          : 'bg-red-400'
+                      }`}
+                      style={{ width: `${Math.min(100, Math.max(0, currentItem.assessmentResult.accuracyScore || 0))}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Fluency Score */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-white/90 font-medium">Fluency</span>
+                    <span className="text-sm text-white font-semibold">
+                      {Math.round(currentItem.assessmentResult.fluencyScore || 0)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-white/20 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-500 ${
+                        (currentItem.assessmentResult.fluencyScore || 0) >= 80
+                          ? 'bg-green-400'
+                          : (currentItem.assessmentResult.fluencyScore || 0) >= 60
+                          ? 'bg-yellow-400'
+                          : 'bg-red-400'
+                      }`}
+                      style={{ width: `${Math.min(100, Math.max(0, currentItem.assessmentResult.fluencyScore || 0))}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Completeness Score */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-white/90 font-medium">Completeness</span>
+                    <span className="text-sm text-white font-semibold">
+                      {Math.round(currentItem.assessmentResult.completenessScore || 0)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-white/20 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-500 ${
+                        (currentItem.assessmentResult.completenessScore || 0) >= 80
+                          ? 'bg-green-400'
+                          : (currentItem.assessmentResult.completenessScore || 0) >= 60
+                          ? 'bg-yellow-400'
+                          : 'bg-red-400'
+                      }`}
+                      style={{ width: `${Math.min(100, Math.max(0, currentItem.assessmentResult.completenessScore || 0))}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -565,7 +649,7 @@ export default function MyWords() {
         phonetic: p.phonetic || undefined,
         difficulty: (p.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
         status: "idle" as const,
-        source: p.source // Ensure source is carried over
+        source: p.source || 'words' // Ensure source is carried over with fallback
       }));
 
       const phrasesOnly = phrases.filter(p => p.source === 'phrases' || p.source === 'phrase_practice').map(p => ({
@@ -574,7 +658,7 @@ export default function MyWords() {
         phonetic: p.phonetic || undefined,
         difficulty: (p.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
         status: "idle" as const,
-        source: p.source // Ensure source is carried over
+        source: p.source || 'phrases' // Ensure source is carried over with fallback
       }));
 
       const readings = phrases.filter(p => p.source === 'reader_content' || p.source === 'reading').map(p => ({
@@ -583,7 +667,7 @@ export default function MyWords() {
         phonetic: p.phonetic || undefined,
         difficulty: (p.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
         status: "idle" as const,
-        source: p.source // Ensure source is carried over
+        source: p.source || 'reading' // Ensure source is carried over with fallback
       }));
 
       // Shuffle each category

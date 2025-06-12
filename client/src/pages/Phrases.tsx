@@ -503,7 +503,7 @@ export default function Phrases() {
     if (!phrase || savedPhrases.has(phrase.text)) return;
 
     try {
-      const response = await fetch("/api/saved-phrases", {
+      const response = await fetch("/api/phrases/save", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -520,8 +520,18 @@ export default function Phrases() {
       }
 
       setSavedPhrases(prev => new Set([...prev, phrase.text]));
+      
+      toast({
+        title: "Phrase Saved",
+        description: "This phrase has been saved to your collection.",
+      });
     } catch (error) {
       console.error("Error saving phrase:", error);
+      toast({
+        title: "Save Error",
+        description: "Could not save phrase. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
