@@ -1375,6 +1375,98 @@ export default function Words() {
                           </Button>
                         </div>
 
+                        {/* Assessment Results with Bar Charts */}
+                        {word.status === "complete" && word.assessmentResult && (
+                          <div className="space-y-4 mt-6 bg-white rounded-lg p-4 mx-2">
+                            {/* Overall Score */}
+                            <div className="text-center">
+                              <div 
+                                className="text-3xl font-bold mb-2" 
+                                style={{ 
+                                  color: word.assessmentResult.pronunciationScore >= 80 ? '#2a9d8f' : '#e76f51' 
+                                }}
+                              >
+                                {Math.round(word.assessmentResult.pronunciationScore)}%
+                              </div>
+                              <p className="text-gray-600 text-sm mb-4">
+                                {word.assessmentResult.pronunciationScore >= 80
+                                  ? "Great job! Your pronunciation is very clear."
+                                  : "Good effort! Try again to improve your score."}
+                              </p>
+                            </div>
+
+                            {/* Detailed Scores with Bar Charts */}
+                            <div className="space-y-2">
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-xs">
+                                  <span className="font-medium text-gray-700">Pronunciation</span>
+                                  <span className="text-gray-700">{Math.round(word.assessmentResult.pronunciationScore)}%</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className="h-2 rounded-full"
+                                    style={{
+                                      width: `${Math.round(word.assessmentResult.pronunciationScore)}%`,
+                                      backgroundColor: word.assessmentResult.pronunciationScore >= 80 ? '#2a9d8f' :
+                                                       word.assessmentResult.pronunciationScore >= 60 ? '#e9c46a' : '#e76f51'
+                                    }}
+                                  ></div>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-xs">
+                                  <span className="font-medium text-gray-700">Accuracy</span>
+                                  <span className="text-gray-700">{Math.round(word.assessmentResult.accuracyScore || 0)}%</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className="h-2 rounded-full"
+                                    style={{
+                                      width: `${Math.round(word.assessmentResult.accuracyScore || 0)}%`,
+                                      backgroundColor: (word.assessmentResult.accuracyScore || 0) >= 80 ? '#2a9d8f' :
+                                                      (word.assessmentResult.accuracyScore || 0) >= 60 ? '#e9c46a' : '#e76f51'
+                                    }}
+                                  ></div>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-xs">
+                                  <span className="font-medium text-gray-700">Fluency</span>
+                                  <span className="text-gray-700">{Math.round(word.assessmentResult.fluencyScore || 0)}%</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className="h-2 rounded-full"
+                                    style={{
+                                      width: `${Math.round(word.assessmentResult.fluencyScore || 0)}%`,
+                                      backgroundColor: (word.assessmentResult.fluencyScore || 0) >= 80 ? '#2a9d8f' :
+                                                      (word.assessmentResult.fluencyScore || 0) >= 60 ? '#e9c46a' : '#e76f51'
+                                    }}
+                                  ></div>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-xs">
+                                  <span className="font-medium text-gray-700">Completeness</span>
+                                  <span className="text-gray-700">{Math.round(word.assessmentResult.completenessScore || 0)}%</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className="h-2 rounded-full"
+                                    style={{
+                                      width: `${Math.round(word.assessmentResult.completenessScore || 0)}%`,
+                                      backgroundColor: (word.assessmentResult.completenessScore || 0) >= 80 ? '#2a9d8f' :
+                                                      (word.assessmentResult.completenessScore || 0) >= 60 ? '#e9c46a' : '#e76f51'
+                                    }}
+                                  ></div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
 
                       </CardContent>
                     </Card>

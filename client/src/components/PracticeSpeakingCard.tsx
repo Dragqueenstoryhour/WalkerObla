@@ -405,24 +405,8 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
         {/* Assessment Results */}
         {phrase.status === "complete" && phrase.assessmentResult && (
           <div className="space-y-4">
-            {/* Star Rating */}
+            {/* Overall Score */}
             <div className="text-center">
-              <div className="flex justify-center items-center mb-2">
-                {[1, 2, 3, 4, 5].map((star) => {
-                  const scoreThreshold = star * 20;
-                  const isFilled = phrase.assessmentResult!.pronunciationScore >= scoreThreshold;
-                  return (
-                    <Star
-                      key={star}
-                      className={`w-6 h-6 mx-1 ${
-                        isFilled 
-                          ? 'text-yellow-400 fill-yellow-400' 
-                          : 'text-gray-300'
-                      }`}
-                    />
-                  );
-                })}
-              </div>
               <div 
                 className="text-4xl font-bold text-center mb-4" 
                 style={{ 
@@ -438,12 +422,12 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
               </p>
             </div>
 
-            {/* Detailed Scores */}
+            {/* Detailed Scores with Bar Charts */}
             <div className="space-y-3 mb-5">
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
-                  <span className="font-medium text-white">Pronunciation</span>
-                  <span className="text-white">{Math.round(phrase.assessmentResult.pronunciationScore)}%</span>
+                  <span className="font-medium text-gray-700">Pronunciation</span>
+                  <span className="text-gray-700">{Math.round(phrase.assessmentResult.pronunciationScore)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div
@@ -459,16 +443,16 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
 
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
-                  <span className="font-medium text-white">Fluency</span>
-                  <span className="text-white">{Math.round(phrase.assessmentResult.fluencyScore)}%</span>
+                  <span className="font-medium text-gray-700">Accuracy</span>
+                  <span className="text-gray-700">{Math.round(phrase.assessmentResult.accuracyScore || 0)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div
                     className="h-2.5 rounded-full"
                     style={{
-                      width: `${Math.round(phrase.assessmentResult.fluencyScore)}%`,
-                      backgroundColor: phrase.assessmentResult.fluencyScore >= 80 ? '#2a9d8f' :
-                                      phrase.assessmentResult.fluencyScore >= 60 ? '#e9c46a' : '#e76f51'
+                      width: `${Math.round(phrase.assessmentResult.accuracyScore || 0)}%`,
+                      backgroundColor: (phrase.assessmentResult.accuracyScore || 0) >= 80 ? '#2a9d8f' :
+                                      (phrase.assessmentResult.accuracyScore || 0) >= 60 ? '#e9c46a' : '#e76f51'
                     }}
                   ></div>
                 </div>
@@ -476,16 +460,16 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
 
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
-                  <span className="font-medium text-white">Completeness</span>
-                  <span className="text-white">{Math.round(phrase.assessmentResult.completenessScore)}%</span>
+                  <span className="font-medium text-gray-700">Fluency</span>
+                  <span className="text-gray-700">{Math.round(phrase.assessmentResult.fluencyScore || 0)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div
                     className="h-2.5 rounded-full"
                     style={{
-                      width: `${Math.round(phrase.assessmentResult.completenessScore)}%`,
-                      backgroundColor: phrase.assessmentResult.completenessScore >= 80 ? '#2a9d8f' :
-                                      phrase.assessmentResult.completenessScore >= 60 ? '#e9c46a' : '#e76f51'
+                      width: `${Math.round(phrase.assessmentResult.fluencyScore || 0)}%`,
+                      backgroundColor: (phrase.assessmentResult.fluencyScore || 0) >= 80 ? '#2a9d8f' :
+                                      (phrase.assessmentResult.fluencyScore || 0) >= 60 ? '#e9c46a' : '#e76f51'
                     }}
                   ></div>
                 </div>
@@ -493,16 +477,16 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
 
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
-                  <span className="font-medium text-white">Accuracy</span>
-                  <span className="text-white">{Math.round(phrase.assessmentResult.accuracyScore)}%</span>
+                  <span className="font-medium text-gray-700">Completeness</span>
+                  <span className="text-gray-700">{Math.round(phrase.assessmentResult.completenessScore || 0)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div
                     className="h-2.5 rounded-full"
                     style={{
-                      width: `${Math.round(phrase.assessmentResult.accuracyScore)}%`,
-                      backgroundColor: phrase.assessmentResult.accuracyScore >= 80 ? '#2a9d8f' :
-                                      phrase.assessmentResult.accuracyScore >= 60 ? '#e9c46a' : '#e76f51'
+                      width: `${Math.round(phrase.assessmentResult.completenessScore || 0)}%`,
+                      backgroundColor: (phrase.assessmentResult.completenessScore || 0) >= 80 ? '#2a9d8f' :
+                                      (phrase.assessmentResult.completenessScore || 0) >= 60 ? '#e9c46a' : '#e76f51'
                     }}
                   ></div>
                 </div>
