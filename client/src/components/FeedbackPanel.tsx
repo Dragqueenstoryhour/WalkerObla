@@ -469,7 +469,7 @@ const FeedbackPanel = () => {
 
   return (
     <div className="space-y-6">
-      {/* General Feedback Card */}
+      {/* General Feedback Card - Hidden as requested 
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
@@ -512,6 +512,7 @@ const FeedbackPanel = () => {
           </div>
         </CardContent>
       </Card>
+      */}
 
       {/* Words to Practice */}
       {pronunciationIssues.length > 0 && (

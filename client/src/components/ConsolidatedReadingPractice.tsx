@@ -1010,6 +1010,23 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
 
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm">
+                      <span className="font-medium text-gray-700">Accuracy</span>
+                      <span className="text-gray-700">{Math.round(phrase.assessmentResult.accuracyScore || 0)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div
+                        className="h-2.5 rounded-full"
+                        style={{
+                          width: `${Math.round(phrase.assessmentResult.accuracyScore || 0)}%`,
+                          backgroundColor: (phrase.assessmentResult.accuracyScore || 0) >= 80 ? '#2a9d8f' :
+                                          (phrase.assessmentResult.accuracyScore || 0) >= 60 ? '#e9c46a' : '#e76f51'
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
                       <span className="font-medium text-gray-700">Fluency</span>
                       <span className="text-gray-700">{Math.round(phrase.assessmentResult.fluencyScore)}%</span>
                     </div>
