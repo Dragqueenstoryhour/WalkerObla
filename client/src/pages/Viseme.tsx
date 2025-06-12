@@ -75,7 +75,7 @@ export default function Viseme() {
   const [currentVisemeId, setCurrentVisemeId] = useState(0);
   const [visemeData, setVisemeData] = useState<VisemeData[]>([]);
   const [audioUrl, setAudioUrl] = useState<string>("");
-  
+
   const audioRef = useRef<HTMLAudioElement>(null);
   const animationTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const { toast } = useToast();
@@ -107,7 +107,7 @@ export default function Viseme() {
 
     setIsGenerating(true);
     try {
-      const speedMultiplier = speed[0] / 100; // Convert percentage to multiplier
+      const speedMultiplier = speed[0] / 100; // Convert percentage to multiplier (e.g., 70 -> 0.7)
       const response = await fetch("/api/visemes/generate", {
         method: "POST",
         headers: {
@@ -117,7 +117,7 @@ export default function Viseme() {
           text: text.trim(),
           voice: "en-US-AriaNeural",
           format: "svg", // We'll use the existing format but map to our JPGs
-          speed: speedMultiplier
+          speed: speedMultiplier // Pass the multiplier to the backend
         }),
       });
 
@@ -126,14 +126,14 @@ export default function Viseme() {
       }
 
       const data: VisemeResponse = await response.json();
-      
+
       // Convert base64 audio data to blob URL
       const binaryString = atob(data.audioBuffer);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
-      
+
       const audioBlob = new Blob([bytes.buffer], { type: "audio/wav" });
       const url = URL.createObjectURL(audioBlob);
       setAudioUrl(url);
@@ -172,33 +172,27 @@ export default function Viseme() {
     setIsPlaying(true);
     setCurrentVisemeId(0); // Start with neutral position
 
-    // Don't adjust playback rate - speed is already applied during audio generation
-    audioRef.current.playbackRate = 1.0;
+    // Do NOT adjust playback rate here. The audio itself is already generated at the desired speed.
+    audioRef.current.playbackRate = 1.0; 
     audioRef.current.currentTime = 0;
-    
+
     const playPromise = audioRef.current.play();
 
     if (playPromise !== undefined) {
       playPromise.then(() => {
         // Audio started successfully, now sync visemes
-        // Since audio speed is pre-applied during generation, use original timing
         visemeData.forEach((viseme, index) => {
+          // Schedule viseme change precisely at the audioOffset
           const timeout = setTimeout(() => {
             setCurrentVisemeId(viseme.visemeId);
           }, viseme.audioOffset);
-          
+
           animationTimeoutsRef.current.push(timeout);
         });
 
-        // Add a final timeout to return to neutral after the last viseme
-        const lastViseme = visemeData[visemeData.length - 1];
-        if (lastViseme) {
-          const finalTimeout = setTimeout(() => {
-            setCurrentVisemeId(0);
-          }, lastViseme.audioOffset + 200); // Shorter buffer since timing is more precise
-          
-          animationTimeoutsRef.current.push(finalTimeout);
-        }
+        // The final viseme (0) is now added in the backend, so we don't need a separate timeout here.
+        // The last viseme in visemeData will be the silence at the end.
+
       }).catch((error) => {
         console.error("Audio playback failed:", error);
         setIsPlaying(false);
@@ -379,7 +373,7 @@ export default function Viseme() {
                   // Ensure smooth transitions by preloading
                 }}
               />
-              
+
               {/* Overlay indicator for current viseme */}
               <div className="absolute bottom-2 left-2 bg-black bg-opacity-75 text-white px-2 py-1 rounded text-sm">
                 Viseme {currentVisemeId}
