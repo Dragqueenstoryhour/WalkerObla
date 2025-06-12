@@ -47,6 +47,7 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingRecording, setIsProcessingRecording] = useState(false);
   const [slowPlayback, setSlowPlayback] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   // Refs for media recording
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -80,6 +81,8 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
         ...prev,
         text: currentContent.content.trim()
       }));
+      // Reset saved state when content changes
+      setIsSaved(false);
     }
   }, [currentContent]);
 
@@ -215,11 +218,11 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
       }, 100);
     } catch (error) {
       console.error("Error generating topic content:", error);
-      toast({
-        title: "Error",
-        description: "Failed to generate content for this topic. Please try again.",
-        variant: "destructive",
-      });
+      // toast({
+      //   title: "Error",
+      //   description: "Failed to generate content for this topic. Please try again.",
+      //   variant: "destructive",
+      // });
     } finally {
       setIsGenerating(false);
     }
@@ -228,11 +231,11 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
   // Handle custom topic generation
   const handleCustomTopicGeneration = async () => {
     if (!customTopic.trim()) {
-      toast({
-        title: "Please enter a topic",
-        description: "Enter something you'd like to read about",
-        variant: "destructive",
-      });
+      // toast({
+      //   title: "Please enter a topic",
+      //   description: "Enter something you'd like to read about",
+      //   variant: "destructive",
+      // });
       return;
     }
 
@@ -256,11 +259,11 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
       }, 100);
     } catch (error) {
       console.error("Error generating custom content:", error);
-      toast({
-        title: "Error",
-        description: "Failed to generate content for your topic. Please try again.",
-        variant: "destructive",
-      });
+      // toast({
+      //   title: "Error",
+      //   description: "Failed to generate content for your topic. Please try again.",
+      //   variant: "destructive",
+      // });
     } finally {
       setIsGeneratingCustom(false);
     }
@@ -565,20 +568,10 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
       // Check if user is authenticated
       const userResponse = await fetch("/api/auth/user");
       if (!userResponse.ok) {
-        toast({
-          title: "Sign In Required",
-          description: "Please sign in to save readings to your collection.",
-          variant: "destructive"
-        });
         return;
       }
 
       if (!currentContent || !phrase.text) {
-        toast({
-          title: "No Content",
-          description: "No reading content available to save.",
-          variant: "destructive"
-        });
         return;
       }
 
@@ -600,17 +593,9 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
         throw new Error("Failed to save reading");
       }
 
-      toast({
-        title: "Reading Saved",
-        description: "Reading content saved to My Journey.",
-      });
+      setIsSaved(true);
     } catch (error) {
       console.error('Error saving reading:', error);
-      toast({
-        title: 'Save Error',
-        description: 'Could not save reading. Please try again.',
-        variant: 'destructive'
-      });
     }
   };
 
@@ -942,10 +927,15 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
                 <div className="flex justify-center">
                   <Button
                     onClick={handleSaveReading}
-                    className="bg-[#FFBD12] hover:bg-[#E6A800] text-white px-8 py-3 text-base"
+                    className={`px-8 py-3 text-base ${
+                      isSaved 
+                        ? "bg-green-600 hover:bg-green-700 text-white" 
+                        : "bg-[#FFBD12] hover:bg-[#E6A800] text-white"
+                    }`}
+                    disabled={isSaved}
                   >
-                    <BookOpen className="w-4 h-4 mr-2" />
-                    Save Reading
+                    <BookOpen className={`w-4 h-4 mr-2 ${isSaved ? "fill-white" : ""}`} />
+                    {isSaved ? "Reading Saved" : "Save Reading"}
                   </Button>
                 </div>
               </div>
