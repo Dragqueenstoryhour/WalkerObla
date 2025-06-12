@@ -37,6 +37,7 @@ const FeedbackPanel = () => {
   const [pronunciationIssues, setPronunciationIssues] = useState<PronunciationIssue[]>([]);
   const [currentWordIndex, setCurrentWordIndex] = useState(-1);
   const [isProcessingRecording, setIsProcessingRecording] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [savedWords, setSavedWords] = useState<Set<string>>(new Set());
   const [currentlyPracticing, setCurrentlyPracticing] = useState<string | null>(null);
   const [wordAssessmentResult, setWordAssessmentResult] = useState<any>(null);
@@ -46,31 +47,10 @@ const FeedbackPanel = () => {
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
   const [slowPlaybackWords, setSlowPlaybackWords] = useState<Record<string, boolean>>({});
 
-  // Use audio recording hook matching Words.tsx exactly
-  const {
-    isRecording,
-    recordingDuration,
-    audioUrl,
-    audioBlob,
-    startRecording,
-    stopRecording,
-    cancelRecording,
-  } = useAudioRecording({
-    onRecordingComplete: (blob) => {
-      if (currentWordIndex >= 0) {
-        processWordRecording(blob, currentWordIndex);
-      }
-    },
-    onError: (error) => {
-      console.error("Recording error:", error);
-      toast({
-        title: "Recording Error",
-        description: "Could not access microphone. Please check your browser permissions.",
-        variant: "destructive",
-      });
-      setCurrentlyPracticing(null);
-    },
-  });
+  // Direct MediaRecorder implementation - matching ConsolidatedReadingPractice exactly
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -147,7 +127,7 @@ const FeedbackPanel = () => {
     }
   }, [pronunciationResults]);
 
-  // Start recording for an individual word practice - matching Words.tsx exactly
+  // Start recording for an individual word practice - matching ConsolidatedReadingPractice exactly
   const startWordPractice = async (wordIndex: number) => {
     if (wordIndex < 0 || wordIndex >= pronunciationIssues.length) return;
 
@@ -164,8 +144,45 @@ const FeedbackPanel = () => {
         ),
       );
 
-      // Start recording using the hook
-      await startRecording();
+      // Clear any previous recording chunks
+      chunksRef.current = [];
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        if (streamRef.current) {
+          const tracks = streamRef.current.getTracks();
+          tracks.forEach(track => track.stop());
+          streamRef.current = null;
+        }
+
+        try {
+          const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+          await processWordRecording(audioBlob, wordIndex);
+        } catch (error) {
+          console.error('Error processing word recording:', error);
+          setIsRecording(false);
+          setIsProcessingRecording(false);
+          setPronunciationIssues((issues) =>
+            issues.map((w, idx) =>
+              idx === wordIndex ? { ...w, status: "idle" } : w,
+            ),
+          );
+        }
+      };
+
+      mediaRecorder.start(100);
+      setIsRecording(true);
 
       toast({
         title: "Recording Started",
@@ -189,9 +206,18 @@ const FeedbackPanel = () => {
     }
   };
 
-  // Stop recording the word - matching Words.tsx exactly
+  // Stop recording the word - matching ConsolidatedReadingPractice exactly
   const stopWordPractice = () => {
-    stopRecording();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+
+    setIsRecording(false);
   };
 
   // Process word recording with Azure - matching Words.tsx exactly
@@ -280,10 +306,20 @@ const FeedbackPanel = () => {
     }
   };
 
-  // Cancel word practice - matching Words.tsx exactly
+  // Cancel word practice - matching ConsolidatedReadingPractice exactly
   const cancelWordPractice = (wordIndex: number) => {
-    // Cancel recording using the hook
-    cancelRecording();
+    // Stop MediaRecorder if active
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+
+    // Stop stream tracks
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+
+    setIsRecording(false);
     setCurrentlyPracticing(null);
 
     // Reset issue status
