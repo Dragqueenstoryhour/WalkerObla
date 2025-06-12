@@ -377,7 +377,7 @@ export async function generateSpeechWithVisemes(
           resolve({
             visemes,
             audioBuffer: audioData,
-            duration: durationMs
+            duration: durationMs / 1000 // Convert to seconds for frontend
           });
         } else {
           const error = `Speech synthesis failed: ${result.reason}`;
