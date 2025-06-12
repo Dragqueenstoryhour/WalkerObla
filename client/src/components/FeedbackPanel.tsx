@@ -35,18 +35,18 @@ const FeedbackPanel = () => {
     "Good progress! Continue practicing to improve fluency." // Initial general feedback
   );
   const [pronunciationIssues, setPronunciationIssues] = useState<PronunciationIssue[]>([]);
+  const [currentWordIndex, setCurrentWordIndex] = useState(-1);
+  const [isProcessingRecording, setIsProcessingRecording] = useState(false);
+  const [savedWords, setSavedWords] = useState<Set<string>>(new Set());
   const [currentlyPracticing, setCurrentlyPracticing] = useState<string | null>(null);
   const [wordAssessmentResult, setWordAssessmentResult] = useState<any>(null);
-  const [isProcessingWord, setIsProcessingWord] = useState(false);
-  const [isSlowMode, setIsSlowMode] = useState(false);
-  const [savedWords, setSavedWords] = useState<Set<string>>(new Set());
   
   // Carousel state
   const [emblaRef, emblaApi] = useEmblaCarousel();
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
   const [slowPlaybackWords, setSlowPlaybackWords] = useState<Record<string, boolean>>({});
 
-  // Use audio recording hook for consistent recording management
+  // Use audio recording hook matching Words.tsx exactly
   const {
     isRecording,
     recordingDuration,
@@ -57,11 +57,8 @@ const FeedbackPanel = () => {
     cancelRecording,
   } = useAudioRecording({
     onRecordingComplete: (blob) => {
-      if (currentlyPracticing) {
-        const wordIndex = pronunciationIssues.findIndex(issue => issue.word === currentlyPracticing);
-        if (wordIndex !== -1) {
-          processWordRecording(blob, wordIndex);
-        }
+      if (currentWordIndex >= 0) {
+        processWordRecording(blob, currentWordIndex);
       }
     },
     onError: (error) => {
@@ -150,87 +147,14 @@ const FeedbackPanel = () => {
     }
   }, [pronunciationResults]);
 
-  // Handle word assessment with audio recording
-  const handleWordAssessment = async (audioBlob: Blob, word: string) => {
-    setIsProcessingWord(true);
-
-    try {
-      // Find the word issue to update
-      const wordIndex = pronunciationIssues.findIndex(issue => issue.word === word);
-      if (wordIndex === -1) return;
-
-      // Update status to assessing
-      setPronunciationIssues((issues) =>
-        issues.map((w, idx) =>
-          idx === wordIndex ? { ...w, status: "assessing" } : w,
-        ),
-      );
-
-      // Send to Azure Speech for assessment
-      const formData = new FormData();
-      formData.append("audio", audioBlob);
-      formData.append("text", word);
-      formData.append("itemType", "word");
-      formData.append("source", "feedback");
-
-      const response = await fetch("/api/pronunciation/assess", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to assess pronunciation");
-      }
-
-      const result = await response.json();
-      setWordAssessmentResult(result);
-
-      // Update with results
-      setPronunciationIssues((issues) =>
-        issues.map((w, idx) =>
-          idx === wordIndex
-            ? {
-                ...w,
-                status: "complete",
-                score: result.pronunciationScore,
-              }
-            : w,
-        ),
-      );
-
-      toast({
-        title: "Assessment Complete",
-        description: `Score: ${Math.round(result.pronunciationScore)}%`,
-      });
-
-    } catch (error) {
-      console.error("Error assessing word pronunciation:", error);
-      toast({
-        title: "Assessment Error",
-        description: "Could not analyze your speech. Please try again.",
-        variant: "destructive",
-      });
-
-      // Reset status to idle
-      const wordIndex = pronunciationIssues.findIndex(issue => issue.word === word);
-      setPronunciationIssues((issues) =>
-        issues.map((w, idx) =>
-          idx === wordIndex ? { ...w, status: "idle" } : w,
-        ),
-      );
-    } finally {
-      setIsProcessingWord(false);
-      setCurrentlyPracticing(null);
-    }
-  };
-
-  // Start recording for an individual word practice
+  // Start recording for an individual word practice - matching Words.tsx exactly
   const startWordPractice = async (wordIndex: number) => {
     if (wordIndex < 0 || wordIndex >= pronunciationIssues.length) return;
 
     try {
       const issue = pronunciationIssues[wordIndex];
-      setCurrentlyPracticing(issue.word);
+      setCurrentlyPracticing(issue.id);
+      setCurrentWordIndex(wordIndex);
       setWordAssessmentResult(null);
 
       // Update the issue status to recording
@@ -242,8 +166,18 @@ const FeedbackPanel = () => {
 
       // Start recording using the hook
       await startRecording();
+
+      toast({
+        title: "Recording Started",
+        description: `Recording word: "${issue.word}"`,
+      });
     } catch (error) {
       console.error("Error starting recording:", error);
+      toast({
+        title: "Microphone Error",
+        description: "Could not access the microphone. Please check permissions.",
+        variant: "destructive",
+      });
       setCurrentlyPracticing(null);
 
       // Reset issue status
@@ -255,44 +189,14 @@ const FeedbackPanel = () => {
     }
   };
 
-  // Stop recording the word
-  const stopWordPractice = async () => {
-    if (!isRecording || !currentlyPracticing) {
-      console.warn("No active recording to stop");
-      return;
-    }
-
-    try {
-      // Update status to assessing immediately
-      const wordIndex = pronunciationIssues.findIndex(issue => issue.word === currentlyPracticing);
-      if (wordIndex !== -1) {
-        setPronunciationIssues((issues) =>
-          issues.map((w, idx) =>
-            idx === wordIndex ? { ...w, status: "assessing" } : w,
-          ),
-        );
-      }
-
-      await stopRecording();
-    } catch (error) {
-      console.error("Error stopping recording:", error);
-      setCurrentlyPracticing(null);
-      
-      // Reset status to idle on error
-      const wordIndex = pronunciationIssues.findIndex(issue => issue.word === currentlyPracticing);
-      if (wordIndex !== -1) {
-        setPronunciationIssues((issues) =>
-          issues.map((w, idx) =>
-            idx === wordIndex ? { ...w, status: "idle" } : w,
-          ),
-        );
-      }
-    }
+  // Stop recording the word - matching Words.tsx exactly
+  const stopWordPractice = () => {
+    stopRecording();
   };
 
-  // Process word recording with Azure
+  // Process word recording with Azure - matching Words.tsx exactly
   const processWordRecording = async (audioBlob: Blob, wordIndex: number) => {
-    setIsProcessingWord(true);
+    setIsProcessingRecording(true);
 
     try {
       const issue = pronunciationIssues[wordIndex];
@@ -328,49 +232,57 @@ const FeedbackPanel = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Assessment API error:', errorData);
-        throw new Error(`Assessment failed: ${response.status} ${response.statusText}`);
+        throw new Error("Failed to assess pronunciation");
       }
 
-      const assessmentResult = await response.json();
-      console.log("Received assessment results:", assessmentResult);
+      const result = await response.json();
+      console.log("Received assessment results:", result);
 
-      setWordAssessmentResult(assessmentResult);
+      // Validate the result has expected properties
+      if (typeof result.pronunciationScore !== "number") {
+        throw new Error("Invalid assessment result format");
+      }
 
-      // Update the issue with results
+      // Update with results
+      setWordAssessmentResult(result);
+
+      // Update in the issues array
       setPronunciationIssues((issues) =>
         issues.map((w, idx) =>
           idx === wordIndex
             ? {
                 ...w,
                 status: "complete",
-                assessmentResult,
-                recordingUrl,
+                assessmentResult: result,
                 recordingBlob: audioBlob,
+                recordingUrl,
               }
             : w,
         ),
       );
 
     } catch (error) {
-      console.error("Error processing recording:", error);
-      
-      // Reset issue status on error
+      console.error("Error assessing word pronunciation:", error);
+      toast({
+        title: "Assessment Error",
+        description: "Could not analyze your speech. Please try again.",
+        variant: "destructive",
+      });
+
+      // Reset status to idle
       setPronunciationIssues((issues) =>
         issues.map((w, idx) =>
           idx === wordIndex ? { ...w, status: "idle" } : w,
         ),
       );
-
     } finally {
-      setIsProcessingWord(false);
-      setCurrentlyPracticing(null);
+      setIsProcessingRecording(false);
     }
   };
 
-  // Cancel word practice
+  // Cancel word practice - matching Words.tsx exactly
   const cancelWordPractice = (wordIndex: number) => {
+    // Cancel recording using the hook
     cancelRecording();
     setCurrentlyPracticing(null);
 
@@ -380,6 +292,11 @@ const FeedbackPanel = () => {
         idx === wordIndex ? { ...w, status: "idle" } : w,
       ),
     );
+
+    toast({
+      title: "Practice Cancelled",
+      description: "Recording stopped",
+    });
   };
 
   // Handle text-to-speech for a word
@@ -591,7 +508,7 @@ const FeedbackPanel = () => {
                               <Button
                                 onClick={() => startWordPractice(index)}
                                 className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
-                                disabled={isRecording || isProcessingWord}
+                                disabled={isRecording || isProcessingRecording}
                               >
                                 <MicIcon className="h-5 w-5" />
                                 Practice This Word
