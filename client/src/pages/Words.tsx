@@ -160,7 +160,7 @@ export default function Words() {
   const [visemeData, setVisemeData] = useState<VisemeData[]>([]);
   const [visemeAudioUrl, setVisemeAudioUrl] = useState<string>("");
   const [currentVisemeWord, setCurrentVisemeWord] = useState<string>("");
-  const [forceImageUpdate, setForceImageUpdate] = useState(0);
+
 
   // Carousel state
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
@@ -658,18 +658,11 @@ export default function Words() {
       playPromise.then(() => {
         console.log("Audio started playing, scheduling viseme changes");
         
-        // Schedule viseme changes with enhanced logging and error handling
+        // Schedule viseme changes
         visemeData.forEach((viseme, index) => {
           const timeout = setTimeout(() => {
             console.log(`Changing to viseme ${viseme.visemeId} at offset ${viseme.audioOffset}ms (index: ${index})`);
-            setCurrentVisemeId(prevId => {
-              if (prevId !== viseme.visemeId) {
-                console.log(`Viseme changed: ${prevId} -> ${viseme.visemeId}`);
-                setForceImageUpdate(prev => prev + 1); // Force image re-render
-                return viseme.visemeId;
-              }
-              return prevId;
-            });
+            setCurrentVisemeId(viseme.visemeId);
           }, viseme.audioOffset);
 
           animationTimeoutsRef.current.push(timeout);
@@ -801,7 +794,7 @@ export default function Words() {
 
       {/* Viseme animation dialog */}
       <Dialog open={showVisemeDialog} onOpenChange={setShowVisemeDialog}>
-        <DialogContent className="max-w-md bg-blue-50 border-blue-200">
+        <DialogContent className="max-w-lg bg-blue-50 border-blue-200">
           <DialogHeader>
             <DialogTitle className="text-white bg-blue-600 -mx-6 -mt-6 px-6 py-4 mb-4">
               Lip Animation - "{currentVisemeWord}"
@@ -811,23 +804,22 @@ export default function Words() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="flex flex-col items-center space-y-4">
-            {/* Animation display */}
-            <div className="relative w-48 h-48 bg-blue-100 rounded-lg overflow-hidden border-2 border-blue-200">
+          <div className="flex items-start space-x-6">
+            {/* Animation display - left aligned */}
+            <div className="relative w-48 h-48 bg-blue-100 rounded-lg overflow-hidden border-2 border-blue-200 flex-shrink-0">
               <img
-                key={`viseme-${currentVisemeId}-${forceImageUpdate}`}
+                key={currentVisemeId}
                 src={visemeImages[currentVisemeId as keyof typeof visemeImages]}
                 alt={`Lip animation frame ${currentVisemeId}`}
                 className="w-full h-full object-cover shadow-lg"
                 style={{
                   opacity: 1,
                   transform: isPlayingVisemes ? 'scale(1.01)' : 'scale(1)',
-                  transition: 'transform 0.08s ease-out',
-                  filter: isPlayingVisemes ? 'brightness(1.05)' : 'brightness(1)',
-                  imageRendering: 'crisp-edges'
+                  transition: 'transform 0.1s ease-out',
+                  filter: isPlayingVisemes ? 'brightness(1.05)' : 'brightness(1)'
                 }}
                 onLoad={() => {
-                  console.log(`Viseme image loaded: ${currentVisemeId} - ${visemeImages[currentVisemeId as keyof typeof visemeImages]}`);
+                  console.log(`Viseme image loaded: ${currentVisemeId}`);
                 }}
                 onError={(e) => {
                   console.error(`Failed to load viseme image ${currentVisemeId}:`, e);
@@ -843,20 +835,21 @@ export default function Words() {
                   </div>
                 </div>
               )}
-
-              {/* Speech bubble when playing */}
-              {isPlayingVisemes && (
-                <div className="absolute top-4 right-4 transform translate-x-full">
-                  <div className="relative bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-lg">
-                    "{currentVisemeWord}"
-                    {/* Speech bubble pointer */}
-                    <div className="absolute left-0 top-1/2 transform -translate-x-full -translate-y-1/2">
-                      <div className="w-0 h-0 border-t-[8px] border-t-transparent border-b-[8px] border-b-transparent border-r-[12px] border-r-blue-600"></div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
+
+            {/* Speech bubble - stationary on the right */}
+            <div className="flex items-center h-48">
+              <div className="relative bg-blue-600 text-white px-4 py-3 rounded-lg text-base font-medium shadow-lg">
+                "{currentVisemeWord}"
+                {/* Speech bubble pointer pointing left to lips */}
+                <div className="absolute left-0 top-1/2 transform -translate-x-full -translate-y-1/2">
+                  <div className="w-0 h-0 border-t-[10px] border-t-transparent border-b-[10px] border-b-transparent border-r-[15px] border-r-blue-600"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
 
             {/* Status */}
             <div className="text-center">
