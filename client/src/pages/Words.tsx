@@ -658,12 +658,24 @@ export default function Words() {
       setImagesReady(true);
       console.log("All viseme images preloaded successfully");
       
-      // Ensure we have at least the neutral position image
+      // Force load neutral position if missing and wait for it
       if (!preloadedImages[0]) {
-        console.warn("Neutral position image not loaded, forcing load");
-        const neutralImg = new Image();
-        neutralImg.src = visemeImages[0];
-        setPreloadedImages(prev => ({ ...prev, [0]: neutralImg }));
+        console.warn("Neutral position image not loaded, forcing synchronous load");
+        await new Promise<void>((resolve) => {
+          const neutralImg = new Image();
+          neutralImg.onload = () => {
+            setPreloadedImages(prev => ({ ...prev, [0]: neutralImg }));
+            console.log("Neutral position image force-loaded successfully");
+            resolve();
+          };
+          neutralImg.onerror = () => {
+            console.error("Failed to force-load neutral position image");
+            resolve(); // Continue anyway
+          };
+          neutralImg.src = visemeImages[0];
+          // Timeout fallback
+          setTimeout(resolve, 1000);
+        });
       }
       
     } catch (error) {
@@ -794,17 +806,45 @@ export default function Words() {
       visemeAudioRef.current.playbackRate = 1.0;
       visemeAudioRef.current.currentTime = 0;
       
-      // Force load the audio if needed
+      // Ensure audio is properly loaded before playing
       if (visemeAudioRef.current.readyState < 2) {
-        console.log("Audio not ready, loading...");
+        console.log("Audio not fully loaded, preloading...");
         visemeAudioRef.current.load();
-        await new Promise((resolve) => {
+        
+        // Wait for audio to be ready with better error handling
+        await new Promise<void>((resolve) => {
+          let resolved = false;
+          
           const handleCanPlay = () => {
-            visemeAudioRef.current?.removeEventListener('canplay', handleCanPlay);
-            resolve(void 0);
+            if (!resolved) {
+              resolved = true;
+              visemeAudioRef.current?.removeEventListener('canplay', handleCanPlay);
+              visemeAudioRef.current?.removeEventListener('loadeddata', handleCanPlay);
+              console.log("Audio successfully preloaded and ready");
+              resolve();
+            }
           };
+          
+          const handleError = () => {
+            if (!resolved) {
+              resolved = true;
+              console.warn("Audio loading failed, proceeding anyway");
+              resolve();
+            }
+          };
+
           visemeAudioRef.current?.addEventListener('canplay', handleCanPlay);
-          setTimeout(resolve, 2000); // Timeout after 2 seconds
+          visemeAudioRef.current?.addEventListener('loadeddata', handleCanPlay);
+          visemeAudioRef.current?.addEventListener('error', handleError);
+          
+          // Reduced timeout for faster fallback
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true;
+              console.warn("Audio loading timeout, proceeding anyway");
+              resolve();
+            }
+          }, 1000);
         });
       }
 
@@ -863,14 +903,10 @@ export default function Words() {
       visemeAudioRef.current.addEventListener("error", handleAudioError);
 
     } catch (error) {
-      console.error("Comprehensive error in playVisemeAnimation:", error);
+      console.error("Error in playVisemeAnimation:", error);
       setIsPlayingVisemes(false);
       setCurrentVisemeId(0);
-      toast({
-        title: "Animation Error",
-        description: "Failed to play animation. Click Play again to retry.",
-        variant: "destructive",
-      });
+      // Silent recovery - no error toast, just reset to allow replay
     }
   };
 
@@ -990,15 +1026,13 @@ export default function Words() {
               )}
             </div>
 
-            {/* iPhone-style speech bubble - stationary on the right */}
+            {/* Speech bubble - stationary on the right */}
             <div className="flex items-center h-48">
               <div className="relative bg-blue-500 text-white px-4 py-3 rounded-2xl text-base font-medium shadow-lg max-w-[150px]">
                 "{currentVisemeWord}"
-                {/* iPhone-style speech bubble tail pointing left to lips */}
-                <div className="absolute left-0 top-1/2 transform -translate-x-1 -translate-y-1/2">
-                  <svg width="8" height="13" viewBox="0 0 8 13" className="text-blue-500">
-                    <path d="M1.533 3.568C8.21 5.984 8.21 7.016 1.533 9.432v3.568H0V0h1.533v3.568z" fill="currentColor"/>
-                  </svg>
+                {/* Simple triangle speech bubble tail pointing left to lips */}
+                <div className="absolute left-0 top-1/2 transform -translate-x-full -translate-y-1/2">
+                  <div className="w-0 h-0 border-t-[10px] border-t-transparent border-b-[10px] border-b-transparent border-r-[15px] border-r-blue-500"></div>
                 </div>
               </div>
             </div>
