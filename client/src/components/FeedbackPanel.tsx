@@ -262,8 +262,96 @@ const FeedbackPanel = () => {
   };
 
   // Stop recording the word
-  const stopWordPractice = () => {
-    stopRecording();
+  const stopWordPractice = async () => {
+    try {
+      await stopRecording();
+    } catch (error) {
+      console.error("Error stopping recording:", error);
+      toast({
+        title: "Recording Error",
+        description: "Failed to stop recording. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Process word recording with Azure
+  const processWordRecording = async (audioBlob: Blob, wordIndex: number) => {
+    setIsProcessingWord(true);
+
+    try {
+      const issue = pronunciationIssues[wordIndex];
+
+      // Validate word data
+      if (!issue || !issue.word || issue.word.trim() === '') {
+        console.error('Invalid word data:', issue);
+        throw new Error('No word text available for assessment');
+      }
+
+      console.log('Processing word:', issue.word);
+
+      // Update status to assessing
+      setPronunciationIssues((issues) =>
+        issues.map((w, idx) =>
+          idx === wordIndex ? { ...w, status: "assessing" } : w,
+        ),
+      );
+
+      // Create a URL for the recording
+      const recordingUrl = URL.createObjectURL(audioBlob);
+
+      // Send to Azure Speech for assessment
+      const formData = new FormData();
+      formData.append("audio", audioBlob);
+      formData.append("text", issue.word.trim());
+      formData.append("itemType", "word");
+      formData.append("source", "feedback_panel");
+
+      const response = await fetch("/api/pronunciation/assess", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Assessment API error:', errorData);
+        throw new Error(`Assessment failed: ${response.status} ${response.statusText}`);
+      }
+
+      const assessmentResult = await response.json();
+      console.log("Received assessment results:", assessmentResult);
+
+      setWordAssessmentResult(assessmentResult);
+
+      // Update the issue with results
+      setPronunciationIssues((issues) =>
+        issues.map((w, idx) =>
+          idx === wordIndex
+            ? {
+                ...w,
+                status: "complete",
+                assessmentResult,
+                recordingUrl,
+                recordingBlob: audioBlob,
+              }
+            : w,
+        ),
+      );
+
+    } catch (error) {
+      console.error("Error processing recording:", error);
+      
+      // Reset issue status on error
+      setPronunciationIssues((issues) =>
+        issues.map((w, idx) =>
+          idx === wordIndex ? { ...w, status: "idle" } : w,
+        ),
+      );
+
+    } finally {
+      setIsProcessingWord(false);
+      setCurrentlyPracticing(null);
+    }
   };
 
   // Cancel word practice
@@ -277,11 +365,6 @@ const FeedbackPanel = () => {
         idx === wordIndex ? { ...w, status: "idle" } : w,
       ),
     );
-
-    toast({
-      title: "Practice Cancelled",
-      description: "Recording stopped",
-    });
   };
 
   // Handle text-to-speech for a word
@@ -300,7 +383,23 @@ const FeedbackPanel = () => {
     const textToSpeak = issue.word;
 
     try {
-      const audioBlob = await synthesizeSpeech(textToSpeak, "default", isSlowPlayback ? 0.6 : 1.0);
+      const response = await fetch('/api/speech/synthesize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: textToSpeak,
+          voice: 'default',
+          speed: isSlowPlayback ? 0.6 : 1.0
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to synthesize speech');
+      }
+
+      const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
 
       if (audioRef.current) {
@@ -345,10 +444,6 @@ const FeedbackPanel = () => {
   // Save a word to user's collection
   const saveWordToCollection = async (word: string) => {
     if (savedWords.has(word)) {
-      toast({
-        title: "Already Saved",
-        description: "This word is already in your collection.",
-      });
       return;
     }
 
@@ -370,18 +465,8 @@ const FeedbackPanel = () => {
       }
 
       setSavedWords(prev => new Set([...prev, word]));
-
-      toast({
-        title: "Word Saved",
-        description: "Added to your collection",
-      });
     } catch (error) {
       console.error("Error saving word:", error);
-      toast({
-        title: "Save Error",
-        description: "Failed to save word. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -481,12 +566,6 @@ const FeedbackPanel = () => {
                       <Card className="h-full shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
                         <CardHeader className="text-center">
                           <CardTitle className="text-3xl font-bold text-white">{issue.word}</CardTitle>
-                          <div className="text-sm text-white/80 mt-2">
-                            {issue.phonetic}
-                          </div>
-                          <div className="text-xs text-white/60 mt-1">
-                            Current score: {Math.round(issue.score)}%
-                          </div>
                         </CardHeader>
                         
                         <CardContent className="space-y-4">
@@ -579,7 +658,7 @@ const FeedbackPanel = () => {
                               variant="outline"
                               className="h-10 px-4 bg-[#6366F1] hover:bg-[#5855EB] text-white border-0"
                             >
-                              <Star className="h-4 w-4 mr-1" />
+                              <Star className={`h-4 w-4 mr-1 ${savedWords.has(issue.word) ? 'fill-white' : ''}`} />
                               Save
                             </Button>
                           </div>
