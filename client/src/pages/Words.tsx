@@ -237,6 +237,22 @@ export default function Words() {
     };
   }, []);
 
+  // Setup carousel event listeners to fix Previous button
+  useEffect(() => {
+    if (!emblaApi) return;
+
+    const onSelect = () => {
+      setCurrentCarouselIndex(emblaApi.selectedScrollSnap());
+    };
+
+    emblaApi.on('select', onSelect);
+    onSelect(); // Set initial index
+
+    return () => {
+      emblaApi.off('select', onSelect);
+    };
+  }, [emblaApi]);
+
   // Auto-load common words when the page opens
   useEffect(() => {
     if (!shareId) {
@@ -353,8 +369,21 @@ export default function Words() {
   };
 
   // Stop recording the word
-  const stopWordPractice = () => {
-    stopRecording();
+  const stopWordPractice = async () => {
+    try {
+      await stopRecording();
+      toast({
+        title: "Recording Stopped",
+        description: "Processing your pronunciation...",
+      });
+    } catch (error) {
+      console.error("Error stopping recording:", error);
+      toast({
+        title: "Recording Error",
+        description: "Failed to stop recording properly",
+        variant: "destructive",
+      });
+    }
   };
 
   // Process word recording with Azure
@@ -678,10 +707,8 @@ export default function Words() {
       // Preload all required images before playing
       await preloadVisemeImages(uniqueVisemeIds);
       
-      // Auto-play the animation after images are ready
-      setTimeout(() => {
-        playVisemeAnimation();
-      }, 300);
+      // Auto-play the animation after images are ready - removed timeout to fix first-time error
+      playVisemeAnimation();
 
     } catch (error) {
       console.error("Error generating visemes:", error);
@@ -874,7 +901,7 @@ export default function Words() {
       <Dialog open={showVisemeDialog} onOpenChange={setShowVisemeDialog}>
         <DialogContent className="max-w-lg bg-blue-50 border-blue-200">
           <DialogHeader>
-            <DialogTitle className="text-white bg-blue-600 -mx-6 -mt-6 px-6 py-4 mb-4">
+            <DialogTitle className="text-white bg-blue-600 -mx-6 -mt-6 px-6 py-4 mb-4 rounded-t-lg">
               Lip Animation - "{currentVisemeWord}"
             </DialogTitle>
             <DialogDescription className="text-blue-800 font-medium">
@@ -907,13 +934,15 @@ export default function Words() {
               )}
             </div>
 
-            {/* Speech bubble - stationary on the right */}
+            {/* iPhone-style speech bubble - stationary on the right */}
             <div className="flex items-center h-48">
-              <div className="relative bg-blue-600 text-white px-4 py-3 rounded-lg text-base font-medium shadow-lg">
+              <div className="relative bg-blue-500 text-white px-4 py-3 rounded-2xl text-base font-medium shadow-lg max-w-[150px]">
                 "{currentVisemeWord}"
-                {/* Speech bubble pointer pointing left to lips */}
-                <div className="absolute left-0 top-1/2 transform -translate-x-full -translate-y-1/2">
-                  <div className="w-0 h-0 border-t-[10px] border-t-transparent border-b-[10px] border-b-transparent border-r-[15px] border-r-blue-600"></div>
+                {/* iPhone-style speech bubble tail pointing left to lips */}
+                <div className="absolute left-0 top-1/2 transform -translate-x-1 -translate-y-1/2">
+                  <svg width="8" height="13" viewBox="0 0 8 13" className="text-blue-500">
+                    <path d="M1.533 3.568C8.21 5.984 8.21 7.016 1.533 9.432v3.568H0V0h1.533v3.568z" fill="currentColor"/>
+                  </svg>
                 </div>
               </div>
             </div>
