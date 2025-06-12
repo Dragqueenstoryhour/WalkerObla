@@ -151,6 +151,17 @@ export default function Words() {
   const [pendingSaveIndex, setPendingSaveIndex] = useState<number | null>(null);
   const [slowPlaybackWords, setSlowPlaybackWords] = useState<{ [key: string]: boolean }>({});
   const [showSummary, setShowSummary] = useState(false);
+  
+  // Letter selection dialog states
+  const [showLetterDialog, setShowLetterDialog] = useState(false);
+  const [selectedTopicType, setSelectedTopicType] = useState<'start' | 'contain' | 'end' | null>(null);
+
+  // Letter and consonant group options
+  const letterOptions = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+    'STR', 'ED', 'ING', 'SH', 'TH'
+  ];
 
   // Viseme animation state
   const [showVisemeDialog, setShowVisemeDialog] = useState(false);
@@ -216,10 +227,10 @@ export default function Words() {
     "Family Members",
     "Weather",
     "Numbers",
-    "Actions/Verbs",
-    "Emotions",
-    "Home and Furniture",
-    "Transportation"
+    "Alphabet",
+    "Words that Start with..",
+    "Words that Contain..",
+    "Words that End with.."
   ];
 
   // Preload viseme images for smooth transitions
@@ -259,6 +270,56 @@ export default function Words() {
       handleGenerateTopicWords("Commonly Used Words");
     }
   }, []);
+
+  // Handle topic card click
+  const handleTopicCardClick = (topic: string) => {
+    if (topic === "Alphabet") {
+      handleGenerateAlphabet();
+    } else if (topic === "Words that Start with..") {
+      setSelectedTopicType('start');
+      setShowLetterDialog(true);
+    } else if (topic === "Words that Contain..") {
+      setSelectedTopicType('contain');
+      setShowLetterDialog(true);
+    } else if (topic === "Words that End with..") {
+      setSelectedTopicType('end');
+      setShowLetterDialog(true);
+    } else {
+      handleGenerateTopicWords(topic);
+    }
+  };
+
+  // Generate alphabet cards
+  const handleGenerateAlphabet = () => {
+    const alphabetWords: ProcessedWord[] = letterOptions.slice(0, 26).map(
+      (letter, index) => ({
+        id: `alphabet-${Date.now()}-${index}`,
+        text: letter,
+        status: "idle",
+      })
+    );
+
+    setProcessedWords(alphabetWords);
+    setCurrentWordIndex(0);
+    scrollToPracticeSection();
+  };
+
+  // Handle letter selection for word generation
+  const handleLetterSelection = (letter: string) => {
+    setShowLetterDialog(false);
+    
+    let topicString = "";
+    if (selectedTopicType === 'start') {
+      topicString = `Words that start with ${letter}`;
+    } else if (selectedTopicType === 'contain') {
+      topicString = `Words that contain ${letter}`;
+    } else if (selectedTopicType === 'end') {
+      topicString = `Words that end with ${letter}`;
+    }
+
+    handleGenerateTopicWords(topicString);
+    setSelectedTopicType(null);
+  };
 
   // Generate topic-based words
   const handleGenerateTopicWords = async (topic: string, customDifficulty?: string) => {
@@ -979,6 +1040,36 @@ export default function Words() {
         </DialogContent>
       </Dialog>
 
+      {/* Letter selection dialog */}
+      <Dialog open={showLetterDialog} onOpenChange={setShowLetterDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedTopicType === 'start' && "Select a Letter - Words that Start with..."}
+              {selectedTopicType === 'contain' && "Select a Letter - Words that Contain..."}
+              {selectedTopicType === 'end' && "Select a Letter - Words that End with..."}
+            </DialogTitle>
+            <DialogDescription>
+              Choose a letter or consonant group to generate words.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-6 md:grid-cols-8 gap-2 p-4">
+            {letterOptions.map((letter) => (
+              <Card
+                key={letter}
+                className="cursor-pointer hover:shadow-md hover:bg-[#0F3CC9] transition-all duration-200 h-12"
+                style={{ backgroundColor: '#1947e5' }}
+                onClick={() => handleLetterSelection(letter)}
+              >
+                <CardContent className="p-2 text-center flex items-center justify-center h-full">
+                  <p className="font-bold text-white text-xs">{letter}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Viseme animation dialog */}
       <Dialog open={showVisemeDialog} onOpenChange={setShowVisemeDialog}>
         <DialogContent className="max-w-lg bg-blue-50 border-blue-200">
@@ -1106,7 +1197,7 @@ export default function Words() {
                     key={topic}
                     className="cursor-pointer hover:shadow-md hover:bg-[#0F3CC9] transition-all duration-200 h-16"
                     style={{ backgroundColor: '#1947e5' }}
-                    onClick={() => handleGenerateTopicWords(topic)}
+                    onClick={() => handleTopicCardClick(topic)}
                   >
                     <CardContent className="p-3 text-center flex items-center justify-center h-full">
                       <p className="font-bold text-white text-sm">{topic}</p>
