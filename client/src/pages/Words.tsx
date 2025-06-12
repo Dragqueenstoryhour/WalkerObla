@@ -160,6 +160,8 @@ export default function Words() {
   const [visemeData, setVisemeData] = useState<VisemeData[]>([]);
   const [visemeAudioUrl, setVisemeAudioUrl] = useState<string>("");
   const [currentVisemeWord, setCurrentVisemeWord] = useState<string>("");
+  const [preloadedImages, setPreloadedImages] = useState<{ [key: number]: HTMLImageElement }>({});
+  const [imagesReady, setImagesReady] = useState(false);
 
 
   // Carousel state
@@ -202,6 +204,7 @@ export default function Words() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const visemeAudioRef = useRef<HTMLAudioElement | null>(null);
   const animationTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Predefined word topics
   const wordTopics = [
@@ -563,6 +566,57 @@ export default function Words() {
     }));
   };
 
+  // Draw viseme on canvas for smooth rendering
+  const drawVisemeOnCanvas = (visemeId: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const img = preloadedImages[visemeId];
+    if (img) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    }
+  };
+
+  // Preload images for specific viseme IDs
+  const preloadVisemeImages = async (visemeIds: number[]): Promise<void> => {
+    console.log("Preloading viseme images for IDs:", visemeIds);
+    setImagesReady(false);
+    
+    const loadPromises = visemeIds.map((id) => {
+      return new Promise<void>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          setPreloadedImages(prev => ({ ...prev, [id]: img }));
+          console.log(`Preloaded viseme image ${id}`);
+          resolve();
+        };
+        img.onerror = () => {
+          console.error(`Failed to preload viseme image ${id}`);
+          reject(new Error(`Failed to load viseme ${id}`));
+        };
+        img.src = visemeImages[id as keyof typeof visemeImages];
+      });
+    });
+
+    try {
+      await Promise.all(loadPromises);
+      setImagesReady(true);
+      console.log("All viseme images preloaded successfully");
+      
+      // Draw initial neutral position
+      if (canvasRef.current) {
+        drawVisemeOnCanvas(0);
+      }
+    } catch (error) {
+      console.error("Error preloading viseme images:", error);
+      throw error;
+    }
+  };
+
   // Generate viseme animation for a word
   const generateVisemeAnimation = async (word: string) => {
     if (!word.trim()) {
@@ -577,6 +631,8 @@ export default function Words() {
     setIsGeneratingVisemes(true);
     setCurrentVisemeWord(word);
     setShowVisemeDialog(true);
+    setCurrentVisemeId(0);
+    setImagesReady(false);
 
     try {
       const response = await fetch("/api/visemes/generate", {
@@ -610,10 +666,22 @@ export default function Words() {
       setVisemeAudioUrl(url);
       setVisemeData(data.visemes);
 
-      // Auto-play the animation
+      // Get unique viseme IDs and preload their images
+      const uniqueVisemeIds: number[] = [];
+      data.visemes.forEach(v => {
+        if (!uniqueVisemeIds.includes(v.visemeId)) {
+          uniqueVisemeIds.push(v.visemeId);
+        }
+      });
+      console.log("Unique viseme IDs to preload:", uniqueVisemeIds);
+      
+      // Preload all required images before playing
+      await preloadVisemeImages(uniqueVisemeIds);
+      
+      // Auto-play the animation after images are ready
       setTimeout(() => {
         playVisemeAnimation();
-      }, 500);
+      }, 300);
 
     } catch (error) {
       console.error("Error generating visemes:", error);
@@ -639,6 +707,15 @@ export default function Words() {
       return;
     }
 
+    if (!imagesReady) {
+      console.log("Images not ready yet, waiting...");
+      toast({
+        title: "Loading",
+        description: "Images are still loading, please wait...",
+      });
+      return;
+    }
+
     // Clear any existing timeouts
     animationTimeoutsRef.current.forEach(clearTimeout);
     animationTimeoutsRef.current = [];
@@ -648,6 +725,7 @@ export default function Words() {
 
     console.log("Starting viseme animation with", visemeData.length, "visemes");
     console.log("Viseme data:", visemeData.map(v => ({ id: v.visemeId, offset: v.audioOffset })));
+    console.log("Images ready:", imagesReady, "Preloaded images:", Object.keys(preloadedImages));
 
     visemeAudioRef.current.playbackRate = 1.0;
     visemeAudioRef.current.currentTime = 0;
