@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Play, Square, Volume2 } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { Play, Square, Volume2, Gauge } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // Import all viseme images
@@ -68,6 +69,7 @@ interface VisemeResponse {
 
 export default function Viseme() {
   const [text, setText] = useState("Hello world, this is a test of viseme animation");
+  const [speed, setSpeed] = useState([100]); // Speed as percentage (50-100)
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentVisemeId, setCurrentVisemeId] = useState(0);
@@ -105,6 +107,7 @@ export default function Viseme() {
 
     setIsGenerating(true);
     try {
+      const speedMultiplier = speed[0] / 100; // Convert percentage to multiplier
       const response = await fetch("/api/visemes/generate", {
         method: "POST",
         headers: {
@@ -113,7 +116,8 @@ export default function Viseme() {
         body: JSON.stringify({
           text: text.trim(),
           voice: "en-US-AriaNeural",
-          format: "svg" // We'll use the existing format but map to our JPGs
+          format: "svg", // We'll use the existing format but map to our JPGs
+          speed: speedMultiplier
         }),
       });
 
@@ -177,13 +181,15 @@ export default function Viseme() {
         // Audio started successfully, now sync visemes
         const startTime = Date.now();
         
-        // Schedule viseme changes based on audio offsets
+        // Schedule viseme changes based on audio offsets, accounting for speed
+        const speedMultiplier = speed[0] / 100;
         visemeData.forEach((viseme, index) => {
-          const timeoutMs = viseme.audioOffset; // Already in milliseconds
+          // Adjust timing based on speed - slower speeds need longer delays
+          const adjustedTimeoutMs = viseme.audioOffset / speedMultiplier;
           
           const timeout = setTimeout(() => {
             setCurrentVisemeId(viseme.visemeId);
-          }, timeoutMs);
+          }, adjustedTimeoutMs);
           
           animationTimeoutsRef.current.push(timeout);
         });
@@ -279,6 +285,29 @@ export default function Viseme() {
                 className="w-full"
                 disabled={isGenerating || isPlaying}
               />
+            </div>
+
+            <div>
+              <label htmlFor="speed-slider" className="block text-sm font-medium mb-2 flex items-center gap-2">
+                <Gauge className="h-4 w-4" />
+                Speech Speed: {speed[0]}%
+              </label>
+              <div className="px-2">
+                <Slider
+                  id="speed-slider"
+                  value={speed}
+                  onValueChange={setSpeed}
+                  min={50}
+                  max={100}
+                  step={5}
+                  className="w-full"
+                  disabled={isGenerating || isPlaying}
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>50% (Slower)</span>
+                  <span>100% (Normal)</span>
+                </div>
+              </div>
             </div>
 
             <div className="flex gap-2">

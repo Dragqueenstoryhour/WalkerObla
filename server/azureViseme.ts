@@ -271,7 +271,8 @@ function generateVisemeBlendShapes(visemeId: number): string {
 export async function generateSpeechWithVisemes(
   text: string,
   voice = "en-US-GuyNeural",
-  format: "svg" | "blendshapes" = "blendshapes"
+  format: "svg" | "blendshapes" = "blendshapes",
+  speed = 1.0
 ): Promise<ConsolidatedVisemeData> {
   // Validate the Azure key
   if (!process.env.AZURE_SPEECH_KEY || !process.env.AZURE_SPEECH_REGION) {
@@ -360,9 +361,18 @@ export async function generateSpeechWithVisemes(
       }
     };
     
-    // Start the synthesis
-    synthesizer.speakTextAsync(
-      text,
+    // Create SSML with speed control
+    const ssml = `
+      <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
+        <voice name="${voice}">
+          <prosody rate="${speed}x">${text}</prosody>
+        </voice>
+      </speak>
+    `.trim();
+
+    // Start the synthesis with SSML
+    synthesizer.speakSsmlAsync(
+      ssml,
       result => {
         if (result.reason === speechsdk.ResultReason.SynthesizingAudioCompleted) {
           // Sort visemes by audio offset

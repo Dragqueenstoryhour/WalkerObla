@@ -681,18 +681,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Viseme generation endpoint
   app.post('/api/visemes/generate', async (req, res) => {
     try {
-      const { text, voice, format } = req.body;
+      const { text, voice, format, speed } = req.body;
       
       if (!text) {
         return res.status(400).json({ error: 'Text is required' });
       }
 
-      console.log(`🎭 Generating visemes for text: "${text}"`);
+      const speechSpeed = speed || 1.0;
+      console.log(`🎭 Generating visemes for text: "${text}" at ${(speechSpeed * 100)}% speed`);
       
       const visemeData = await generateSpeechWithVisemes(
         text,
         voice || "en-US-AriaNeural",
-        format || "svg"
+        format || "svg",
+        speechSpeed
       );
       
       console.log(`✅ Generated ${visemeData.visemes.length} visemes with ${visemeData.duration.toFixed(2)}s duration`);
