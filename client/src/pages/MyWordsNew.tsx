@@ -14,6 +14,7 @@ import { CombinedLineChart } from '@/components/CombinedLineChart'; // Import th
 interface SavedPhrase {
   id: number;
   phrase: string;
+  syllabication?: string;
   phonetic: string | null;
   difficulty: string | null;
   source: string | null; // e.g., 'words', 'phrases', 'reader_feedback', 'reader_content'
@@ -25,6 +26,7 @@ interface SavedPhrase {
 interface ProcessedItem {
   id: string; // This ID will now include the prefix, e.g., "word-123" or "phrase-456"
   text: string;
+  syllabication?: string;
   phonetic?: string;
   difficulty?: "beginner" | "intermediate" | "advanced";
   recordingUrl?: string | null;
@@ -370,6 +372,11 @@ function PracticeCarousel({
           </button>
           <CardHeader className="text-center">
             <CardTitle className="text-3xl font-bold text-white">{currentItem.text}</CardTitle>
+            {currentItem.syllabication && (
+              <div className="text-lg italic text-white/80 mt-2">
+                {currentItem.syllabication}
+              </div>
+            )}
           </CardHeader>
 
           <CardContent className="space-y-4">
@@ -646,6 +653,7 @@ export default function MyWords() {
       const words = phrases.filter(p => p.source === 'words' || p.source === 'reader_feedback').map(p => ({
         id: `word-${p.id}`,
         text: p.phrase,
+        syllabication: p.syllabication || undefined,
         phonetic: p.phonetic || undefined,
         difficulty: (p.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
         status: "idle" as const,

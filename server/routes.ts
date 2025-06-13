@@ -119,6 +119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: `word_${word.id}`,
         userId: word.userId,
         phrase: word.word,
+        syllabication: word.syllabication,
         phonetic: word.pronunciation,
         difficulty: word.difficultyLevel ? word.difficultyLevel.toString() : null,
         assessmentResults: null,
