@@ -97,7 +97,8 @@ export default function Phrases() {
     containScroll: 'trimSnaps',
     slidesToScroll: 1,
     skipSnaps: false,
-    inViewThreshold: 0.7
+    inViewThreshold: 0.7,
+    startIndex: 0
   });
 
   // Use audio recording hook for consistent recording management
@@ -134,6 +135,15 @@ export default function Phrases() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentPhraseIndexRef = useRef<number>(-1);
+
+  // Helper function to determine font size based on text length
+  const getTextSizeClass = (text: string) => {
+    const length = text.length;
+    if (length <= 20) return 'text-2xl sm:text-3xl'; // Large for short phrases
+    if (length <= 35) return 'text-xl sm:text-2xl';  // Medium for moderate phrases  
+    if (length <= 50) return 'text-lg sm:text-xl';   // Smaller for longer phrases
+    return 'text-base sm:text-lg';                   // Smallest for very long phrases
+  };
 
   // Predefined phrase topics
   const phraseTopics = [
@@ -659,18 +669,20 @@ export default function Phrases() {
             </div>
 
             {/* Carousel */}
-            <div className="embla" ref={emblaRef}>
+            <div className="embla overflow-hidden" ref={emblaRef}>
               <div className="embla__container flex">
                 {processedPhrases.map((phrase, index) => (
-                  <div key={phrase.id} className="embla__slide flex-[0_0_100%] px-2">
-                    <Card className="h-full shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
-                      <CardHeader className="text-center">
-                        <CardTitle className="text-3xl font-bold text-white">{phrase.text}</CardTitle>
+                  <div key={phrase.id} className="embla__slide flex-[0_0_100%] px-2 flex justify-center">
+                    <Card className="w-full max-w-xs sm:max-w-sm shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
+                      <CardHeader className="text-center px-3 py-4">
+                        <CardTitle className={`${getTextSizeClass(phrase.text)} font-bold text-white leading-relaxed px-2`}>
+                          {phrase.text}
+                        </CardTitle>
                       </CardHeader>
                       
-                      <CardContent className="space-y-4">
+                      <CardContent className="space-y-3 px-3 pb-4">
                         {/* Recording Controls */}
-                        <div className="flex justify-center gap-2">
+                        <div className="flex justify-center gap-2 flex-wrap">
                           {phrase.status === "idle" && (
                             <Button
                               onClick={() => startPhrasePractice(index)}
@@ -724,18 +736,19 @@ export default function Phrases() {
                         </div>
 
                         {/* Hear and Slow Switch + Save */}
-                        <div className="flex justify-center gap-2">
+                        <div className="flex justify-center gap-2 flex-wrap">
                           <Button
                             onClick={() => handleTextToSpeech(index)}
                             variant="outline"
-                            className="h-10 px-4 bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0"
+                            size="sm"
+                            className="h-9 px-3 bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0"
                           >
-                            <Ear className="h-4 w-4 mr-1" />
+                            <Ear className="h-3 w-3 mr-1" />
                             Hear
                           </Button>
                           <button
                             onClick={() => toggleSlowPlayback(phrase.id)}
-                            className={`relative inline-flex h-10 w-16 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                            className={`relative inline-flex h-9 w-14 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
                               slowPlaybackPhrases[phrase.id] ? 'bg-[#FFE8E8]' : 'bg-gray-300'
                             }`}
                             role="switch"
@@ -743,26 +756,27 @@ export default function Phrases() {
                             aria-label="Toggle slow playback"
                           >
                             <span
-                              className={`inline-flex h-8 w-8 transform rounded-full bg-white transition-transform duration-200 ease-in-out items-center justify-center ${
-                                slowPlaybackPhrases[phrase.id] ? 'translate-x-8' : 'translate-x-1'
+                              className={`inline-flex h-7 w-7 transform rounded-full bg-white transition-transform duration-200 ease-in-out items-center justify-center ${
+                                slowPlaybackPhrases[phrase.id] ? 'translate-x-6' : 'translate-x-1'
                               }`}
                             >
-                              <Snail className="h-3 w-3 text-gray-600" />
+                              <Snail className="h-2 w-2 text-gray-600" />
                             </span>
                           </button>
                           <Button
                             onClick={() => savePhraseToCollection(index)}
                             variant="outline"
-                            className="h-10 px-4 bg-[#6366F1] hover:bg-[#5855EB] text-white border-0"
+                            size="sm"
+                            className="h-9 px-3 bg-[#6366F1] hover:bg-[#5855EB] text-white border-0"
                           >
-                            <Star className={`h-4 w-4 mr-1 ${savedPhrases.has(processedPhrases[index]?.text) ? 'fill-white' : ''}`} />
+                            <Star className={`h-3 w-3 mr-1 ${savedPhrases.has(processedPhrases[index]?.text) ? 'fill-white' : ''}`} />
                             Save
                           </Button>
                         </div>
 
                         {/* Assessment Results with Bar Charts */}
                         {phrase.status === "complete" && phrase.assessmentResult && (
-                          <div className="space-y-4 mt-6 bg-white rounded-lg p-4 mx-2">
+                          <div className="space-y-3 mt-4 bg-white rounded-lg p-3 mx-1">
                             {/* Overall Score */}
                             <div className="text-center">
                               <div 
