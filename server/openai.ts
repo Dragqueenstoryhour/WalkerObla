@@ -606,12 +606,12 @@ export async function generateTopicPhrases(
     console.log(`Generating ${type} related to topic: "${topic}" with difficulty level: ${difficulty}`);
 
     // Validate difficulty level
-    if (!DIFFICULTY_SCALE[difficulty]) {
+    if (!DIFFICULTY_SCALE[difficulty as keyof typeof DIFFICULTY_SCALE]) {
       console.warn(`Invalid difficulty level ${difficulty}, defaulting to level 4`);
       difficulty = "4";
     }
 
-    const difficultyInfo = DIFFICULTY_SCALE[difficulty];
+    const difficultyInfo = DIFFICULTY_SCALE[difficulty as keyof typeof DIFFICULTY_SCALE];
     const numberOfItems = 8; // Always generate 8 items
 
     let itemTypeDescription;
@@ -644,7 +644,8 @@ ${type === "words" ? `IMPORTANT:
 - Ensure words are grammatically useful and convey clear meaning on their own, excluding purely grammatical connectors or common articles/prepositions unless specifically requested by context.
 - Ensure each word is directly related to the topic "${topic}"
 - Provide diverse, unique words (no repetition)
-- Words should be substantive and meaningful` : ""}
+- Words should be substantive and meaningful
+- For each word, also provide its syllabication (syllables separated by hyphens)` : ""}
 
 **Difficulty Level**: ${difficulty}/8 (${difficultyInfo.name})
 
@@ -661,17 +662,20 @@ ${type === "words" ? `IMPORTANT:
   - The generated words/phrases should be analogous in complexity and type to the examples provided for this difficulty level, such as: ${difficultyInfo.examples.join(', ')}.
 - **Exclusions**:
   - Do NOT include numbers or numerical sequences (e.g., "5, 4, 3")
-  - Do NOT include artificial hyphenated syllabic breakdowns (e.g., "cog-ni-tive"); however, naturally hyphenated compound words (e.g., "well-being") are acceptable.
+  - Do NOT include artificial hyphenated syllabic breakdowns in the main text; however, naturally hyphenated compound words (e.g., "well-being") are acceptable.
   - Avoid overly technical or academic terms unless essential to the topic and difficulty
   - Do NOT include incomplete sentences, fragments, lists, bullet points, or markdown formatting
 - **Output Format**:
-  - Return a JSON object with a single key "phrases" containing an array of ${numberOfItems} strings
-  - Example: {"phrases": ["item 1", "item 2", ..., "item ${numberOfItems}"]}
+${type === "words" ? 
+  `  - Return a JSON object with a "words" array containing objects with "text" and "syllabication" properties
+  - Example: {"words": [{"text": "elephant", "syllabication": "el-e-phant"}, {"text": "computer", "syllabication": "com-pu-ter"}]}` :
+  `  - Return a JSON object with a single key "phrases" containing an array of ${numberOfItems} strings
+  - Example: {"phrases": ["item 1", "item 2", ..., "item ${numberOfItems}"]}`}
 
 **Examples for Topic "Commonly Used Phrases"**:
 - Difficulty 1: ["Hi, how are you?", "Good morning!", "Thank you very much."]
 **Examples for Topic "Common English Words"**:
-- Difficulty 1: ["cat", "dog", "house"]
+- Difficulty 1: [{"text": "cat", "syllabication": "cat"}, {"text": "dog", "syllabication": "dog"}, {"text": "house", "syllabication": "house"}]
 `;
 
     const response = await openai.chat.completions.create({
@@ -708,33 +712,65 @@ ${type === "words" ? `IMPORTANT:
       parsed = { phrases: lines };
     }
 
-    // Validate the phrases array
-    if (!parsed.phrases || !Array.isArray(parsed.phrases)) {
-      console.warn("OpenAI response did not contain a valid 'phrases' array:", parsed);
-      parsed.phrases = [];
+    // Handle different response formats for words vs phrases
+    let validItems: any[] = [];
+    if (type === "words") {
+      // For words, expect a "words" array with objects containing "text" and "syllabication"
+      if (parsed.words && Array.isArray(parsed.words)) {
+        validItems = parsed.words
+          .filter((item: any) => {
+            if (!item || typeof item !== 'object') return false;
+            if (!item.text || typeof item.text !== 'string' || !item.text.trim()) return false;
+            if (!item.syllabication || typeof item.syllabication !== 'string') return false;
+            
+            // Ensure it's a single word
+            if (item.text.split(/\s+/).length > 1) return false;
+            // Exclude numbers and invalid patterns
+            if (/^\d+(,\s*\d+)*$/.test(item.text)) return false;
+            return true;
+          })
+          .slice(0, numberOfItems);
+      }
+      
+      // If we don't have valid words, fall back to phrases format and create syllabication
+      if (validItems.length === 0 && parsed.phrases && Array.isArray(parsed.phrases)) {
+        validItems = parsed.phrases
+          .filter((text: any) => {
+            if (typeof text !== 'string' || !text.trim()) return false;
+            if (text.split(/\s+/).length > 1) return false; // Single words only
+            if (/^\d+(,\s*\d+)*$/.test(text)) return false;
+            return true;
+          })
+          .map((text: any) => ({
+            text: text.trim(),
+            syllabication: createBasicSyllabication(text.trim())
+          }))
+          .slice(0, numberOfItems);
+      }
+    } else {
+      // For phrases, expect the old format
+      if (!parsed.phrases || !Array.isArray(parsed.phrases)) {
+        console.warn("OpenAI response did not contain a valid 'phrases' array:", parsed);
+        parsed.phrases = [];
+      }
+      
+      // Filter and validate phrases
+      validItems = parsed.phrases
+        .filter((item: any) => {
+          // Ensure item is a string and non-empty
+          if (typeof item !== 'string' || !item.trim()) return false;
+          // Exclude numbers and hyphenated terms (unless they are valid compound words)
+          if (/^\d+(,\s*\d+)*$/.test(item)) return false; // e.g., "5, 4, 3"
+          // Adjust hyphenation check for words vs. phrases if needed. For now, keep it general.
+          if (item.includes('-') && !item.match(/^[a-zA-Z]+(-[a-zA-Z]+)*$/)) return false; // e.g., "cog-ni-tive", allow "well-being"
+
+          const wordCount = item.split(/\s+/).length;
+          // For phrases, allow up to max sentence length + 20%
+          if (wordCount > difficultyInfo.maxSentenceLength * 1.2) return false;
+          return true;
+        })
+        .slice(0, numberOfItems);
     }
-
-    // Filter and validate phrases/words
-    let validItems = parsed.phrases
-      .filter(item => {
-        // Ensure item is a string and non-empty
-        if (typeof item !== 'string' || !item.trim()) return false;
-        // Exclude numbers and hyphenated terms (unless they are valid compound words)
-        if (/^\d+(,\s*\d+)*$/.test(item)) return false; // e.g., "5, 4, 3"
-        // Adjust hyphenation check for words vs. phrases if needed. For now, keep it general.
-        if (item.includes('-') && !item.match(/^[a-zA-Z]+(-[a-zA-Z]+)*$/)) return false; // e.g., "cog-ni-tive", allow "well-being"
-
-        const wordCount = item.split(/\s+/).length;
-        if (type === "words") {
-            // For words, ensure it's a single word primarily
-            if (wordCount > 1) return false;
-        } else {
-            // For phrases, allow up to max sentence length + 20%
-            if (wordCount > difficultyInfo.maxSentenceLength * 1.2) return false;
-        }
-        return true;
-      })
-      .slice(0, numberOfItems);
 
     // If we don't have enough valid items, retry once
     if (validItems.length < numberOfItems) {
