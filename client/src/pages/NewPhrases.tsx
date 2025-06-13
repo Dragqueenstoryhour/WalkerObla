@@ -180,7 +180,6 @@ export default function NewPhrases() {
 
   // Set current mode to phrases - separate effect to ensure it always runs
   useEffect(() => {
-    console.log('NewPhrases: Setting mode to phrases');
     setCurrentMode('phrases');
   }, [setCurrentMode]);
 

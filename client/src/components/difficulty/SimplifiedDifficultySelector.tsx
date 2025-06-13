@@ -103,9 +103,6 @@ export function DifficultyDropdown({ onConfirm }: DifficultyDropdownProps) {
   
   // Get mode-specific label
   const difficultyLabel = getDifficultyLabel(currentMode);
-  
-  // Debug logging
-  console.log(`DifficultyDropdown: currentMode=${currentMode}, label=${difficultyLabel}, difficulty=${difficulty}`);
 
   // Handle OK button click
   const handleConfirm = async () => {

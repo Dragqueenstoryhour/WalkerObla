@@ -117,7 +117,6 @@ export function DifficultyProvider({ children }: DifficultyProviderProps) {
 
   // Set current mode and update localStorage
   const setCurrentMode = (mode: PracticeMode) => {
-    console.log(`DifficultyContext: Setting mode from ${currentMode} to ${mode}`);
     setCurrentModeState(mode);
     localStorage.setItem('readAssistCurrentMode', mode);
   };

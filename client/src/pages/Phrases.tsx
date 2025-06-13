@@ -71,7 +71,7 @@ export default function Phrases() {
   const { user, isAuthenticated } = useAuth();
   const params = useParams();
   const shareId = params.shareId;
-  const { difficulty, setDifficulty } = useDifficulty();
+  const { difficulty, setDifficulty, setCurrentMode } = useDifficulty();
 
   // State variables
   const [aiGenerateTopic, setAiGenerateTopic] = useState("Common Phrases");
@@ -169,6 +169,12 @@ export default function Phrases() {
       });
     }
   }, [emblaApi]);
+
+  // Set current mode to phrases - separate effect to ensure it always runs
+  useEffect(() => {
+    console.log('Phrases: Setting mode to phrases');
+    setCurrentMode('phrases');
+  }, [setCurrentMode]);
 
   // Auto-load common phrases when the page opens
   useEffect(() => {
