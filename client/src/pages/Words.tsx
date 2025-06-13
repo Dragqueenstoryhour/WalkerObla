@@ -1409,10 +1409,15 @@ export default function Words() {
                           <Button
                             onClick={() => saveWordToCollection(index)}
                             variant="outline"
-                            className="h-10 px-4 bg-[#6366F1] hover:bg-[#5855EB] text-white border-0"
+                            className={`h-10 px-4 text-white border-0 ${
+                              savedWords.has(processedWords[index]?.text)
+                                ? "bg-green-600 hover:bg-green-700"
+                                : "bg-[#6366F1] hover:bg-[#5855EB]"
+                            }`}
+                            disabled={savedWords.has(processedWords[index]?.text)}
                           >
                             <Star className={`h-4 w-4 mr-1 ${savedWords.has(processedWords[index]?.text) ? 'fill-white' : ''}`} />
-                            Save
+                            {savedWords.has(processedWords[index]?.text) ? "Word Saved" : "Save"}
                           </Button>
                         </div>
 

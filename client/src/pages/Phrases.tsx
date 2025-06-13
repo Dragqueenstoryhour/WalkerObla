@@ -772,10 +772,15 @@ export default function Phrases() {
                             onClick={() => savePhraseToCollection(index)}
                             variant="outline"
                             size="sm"
-                            className="h-9 px-3 bg-[#6366F1] hover:bg-[#5855EB] text-white border-0"
+                            className={`h-9 px-3 text-white border-0 ${
+                              savedPhrases.has(processedPhrases[index]?.text)
+                                ? "bg-green-600 hover:bg-green-700"
+                                : "bg-[#6366F1] hover:bg-[#5855EB]"
+                            }`}
+                            disabled={savedPhrases.has(processedPhrases[index]?.text)}
                           >
-                            <Star className={`h-3 w-3 mr-1 ${savedPhrases.has(processedPhrases[index]?.text) ? 'fill-white' : ''}`} />
-                            Save
+                            <Star className={`h-3 w-3 mr-1 ${savedPhrases.has(processedPhrases[index]?.text) ? 'fill-white stroke-none' : 'stroke-white'}`} />
+                            {savedPhrases.has(processedPhrases[index]?.text) ? "Phrase Saved" : "Save"}
                           </Button>
                         </div>
 
