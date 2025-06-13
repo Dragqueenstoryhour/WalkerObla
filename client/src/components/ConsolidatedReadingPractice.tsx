@@ -31,7 +31,7 @@ interface ProcessedPhrase {
 const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, contentId }: ConsolidatedReadingPracticeProps) => {
   const { currentContent, setCurrentContent, currentHighlightedText, isReading } = useReading();
   const { toast } = useToast();
-  const { difficulty, setDifficulty } = useDifficulty();
+  const { difficulty, setDifficulty, setCurrentMode } = useDifficulty();
   const [isGenerating, setIsGenerating] = useState(false);
   const readingContentRef = useRef<HTMLDivElement>(null);
 
