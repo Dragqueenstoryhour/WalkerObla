@@ -134,7 +134,7 @@ export default function Words() {
   const { user, isAuthenticated } = useAuth();
   const params = useParams();
   const shareId = params.shareId;
-  const { difficulty, setDifficulty } = useDifficulty();
+  const { difficulty, setDifficulty, setCurrentMode } = useDifficulty();
 
   // State variables
   const [aiGenerateTopic, setAiGenerateTopic] = useState("Commonly Used Words");
@@ -271,12 +271,13 @@ export default function Words() {
     };
   }, [emblaApi]);
 
-  // Auto-load common words when the page opens
+  // Set current mode to words and auto-load common words when the page opens
   useEffect(() => {
+    setCurrentMode('words');
     if (!shareId) {
       handleGenerateTopicWords("Commonly Used Words");
     }
-  }, []);
+  }, [setCurrentMode]);
 
   // Handle topic card click
   const handleTopicCardClick = (topic: string) => {

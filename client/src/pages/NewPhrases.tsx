@@ -74,7 +74,7 @@ export default function NewPhrases() {
   const { user, isAuthenticated } = useAuth();
   const params = useParams();
   const shareId = params.shareId; // Get the shared link ID from URL
-  const { difficulty, setDifficulty } = useDifficulty();
+  const { difficulty, setDifficulty, setCurrentMode } = useDifficulty();
 
   // We'll add this after our other state variables are defined
   const [isGenerating, setIsGenerating] = useState(false);
