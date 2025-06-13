@@ -612,7 +612,8 @@ export default function Words() {
     });
 
     const isSlowPlayback = slowPlaybackWords[word.id] || false;
-    const textToSpeak = word.text;
+    // Use syllabication for slow playback if available, otherwise use regular text
+    const textToSpeak = isSlowPlayback && word.syllabication ? word.syllabication : word.text;
 
     // Construct the SSML string with Azure AI Speech native voice
     let ssmlText = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">`;
@@ -1303,6 +1304,11 @@ export default function Words() {
                     <Card className="h-full shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
                       <CardHeader className="text-center">
                         <CardTitle className="text-3xl font-bold text-white">{word.text}</CardTitle>
+                        {word.syllabication && (
+                          <div className="text-lg italic text-white/80 mt-2">
+                            {word.syllabication}
+                          </div>
+                        )}
                       </CardHeader>
                       
                       <CardContent className="space-y-4">

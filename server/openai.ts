@@ -595,8 +595,61 @@ export async function generateSimilarPhrases(
 }
 
 /**
- * Generate topic-specific phrases or words with enhanced difficulty level support
+ * Create basic syllabication for a word using simple rules
  */
+function createBasicSyllabication(word: string): string {
+  if (!word || word.length <= 3) {
+    return word; // Short words typically don't need syllable breaks
+  }
+  
+  const vowels = 'aeiouy';
+  const consonants = 'bcdfghjklmnpqrstvwxz';
+  word = word.toLowerCase();
+  
+  let syllables: string[] = [];
+  let currentSyllable = '';
+  
+  for (let i = 0; i < word.length; i++) {
+    const char = word[i];
+    const nextChar = word[i + 1];
+    
+    currentSyllable += char;
+    
+    // Check if we should break after this character
+    let shouldBreak = false;
+    
+    if (i < word.length - 1) {
+      if (vowels.includes(char) && consonants.includes(nextChar)) {
+        // Vowel followed by consonant - potential break point
+        if (i + 2 < word.length && vowels.includes(word[i + 2])) {
+          // V-C-V pattern - break after the consonant
+          currentSyllable += nextChar;
+          i++; // Skip the consonant we just added
+          shouldBreak = true;
+        }
+      } else if (consonants.includes(char) && vowels.includes(nextChar)) {
+        // Consonant followed by vowel - break before the vowel
+        shouldBreak = true;
+      }
+    }
+    
+    if (shouldBreak || i === word.length - 1) {
+      syllables.push(currentSyllable);
+      currentSyllable = '';
+    }
+  }
+  
+  // If we still have content in currentSyllable, add it
+  if (currentSyllable) {
+    syllables.push(currentSyllable);
+  }
+  
+  // Clean up single character syllables and merge if needed
+  const cleanedSyllables = syllables.filter(s => s.length > 0);
+  
+  return cleanedSyllables.join('-');
+}
+
 export async function generateTopicPhrases(
   topic: string,
   difficulty: string = "4",
