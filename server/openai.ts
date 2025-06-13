@@ -17,77 +17,103 @@ const ADVANCED_MODEL = "gpt-4o";
 export const DIFFICULTY_SCALE = {
   "1": {
     name: "Very Easy",
-    syllableRange: "1 syllable only",
-    wordTypes: "basic everyday nouns and actions",
-    examples: ["cat", "dog", "run", "walk", "eat"],
-    complexity: "Extremely simple words with straightforward pronunciation",
-    phonetics: "Simple consonant-vowel patterns (CV, CVC)",
-    maxSentenceLength: 5
+    syllableRange: "1-2 syllables, common words",
+    wordTypes: "basic everyday nouns, verbs, and simple adjectives",
+    examples: ["cat", "run", "happy", "big", "blue"],
+    complexity: "Extremely simple sentences, straightforward vocabulary, direct and clear meaning.",
+    phonetics: "Simple consonant-vowel patterns (CV, CVC), basic sight words.",
+    maxSentenceLength: 8,
+    maxWords: 25,
+    gradeLevel: 3,
+    numSentences: 3
   },
   "2": {
     name: "Easy",
-    syllableRange: "1-2 syllables",
-    wordTypes: "common everyday vocabulary, simple actions",
-    examples: ["water", "morning", "dinner", "talking"],
-    complexity: "Simple words with regular spelling patterns",
-    phonetics: "Basic consonant blends (bl, st, tr)",
-    maxSentenceLength: 7
+    syllableRange: "1-2 syllables, familiar words",
+    wordTypes: "common everyday vocabulary, simple actions, basic adverbs",
+    examples: ["water", "quickly", "morning", "playing", "small"],
+    complexity: "Simple sentence structures, regular spelling patterns, easy to understand narratives.",
+    phonetics: "Basic consonant blends (bl, st, tr), short and long vowels.",
+    maxSentenceLength: 10,
+    maxWords: 30,
+    gradeLevel: 4,
+    numSentences: 3
   },
   "3": {
     name: "Easy Medium",
-    syllableRange: "1-2 syllables, occasional 3",
-    wordTypes: "expanded everyday vocabulary",
-    examples: ["breakfast", "computer", "yesterday", "remember"],
-    complexity: "Familiar words with some phonetic challenges",
-    phonetics: "Multiple consonant sounds (str, spl)",
-    maxSentenceLength: 10
+    syllableRange: "1-3 syllables, growing vocabulary",
+    wordTypes: "slightly expanded vocabulary, common adjectives, adverbs, and connecting words",
+    examples: ["discover", "beautiful", "carefully", "explain", "friendly"],
+    complexity: "Slightly more varied sentence structures, some compound sentences, clear and coherent paragraphs.",
+    phonetics: "Introduction to digraphs (sh, ch, th), common vowel teams (ea, oi).",
+    maxSentenceLength: 9,
+    maxWords: 35,
+    gradeLevel: 4,
+    numSentences: 4
   },
   "4": {
     name: "Medium",
-    syllableRange: "2-3 syllables",
-    wordTypes: "general vocabulary, basic specialized terms",
-    examples: ["important", "afternoon", "restaurant", "telephone"],
-    complexity: "Some challenging sounds and longer words",
-    phonetics: "Complex vowel sounds, diphthongs",
-    maxSentenceLength: 12
+    syllableRange: "2-3 syllables, general vocabulary",
+    wordTypes: "general vocabulary, common abstract nouns, varied verbs, introductory academic terms",
+    examples: ["information", "problem", "solution", "consider", "develop"],
+    complexity: "Standard sentence structures, some compound and basic complex sentences, developing narrative complexity.",
+    phonetics: "Common diphthongs (ou, oy), common prefixes and suffixes.",
+    maxSentenceLength: 9,
+    maxWords: 35,
+    gradeLevel: 5,
+    numSentences: 4
   },
   "5": {
     name: "Medium Hard",
-    syllableRange: "2-3 syllables, some 4",
-    wordTypes: "varied vocabulary with specific contextual terms",
-    examples: ["dictionary", "information", "technology", "understanding"],
-    complexity: "Words with less predictable pronunciation",
-    phonetics: "Consonant clusters, varied stress patterns",
-    maxSentenceLength: 15
+    syllableRange: "2-4 syllables, broader vocabulary",
+    wordTypes: "broader vocabulary, some academic terms, more nuanced verbs and adjectives, thematic words",
+    examples: ["environment", "analysis", "significant", "critique", "perspective"],
+    complexity: "More complex sentence structures, including some complex sentences, paragraphs with multiple ideas, analytical reasoning.",
+    phonetics: "Irregular vowel sounds, less common consonant blends, emphasis on word stress.",
+    maxSentenceLength: 8,
+    maxWords: 40,
+    gradeLevel: 6,
+    numSentences: 5
   },
   "6": {
     name: "Hard",
-    syllableRange: "2-4 syllables",
-    wordTypes: "domain-specific vocabulary, abstract concepts",
-    examples: ["philosophy", "celebration", "education", "relationship"],
-    complexity: "Complex words with multiple syllables",
-    phonetics: "Challenging consonant combinations, stress shifts",
-    maxSentenceLength: 20
+    syllableRange: "3-5 syllables, academic vocabulary",
+    wordTypes: "academic and specialized vocabulary, abstract concepts, formal language",
+    examples: ["hypothesis", "consequence", "implication", "demonstrate", "synthesis"],
+    complexity: "Complex and compound-complex sentences, requires careful reading and inference, multi-paragraph structure.",
+    phonetics: "Subtle phonetic distinctions, multiple pronunciations for some graphemes, focus on intonation.",
+    maxSentenceLength: 9,
+    maxWords: 45,
+    gradeLevel: 6,
+    numSentences: 5
   },
   "7": {
     name: "Very Hard",
-    syllableRange: "3-5 syllables",
-    wordTypes: "specialized terminology, abstract concepts",
-    examples: ["psychology", "pharmaceutical", "collaboration", "university"],
-    complexity: "Multisyllabic words with difficult sound combinations",
-    phonetics: "Difficult consonant clusters, subtle vowel distinctions",
-    maxSentenceLength: 25
+    syllableRange: "4-8+ syllables, highly complex",
+    wordTypes: "highly specialized, technical, academic, and abstract vocabulary, nuanced terminology",
+    examples: ["epistemological", "paradigm", "ubiquitous", "recalcitrant", "dichotomy"],
+    complexity: "Extremely advanced and nuanced language, often requiring specialized knowledge to comprehend fully. Intricate sentence structures, extended analytical discussions.",
+    phonetics: "Complex, irregular, and subtle phonetic distinctions, emphasis on advanced prosody.",
+    maxSentenceLength: 10,
+    maxWords: 50,
+    gradeLevel: 7,
+    numSentences: 5
   },
-  "8": {
+  "8": { // New level
     name: "Expert",
-    syllableRange: "3+ syllables, many 5+",
-    wordTypes: "technical terminology, advanced field-specific vocabulary",
-    examples: ["philosophical", "entrepreneurial", "biotechnology", "multidisciplinary"],
-    complexity: "Complex multisyllabic words with challenging pronunciation",
-    phonetics: "Most challenging sound combinations and stress patterns",
-    maxSentenceLength: 30
+    syllableRange: "4-8+ syllables, professional/academic",
+    wordTypes: "professional, highly specialized, theoretical, and philosophical vocabulary",
+    examples: ["conundrum", "ineluctable", "esoteric", "parsimonious", "verisimilitude"],
+    complexity: "Mastery-level language, incorporating complex rhetorical devices and requiring deep analytical engagement. Sophisticated sentence structures.",
+    phonetics: "Advanced phonetic awareness, understanding of etymology and linguistic history.",
+    maxSentenceLength: 10,
+    maxWords: 60,
+    gradeLevel: 8,
+    numSentences: 6
   }
 };
+
+type DifficultyLevel = keyof typeof DIFFICULTY_SCALE;
 
 /**
  * Transcribe audio to text using OpenAI Whisper
@@ -233,114 +259,76 @@ function createDefaultContent(topic: string, rawContent: string): any {
   return {
     title: title,
     content: cleanContent,
-    source: null
   };
 }
 
-export async function generateReadingContent(topic: string, difficulty: string): Promise<ReadingContent> {
+export async function generateReadingContent(topic: string, difficulty: DifficultyLevel): Promise<ReadingContent> {
   try {
-    // Adjust language complexity based on difficulty level (1 through 8)
-    let languageLevel = "";
-    let maxWords = 150; // Default max words to conserve tokens
-    let sentenceLength = "";
-    let sentenceCount = 1;
-    let syllableCount = "";
-    let complexityGuidance = "";
-    let mappedDifficulty: "easy" | "medium" | "hard" = "easy"; // For backward compatibility
+    const difficultyInfo = DIFFICULTY_SCALE[difficulty];
 
-    switch(difficulty) {
-      case "1":
-        mappedDifficulty = "easy";
-        languageLevel = "adult-level, grammatically correct sentences using *only* the most basic, high-frequency, one-syllable words for everyday concepts.";
-        maxWords = 15;
-        sentenceLength = "3-5 words";
-        sentenceCount = 1;
-        syllableCount = "only one-syllable words (allow minor exceptions like 'the', 'and')";
-        complexityGuidance = "Use common, concrete nouns and verbs. Avoid abstract concepts, specialized jargon, or multi-syllabic words where simpler synonyms exist.";
-        break;
-      case "2":
-        mappedDifficulty = "easy";
-        languageLevel = "adult-level, grammatically correct sentences with very simple, high-frequency vocabulary suitable for everyday topics and situations.";
-        maxWords = 20;
-        sentenceLength = "5-8 words";
-        sentenceCount = 2;
-        syllableCount = "primarily one-syllable words with a few basic two-syllable words";
-        complexityGuidance = "Focus on common, practical vocabulary. Avoid complex sentence structures or unfamiliar terms.";
-        break;
-      case "3":
-        mappedDifficulty = "easy";
-        languageLevel = "adult-level, grammatically correct sentences with simple vocabulary that is familiar in daily life.";
-        maxWords = 25;
-        sentenceLength = "5-10 words";
-        sentenceCount = 2;
-        syllableCount = "mix of one and two-syllable words, mostly common everyday terms";
-        complexityGuidance = "Use clear, direct language. Introduce occasional three-syllable words if they are common and easily understood.";
-        break;
-      case "4":
-        mappedDifficulty = "medium";
-        languageLevel = "adult-level, grammatically correct sentences with basic general vocabulary.";
-        maxWords = 30;
-        sentenceLength = "7-12 words";
-        sentenceCount = 3;
-        syllableCount = "mostly two-syllable words with some one-syllable words";
-        complexityGuidance = "Incorporate slightly more varied vocabulary, but keep sentence structures straightforward.";
-        break;
-      case "5":
-        mappedDifficulty = "medium";
-        languageLevel = "adult-level, grammatically correct sentences with straightforward vocabulary.";
-        maxWords = 40;
-        sentenceLength = "8-15 words";
-        sentenceCount = 3;
-        syllableCount = "balanced mix of one, two and occasional three-syllable words";
-        complexityGuidance = "Introduce some descriptive language and slightly more complex ideas, maintaining clarity.";
-        break;
-      case "6":
-        mappedDifficulty = "hard";
-        languageLevel = "adult-level, grammatically correct sentences with moderately advanced vocabulary.";
-        maxWords = 50;
-        sentenceLength = "10-18 words";
-        sentenceCount = 4;
-        syllableCount = "mix of two and three-syllable words with occasional specialized terms";
-        complexityGuidance = "Incorporate more nuanced vocabulary and moderately complex sentence structures suitable for general adult reading.";
-        break;
-      case "7":
-        mappedDifficulty = "hard";
-        languageLevel = "adult-level, grammatically correct sentences with advanced vocabulary.";
-        maxWords = 60;
-        sentenceLength = "12-22 words";
-        sentenceCount = 5;
-        syllableCount = "mainly three-syllable words with some complex terms and technical vocabulary";
-        complexityGuidance = "Use precise and varied vocabulary. Sentence structures can be more complex but should remain clear and readable.";
-        break;
-      case "8":
-        mappedDifficulty = "hard";
-        languageLevel = "adult-level, grammatically correct sentences with sophisticated vocabulary.";
-        maxWords = 70;
-        sentenceLength = "15-25 words";
-        sentenceCount = 6;
-        syllableCount = "complex multi-syllable words with specialized terminology relevant to the topic";
-        complexityGuidance = "Employ sophisticated vocabulary and complex sentence structures appropriate for expert-level content. Ensure all words and concepts are clearly explained within the context.";
-        break;
-      // Backward compatibility for older difficulty labels
-      case "easy":
-        return generateReadingContent(topic, "1");
-      case "medium":
-        return generateReadingContent(topic, "4");
-      case "hard":
-        return generateReadingContent(topic, "7");
-      default: // Fallback for invalid difficulty
-        return generateReadingContent(topic, "2"); // Default to level 2 for better readability
+    if (!difficultyInfo) {
+      throw new Error(`Invalid difficulty level: ${difficulty}`);
     }
 
-    const systemPrompt = `You are creating short, ${languageLevel} about "${topic}".
-    - Use ${syllableCount}.
-    - Write exactly ${sentenceCount} complete, grammatically correct sentences.
-    - Each sentence should be ${sentenceLength} long.
-    - Keep the total content under ${maxWords} words.
-    - Write in a natural, conversational style with clear narrative flow.
-    - **Crucially for lower levels (1-3)**: ${complexityGuidance} Ensure the sentences are coherent and flow naturally together.
-    - Avoid fragments, choppy phrases, or awkward constructions like "Eat clean, move more."
-    - Return ONLY JSON: {"title": "string", "content": "string", "source": "Obla"}`;
+    // Ensure the difficulty is a string for consistency
+    const difficultyString = String(difficulty);
+
+    const systemPrompt = `You are an expert content creator for an English reading app designed to help learners improve their reading comprehension and vocabulary.
+    Your task is to generate engaging, informative, and grammatically correct reading content.
+    The content must be tailored to the user's selected difficulty level, ensuring appropriate vocabulary, sentence structure, and overall complexity.
+    For the current difficulty level "${difficultyInfo.name}" (level ${difficultyString}), here are the detailed guidelines:
+    - Max Total Words: EXACTLY ${difficultyInfo.maxWords} words. This is a STRICT MAXIMUM, no other instruction overrides this limit.
+    - Target Grade Reading Level: Grade ${difficultyInfo.gradeLevel}.
+    - Number of Sentences: Approximately ${difficultyInfo.numSentences} sentences.
+    - Syllable Range: ${difficultyInfo.syllableRange}
+    - Word Types: ${difficultyInfo.wordTypes}
+    - Examples of Words: ${difficultyInfo.examples.join(", ")}
+    - Overall Complexity: ${difficultyInfo.complexity}
+    - Phonetic Patterns: ${difficultyInfo.phonetics}
+    - Max Sentence Length: Aim for sentences with an average of ${Math.round(difficultyInfo.maxWords / difficultyInfo.numSentences)} words, generally ranging from ${difficultyInfo.maxSentenceLength - 2} to ${difficultyInfo.maxSentenceLength + 4} words to ensure natural flow. Avoid overly short or choppy sentences, ensuring the text reads very normally and coherently.
+
+    Ensure the generated content is:
+    1. Original and creative. Do not use clichés or generic phrases.
+    2. Informative and educational, suitable for an English learning context.
+    3. Grammatically perfect and flows naturally.
+    4. Presented as a single, coherent article or story based on the topic "${topic}".
+
+  Your response MUST be a JSON object with the following structure:
+  \`\`\`json
+  {
+    "title": "Title of the Article",
+    "content": "The main body of the reading article. Ensure it's a single string.",
+    "wordCount": 0, // Calculated word count of the 'content' field
+    "readingTime": 0, // Estimated reading time in seconds
+    "vocabulary": [
+      {
+        "word": "word1",
+        "definition": "definition of word1",
+        "context": "sentence from content where word1 appears"
+      }
+    ],
+    "keyPhrases": ["phrase1", "phrase2"],
+    "comprehensionQuestions": [
+      {
+        "question": "Question text?",
+        "options": ["Option A", "Option B", "Option C", "Option D"],
+        "correctAnswer": "Option A"
+      }
+    ],
+    "summary": "A concise summary of the article."
+  }
+  \`\`\`
+
+  - The 'content' field should be a single string, representing the full article.
+  - The 'vocabulary' array should contain 5-7 key words from the article relevant to the difficulty level, each with a clear definition and a sentence from the article itself as context.
+  - The 'keyPhrases' array should contain 3-5 important phrases from the article that contribute to understanding.
+  - The 'comprehensionQuestions' array should contain 3-5 multiple-choice questions (4 options each) directly based on the article, with one correct answer.
+  - The 'summary' should be 2-3 sentences long and accurately reflect the main points of the article.
+  - Word count and reading time should be accurately estimated.
+
+  Strictly adhere to the specified difficulty level for the content, vocabulary, and sentence structure.
+  Do NOT include any introductory or concluding remarks outside the JSON. Only return the JSON object.
+  `;
 
     console.log(`Using OpenAI to generate content about "${topic}" with difficulty "${difficulty}"`);
 
@@ -349,48 +337,70 @@ export async function generateReadingContent(topic: string, difficulty: string):
       model: "gpt-3.5-turbo", // Using a cheaper model to conserve tokens
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Write an interesting, coherent, and flowing passage about ${topic} for speech practice.
-        Use ${languageLevel} vocabulary and create exactly ${sentenceCount} complete, grammatically correct sentence(s) with ${syllableCount}.
-        ${parseInt(difficulty) <= 3 ? 'Ensure sentences use simple, everyday language and have a natural, flowing rhythm. Avoid complex words like "mysterious" or "inventor" when simpler synonyms are available. Focus on concrete ideas.' : ''}
-        IMPORTANT: Keep it engaging, informative, and under ${maxWords} words total. Ensure clear narrative flow, especially for shorter passages.` }
+        { role: "user", content: `Generate a new reading article about "${topic}" for a "${difficultyInfo.name}" level.` }
       ],
       temperature: 0.7,
-      max_tokens: 300, // Strict token limit to prevent large responses
+      max_tokens: 1000, // Adjusted max_tokens to accommodate full JSON output
       response_format: { type: "json_object" } // Ensure JSON format
     });
 
     const responseContent = completion.choices[0].message.content;
     console.log("Raw response content:", responseContent);
 
-    let content;
+    let parsedContent;
     try {
       // Parse the JSON response
-      content = JSON.parse(responseContent || "{}");
+      parsedContent = JSON.parse(responseContent || "{}");
 
-      // Make sure we have all required fields
-      if (!content.title || !content.content) {
-        console.log("Parsed content missing required fields, using default structure");
-        content = createDefaultContent(topic, responseContent || "");
+      // Make sure we have all required fields, using createDefaultContent as a fallback if parse fails partially
+      if (!parsedContent.title || !parsedContent.content) {
+        console.warn("Parsed content missing required fields from OpenAI, attempting default structure.");
+        // This fallback creates a simplified structure, not the full desired JSON.
+        // It's mostly for graceful error handling if OpenAI doesn't return the full spec.
+        const defaultContent = createDefaultContent(topic, responseContent || "");
+        parsedContent = {
+          title: defaultContent.title,
+          content: defaultContent.content,
+          wordCount: defaultContent.content.split(/\s+/).filter(Boolean).length,
+          readingTime: defaultContent.content.split(/\s+/).filter(Boolean).length * 3,
+          vocabulary: [],
+          keyPhrases: [],
+          comprehensionQuestions: [],
+          summary: "Summary unavailable."
+        };
       }
     } catch (err) {
-      console.error("Error processing API response:", err);
-      // Create a default content as fallback
-      content = createDefaultContent(topic, responseContent || "Content unavailable");
+      console.error("Error processing API response JSON:", err);
+      // Create a default content as fallback for complete parsing failure
+      const defaultContent = createDefaultContent(topic, responseContent || "Content unavailable");
+      parsedContent = {
+        title: defaultContent.title,
+        content: defaultContent.content,
+        wordCount: defaultContent.content.split(/\s+/).filter(Boolean).length,
+        readingTime: defaultContent.content.split(/\s+/).filter(Boolean).length * 3,
+        vocabulary: [],
+        keyPhrases: [],
+        comprehensionQuestions: [],
+        summary: "Summary unavailable."
+      };
     }
 
     // Calculate word count
-    const calculatedWordCount = content.content.split(/\s+/).filter(Boolean).length;
+    const calculatedWordCount = parsedContent.content.split(/\s+/).filter(Boolean).length;
 
     // Create the object first to avoid type compatibility issues
-    const readingContent = {
+    const readingContent: ReadingContent = {
       id: Date.now(),
-      title: content.title,
-      content: content.content,
-      source: content.source || "",
-      wordCount: Math.min(calculatedWordCount, maxWords), // Ensure word count doesn't exceed our limit
+      title: parsedContent.title,
+      content: parsedContent.content,
+      wordCount: calculatedWordCount,
       readingTime: calculatedWordCount * 3,
-      difficulty: mappedDifficulty,
+      difficulty: difficultyString, // Ensure it's a string
       createdAt: new Date().toISOString(), // Store directly as ISO string for compatibility
+      vocabulary: parsedContent.vocabulary || [],
+      keyPhrases: parsedContent.keyPhrases || [],
+      comprehensionQuestions: parsedContent.comprehensionQuestions || [],
+      summary: parsedContent.summary || "",
     };
 
     // Return the content
@@ -443,7 +453,7 @@ export async function generateSampleContent(): Promise<ReadingContent> {
   const randomTopic = topics[Math.floor(Math.random() * topics.length)];
 
   // Generate content on the random topic with easy difficulty
-  return generateReadingContent(randomTopic, "2"); // Use difficulty 2 for better readability
+  return generateReadingContent(randomTopic, "2"); // Use difficulty "2" (string) for better readability and type consistency
 }
 
 /**
@@ -601,23 +611,23 @@ function createBasicSyllabication(word: string): string {
   if (!word || word.length <= 3) {
     return word; // Short words typically don't need syllable breaks
   }
-  
+
   const vowels = 'aeiouy';
   const consonants = 'bcdfghjklmnpqrstvwxz';
   word = word.toLowerCase();
-  
+
   let syllables: string[] = [];
   let currentSyllable = '';
-  
+
   for (let i = 0; i < word.length; i++) {
     const char = word[i];
     const nextChar = word[i + 1];
-    
+
     currentSyllable += char;
-    
+
     // Check if we should break after this character
     let shouldBreak = false;
-    
+
     if (i < word.length - 1) {
       if (vowels.includes(char) && consonants.includes(nextChar)) {
         // Vowel followed by consonant - potential break point
@@ -632,39 +642,39 @@ function createBasicSyllabication(word: string): string {
         shouldBreak = true;
       }
     }
-    
+
     if (shouldBreak || i === word.length - 1) {
       syllables.push(currentSyllable);
       currentSyllable = '';
     }
   }
-  
+
   // If we still have content in currentSyllable, add it
   if (currentSyllable) {
     syllables.push(currentSyllable);
   }
-  
+
   // Clean up single character syllables and merge if needed
   const cleanedSyllables = syllables.filter(s => s.length > 0);
-  
+
   return cleanedSyllables.join('-');
 }
 
 export async function generateTopicPhrases(
   topic: string,
-  difficulty: string = "4",
+  difficulty: DifficultyLevel = "4", // Use DifficultyLevel type
   type: "words" | "phrases" // Default to words as per new requirements
 ): Promise<string[]> {
   try {
     console.log(`Generating ${type} related to topic: "${topic}" with difficulty level: ${difficulty}`);
 
     // Validate difficulty level
-    if (!DIFFICULTY_SCALE[difficulty as keyof typeof DIFFICULTY_SCALE]) {
+    if (!DIFFICULTY_SCALE[difficulty]) { // Directly use difficulty
       console.warn(`Invalid difficulty level ${difficulty}, defaulting to level 4`);
       difficulty = "4";
     }
 
-    const difficultyInfo = DIFFICULTY_SCALE[difficulty as keyof typeof DIFFICULTY_SCALE];
+    const difficultyInfo = DIFFICULTY_SCALE[difficulty]; // Directly use difficulty
     const numberOfItems = 8; // Always generate 8 items
 
     let itemTypeDescription;
@@ -674,7 +684,7 @@ export async function generateTopicPhrases(
 
     if (type === "words") {
       itemTypeDescription = "meaningful single words";
-      complexityDescription = difficultyInfo.complexity.replace('words with', 'single words with'); // Adjust for words
+      complexityDescription = difficultyInfo.complexity.replace('sentences,', 'single words,'); // Adjust for words
       lengthConstraint = `Words MUST be single standalone meaningful words (no articles, prepositions, or pronouns) with ${difficultyInfo.syllableRange}`;
       // examplesBasedOnType = difficultyInfo.examples.slice(0, 3).join(", "); // This variable was not used, removed.
     } else { // type === "phrases"
@@ -719,7 +729,7 @@ ${type === "words" ? `IMPORTANT:
   - Avoid overly technical or academic terms unless essential to the topic and difficulty
   - Do NOT include incomplete sentences, fragments, lists, bullet points, or markdown formatting
 - **Output Format**:
-${type === "words" ? 
+${type === "words" ?
   `  - Return a JSON object with a "words" array containing objects with "text" and "syllabication" properties
   - Example: {"words": [{"text": "elephant", "syllabication": "el-e-phant"}, {"text": "computer", "syllabication": "com-pu-ter"}]}` :
   `  - Return a JSON object with a single key "phrases" containing an array of ${numberOfItems} strings
@@ -775,7 +785,7 @@ ${type === "words" ?
             if (!item || typeof item !== 'object') return false;
             if (!item.text || typeof item.text !== 'string' || !item.text.trim()) return false;
             if (!item.syllabication || typeof item.syllabication !== 'string') return false;
-            
+
             // Ensure it's a single word
             if (item.text.split(/\s+/).length > 1) return false;
             // Exclude numbers and invalid patterns
@@ -784,7 +794,7 @@ ${type === "words" ?
           })
           .slice(0, numberOfItems);
       }
-      
+
       // If we don't have valid words, fall back to phrases format and create syllabication
       if (validItems.length === 0 && parsed.phrases && Array.isArray(parsed.phrases)) {
         validItems = parsed.phrases
@@ -806,7 +816,7 @@ ${type === "words" ?
         console.warn("OpenAI response did not contain a valid 'phrases' array:", parsed);
         parsed.phrases = [];
       }
-      
+
       // Filter and validate phrases
       validItems = parsed.phrases
         .filter((item: any) => {

@@ -105,6 +105,8 @@ import { useDifficulty } from "@/contexts/DifficultyContext";
 import { DifficultyDropdown } from "@/components/difficulty/SimplifiedDifficultySelector";
 import { SummaryCard } from "@/components/SummaryCard";
 import useEmblaCarousel from 'embla-carousel-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Assuming you have these components
+
 
 interface ProcessedWord {
   id: string;
@@ -152,17 +154,32 @@ export default function Words() {
   const [pendingSaveIndex, setPendingSaveIndex] = useState<number | null>(null);
   const [slowPlaybackWords, setSlowPlaybackWords] = useState<{ [key: string]: boolean }>({});
   const [showSummary, setShowSummary] = useState(false);
-  
+
   // Letter selection dialog states
   const [showLetterDialog, setShowLetterDialog] = useState(false);
   const [selectedTopicType, setSelectedTopicType] = useState<'start' | 'contain' | 'end' | null>(null);
+  const [selectedLetterTab, setSelectedLetterTab] = useState<"letters" | "otherSounds">("letters");
+
 
   // Letter and consonant group options
-  const letterOptions = [
+  const letterOptionsAlphabet = [
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
     'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-    'STR', 'ED', 'ING', 'SH', 'TH'
   ];
+
+  const letterOptionsStartSounds = [
+    'AR', 'BL', 'BR', 'CH', 'CL', 'CR', 'FR', 'GR', 'GL', 'KR', 'PL', 'PR', 'SK', 'SH', 'SHR', 'SL', 'SM', 'SN', 'ST', 'STR', 'TH', 'TR',
+  ];
+
+  const letterOptionsContainSounds = [
+    'AR', 'BL', 'BR', 'CH', 'CL', 'CR', 'FR', 'GR', 'GL', 'KR', 'PL', 'PR', 'SK', 'SH', 'SHR', 'SL', 'SM', 'SN', 'ST', 'STR', 'TH', 'TR',
+    'GR', 'RT', 'RS', 'RD*N', 'RT*N'
+  ];
+
+  const letterOptionsEndSounds = [
+    '-AR', '-CH', '-SK', '-SH', '-ST', '-TH', '-CIAL', '-CIOUS', '-ED', '-ES', '-EST', '-GEOUS', '-ING', '-IST', '-IZE', '-KLS', '-LOGY', '-METRY', '-PS', '-SIAN', '-SHESD', '-SION', '-ST', '-TIAL', '-TION',
+  ];
+
 
   // Viseme animation state
   const [showVisemeDialog, setShowVisemeDialog] = useState(false);
@@ -290,12 +307,15 @@ export default function Words() {
       handleGenerateAlphabet();
     } else if (topic === "Words that Start with..") {
       setSelectedTopicType('start');
+      setSelectedLetterTab('letters'); // Default to letters tab
       setShowLetterDialog(true);
     } else if (topic === "Words that Contain..") {
       setSelectedTopicType('contain');
+      setSelectedLetterTab('letters'); // Default to letters tab
       setShowLetterDialog(true);
     } else if (topic === "Words that End with..") {
       setSelectedTopicType('end');
+      setSelectedLetterTab('letters'); // Default to letters tab
       setShowLetterDialog(true);
     } else {
       handleGenerateTopicWords(topic);
@@ -304,7 +324,7 @@ export default function Words() {
 
   // Generate alphabet cards
   const handleGenerateAlphabet = () => {
-    const alphabetWords: ProcessedWord[] = letterOptions.slice(0, 26).map(
+    const alphabetWords: ProcessedWord[] = letterOptionsAlphabet.map(
       (letter, index) => ({
         id: `alphabet-${Date.now()}-${index}`,
         text: letter,
@@ -324,7 +344,7 @@ export default function Words() {
   // Handle letter selection for word generation
   const handleLetterSelection = (letter: string) => {
     setShowLetterDialog(false);
-    
+
     let topicString = "";
     if (selectedTopicType === 'start') {
       topicString = `Words that start with ${letter}`;
@@ -718,10 +738,10 @@ export default function Words() {
   const preloadVisemeImages = async (visemeIds: number[]): Promise<void> => {
     console.log("Preloading viseme images for IDs:", visemeIds);
     setImagesReady(false);
-    
+
     // Always include viseme 0 (neutral position) for smooth transitions
     const idsToLoad = [0, ...visemeIds].filter((id, index, arr) => arr.indexOf(id) === index);
-    
+
     const loadPromises = idsToLoad.map((id) => {
       return new Promise<void>((resolve, reject) => {
         // Check if image is already loaded
@@ -742,11 +762,11 @@ export default function Words() {
           // Don't reject, just log error and continue
           resolve();
         };
-        
+
         // Set crossOrigin to handle potential CORS issues
         img.crossOrigin = "anonymous";
         img.src = visemeImages[id as keyof typeof visemeImages];
-        
+
         // Add timeout to prevent hanging
         setTimeout(() => {
           if (!img.complete) {
@@ -761,7 +781,7 @@ export default function Words() {
       await Promise.all(loadPromises);
       setImagesReady(true);
       console.log("All viseme images preloaded successfully");
-      
+
       // Force load neutral position if missing and wait for it
       if (!preloadedImages[0]) {
         console.warn("Neutral position image not loaded, forcing synchronous load");
@@ -781,7 +801,7 @@ export default function Words() {
           setTimeout(resolve, 1000);
         });
       }
-      
+
     } catch (error) {
       console.error("Error preloading viseme images:", error);
       // Don't throw error, just set ready state to allow playback attempt
@@ -846,10 +866,10 @@ export default function Words() {
         }
       });
       console.log("Unique viseme IDs to preload:", uniqueVisemeIds);
-      
+
       // Preload all required images before playing
       await preloadVisemeImages(uniqueVisemeIds);
-      
+
       // Auto-play the animation after images are ready - removed timeout to fix first-time error
       playVisemeAnimation();
 
@@ -872,12 +892,12 @@ export default function Words() {
       console.log("Images not ready, waiting up to 3 seconds...");
       let waitCount = 0;
       const maxWait = 30; // 3 seconds
-      
+
       while (!imagesReady && waitCount < maxWait) {
         await new Promise(resolve => setTimeout(resolve, 100));
         waitCount++;
       }
-      
+
       if (!imagesReady) {
         console.warn("Images still not ready after timeout, proceeding anyway");
         setImagesReady(true); // Force ready state
@@ -899,16 +919,16 @@ export default function Words() {
     try {
       visemeAudioRef.current.playbackRate = 1.0;
       visemeAudioRef.current.currentTime = 0;
-      
+
       // Ensure audio is properly loaded before playing
       if (visemeAudioRef.current.readyState < 2) {
         console.log("Audio not fully loaded, preloading...");
         visemeAudioRef.current.load();
-        
+
         // Wait for audio to be ready with better error handling
         await new Promise<void>((resolve) => {
           let resolved = false;
-          
+
           const handleCanPlay = () => {
             if (!resolved) {
               resolved = true;
@@ -918,7 +938,7 @@ export default function Words() {
               resolve();
             }
           };
-          
+
           const handleError = () => {
             if (!resolved) {
               resolved = true;
@@ -930,7 +950,7 @@ export default function Words() {
           visemeAudioRef.current?.addEventListener('canplay', handleCanPlay);
           visemeAudioRef.current?.addEventListener('loadeddata', handleCanPlay);
           visemeAudioRef.current?.addEventListener('error', handleError);
-          
+
           // Reduced timeout for faster fallback
           setTimeout(() => {
             if (!resolved) {
@@ -947,7 +967,7 @@ export default function Words() {
       if (playPromise !== undefined) {
         await playPromise.then(() => {
           console.log("Audio started playing successfully, scheduling viseme changes");
-          
+
           // Schedule viseme changes
           visemeData.forEach((viseme, index) => {
             const timeout = setTimeout(() => {
@@ -965,7 +985,7 @@ export default function Words() {
             setCurrentVisemeId(0);
             setIsPlayingVisemes(false);
           }, maxOffset + 500);
-          
+
           animationTimeoutsRef.current.push(finalTimeout);
 
         }).catch((error) => {
@@ -1057,6 +1077,28 @@ export default function Words() {
     }
   };
 
+  const getLetterOptions = () => {
+    if (selectedTopicType === 'start') {
+      return {
+        letters: letterOptionsAlphabet,
+        otherSounds: letterOptionsStartSounds
+      };
+    } else if (selectedTopicType === 'contain') {
+      return {
+        letters: letterOptionsAlphabet,
+        otherSounds: letterOptionsContainSounds
+      };
+    } else if (selectedTopicType === 'end') {
+      return {
+        letters: letterOptionsAlphabet,
+        otherSounds: letterOptionsEndSounds
+      };
+    }
+    return { letters: [], otherSounds: [] };
+  };
+
+  const currentLetterOptions = getLetterOptions();
+
   return (
     <div className="container mx-auto px-4 py-8 bg-green-50 min-h-screen">
       {/* Shared words notification dialog */}
@@ -1088,29 +1130,53 @@ export default function Words() {
       <Dialog open={showLetterDialog} onOpenChange={setShowLetterDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>
-              {selectedTopicType === 'start' && "Select a Letter - Words that Start with..."}
-              {selectedTopicType === 'contain' && "Select a Letter - Words that Contain..."}
-              {selectedTopicType === 'end' && "Select a Letter - Words that End with..."}
+            <DialogTitle className="text-white bg-blue-600 -mx-6 -mt-6 px-6 py-4 mb-4 rounded-t-lg">
+              {selectedTopicType === 'start' && "Words that Start with..."}
+              {selectedTopicType === 'contain' && "Words that Contain..."}
+              {selectedTopicType === 'end' && "Words that End with..."}
             </DialogTitle>
-            <DialogDescription>
-              Choose a letter or consonant group to generate words.
+            <DialogDescription className="text-gray-700 font-medium">
+              Choose a letter or sound group to generate words.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-6 md:grid-cols-8 gap-2 p-4">
-            {letterOptions.map((letter) => (
-              <Card
-                key={letter}
-                className="cursor-pointer hover:shadow-md hover:bg-[#0F3CC9] transition-all duration-200 h-12"
-                style={{ backgroundColor: '#1947e5' }}
-                onClick={() => handleLetterSelection(letter)}
-              >
-                <CardContent className="p-2 text-center flex items-center justify-center h-full">
-                  <p className="font-bold text-white text-xs">{letter}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Tabs value={selectedLetterTab} onValueChange={(value) => setSelectedLetterTab(value as "letters" | "otherSounds")} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4 bg-gray-200">
+              <TabsTrigger value="letters" className="data-[state=active]:bg-[#1947e5] data-[state=active]:text-white data-[state=active]:shadow-md">Letters</TabsTrigger>
+              <TabsTrigger value="otherSounds" className="data-[state=active]:bg-[#1947e5] data-[state=active]:text-white data-[state=active]:shadow-md">Other Sounds</TabsTrigger>
+            </TabsList>
+            <TabsContent value="letters">
+              <div className="grid grid-cols-6 md:grid-cols-8 gap-2 p-4">
+                {currentLetterOptions.letters.map((letter) => (
+                  <Card
+                    key={letter}
+                    className="cursor-pointer hover:shadow-md hover:bg-[#0F3CC9] transition-all duration-200 h-12"
+                    style={{ backgroundColor: '#1947e5' }}
+                    onClick={() => handleLetterSelection(letter)}
+                  >
+                    <CardContent className="p-2 text-center flex items-center justify-center h-full">
+                      <p className="font-bold text-white text-xs">{letter}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+            <TabsContent value="otherSounds">
+              <div className="grid grid-cols-4 md:grid-cols-6 gap-2 p-4">
+                {currentLetterOptions.otherSounds.map((sound) => (
+                  <Card
+                    key={sound}
+                    className="cursor-pointer hover:shadow-md hover:bg-[#0F3CC9] transition-all duration-200 h-12"
+                    style={{ backgroundColor: '#1947e5' }}
+                    onClick={() => handleLetterSelection(sound)}
+                  >
+                    <CardContent className="p-2 text-center flex items-center justify-center h-full">
+                      <p className="font-bold text-white text-xs">{sound.replace(/_/g, ' ')}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
@@ -1125,7 +1191,7 @@ export default function Words() {
               Watch how to pronounce this word with slow lip movements.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="flex items-start space-x-6">
             {/* Animation display - left aligned */}
             <div 
@@ -1311,7 +1377,7 @@ export default function Words() {
                           </div>
                         )}
                       </CardHeader>
-                      
+
                       <CardContent className="space-y-4">
                         {/* Recording Controls */}
                         <div className="flex justify-center gap-2">
@@ -1532,7 +1598,7 @@ export default function Words() {
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Previous
               </Button>
-              
+
               <Button
                 onClick={() => emblaApi?.scrollNext()}
                 disabled={currentCarouselIndex >= processedWords.length - 1}
