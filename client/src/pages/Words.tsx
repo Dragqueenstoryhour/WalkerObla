@@ -271,13 +271,17 @@ export default function Words() {
     };
   }, [emblaApi]);
 
-  // Set current mode to words and auto-load common words when the page opens
+  // Set current mode to words - separate effect to ensure it always runs
   useEffect(() => {
     setCurrentMode('words');
+  }, [setCurrentMode]);
+
+  // Auto-load common words when the page opens
+  useEffect(() => {
     if (!shareId) {
       handleGenerateTopicWords("Commonly Used Words");
     }
-  }, [setCurrentMode]);
+  }, []);
 
   // Handle topic card click
   const handleTopicCardClick = (topic: string) => {

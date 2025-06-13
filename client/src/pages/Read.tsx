@@ -35,16 +35,20 @@ const Read = () => {
     queryKey: ['/api/content/sample'],
   });
 
-  // Set current mode to reading and set initial content when loaded
+  // Set current mode to reading - separate effect to ensure it always runs
   useEffect(() => {
     setCurrentMode('reading');
+  }, [setCurrentMode]);
+
+  // Set initial content when loaded
+  useEffect(() => {
     if (initialContent && !currentContent) {
       const content = initialContent as any;
       if (content && content.id && content.title && content.content) {
         setCurrentContent(content as ReadingContentType);
       }
     }
-  }, [initialContent, currentContent, setCurrentContent, setCurrentMode]);
+  }, [initialContent, currentContent, setCurrentContent]);
 
   // Handle assessment results
   const handleAssessmentReceived = (results: PronunciationAssessmentResult) => {

@@ -178,11 +178,14 @@ export default function NewPhrases() {
     }, 500);
   };
 
-  // Set up history data, set current mode, and load initial phrases for "Commonly Used Phrases"
+  // Set current mode to phrases - separate effect to ensure it always runs
   useEffect(() => {
-    // Set current mode to phrases
+    console.log('NewPhrases: Setting mode to phrases');
     setCurrentMode('phrases');
-    
+  }, [setCurrentMode]);
+
+  // Set up history data and load initial phrases for "Commonly Used Phrases"
+  useEffect(() => {
     // Set up some sample history data for visualization
     setHistoryData([
       { date: "2025-04-28", score: 65 },
@@ -215,7 +218,7 @@ export default function NewPhrases() {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
-  }, []); // Removed handleGenerateTopicPhrases from dependencies
+  }, []); // Empty dependency array for initial setup only
 
   // Load shared phrases if the shareId is present in the URL
   useEffect(() => {
