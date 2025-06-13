@@ -178,8 +178,11 @@ export default function NewPhrases() {
     }, 500);
   };
 
-  // Set up history data and load initial phrases for "Commonly Used Phrases"
+  // Set up history data, set current mode, and load initial phrases for "Commonly Used Phrases"
   useEffect(() => {
+    // Set current mode to phrases
+    setCurrentMode('phrases');
+    
     // Set up some sample history data for visualization
     setHistoryData([
       { date: "2025-04-28", score: 65 },

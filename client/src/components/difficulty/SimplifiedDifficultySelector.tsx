@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useDifficulty, difficultyLevelNames, DifficultyLevel } from '@/contexts/DifficultyContext';
+import { useDifficulty, difficultyLevelNames, DifficultyLevel, getDifficultyLabel } from '@/contexts/DifficultyContext';
 import { useReading } from '@/contexts/ReadingContext';
 import { generateReadingContent } from '@/lib/openai';
 import { cn } from '@/lib/utils';
@@ -96,10 +96,13 @@ interface DifficultyDropdownProps {
 
 export function DifficultyDropdown({ onConfirm }: DifficultyDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const { difficulty, setDifficulty } = useDifficulty();
+  const { difficulty, setDifficulty, currentMode } = useDifficulty();
   const { toast } = useToast();
   const { currentContent, setCurrentContent } = useReading();
   const [isGenerating, setIsGenerating] = useState(false);
+  
+  // Get mode-specific label
+  const difficultyLabel = getDifficultyLabel(currentMode);
 
   // Handle OK button click
   const handleConfirm = async () => {
@@ -164,7 +167,7 @@ export function DifficultyDropdown({ onConfirm }: DifficultyDropdownProps) {
         onClick={() => setIsOpen(!isOpen)} 
         className="flex items-center justify-center gap-2 px-8 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold rounded-lg shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2"
       >
-        <span className="font-bold">Level: {difficulty}/8</span>
+        <span className="font-bold">{difficultyLabel}: {difficulty}/8</span>
         <Gauge className="h-5 w-5 animate-pulse" />
       </button>
 

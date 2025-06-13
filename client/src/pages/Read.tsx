@@ -8,6 +8,7 @@ import HelpModal from '@/components/modals/HelpModal';
 import { useQuery } from '@tanstack/react-query';
 import { useReading } from '@/contexts/ReadingContext';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useDifficulty } from '@/contexts/DifficultyContext';
 import { ReadingContent as ReadingContentType, PronunciationAssessmentResult } from '@/lib/types';
 import { CheckCircle, BookOpen } from 'lucide-react';
 
@@ -17,6 +18,7 @@ const Read = () => {
   const [showHelpModal, setShowHelpModal] = useState(false);
 
   const { isAuthenticated } = useAuthContext();
+  const { setCurrentMode } = useDifficulty();
   const { 
     currentContent, 
     setCurrentContent, 
@@ -33,15 +35,16 @@ const Read = () => {
     queryKey: ['/api/content/sample'],
   });
 
-  // Use useEffect to set the initial content when loaded
+  // Set current mode to reading and set initial content when loaded
   useEffect(() => {
+    setCurrentMode('reading');
     if (initialContent && !currentContent) {
       const content = initialContent as any;
       if (content && content.id && content.title && content.content) {
         setCurrentContent(content as ReadingContentType);
       }
     }
-  }, [initialContent, currentContent, setCurrentContent]);
+  }, [initialContent, currentContent, setCurrentContent, setCurrentMode]);
 
   // Handle assessment results
   const handleAssessmentReceived = (results: PronunciationAssessmentResult) => {
