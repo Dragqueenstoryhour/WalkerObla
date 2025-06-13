@@ -109,6 +109,7 @@ import useEmblaCarousel from 'embla-carousel-react';
 interface ProcessedWord {
   id: string;
   text: string;
+  syllabication?: string;
   phonetic?: string;
   difficulty?: "beginner" | "intermediate" | "advanced";
   recordingUrl?: string | null;
@@ -371,11 +372,29 @@ export default function Words() {
       const result = await response.json();
 
       const newWords: ProcessedWord[] = result.phrases.map(
-        (text: string, index: number) => ({
-          id: `word-${Date.now()}-topic-${index}`,
-          text,
-          status: "idle",
-        }),
+        (item: any, index: number) => {
+          // Handle both old format (string) and new format (object with text and syllabication)
+          if (typeof item === 'string') {
+            return {
+              id: `word-${Date.now()}-topic-${index}`,
+              text: item,
+              status: "idle",
+            };
+          } else if (item && typeof item === 'object' && item.text) {
+            return {
+              id: `word-${Date.now()}-topic-${index}`,
+              text: item.text,
+              syllabication: item.syllabication,
+              status: "idle",
+            };
+          } else {
+            return {
+              id: `word-${Date.now()}-topic-${index}`,
+              text: `Word ${index + 1}`,
+              status: "idle",
+            };
+          }
+        }
       );
 
       setProcessedWords(newWords);
