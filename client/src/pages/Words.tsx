@@ -612,8 +612,8 @@ export default function Words() {
     });
 
     const isSlowPlayback = slowPlaybackWords[word.id] || false;
-    // Use syllabication for slow playback if available, otherwise use regular text
-    const textToSpeak = isSlowPlayback && word.syllabication ? word.syllabication : word.text;
+    // Always use the regular word text for TTS, not syllabication
+    const textToSpeak = word.text;
 
     // Construct the SSML string with Azure AI Speech native voice
     let ssmlText = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">`;
@@ -1037,6 +1037,7 @@ export default function Words() {
         },
         body: JSON.stringify({
           word: word.text,
+          syllabication: word.syllabication,
           difficulty: word.difficulty || "beginner",
           source: "words"
         }),

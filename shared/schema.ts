@@ -125,6 +125,7 @@ export const savedWords = pgTable("saved_words", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull(),
   word: text("word").notNull(),
+  syllabication: text("syllabication"), // Added for syllable breakdown display
   definition: text("definition"),
   pronunciation: text("pronunciation"),
   folderId: integer("folder_id"),

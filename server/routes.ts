@@ -618,7 +618,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/saved-words', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { word, folderId } = req.body;
+      const { word, syllabication, folderId } = req.body;
       
       if (!word) {
         return res.status(400).json({ error: 'Word is required' });
@@ -627,6 +627,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const wordData = {
         userId,
         word,
+        syllabication: syllabication || null,
         folderId: folderId ? parseInt(folderId) : null,
         difficultyLevel: 1,
         practiceCount: 0,
