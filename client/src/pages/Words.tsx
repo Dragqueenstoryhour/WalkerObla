@@ -159,6 +159,7 @@ export default function Words() {
   // Tutorial state
   const [runTutorial, setRunTutorial] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
+  const [manualAdvance, setManualAdvance] = useState(false);
 
   // Letter selection dialog states
   const [showLetterDialog, setShowLetterDialog] = useState(false);
@@ -267,10 +268,10 @@ export default function Words() {
   // Tutorial steps definition
   const tutorialSteps = [
     {
-      target: 'body',
+      target: '.topic-selection-area',
       content: 'Welcome to Obla Words! Start by selecting a topic from the list to generate words, or use the input field to create your own custom topic.',
       disableBeacon: true,
-      placement: 'center' as const,
+      placement: 'bottom' as const,
     },
     {
       target: '.custom-topic-input',
@@ -279,7 +280,7 @@ export default function Words() {
       placement: 'top' as const, // Changed to top
     },
     {
-      target: '.practice-cards-area',
+      target: '.embla__viewport',
       content: 'Here are your practice cards, each displaying a word to speak. When you\'re ready, click the \'Start Recording\' button to begin practicing.',
       disableBeacon: true,
       placement: 'top' as const,
@@ -357,7 +358,7 @@ export default function Words() {
   }, []);
 
   // Text-to-speech for tutorial instructions
-  const speakTutorialInstruction = async (text: string) => {
+  const speakTutorialInstruction = async (text: string, shouldAutoAdvance: boolean = true) => {
     try {
       // Stop any existing tutorial audio
       if (tutorialAudioRef.current) {
@@ -392,7 +393,7 @@ export default function Words() {
       const audio = new Audio(audioUrl);
       tutorialAudioRef.current = audio;
       
-      // Add event listeners for better error handling
+      // Add event listeners for better error handling and auto-advance
       audio.addEventListener('loadeddata', () => {
         audio.play().catch(error => {
           console.error('Error playing tutorial audio:', error);
@@ -401,10 +402,18 @@ export default function Words() {
       
       audio.addEventListener('ended', () => {
         URL.revokeObjectURL(audioUrl);
+        // Auto-advance to next step after TTS finishes if not manually advanced
+        if (shouldAutoAdvance && !manualAdvance && stepIndex < tutorialSteps.length - 1) {
+          setTimeout(() => {
+            setStepIndex(prev => prev + 1);
+          }, 1000);
+        }
+        // Reset manual advance flag after TTS ends
+        setManualAdvance(false);
       });
       
       audio.addEventListener('error', (error) => {
-        console.error('Audio playback error:', error);
+        console.error('Audio playbook error:', error);
       });
       
       audio.load();
@@ -424,6 +433,13 @@ export default function Words() {
       if (tutorialAudioRef.current) {
         tutorialAudioRef.current.pause(); // Stop any ongoing speech
       }
+      
+      // Play completion message when finished
+      if (status === STATUS.FINISHED) {
+        setTimeout(() => {
+          speakTutorialInstruction("Way to go! You're ready to get started", false);
+        }, 500);
+      }
     } else if (type === EVENTS.TOUR_START) {
       // Speak the first step when tutorial starts
       setTimeout(() => {
@@ -435,6 +451,11 @@ export default function Words() {
 
       // Speak the instruction for the next step when moving forward
       if (action === ACTIONS.NEXT && tutorialSteps[nextStepIndex]) {
+        // Stop current TTS before speaking next step
+        if (tutorialAudioRef.current) {
+          tutorialAudioRef.current.pause();
+          tutorialAudioRef.current.currentTime = 0;
+        }
         setTimeout(() => {
           speakTutorialInstruction(tutorialSteps[nextStepIndex].content);
         }, 500);
