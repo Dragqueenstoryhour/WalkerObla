@@ -18,10 +18,10 @@ def send_contact_email(name, email, category, subject, message):
         # Create email message structure
         mail_body = {}
         
-        # Set from address (using MailerSend trial domain)
+        # Set from address (using verified domain)
         mail_from = {
             "name": "Obla App",
-            "email": "MS_G4nOx8@trial-jy7zpl9k3o0l5vx6.mlsender.net"
+            "email": "noreply@obla.me"
         }
         mailer.set_mail_from(mail_from, mail_body)
         
