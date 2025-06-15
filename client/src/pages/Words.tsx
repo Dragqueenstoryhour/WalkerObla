@@ -268,15 +268,15 @@ export default function Words() {
   const tutorialSteps = [
     {
       target: '.topic-selection-area',
-      content: 'Welcome to Speech Practice! Start by selecting a topic from the list to generate words, or use the input field to create your own custom topic.',
+      content: 'Welcome to Obla Words! Start by selecting a topic from the list to generate words, or use the input field to create your own custom topic.',
       disableBeacon: true,
-      placement: 'bottom' as const,
+      placement: 'bottom' as const, // Keep as bottom to show content below
     },
     {
       target: '.custom-topic-input',
       content: 'You can also type your own custom topic here to generate specific words for practice.',
       disableBeacon: true,
-      placement: 'bottom' as const,
+      placement: 'top' as const, // Changed to top
     },
     {
       target: '.practice-cards-area',
@@ -337,7 +337,7 @@ export default function Words() {
       target: '.words-level-button',
       content: 'To change the difficulty of the words presented, click the \'Words Level\' button and use the slider to adjust your preference.',
       disableBeacon: true,
-      placement: 'bottom' as const,
+      placement: 'bottom' as const, // Keep as bottom
     },
   ];
 
@@ -374,11 +374,11 @@ export default function Words() {
       if (response.ok) {
         const audioBlob = await response.blob();
         const audioUrl = URL.createObjectURL(audioBlob);
-        
+
         if (tutorialAudioRef.current) {
           tutorialAudioRef.current.pause();
         }
-        
+
         const audio = new Audio(audioUrl);
         tutorialAudioRef.current = audio;
         await audio.play();
@@ -391,17 +391,21 @@ export default function Words() {
   // Joyride callback function
   const handleJoyrideCallback = (data: CallBackProps) => {
     const { action, index, status, type } = data;
-    
-    if (([STATUS.FINISHED, STATUS.SKIPPED] as string[]).includes(status)) {
+
+    // If tutorial finishes, skips, or the close button is clicked, reset tutorial state
+    if (([STATUS.FINISHED, STATUS.SKIPPED] as string[]).includes(status) || action === ACTIONS.CLOSE) {
       setRunTutorial(false);
       setStepIndex(0);
+      if (tutorialAudioRef.current) {
+        tutorialAudioRef.current.pause(); // Stop any ongoing speech
+      }
     } else if (([EVENTS.STEP_AFTER, EVENTS.TARGET_NOT_FOUND] as string[]).includes(type)) {
       const nextStepIndex = index + (action === ACTIONS.PREV ? -1 : 1);
       setStepIndex(nextStepIndex);
-      
-      // Speak the instruction for the current step
-      if (tutorialSteps[index] && action !== ACTIONS.PREV) {
-        speakTutorialInstruction(tutorialSteps[index].content);
+
+      // Speak the instruction for the current step (only if moving forward)
+      if (tutorialSteps[nextStepIndex] && action !== ACTIONS.PREV) { // Check nextStepIndex as it's the new current
+        speakTutorialInstruction(tutorialSteps[nextStepIndex].content);
       }
     }
   };
@@ -459,7 +463,7 @@ export default function Words() {
   const handleGenerateAlphabet = () => {
     const alphabetWords: ProcessedWord[] = letterOptionsAlphabet.map(
       (letter, index) => ({
-        id: `alphabet-${Date.now()}-${index}`,
+        id: `alphabet-<span class="math-inline">\{Date\.now\(\)\}\-</span>{index}`,
         text: letter,
         status: "idle",
       })
@@ -529,20 +533,20 @@ export default function Words() {
           // Handle both old format (string) and new format (object with text and syllabication)
           if (typeof item === 'string') {
             return {
-              id: `word-${Date.now()}-topic-${index}`,
+              id: `word-<span class="math-inline">\{Date\.now\(\)\}\-topic\-</span>{index}`,
               text: item,
               status: "idle",
             };
           } else if (item && typeof item === 'object' && item.text) {
             return {
-              id: `word-${Date.now()}-topic-${index}`,
+              id: `word-<span class="math-inline">\{Date\.now\(\)\}\-topic\-</span>{index}`,
               text: item.text,
               syllabication: item.syllabication,
               status: "idle",
             };
           } else {
             return {
-              id: `word-${Date.now()}-topic-${index}`,
+              id: `word-<span class="math-inline">\{Date\.now\(\)\}\-topic\-</span>{index}`,
               text: `Word ${index + 1}`,
               status: "idle",
             };
@@ -1655,7 +1659,7 @@ export default function Words() {
                             </div>
 
                             {/* Detailed Scores with Bar Charts */}
-                            <div className="space-y-2">
+                            <div className="space-y-1">
                               <div className="space-y-1">
                                 <div className="flex justify-between text-xs">
                                   <span className="font-medium text-gray-700">Pronunciation</span>
@@ -1727,63 +1731,107 @@ export default function Words() {
                           </div>
                         )}
 
-                      </CardContent>
-                    </Card>
-                  </div>
-                ))}
-              </div>
-            </div>
+                        </CardContent>
+                                            </Card>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
 
-            {/* Navigation controls */}
-            <div className="flex justify-center space-x-4">
-              <Button
-                onClick={() => emblaApi?.scrollPrev()}
-                disabled={currentCarouselIndex === 0}
-                variant="outline"
-                size="sm"
-                className="previous-button"
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
-              </Button>
+                                    {/* Navigation controls */}
+                                    <div className="flex justify-center space-x-4">
+                                      <Button
+                                        onClick={() => emblaApi?.scrollPrev()}
+                                        disabled={currentCarouselIndex === 0}
+                                        variant="outline"
+                                        size="sm"
+                                        className="previous-button"
+                                      >
+                                        <ChevronLeft className="h-4 w-4 mr-1" />
+                                        Previous
+                                      </Button>
 
-              <Button
-                onClick={() => emblaApi?.scrollNext()}
-                disabled={currentCarouselIndex >= processedWords.length - 1}
-                variant="outline"
-                size="sm"
-                className="next-button"
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
+                                      <Button
+                                        onClick={() => emblaApi?.scrollNext()}
+                                        disabled={currentCarouselIndex >= processedWords.length - 1}
+                                        variant="outline"
+                                        size="sm"
+                                        className="next-button"
+                                      >
+                                        Next
+                                        <ChevronRight className="h-4 w-4 ml-1" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
 
-      {/* Joyride Tutorial Component */}
-      <Joyride
-        steps={tutorialSteps}
-        run={runTutorial}
-        stepIndex={stepIndex}
-        callback={handleJoyrideCallback}
-        continuous={true}
-        showProgress={true}
-        showSkipButton={true}
-        styles={{
-          options: {
-            primaryColor: '#1947e5',
-          }
-        }}
-        locale={{
-          back: 'Back',
-          close: 'Close',
-          last: 'Finish',
-          next: 'Next',
-          skip: 'Skip Tutorial'
-        }}
-      />
-    </div>
-  );
-}
+                              {/* Joyride Tutorial Component */}
+                              <Joyride
+                                steps={tutorialSteps}
+                                run={runTutorial}
+                                stepIndex={stepIndex}
+                                callback={handleJoyrideCallback}
+                                continuous={true}
+                                showProgress={true}
+                                showSkipButton={true}
+                                styles={{
+                                  options: {
+                                    primaryColor: '#FF9692',
+                                    backgroundColor: '#1947e5',
+                                    textColor: '#ffffff',
+                                    arrowColor: '#1947e5',
+                                  },
+                                  tooltip: {
+                                    backgroundColor: '#1947e5',
+                                    color: '#ffffff',
+                                    borderRadius: '8px',
+                                  },
+                                  tooltipContainer: {
+                                    textAlign: 'left',
+                                  },
+                                  tooltipTitle: {
+                                    color: '#ffffff',
+                                    fontSize: '18px',
+                                    fontWeight: 'bold',
+                                  },
+                                  tooltipContent: {
+                                    color: '#ffffff',
+                                    fontSize: '16px',
+                                    padding: '16px',
+                                  },
+                                  buttonNext: {
+                                    backgroundColor: '#FF9692',
+                                    color: '#ffffff',
+                                    fontSize: '14px',
+                                    fontWeight: 'bold',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                  },
+                                  buttonBack: {
+                                    backgroundColor: 'transparent',
+                                    color: '#ffffff',
+                                    fontSize: '14px',
+                                    marginRight: '10px',
+                                    border: '1px solid #ffffff',
+                                    borderRadius: '6px',
+                                  },
+                                  buttonSkip: {
+                                    color: '#ffffff',
+                                    fontSize: '14px',
+                                  },
+                                  buttonClose: {
+                                    color: '#ffffff',
+                                  },
+                                }}
+                                locale={{
+                                  back: 'Back',
+                                  close: 'Close',
+                                  last: 'Finish',
+                                  next: 'Next',
+                                  skip: 'Skip Tutorial'
+                                }}
+                              />
+                            </div>
+                          );
+                        }
