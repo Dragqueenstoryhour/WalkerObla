@@ -1440,7 +1440,9 @@ export default function Words() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Select Your Topic</h2>
-              <DifficultyDropdown />
+              <div className="words-level-button">
+                <DifficultyDropdown />
+              </div>
             </div>
 
             {/* Choose a Topic Cards */}
@@ -1608,7 +1610,7 @@ export default function Words() {
                           <Button
                             onClick={() => generateVisemeAnimation(word.text)}
                             variant="outline"
-                            className="h-10 px-4 bg-[#F59E0B] hover:bg-[#D97706] text-white border-0"
+                            className="h-10 px-4 bg-[#F59E0B] hover:bg-[#D97706] text-white border-0 see-button"
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             See
@@ -1620,7 +1622,7 @@ export default function Words() {
                           <Button
                             onClick={() => saveWordToCollection(index)}
                             variant="outline"
-                            className={`h-10 px-4 text-white border-0 ${
+                            className={`h-10 px-4 text-white border-0 save-button ${
                               savedWords.has(processedWords[index]?.text)
                                 ? "bg-green-600 hover:bg-green-700"
                                 : "bg-[#6366F1] hover:bg-[#5855EB]"
@@ -1739,6 +1741,7 @@ export default function Words() {
                 disabled={currentCarouselIndex === 0}
                 variant="outline"
                 size="sm"
+                className="previous-button"
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Previous
@@ -1749,6 +1752,7 @@ export default function Words() {
                 disabled={currentCarouselIndex >= processedWords.length - 1}
                 variant="outline"
                 size="sm"
+                className="next-button"
               >
                 Next
                 <ChevronRight className="h-4 w-4 ml-1" />
@@ -1757,6 +1761,29 @@ export default function Words() {
           </div>
         )}
       </div>
+
+      {/* Joyride Tutorial Component */}
+      <Joyride
+        steps={tutorialSteps}
+        run={runTutorial}
+        stepIndex={stepIndex}
+        callback={handleJoyrideCallback}
+        continuous={true}
+        showProgress={true}
+        showSkipButton={true}
+        styles={{
+          options: {
+            primaryColor: '#1947e5',
+          }
+        }}
+        locale={{
+          back: 'Back',
+          close: 'Close',
+          last: 'Finish',
+          next: 'Next',
+          skip: 'Skip Tutorial'
+        }}
+      />
     </div>
   );
 }
