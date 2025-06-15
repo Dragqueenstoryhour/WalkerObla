@@ -2,50 +2,59 @@ import ourStoryImage from "@assets/ChatGPT Image Jun 15, 2025, 10_33_48 AM_17499
 
 export default function OurStory() {
   return (
-    <div className="min-h-screen bg-blue-600 text-white">
-      <div className="container mx-auto px-4 py-12 max-w-4xl">
+    <div className="min-h-screen bg-white text-blue-800 flex items-center justify-center py-12">
+      <div className="container mx-auto px-4 max-w-4xl">
         <div className="text-center space-y-8">
           <h1 className="text-4xl md:text-5xl font-bold mb-8">Our Story</h1>
-          
-          <div className="space-y-6 text-lg leading-relaxed">
-            <p>
-              Speech is one of our most fundamental ways of connecting with others. When a strok or brain injury 
-              affects our ability to communicate clearly, it can feel isolating and frustrating. We founded Obla 
-              because we believe everyone deserves the tools and support they need to rebuild their confidence in speaking.
-            </p>
-            
-            <p>
-              Our journey began when we witnessed firsthand how traditional speech therapy, while effective, 
-              often lacks the personalized, accessible practice opportunities that patients need between sessions. 
-              We saw an opportunity to bridge this gap using cutting-edge AI technology and compassionate design.
-            </p>
-            
-            <p>
-              Obla combines advanced speech assessment technology with personalized learning experiences, 
-              creating a safe space where users can practice at their own pace. Our AI-powered pronunciation 
-              feedback, adaptive content generation, and progress tracking are designed specifically for 
-              stroke survivors and others working to improve their speech clarity.
-            </p>
-            
-            <p>
-              We're not just building an app – we're creating a community of support, progress, and hope. 
-              Every feature we develop is guided by the real experiences and needs of people on their 
-              recovery journey. Because we believe that with the right tools and encouragement, 
-              everyone can find their voice again.
-            </p>
-            
-            <p className="text-xl font-semibold">
-              Together, we're making speech therapy more accessible, engaging, and effective for everyone.
-            </p>
+
+          {/* Card 1 */}
+          <div className="bg-blue-600 text-white p-8 rounded-lg shadow-lg border-4 border-blue-600 mx-auto max-w-2xl mb-8">
+            <div className="space-y-6 text-lg leading-relaxed text-left">
+              <p>
+                Speech is one of the most fundamental ways we connect with others. When a stroke or brain injury disrupts that, it can be incredibly challenging.
+              </p>
+              <ul className="list-disc pl-5 space-y-2">
+                <li>At Obla, we believe no one should have to face that journey alone. That’s why we’re here to offer tools and a path forward for anyone rebuilding their confidence in speaking!</li>
+              </ul>
+              <p>
+                Whether you're working alongside a speech therapist or navigating recovery on your own, Obla aims to offer personalized speech support that is accessible to everyone.
+              </p>
+            </div>
           </div>
-          
-          <div className="mt-12 flex justify-center">
-            <img 
-              src={ourStoryImage} 
-              alt="Our founders working together on Obla" 
-              className="max-w-full h-auto rounded-lg shadow-lg border-4 border-white"
-              style={{ maxHeight: '400px' }}
-            />
+
+          {/* Card 2 */}
+          <div className="bg-blue-600 text-white p-8 rounded-lg shadow-lg border-4 border-blue-600 mx-auto max-w-2xl mb-8">
+            <div className="space-y-6 text-lg leading-relaxed text-left">
+              <p>
+                Obla blends advanced speech technology with meaningful, individualized learning experiences.
+              </p>
+              <ul className="list-disc pl-5 space-y-2">
+                <li>With real-time pronunciation feedback, content that adapts to each person's needs, and clear progress tracking, we're helping stroke and brain injury survivors and others take meaningful steps toward clearer, more confident speech.</li>
+              </ul>
+              <p>
+                Every feature we create is inspired by the real experiences of people and their journey to recovery. With the right support and tools, everyone can make meaningful progress towards finding their voice again.
+              </p>
+            </div>
+          </div>
+
+          {/* Card 3 with image */}
+          <div className="bg-blue-600 text-white p-8 rounded-lg shadow-lg border-4 border-blue-600 mx-auto max-w-2xl">
+            <div className="space-y-6 text-lg leading-relaxed text-center"> {/* Centered text */}
+              <p className="text-xl font-bold italic mb-4">
+                Servitium per technologiam - service through technology.
+              </p>
+              <p className="text-xl font-semibold">
+                Together, we’re reimagining what speech therapy can be — accessible, adaptive, and engaging for everyone.
+              </p>
+              <div className="mt-8 flex justify-center">
+                <img
+                  src={ourStoryImage}
+                  alt="Our founders working together on Obla"
+                  className="max-w-full h-auto rounded-lg shadow-lg border-4 border-white"
+                  style={{ maxHeight: '400px' }}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
