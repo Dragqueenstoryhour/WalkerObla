@@ -1,12 +1,5 @@
-import { MailService } from '@sendgrid/mail';
-
-let mailService: MailService | null = null;
-
-// Initialize SendGrid service if API key is available
-if (process.env.SENDGRID_API_KEY) {
-  mailService = new MailService();
-  mailService.setApiKey(process.env.SENDGRID_API_KEY);
-}
+import { spawn } from 'child_process';
+import { promisify } from 'util';
 
 interface ContactFormData {
   name: string;
@@ -17,37 +10,71 @@ interface ContactFormData {
 }
 
 export async function sendContactForm(data: ContactFormData): Promise<boolean> {
-  if (!mailService) {
-    console.error('SendGrid API key not configured');
+  if (!process.env.MAILERSEND_API_TOKEN) {
+    console.error('MailerSend API token not configured');
     return false;
   }
 
-  try {
-    await mailService.send({
-      to: 'adamlowendick@gmail.com',
-      from: 'noreply@obla.app', // This should be a verified sender
-      subject: `[Obla Contact] ${data.category}: ${data.subject}`,
-      html: `
-        <h3>New Contact Form Submission</h3>
-        <p><strong>Category:</strong> ${data.category}</p>
-        <p><strong>Name:</strong> ${data.name}</p>
-        <p><strong>Email:</strong> ${data.email}</p>
-        <p><strong>Subject:</strong> ${data.subject}</p>
-        <p><strong>Message:</strong></p>
-        <p>${data.message.replace(/\n/g, '<br>')}</p>
-      `,
-      text: `
-        New Contact Form Submission
-        Category: ${data.category}
-        Name: ${data.name}
-        Email: ${data.email}
-        Subject: ${data.subject}
-        Message: ${data.message}
-      `
-    });
-    return true;
-  } catch (error) {
-    console.error('SendGrid email error:', error);
-    return false;
-  }
+  return new Promise((resolve) => {
+    try {
+      // Set the MailerSend API token as environment variable for the Python script
+      const env = { 
+        ...process.env, 
+        MAILERSEND_API_TOKEN: process.env.MAILERSEND_API_TOKEN 
+      };
+      
+      const pythonProcess = spawn('python3', ['server/mailersend_service.py'], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: env
+      });
+
+      // Send data to Python script via stdin
+      const inputData = JSON.stringify(data);
+      pythonProcess.stdin.write(inputData);
+      pythonProcess.stdin.end();
+
+      let output = '';
+      let errorOutput = '';
+
+      pythonProcess.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+
+      pythonProcess.stderr.on('data', (data) => {
+        errorOutput += data.toString();
+      });
+
+      pythonProcess.on('close', (code) => {
+        if (code === 0) {
+          try {
+            const result = JSON.parse(output);
+            if (result.success) {
+              console.log('✅ Contact email sent successfully via MailerSend');
+              resolve(true);
+            } else {
+              console.error('❌ MailerSend error:', result.error);
+              resolve(false);
+            }
+          } catch (parseError) {
+            console.error('❌ Failed to parse MailerSend response:', parseError);
+            console.error('Raw output:', output);
+            resolve(false);
+          }
+        } else {
+          console.error('❌ Python script failed with code:', code);
+          console.error('Error output:', errorOutput);
+          resolve(false);
+        }
+      });
+
+      pythonProcess.on('error', (error) => {
+        console.error('❌ Failed to spawn Python process:', error);
+        resolve(false);
+      });
+
+    } catch (error) {
+      console.error('❌ MailerSend service error:', error);
+      resolve(false);
+    }
+  });
 }

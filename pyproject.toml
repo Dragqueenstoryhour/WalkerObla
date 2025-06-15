@@ -7,6 +7,7 @@ dependencies = [
     "flask>=3.1.0",
     "grpcio>=1.71.0",
     "gtts>=2.5.4",
+    "mailersend>=0.6.0",
     "numpy>=2.2.5",
     "pandas>=2.2.3",
     "protobuf>=6.30.2",
