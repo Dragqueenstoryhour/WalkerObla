@@ -9,8 +9,8 @@ export default function OurStory() {
           
           <div className="space-y-6 text-lg leading-relaxed">
             <p>
-              Speech is one of our most fundamental ways of connecting with others. When stroke or other conditions 
-              affect our ability to communicate clearly, it can feel isolating and frustrating. We founded Obla 
+              Speech is one of our most fundamental ways of connecting with others. When a strok or brain injury 
+              affects our ability to communicate clearly, it can feel isolating and frustrating. We founded Obla 
               because we believe everyone deserves the tools and support they need to rebuild their confidence in speaking.
             </p>
             
