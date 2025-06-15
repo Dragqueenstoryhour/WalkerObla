@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from "@/components/ui/button";
 import { LogOut, LogIn } from 'lucide-react'; 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useLocation } from 'wouter';
 
 interface AuthButtonsProps {
   className?: string;
@@ -36,14 +37,33 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
 
   if (isAuthenticated && user) {
     const userData = user as any;
+    const [, navigate] = useLocation();
+    const [showTooltip, setShowTooltip] = useState(false);
+
+    const handleAvatarClick = () => {
+      navigate('/my-account');
+    };
+
     return (
       <div className="flex items-center gap-2">
-        <Avatar className="h-8 w-8 border-2 border-primary">
-          <AvatarImage src={userData.profileImageUrl || undefined} alt={userData.username || 'User'} />
-          <AvatarFallback className="bg-primary text-primary-foreground">
-            {(userData.username || userData.firstName || 'U').charAt(0).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
+        <div className="relative">
+          <Avatar 
+            className="h-8 w-8 border-2 border-primary cursor-pointer hover:border-green-500 transition-colors"
+            onClick={handleAvatarClick}
+            onMouseEnter={() => setShowTooltip(true)}
+            onMouseLeave={() => setShowTooltip(false)}
+          >
+            <AvatarImage src={userData.profileImageUrl || undefined} alt={userData.username || 'User'} />
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              {(userData.username || userData.firstName || 'U').charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          {showTooltip && (
+            <div className="absolute right-full mr-2 top-1/2 transform -translate-y-1/2 bg-white border border-gray-200 rounded px-2 py-1 shadow-lg whitespace-nowrap z-10">
+              <span className="text-sm font-medium text-green-600">My Account</span>
+            </div>
+          )}
+        </div>
         {showText && (
           <div className="hidden md:flex flex-col">
             <span className="text-sm font-medium leading-none">

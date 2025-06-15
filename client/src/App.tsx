@@ -25,6 +25,8 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { useAuth } from "./hooks/useAuth";
 import { AuthButtons } from "./components/AuthButtons";
 import Account from "./pages/Account";
+import MyAccount from "./pages/MyAccount";
+import OurStory from "./pages/OurStory";
 import { DifficultyProvider, useDifficulty } from "./contexts/DifficultyContext";
 import { DifficultySelectionDialog } from "./components/difficulty/DifficultySelectionDialog";
 import { useEffect, useState } from "react";
@@ -138,6 +140,8 @@ function Router() {
         <Route path="/shared-phrases/:shareId" component={NewPhrases} />
         <Route path="/my-words" component={MyWordsNew} />
         <Route path="/account" component={Account} />
+        <Route path="/my-account" component={MyAccount} />
+        <Route path="/our-story" component={OurStory} />
         <Route path="/profile" component={Profile} />
         <Route path="/animation" component={Animation} />
         <Route path="/azure-animation" component={AzureAnimation} />

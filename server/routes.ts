@@ -5,6 +5,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { assessPronunciation, synthesizeSpeech, synthesizeSpeechFromSSML, getWordPronunciation } from "./azure";
 import { generateSpeechWithVisemes } from "./azureViseme";
 import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases, generateSampleContent, generateSpeechResponse } from "./openai";
+import { sendContactForm } from "./email";
 import multer from "multer";
 import { z } from "zod";
 import { insertUserSavedPhraseSchema, insertPracticeGroupSchema, insertUserActivitySchema } from "@shared/schema";
