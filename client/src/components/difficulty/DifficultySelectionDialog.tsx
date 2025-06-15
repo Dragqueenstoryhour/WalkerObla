@@ -6,7 +6,7 @@ import { DifficultySlider } from './SimplifiedDifficultySelector';
 import { useReading } from '@/contexts/ReadingContext';
 import { generateReadingContent } from '@/lib/openai';
 import { useToast } from '@/hooks/use-toast';
-import { RotateCw } from 'lucide-react';
+import { RotateCw, Users } from 'lucide-react';
 import oblaLogoPath from '@assets/e0dfb3c8-508c-4b30-994b-f471210dcd7c_1749383232529.jpg';
 
 interface DifficultySelectionDialogProps {
@@ -19,6 +19,15 @@ export function DifficultySelectionDialog({ open, onClose }: DifficultySelection
   const { toast } = useToast();
   const { currentContent, setCurrentContent } = useReading();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  const handleTutorial = () => {
+    // Close this dialog and trigger tutorial
+    setHasSelectedDifficulty(true);
+    onClose();
+    // Trigger tutorial on Words page by dispatching a custom event
+    window.dispatchEvent(new CustomEvent('startTutorial'));
+  };
 
   const handleConfirm = async () => {
     setIsGenerating(true);
@@ -76,29 +85,37 @@ export function DifficultySelectionDialog({ open, onClose }: DifficultySelection
     <Dialog open={open} onOpenChange={(isOpen) => {
       if (!isOpen) onClose();
     }}>
-      <DialogContent className="sm:max-w-lg bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 border-2 border-purple-200 shadow-2xl">
+      <DialogContent className="sm:max-w-lg bg-blue-600 border-2 border-blue-700 shadow-2xl">
         <div className="text-center mb-6">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
             <img src={oblaLogoPath} alt="Obla Logo" className="w-full h-full object-cover" />
           </div>
-          <DialogTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
+          <DialogTitle className="text-3xl font-bold text-white mb-2">
             Welcome to Obla!
           </DialogTitle>
-          <DialogDescription className="text-lg text-gray-700 leading-relaxed">
-            Your AI-powered speech therapy companion is ready to help you improve pronunciation!
+          <DialogDescription className="text-lg text-white leading-relaxed mb-6">
+            Your AI-powered speech therapy companion is ready to help you improve your pronunciation!
           </DialogDescription>
+
+          {/* Start Tutorial Button */}
+          <div className="mb-6">
+            <Button 
+              onClick={handleTutorial}
+              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg transform transition-all duration-200 hover:scale-105 animate-bounce flex items-center gap-2"
+            >
+              <Users className="h-5 w-5" />
+              Start Tutorial
+            </Button>
+          </div>
+
+          {/* Or text */}
+          <p className="text-white/80 text-sm mb-6">
+            ...or if this isn't your first rodeo, select your difficulty level to get started!
+          </p>
         </div>
 
-        <div className="bg-white/70 rounded-lg p-6 mb-6 border border-purple-100 backdrop-blur-sm">
-          <h3 className="text-xl font-semibold text-purple-800 mb-4 text-center">
-            Let's personalize your experience
-          </h3>
-          <p className="text-gray-700 mb-4 text-center">
-            Choose your starting difficulty level. Don't worry - you can always adjust it later!
-          </p>
-
+        <div className="bg-white/10 rounded-lg p-6 mb-6 border border-white/20 backdrop-blur-sm">
           <DifficultySlider />
-
         </div>
 
         <div className="flex justify-center">
@@ -113,7 +130,7 @@ export function DifficultySelectionDialog({ open, onClose }: DifficultySelection
                 <RotateCw className="h-5 w-5 animate-spin" />
               </>
             ) : (
-              "Start My Journey!"
+              "Start!"
             )}
           </Button>
         </div>

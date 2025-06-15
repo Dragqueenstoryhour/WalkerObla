@@ -358,6 +358,18 @@ export default function Words() {
     };
   }, []);
 
+  // Listen for tutorial trigger from welcome dialog
+  useEffect(() => {
+    const handleStartTutorial = () => {
+      setRunTutorial(true);
+    };
+
+    window.addEventListener('startTutorial', handleStartTutorial);
+    return () => {
+      window.removeEventListener('startTutorial', handleStartTutorial);
+    };
+  }, []);
+
   // Text-to-speech for tutorial instructions
   const speakTutorialInstruction = async (text: string) => {
     try {
@@ -1507,7 +1519,7 @@ export default function Words() {
             <Button
               onClick={() => setRunTutorial(true)}
               variant="outline"
-              className="flex items-center gap-2 bg-blue-50 border-blue-200 hover:bg-blue-100 text-blue-700"
+              className="flex items-center gap-2 bg-[#ff7f7c] hover:bg-[#ff6c69] border-[#ff7f7c] text-white"
             >
               <Users className="h-4 w-4" />
               Tutorial
