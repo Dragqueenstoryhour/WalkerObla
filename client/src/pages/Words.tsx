@@ -270,44 +270,44 @@ export default function Words() {
   const tutorialSteps = [
     {
       target: '.topic-selection-area',
-      content: 'Welcome to Obla Words! Start by selecting a topic from the list to generate words, or use the input field to create your own custom topic.',
+      content: 'Welcome to Obla Words! You can start by selecting a topic from this list to generate words. Practice specific sounds by selecting one the four buttons at the bottom.',
       disableBeacon: true,
       placement: 'bottom' as const,
     },
     {
       target: '.custom-topic-input',
-      content: 'You can also type your own custom topic here to generate specific words for practice.',
+      content: 'Have another topic you want to brush up on? Enter it here and press Generate to get words specific to that subject!',
       disableBeacon: true,
       placement: 'top' as const, // Changed to top
     },
     {
       target: '.embla__viewport',
-      content: 'Here are your practice cards, each displaying a word to speak. When you\'re ready, click the \'Start Recording\' button to begin practicing.',
+      content: 'Here are your practice cards, each displaying a word to practice speaking.',
       disableBeacon: true,
       placement: 'top' as const,
     },
     {
       target: '.start-recording-button',
-      content: 'Click this button to start recording your pronunciation. The tutorial will pause here - you must click \'Start Recording\' to proceed.',
+      content: 'When you\'re ready, you can click the Start Recording button to record.',
       disableBeacon: true,
       placement: 'top' as const,
       spotlightClicks: true,
     },
     {
       target: '.stop-recording-button',
-      content: 'Now speak the word clearly. Click the \'Stop Recording\' button when you\'re finished, and you\'ll see your pronunciation results.',
+      content: 'Once you have finished saying the work, you can Click the \'Stop Recording\' button to see your pronunciation results.',
       disableBeacon: true,
       placement: 'top' as const,
     },
     {
       target: '.hear-button',
-      content: 'To help you, you can click \'Hear\' to listen to the word pronunciation.',
+      content: 'If you want to hear the word said, you can click \'Hear\' to listen to the word pronunciation.',
       disableBeacon: true,
       placement: 'top' as const,
     },
     {
       target: '.slow-toggle',
-      content: 'Toggle \'Slow\' to slow down the pronunciation for better understanding.',
+      content: 'Toggle the \'Slow\' switch to slow down the word being said.',
       disableBeacon: true,
       placement: 'top' as const,
     },
@@ -319,25 +319,25 @@ export default function Words() {
     },
     {
       target: '.next-button',
-      content: 'Once you\'ve practiced a word, click the \'Next\' button to move to the next word.',
+      content: 'Once you\'ve practiced a word, you can click the \'Next\' button to move to the next word.',
       disableBeacon: true,
       placement: 'top' as const,
     },
     {
       target: '.previous-button',
-      content: 'You can also go back with the \'Previous\' button to review earlier words.',
+      content: 'You can also go back with the \'Previous\' button.',
       disableBeacon: true,
       placement: 'top' as const,
     },
     {
       target: '.save-button',
-      content: 'If you find a word you want to practice again later, simply click the \'Save\' button to add it to your \'My Journey\' list.',
+      content: 'If you find a word you want to practice again later, simply click the Save button to add it to your My Journey list. You can access this in the top right once you have logged in.',
       disableBeacon: true,
       placement: 'top' as const,
     },
     {
       target: '.words-level-button',
-      content: 'To change the difficulty of the words presented, click the \'Words Level\' button and use the slider to adjust your preference.',
+      content: 'To change the difficulty of the words presented, select the Words Level button and use the slider to adjust your preference.',
       disableBeacon: true,
       placement: 'bottom' as const, // Keep as bottom
     },
@@ -1510,7 +1510,7 @@ export default function Words() {
               className="flex items-center gap-2 bg-blue-50 border-blue-200 hover:bg-blue-100 text-blue-700"
             >
               <Users className="h-4 w-4" />
-              Help
+              Tutorial
             </Button>
           </div>
         </div>
