@@ -1444,7 +1444,7 @@ export default function Words() {
             </div>
 
             {/* Choose a Topic Cards */}
-            <div className="mb-6">
+            <div className="mb-6 topic-selection-area">
               <h3 className="text-md font-bold mb-3">Choose a Topic</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto">
                 {wordTopics.map((topic) => (
@@ -1475,7 +1475,7 @@ export default function Words() {
                       handleGenerateTopicWords(aiGenerateTopic);
                     }
                   }}
-                  className="flex-1"
+                  className="flex-1 custom-topic-input"
                   disabled={isProcessing}
                 />
                 <Button
@@ -1499,7 +1499,7 @@ export default function Words() {
 
         {/* Practice section */}
         {processedWords.length > 0 && (
-          <div id="practice-words-section" className="space-y-6">
+          <div id="practice-words-section" className="space-y-6 practice-cards-area">
             {/* Progress indicator */}
             <div className="bg-white rounded-lg p-4 shadow-lg border-0">
               <Progress 
@@ -1529,7 +1529,7 @@ export default function Words() {
                           {word.status === "idle" && (
                             <Button
                               onClick={() => startWordPractice(index)}
-                              className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
+                              className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 start-recording-button"
                               disabled={isRecording || isProcessingRecording}
                             >
                               <Mic className="h-5 w-5" />
@@ -1541,7 +1541,7 @@ export default function Words() {
                             <Button
                               onClick={stopWordPractice}
                               variant="destructive"
-                              className="flex items-center gap-2"
+                              className="flex items-center gap-2 stop-recording-button"
                             >
                               <StopCircleIcon className="h-4 w-4" />
                               Stop Recording
@@ -1583,14 +1583,14 @@ export default function Words() {
                           <Button
                             onClick={() => handleTextToSpeech(index)}
                             variant="outline"
-                            className="h-10 px-4 bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0"
+                            className="h-10 px-4 bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0 hear-button"
                           >
                             <Ear className="h-4 w-4 mr-1" />
                             Hear
                           </Button>
                           <button
                             onClick={() => toggleSlowPlayback(word.id)}
-                            className={`relative inline-flex h-10 w-16 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                            className={`relative inline-flex h-10 w-16 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 slow-toggle ${
                               slowPlaybackWords[word.id] ? 'bg-[#FFE8E8]' : 'bg-gray-300'
                             }`}
                             role="switch"
