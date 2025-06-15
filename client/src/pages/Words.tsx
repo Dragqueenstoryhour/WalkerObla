@@ -267,10 +267,10 @@ export default function Words() {
   // Tutorial steps definition
   const tutorialSteps = [
     {
-      target: '.topic-selection-area',
+      target: 'body',
       content: 'Welcome to Obla Words! Start by selecting a topic from the list to generate words, or use the input field to create your own custom topic.',
       disableBeacon: true,
-      placement: 'bottom' as const, // Keep as bottom to show content below
+      placement: 'center' as const,
     },
     {
       target: '.custom-topic-input',
@@ -359,32 +359,57 @@ export default function Words() {
   // Text-to-speech for tutorial instructions
   const speakTutorialInstruction = async (text: string) => {
     try {
-      const response = await fetch('/api/tts/synthesize', {
-        method: 'POST',
+      // Stop any existing tutorial audio
+      if (tutorialAudioRef.current) {
+        tutorialAudioRef.current.pause();
+        tutorialAudioRef.current.currentTime = 0;
+      }
+
+      // Use the same SSML approach as the working "Hear" button
+      let ssmlText = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">`;
+      ssmlText += `<voice name="en-US-AvaNeural">`;
+      ssmlText += text;
+      ssmlText += `</voice>`;
+      ssmlText += `</speak>`;
+
+      const response = await fetch("/api/speech/synthesize", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          text: text,
-          voice: 'alloy',
-          speed: 1.0
+        body: JSON.stringify({ 
+          ssml: ssmlText,
         }),
       });
 
-      if (response.ok) {
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-
-        if (tutorialAudioRef.current) {
-          tutorialAudioRef.current.pause();
-        }
-
-        const audio = new Audio(audioUrl);
-        tutorialAudioRef.current = audio;
-        await audio.play();
+      if (!response.ok) {
+        throw new Error(`Failed to synthesize speech: ${response.status}`);
       }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      const audio = new Audio(audioUrl);
+      tutorialAudioRef.current = audio;
+      
+      // Add event listeners for better error handling
+      audio.addEventListener('loadeddata', () => {
+        audio.play().catch(error => {
+          console.error('Error playing tutorial audio:', error);
+        });
+      });
+      
+      audio.addEventListener('ended', () => {
+        URL.revokeObjectURL(audioUrl);
+      });
+      
+      audio.addEventListener('error', (error) => {
+        console.error('Audio playback error:', error);
+      });
+      
+      audio.load();
     } catch (error) {
-      console.error('Error playing tutorial instruction:', error);
+      console.error('Error in tutorial TTS:', error);
     }
   };
 
@@ -399,13 +424,20 @@ export default function Words() {
       if (tutorialAudioRef.current) {
         tutorialAudioRef.current.pause(); // Stop any ongoing speech
       }
+    } else if (type === EVENTS.TOUR_START) {
+      // Speak the first step when tutorial starts
+      setTimeout(() => {
+        speakTutorialInstruction(tutorialSteps[0].content);
+      }, 1000);
     } else if (([EVENTS.STEP_AFTER, EVENTS.TARGET_NOT_FOUND] as string[]).includes(type)) {
       const nextStepIndex = index + (action === ACTIONS.PREV ? -1 : 1);
       setStepIndex(nextStepIndex);
 
-      // Speak the instruction for the current step (only if moving forward)
-      if (tutorialSteps[nextStepIndex] && action !== ACTIONS.PREV) { // Check nextStepIndex as it's the new current
-        speakTutorialInstruction(tutorialSteps[nextStepIndex].content);
+      // Speak the instruction for the next step when moving forward
+      if (action === ACTIONS.NEXT && tutorialSteps[nextStepIndex]) {
+        setTimeout(() => {
+          speakTutorialInstruction(tutorialSteps[nextStepIndex].content);
+        }, 500);
       }
     }
   };
