@@ -160,6 +160,7 @@ export default function Words() {
   const [runTutorial, setRunTutorial] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [manualAdvance, setManualAdvance] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   // Letter selection dialog states
   const [showLetterDialog, setShowLetterDialog] = useState(false);
@@ -360,6 +361,13 @@ export default function Words() {
   // Text-to-speech for tutorial instructions
   const speakTutorialInstruction = async (text: string, shouldAutoAdvance: boolean = true) => {
     try {
+      // Prevent overlapping TTS
+      if (isSpeaking) {
+        return;
+      }
+
+      setIsSpeaking(true);
+
       // Stop any existing tutorial audio
       if (tutorialAudioRef.current) {
         tutorialAudioRef.current.pause();
@@ -384,6 +392,7 @@ export default function Words() {
       });
 
       if (!response.ok) {
+        setIsSpeaking(false);
         throw new Error(`Failed to synthesize speech: ${response.status}`);
       }
 
@@ -397,15 +406,27 @@ export default function Words() {
       audio.addEventListener('loadeddata', () => {
         audio.play().catch(error => {
           console.error('Error playing tutorial audio:', error);
+          setIsSpeaking(false);
         });
       });
       
       audio.addEventListener('ended', () => {
         URL.revokeObjectURL(audioUrl);
+        setIsSpeaking(false);
+        
         // Auto-advance to next step after TTS finishes if not manually advanced
         if (shouldAutoAdvance && !manualAdvance && stepIndex < tutorialSteps.length - 1) {
           setTimeout(() => {
-            setStepIndex(prev => prev + 1);
+            setStepIndex(prev => {
+              const newIndex = prev + 1;
+              // Speak the next step's instruction after auto-advance
+              if (tutorialSteps[newIndex]) {
+                setTimeout(() => {
+                  speakTutorialInstruction(tutorialSteps[newIndex].content);
+                }, 500);
+              }
+              return newIndex;
+            });
           }, 1000);
         }
         // Reset manual advance flag after TTS ends
@@ -413,12 +434,14 @@ export default function Words() {
       });
       
       audio.addEventListener('error', (error) => {
-        console.error('Audio playbook error:', error);
+        console.error('Audio playback error:', error);
+        setIsSpeaking(false);
       });
       
       audio.load();
     } catch (error) {
       console.error('Error in tutorial TTS:', error);
+      setIsSpeaking(false);
     }
   };
 
@@ -430,9 +453,11 @@ export default function Words() {
     if (([STATUS.FINISHED, STATUS.SKIPPED] as string[]).includes(status) || action === ACTIONS.CLOSE) {
       setRunTutorial(false);
       setStepIndex(0);
+      setManualAdvance(false);
       if (tutorialAudioRef.current) {
         tutorialAudioRef.current.pause(); // Stop any ongoing speech
       }
+      setIsSpeaking(false);
       
       // Play completion message when finished
       if (status === STATUS.FINISHED) {
@@ -453,13 +478,15 @@ export default function Words() {
       if (action === ACTIONS.NEXT) {
         setManualAdvance(true);
         
+        // Stop current TTS before speaking next step
+        if (tutorialAudioRef.current) {
+          tutorialAudioRef.current.pause();
+          tutorialAudioRef.current.currentTime = 0;
+        }
+        setIsSpeaking(false);
+        
         // Speak the instruction for the next step when moving forward
         if (tutorialSteps[nextStepIndex]) {
-          // Stop current TTS before speaking next step
-          if (tutorialAudioRef.current) {
-            tutorialAudioRef.current.pause();
-            tutorialAudioRef.current.currentTime = 0;
-          }
           setTimeout(() => {
             speakTutorialInstruction(tutorialSteps[nextStepIndex].content);
           }, 500);
