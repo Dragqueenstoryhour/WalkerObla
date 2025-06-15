@@ -25,6 +25,9 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
     login,
     logout
   } = useAuth();
+  
+  const [, navigate] = useLocation();
+  const [showTooltip, setShowTooltip] = useState(false);
 
   if (isLoading) {
     return (
@@ -37,8 +40,6 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
 
   if (isAuthenticated && user) {
     const userData = user as any;
-    const [, navigate] = useLocation();
-    const [showTooltip, setShowTooltip] = useState(false);
 
     const handleAvatarClick = () => {
       navigate('/my-account');

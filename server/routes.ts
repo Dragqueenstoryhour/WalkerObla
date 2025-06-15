@@ -719,6 +719,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Contact form endpoint
+  app.post('/api/contact', async (req, res) => {
+    try {
+      const contactSchema = z.object({
+        name: z.string().min(1, "Name is required"),
+        email: z.string().email("Valid email is required"),
+        category: z.enum(['Question', 'Bug fix', 'Enhancement Suggestion']),
+        subject: z.string().min(1, "Subject is required"),
+        message: z.string().min(1, "Message is required")
+      });
+
+      const contactData = contactSchema.parse(req.body);
+      
+      const success = await sendContactForm(contactData);
+      
+      if (success) {
+        res.json({ message: 'Contact form submitted successfully' });
+      } else {
+        res.status(500).json({ error: 'Failed to send contact form' });
+      }
+    } catch (error) {
+      console.error('Contact form error:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ 
+          error: 'Validation failed',
+          details: error.errors 
+        });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
