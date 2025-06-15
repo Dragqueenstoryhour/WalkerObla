@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useParams } from "wouter";
+import Joyride, { CallBackProps, STATUS, EVENTS, ACTIONS } from 'react-joyride';
 import {
   Dialog,
   DialogContent,
@@ -155,6 +156,10 @@ export default function Words() {
   const [slowPlaybackWords, setSlowPlaybackWords] = useState<{ [key: string]: boolean }>({});
   const [showSummary, setShowSummary] = useState(false);
 
+  // Tutorial state
+  const [runTutorial, setRunTutorial] = useState(false);
+  const [stepIndex, setStepIndex] = useState(0);
+
   // Letter selection dialog states
   const [showLetterDialog, setShowLetterDialog] = useState(false);
   const [selectedTopicType, setSelectedTopicType] = useState<'start' | 'contain' | 'end' | null>(null);
@@ -241,6 +246,7 @@ export default function Words() {
   const animationTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const currentWordIndexRef = useRef<number>(-1);
+  const tutorialAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Predefined word topics
   const wordTopics = [
@@ -258,6 +264,83 @@ export default function Words() {
     "Words that End with.."
   ];
 
+  // Tutorial steps definition
+  const tutorialSteps = [
+    {
+      target: '.topic-selection-area',
+      content: 'Welcome to Speech Practice! Start by selecting a topic from the list to generate words, or use the input field to create your own custom topic.',
+      disableBeacon: true,
+      placement: 'bottom' as const,
+    },
+    {
+      target: '.custom-topic-input',
+      content: 'You can also type your own custom topic here to generate specific words for practice.',
+      disableBeacon: true,
+      placement: 'bottom' as const,
+    },
+    {
+      target: '.practice-cards-area',
+      content: 'Here are your practice cards, each displaying a word to speak. When you\'re ready, click the \'Start Recording\' button to begin practicing.',
+      disableBeacon: true,
+      placement: 'top' as const,
+    },
+    {
+      target: '.start-recording-button',
+      content: 'Click this button to start recording your pronunciation. The tutorial will pause here - you must click \'Start Recording\' to proceed.',
+      disableBeacon: true,
+      placement: 'top' as const,
+      spotlightClicks: true,
+    },
+    {
+      target: '.stop-recording-button',
+      content: 'Now speak the word clearly. Click the \'Stop Recording\' button when you\'re finished, and you\'ll see your pronunciation results.',
+      disableBeacon: true,
+      placement: 'top' as const,
+    },
+    {
+      target: '.hear-button',
+      content: 'To help you, you can click \'Hear\' to listen to the word pronunciation.',
+      disableBeacon: true,
+      placement: 'top' as const,
+    },
+    {
+      target: '.slow-toggle',
+      content: 'Toggle \'Slow\' to slow down the pronunciation for better understanding.',
+      disableBeacon: true,
+      placement: 'top' as const,
+    },
+    {
+      target: '.see-button',
+      content: 'Click \'See\' for an articulation animation that shows how to pronounce the word.',
+      disableBeacon: true,
+      placement: 'top' as const,
+    },
+    {
+      target: '.next-button',
+      content: 'Once you\'ve practiced a word, click the \'Next\' button to move to the next word.',
+      disableBeacon: true,
+      placement: 'top' as const,
+    },
+    {
+      target: '.previous-button',
+      content: 'You can also go back with the \'Previous\' button to review earlier words.',
+      disableBeacon: true,
+      placement: 'top' as const,
+    },
+    {
+      target: '.save-button',
+      content: 'If you find a word you want to practice again later, simply click the \'Save\' button to add it to your \'My Journey\' list.',
+      disableBeacon: true,
+      placement: 'top' as const,
+    },
+    {
+      target: '.words-level-button',
+      content: 'To change the difficulty of the words presented, click the \'Words Level\' button and use the slider to adjust your preference.',
+      disableBeacon: true,
+      placement: 'bottom' as const,
+    },
+  ];
+
   // Preload viseme images for smooth transitions
   useEffect(() => {
     Object.values(visemeImages).forEach((src) => {
@@ -272,6 +355,56 @@ export default function Words() {
       animationTimeoutsRef.current.forEach(clearTimeout);
     };
   }, []);
+
+  // Text-to-speech for tutorial instructions
+  const speakTutorialInstruction = async (text: string) => {
+    try {
+      const response = await fetch('/api/tts/synthesize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: text,
+          voice: 'alloy',
+          speed: 1.0
+        }),
+      });
+
+      if (response.ok) {
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        if (tutorialAudioRef.current) {
+          tutorialAudioRef.current.pause();
+        }
+        
+        const audio = new Audio(audioUrl);
+        tutorialAudioRef.current = audio;
+        await audio.play();
+      }
+    } catch (error) {
+      console.error('Error playing tutorial instruction:', error);
+    }
+  };
+
+  // Joyride callback function
+  const handleJoyrideCallback = (data: CallBackProps) => {
+    const { action, index, status, type } = data;
+    
+    if (([STATUS.FINISHED, STATUS.SKIPPED] as string[]).includes(status)) {
+      setRunTutorial(false);
+      setStepIndex(0);
+    } else if (([EVENTS.STEP_AFTER, EVENTS.TARGET_NOT_FOUND] as string[]).includes(type)) {
+      const nextStepIndex = index + (action === ACTIONS.PREV ? -1 : 1);
+      setStepIndex(nextStepIndex);
+      
+      // Speak the instruction for the current step
+      if (tutorialSteps[index] && action !== ACTIONS.PREV) {
+        speakTutorialInstruction(tutorialSteps[index].content);
+      }
+    }
+  };
 
   // Setup carousel event listeners to fix Previous button
   useEffect(() => {
@@ -1284,10 +1417,22 @@ export default function Words() {
       {/* Header */}
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-purple-800 mb-2">Speech Practice - Words</h1>
-          <p className="text-muted-foreground">
-            Generate and practice words to improve your speech clarity and pronunciation
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-purple-800 mb-2">Speech Practice - Words</h1>
+              <p className="text-muted-foreground">
+                Generate and practice words to improve your speech clarity and pronunciation
+              </p>
+            </div>
+            <Button
+              onClick={() => setRunTutorial(true)}
+              variant="outline"
+              className="flex items-center gap-2 bg-blue-50 border-blue-200 hover:bg-blue-100 text-blue-700"
+            >
+              <Users className="h-4 w-4" />
+              Help
+            </Button>
+          </div>
         </div>
 
         {/* Select Your Topic Section */}
