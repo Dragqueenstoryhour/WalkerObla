@@ -449,16 +449,21 @@ export default function Words() {
       const nextStepIndex = index + (action === ACTIONS.PREV ? -1 : 1);
       setStepIndex(nextStepIndex);
 
-      // Speak the instruction for the next step when moving forward
-      if (action === ACTIONS.NEXT && tutorialSteps[nextStepIndex]) {
-        // Stop current TTS before speaking next step
-        if (tutorialAudioRef.current) {
-          tutorialAudioRef.current.pause();
-          tutorialAudioRef.current.currentTime = 0;
+      // Set manual advance flag when user clicks Next
+      if (action === ACTIONS.NEXT) {
+        setManualAdvance(true);
+        
+        // Speak the instruction for the next step when moving forward
+        if (tutorialSteps[nextStepIndex]) {
+          // Stop current TTS before speaking next step
+          if (tutorialAudioRef.current) {
+            tutorialAudioRef.current.pause();
+            tutorialAudioRef.current.currentTime = 0;
+          }
+          setTimeout(() => {
+            speakTutorialInstruction(tutorialSteps[nextStepIndex].content);
+          }, 500);
         }
-        setTimeout(() => {
-          speakTutorialInstruction(tutorialSteps[nextStepIndex].content);
-        }, 500);
       }
     }
   };
