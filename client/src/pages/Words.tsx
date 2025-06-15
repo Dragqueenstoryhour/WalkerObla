@@ -359,7 +359,7 @@ export default function Words() {
   }, []);
 
   // Text-to-speech for tutorial instructions
-  const speakTutorialInstruction = async (text: string, shouldAutoAdvance: boolean = true) => {
+  const speakTutorialInstruction = async (text: string) => {
     try {
       // Prevent overlapping TTS
       if (isSpeaking) {
@@ -402,7 +402,7 @@ export default function Words() {
       const audio = new Audio(audioUrl);
       tutorialAudioRef.current = audio;
       
-      // Add event listeners for better error handling and auto-advance
+      // Add event listeners for better error handling
       audio.addEventListener('loadeddata', () => {
         audio.play().catch(error => {
           console.error('Error playing tutorial audio:', error);
@@ -415,18 +415,9 @@ export default function Words() {
         setIsSpeaking(false);
         
         // Auto-advance to next step after TTS finishes if not manually advanced
-        if (shouldAutoAdvance && !manualAdvance && stepIndex < tutorialSteps.length - 1) {
+        if (!manualAdvance && stepIndex < tutorialSteps.length - 1) {
           setTimeout(() => {
-            setStepIndex(prev => {
-              const newIndex = prev + 1;
-              // Speak the next step's instruction after auto-advance
-              if (tutorialSteps[newIndex]) {
-                setTimeout(() => {
-                  speakTutorialInstruction(tutorialSteps[newIndex].content);
-                }, 500);
-              }
-              return newIndex;
-            });
+            setStepIndex(prev => prev + 1);
           }, 1000);
         }
         // Reset manual advance flag after TTS ends
@@ -462,14 +453,9 @@ export default function Words() {
       // Play completion message when finished
       if (status === STATUS.FINISHED) {
         setTimeout(() => {
-          speakTutorialInstruction("Way to go! You're ready to get started", false);
+          speakTutorialInstruction("Way to go! You're ready to get started");
         }, 500);
       }
-    } else if (type === EVENTS.TOUR_START) {
-      // Speak the first step when tutorial starts
-      setTimeout(() => {
-        speakTutorialInstruction(tutorialSteps[0].content);
-      }, 1000);
     } else if (([EVENTS.STEP_AFTER, EVENTS.TARGET_NOT_FOUND] as string[]).includes(type)) {
       const nextStepIndex = index + (action === ACTIONS.PREV ? -1 : 1);
       setStepIndex(nextStepIndex);
@@ -484,16 +470,21 @@ export default function Words() {
           tutorialAudioRef.current.currentTime = 0;
         }
         setIsSpeaking(false);
-        
-        // Speak the instruction for the next step when moving forward
-        if (tutorialSteps[nextStepIndex]) {
-          setTimeout(() => {
-            speakTutorialInstruction(tutorialSteps[nextStepIndex].content);
-          }, 500);
-        }
       }
     }
   };
+
+  // Handle TTS for tutorial steps based on stepIndex changes
+  useEffect(() => {
+    if (!runTutorial || !tutorialSteps[stepIndex]) return;
+    
+    // Delay TTS to allow Joyride to render the step
+    const timer = setTimeout(() => {
+      speakTutorialInstruction(tutorialSteps[stepIndex].content);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [stepIndex, runTutorial]);
 
   // Setup carousel event listeners to fix Previous button
   useEffect(() => {
