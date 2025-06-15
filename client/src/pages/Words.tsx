@@ -177,7 +177,7 @@ export default function Words() {
   ];
 
   const letterOptionsEndSounds = [
-    '-AR', '-CH', '-SK', '-SH', '-ST', '-TH', '-CIAL', '-CIOUS', '-ED', '-ES', '-EST', '-GEOUS', '-ING', '-IST', '-IZE', '-KLS', '-LOGY', '-METRY', '-PS', '-SIAN', '-SHESD', '-SION', '-ST', '-TIAL', '-TION',
+    '-AR', '-CH', '-SK', '-SH', '-ST', '-TH', '-CIAL', '-CIOUS', '-ED', '-ES', '-EST', '-GEOUS', '-ING', '-IST', '-IZE', '-KLS', '-LOGY', '-METRY', '-PS', '-SIAN', '-SH', '-ESD', '-SION', '-ST', '-TIAL', '-TION',
   ];
 
 
