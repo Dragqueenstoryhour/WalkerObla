@@ -10,6 +10,7 @@ import { ChevronLeft, ChevronRight, Volume2, Shuffle, BookOpen, MicIcon, StopCir
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { CombinedLineChart } from '@/components/CombinedLineChart'; // Import the chart component
+import { MostRecentActivities } from '@/components/MostRecentActivities';
 
 interface SavedPhrase {
   id: number;
@@ -802,6 +803,11 @@ export default function MyWords() {
             phraseActivities={phraseActivities}
             readingActivities={readingActivities}
           />
+          
+          {/* Most Recent Activities */}
+          <div className="mt-8">
+            <MostRecentActivities />
+          </div>
         </div>
       </div>
     </div>

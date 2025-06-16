@@ -67,6 +67,8 @@ export interface IStorage {
     phraseStats: { total: number; avgScore: number; recent: UserActivity[] };
     readingStats: { total: number; avgScore: number; recent: UserActivity[] };
   }>;
+  getRecentActivities(userId: string, limit?: number, offset?: number): Promise<UserActivity[]>;
+  getTotalActivitiesCount(userId: string): Promise<number>;
   
   // User profile operations
   getUserProfile(userId: string): Promise<UserProfile | undefined>;
