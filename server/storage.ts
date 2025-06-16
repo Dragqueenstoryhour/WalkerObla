@@ -602,6 +602,27 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
+  // Get paginated recent activities for Most Recent Activities table
+  async getRecentActivities(userId: string, limit: number = 10, offset: number = 0): Promise<UserActivity[]> {
+    return await db
+      .select()
+      .from(userActivity)
+      .where(eq(userActivity.userId, userId))
+      .orderBy(desc(userActivity.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  // Get total count of activities for pagination
+  async getTotalActivitiesCount(userId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(userActivity)
+      .where(eq(userActivity.userId, userId));
+    
+    return result[0]?.count || 0;
+  }
+
   // Health check for deployment readiness
   async healthCheck(): Promise<void> {
     try {

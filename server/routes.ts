@@ -89,6 +89,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get paginated recent activities for Most Recent Activities table
+  app.get('/api/user/recent-activities', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const offset = (page - 1) * limit;
+      
+      const recentActivities = await storage.getRecentActivities(userId, limit, offset);
+      const totalCount = await storage.getTotalActivitiesCount(userId);
+      
+      res.json({
+        activities: recentActivities,
+        currentPage: page,
+        totalPages: Math.ceil(totalCount / limit),
+        totalCount,
+        hasNextPage: page * limit < totalCount,
+        hasPrevPage: page > 1
+      });
+    } catch (error) {
+      console.error("Error fetching recent activities:", error);
+      res.status(500).json({ message: "Failed to fetch recent activities" });
+    }
+  });
+
   // Record user activity
   app.post('/api/user/activity', isAuthenticated, async (req: any, res) => {
     try {
