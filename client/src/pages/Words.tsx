@@ -274,6 +274,37 @@ export default function Words() {
     inViewThreshold: 0.7
   });
 
+  // Carousel navigation functions
+  const scrollPrev = React.useCallback(() => {
+    if (emblaApi) emblaApi.scrollPrev();
+  }, [emblaApi]);
+
+  const scrollNext = React.useCallback(() => {
+    if (emblaApi) emblaApi.scrollNext();
+  }, [emblaApi]);
+
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  // Update carousel navigation state
+  useEffect(() => {
+    if (!emblaApi) return;
+
+    const updateScrollButtons = () => {
+      setCanScrollPrev(emblaApi.canScrollPrev());
+      setCanScrollNext(emblaApi.canScrollNext());
+    };
+
+    emblaApi.on('select', updateScrollButtons);
+    emblaApi.on('reInit', updateScrollButtons);
+    updateScrollButtons();
+
+    return () => {
+      emblaApi.off('select', updateScrollButtons);
+      emblaApi.off('reInit', updateScrollButtons);
+    };
+  }, [emblaApi]);
+
   // Use audio recording hook for consistent recording management
   const {
     isRecording,
@@ -765,6 +796,7 @@ export default function Words() {
         "Entertainment and Media", "Education and Learning", "Sports and Fitness"
       ];
       const randomTopic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
+      setAiGenerateTopic(randomTopic);
       handleGenerateTopicWords(randomTopic);
     } else if (problemSound === "new_topic") {
       // Generate words from a random new topic
@@ -777,11 +809,26 @@ export default function Words() {
         "Fashion and Style", "Architecture and Design", "History and Heritage", "Geography and Places"
       ];
       const randomTopic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
+      setAiGenerateTopic(randomTopic);
       handleGenerateTopicWords(randomTopic);
-    } else {
-      // Handle specific sound practice
+    } else if (problemSound.length <= 3) {
+      // Handle specific sound practice (single letters or short sounds)
       setSelectedTopicType("contain");
       handleGenerateWordsWithSound(problemSound);
+    } else {
+      // If it's a longer string, treat it as a topic suggestion
+      // Extract the actual topic from the feedback question
+      const topicMatch = problemSound.match(/'([^']+)'/);
+      if (topicMatch) {
+        const extractedTopic = topicMatch[1];
+        setAiGenerateTopic(extractedTopic);
+        handleGenerateTopicWords(extractedTopic);
+      } else {
+        // Fallback: use a default topic
+        const fallbackTopic = "Commonly Used Words";
+        setAiGenerateTopic(fallbackTopic);
+        handleGenerateTopicWords(fallbackTopic);
+      }
     }
   };
 
@@ -1878,6 +1925,57 @@ export default function Words() {
               />
             </div>
 
+            {/* Navigation Controls */}
+            <div className="flex justify-between items-center bg-white rounded-lg p-4 shadow-lg border-0">
+              <Button
+                onClick={scrollPrev}
+                disabled={!canScrollPrev}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-gray-600">
+                  {currentCarouselIndex + 1} of {processedWords.length}
+                </span>
+                {currentCarouselIndex === processedWords.length - 1 && !showSummary && (
+                  <Button
+                    onClick={handleFinishPractice}
+                    disabled={isGeneratingFeedback}
+                    className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+                    size="sm"
+                  >
+                    {isGeneratingFeedback ? (
+                      <>
+                        <RotateCw className="h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Flag className="h-4 w-4" />
+                        Finish Practice
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+
+              <Button
+                onClick={scrollNext}
+                disabled={!canScrollNext}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+
             {/* Carousel */}
             <div className="embla" ref={emblaRef}>
               <div className="embla__container flex">
@@ -1885,7 +1983,7 @@ export default function Words() {
                   <div key={`${word.id}-${index}`} className="embla__slide flex-[0_0_100%] px-2">
                     {word.id === 'summary-card' ? (
                       // Summary Card
-                      <Card className="h-full shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
+                      <Card className="h-full shadow-lg border-0 card-content max-w-full overflow-hidden" style={{ backgroundColor: '#1947e5' }}>
                         <CardHeader className="text-center text-white pb-4 relative overflow-hidden">
                           {/* Celebratory particles effect */}
                           <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -1895,7 +1993,6 @@ export default function Words() {
                             <div className="absolute top-6 right-1/4 w-1 h-1 bg-white/80 rounded-full animate-pulse"></div>
                           </div>
                           <CardTitle className="text-3xl font-bold flex items-center justify-center gap-2 relative z-10">
-                            <Flag className="h-6 w-6 text-yellow-300" />
                             🎉 Practice Session Complete! 🎉
                           </CardTitle>
                           <CardDescription className="text-white/90 mt-2 text-lg relative z-10">
@@ -1950,24 +2047,24 @@ export default function Words() {
 
                           {/* AI Feedback Section */}
                           {isGeneratingFeedback ? (
-                            <div className="p-4 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20">
-                              <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                                Generating Personalized Feedback...
+                            <div className="p-3 md:p-4 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20 mx-1">
+                              <h4 className="text-base md:text-lg font-semibold text-white mb-3 flex items-center gap-2 flex-wrap">
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white flex-shrink-0"></div>
+                                <span className="break-words">Generating Personalized Feedback...</span>
                               </h4>
-                              <p className="text-white/80">Analyzing your practice session to provide targeted suggestions</p>
+                              <p className="text-white/80 text-sm md:text-base break-words">Analyzing your practice session to provide targeted suggestions</p>
                             </div>
                           ) : summaryFeedback && showFeedbackInSummary && summaryFeedback.practicePrompt && (
-                            <div className="p-4 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20">
-                              <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                                <Lightbulb className="h-5 w-5" />
-                                Personalized Feedback
+                            <div className="p-3 md:p-4 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20 mx-1">
+                              <h4 className="text-base md:text-lg font-semibold text-white mb-3 flex items-center gap-2 flex-wrap">
+                                <Lightbulb className="h-5 w-5 flex-shrink-0" />
+                                <span className="break-words">Personalized Feedback</span>
                               </h4>
-                              <p className="text-white/90 mb-4">{summaryFeedback.practicePrompt.question}</p>
-                              <div className="flex gap-3">
+                              <p className="text-white/90 mb-4 text-sm md:text-base break-words hyphens-auto">{summaryFeedback.practicePrompt.question}</p>
+                              <div className="flex gap-2 md:gap-3 flex-wrap">
                                 <Button
                                   onClick={() => handleSummaryPracticePrompt(summaryFeedback.practicePrompt!.problemSound)}
-                                  className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+                                  className="bg-white/20 hover:bg-white/30 text-white border-white/30 text-sm md:text-base"
                                   size="sm"
                                   variant="outline"
                                 >
@@ -1975,7 +2072,7 @@ export default function Words() {
                                 </Button>
                                 <Button
                                   onClick={closeFeedbackSuggestion}
-                                  className="bg-white/10 hover:bg-white/20 text-white border-white/30"
+                                  className="bg-white/10 hover:bg-white/20 text-white border-white/30 text-sm md:text-base"
                                   size="sm"
                                   variant="outline"
                                 >
