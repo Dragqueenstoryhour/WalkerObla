@@ -795,6 +795,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate words containing specific sounds for targeted practice
+  app.post('/api/content/generate-words-with-sound', async (req, res) => {
+    try {
+      const { targetSound, difficulty = "4", count = 8 } = req.body;
+      
+      if (!targetSound) {
+        return res.status(400).json({ error: 'targetSound is required' });
+      }
+
+      console.log(`Generating words containing sound: "${targetSound}" with difficulty: ${difficulty}`);
+      
+      const words = await generateWordsWithSound(targetSound, difficulty, count);
+      
+      // Format response to match existing endpoint structure
+      const formattedWords = words.map(word => ({
+        text: word.text,
+        syllabication: word.syllabication
+      }));
+      
+      res.json({ phrases: formattedWords });
+    } catch (error) {
+      console.error("Error generating words with sound:", error);
+      res.status(500).json({ error: "Failed to generate words with sound" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

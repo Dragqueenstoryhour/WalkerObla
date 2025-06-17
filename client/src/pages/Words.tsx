@@ -567,12 +567,88 @@ export default function Words() {
     setCurrentMode('words');
   }, [setCurrentMode]);
 
-  // Auto-load common words when the page opens
+  // Generate words containing specific sounds for targeted practice
+  const handleGenerateWordsWithSound = async (targetSound: string) => {
+    setIsProcessing(true);
+
+    try {
+      const response = await fetch("/api/content/generate-words-with-sound", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          targetSound,
+          difficulty,
+          count: 8
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate words with sound");
+      }
+
+      const result = await response.json();
+
+      const newWords: ProcessedWord[] = result.phrases.map(
+        (item: any, index: number) => ({
+          id: `word-${Date.now()}-sound-${index}`,
+          text: item.text,
+          syllabication: item.syllabication,
+          status: "idle",
+        })
+      );
+
+      setProcessedWords(newWords);
+      setCurrentWordIndex(0);
+      setCurrentCarouselIndex(0);
+      if (emblaApi) {
+        emblaApi.scrollTo(0);
+      }
+      
+      // Update topic to show focused practice
+      setAiGenerateTopic(`Words that include "${targetSound}"`);
+      
+      scrollToPracticeSection();
+      
+      // Show success message
+      toast({
+        title: "Focused Practice Ready",
+        description: `Generated words containing "${targetSound}" for targeted practice`,
+      });
+    } catch (error) {
+      console.error("Error generating words with sound:", error);
+      toast({
+        title: "Generation Error",
+        description: "Failed to generate focused practice words. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Auto-scroll to practice section after words are generated
+  const scrollToPracticeSection = () => {
+    setTimeout(() => {
+      const practiceSection = document.getElementById('practice-words-section');
+      if (practiceSection) {
+        practiceSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 500);
+  };
+
+  // Auto-load focused words or common words when the page opens
   useEffect(() => {
     if (!shareId) {
-      handleGenerateTopicWords("Commonly Used Words");
+      if (focusSound) {
+        // Generate words containing the specific sound for targeted practice
+        handleGenerateWordsWithSound(focusSound);
+      } else {
+        handleGenerateTopicWords("Commonly Used Words");
+      }
     }
-  }, []);
+  }, [focusSound]);
 
   // Handle topic card click
   const handleTopicCardClick = (topic: string) => {
@@ -707,16 +783,6 @@ export default function Words() {
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  // Auto-scroll to practice section after words are generated
-  const scrollToPracticeSection = () => {
-    setTimeout(() => {
-      const practiceSection = document.getElementById('practice-words-section');
-      if (practiceSection) {
-        practiceSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 500);
   };
 
   // Start recording for an individual word practice
