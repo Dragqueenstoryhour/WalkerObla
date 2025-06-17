@@ -216,6 +216,7 @@ export default function Words() {
   const [showSummary, setShowSummary] = useState(false);
   const [summaryFeedback, setSummaryFeedback] = useState<PronunciationFeedback | null>(null);
   const [showFeedbackInSummary, setShowFeedbackInSummary] = useState(true);
+  const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
 
   // Tutorial state
   const [runTutorial, setRunTutorial] = useState(false);
@@ -643,11 +644,34 @@ export default function Words() {
 
   // Handle finish practice and add summary card to carousel
   const handleFinishPractice = async () => {
+    // Prevent duplicate finish cards
+    if (processedWords.some(word => word.id === 'summary-card')) {
+      return;
+    }
+
     const wordsWithScores = processedWords.filter(word => 
       word.assessmentResult && word.assessmentResult.pronunciationScore !== null
     );
 
-    // Generate AI feedback based on current session words
+    // Add summary card immediately with loading state
+    const summaryWord: ProcessedWord = {
+      id: 'summary-card',
+      text: 'Practice Session Complete!',
+      status: 'complete'
+    };
+
+    setProcessedWords(prev => [...prev, summaryWord]);
+    setShowSummary(true);
+    setIsGeneratingFeedback(true);
+    
+    // Navigate to the summary card
+    setTimeout(() => {
+      if (emblaApi) {
+        emblaApi.scrollTo(processedWords.length); // Go to the new summary card
+      }
+    }, 100);
+
+    // Generate AI feedback asynchronously
     if (wordsWithScores.length > 0) {
       try {
         const sessionData = wordsWithScores.map(word => ({
@@ -677,34 +701,58 @@ export default function Words() {
         }
       } catch (error) {
         console.error('Error generating session feedback:', error);
+      } finally {
+        setIsGeneratingFeedback(false);
       }
+    } else {
+      setIsGeneratingFeedback(false);
     }
+  };
 
-    // Add summary card as final carousel item and navigate to it
-    const summaryWord: ProcessedWord = {
-      id: 'summary-card',
-      text: 'Practice Session Complete!',
-      status: 'complete'
-    };
-
-    setProcessedWords(prev => [...prev, summaryWord]);
-    setShowSummary(true);
+  // Handle practice more words from summary
+  const handlePracticeMoreWords = () => {
+    // Select a random topic from available topics
+    const topics = [
+      "Commonly Used Words",
+      "Family and Relationships", 
+      "Home and Daily Life",
+      "Food and Cooking",
+      "Work and Career",
+      "Health and Wellness",
+      "Travel and Transportation",
+      "Education and Learning",
+      "Technology and Innovation",
+      "Entertainment and Hobbies"
+    ];
     
-    // Navigate to the summary card
-    setTimeout(() => {
-      if (emblaApi) {
-        emblaApi.scrollTo(processedWords.length); // Go to the new summary card
-      }
-    }, 100);
+    const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+    
+    // Reset session and generate new words
+    setShowSummary(false);
+    setSummaryFeedback(null);
+    setShowFeedbackInSummary(true);
+    setProcessedWords([]);
+    setCurrentCarouselIndex(0);
+    setSelectedTopic(randomTopic);
+    setSelectedSound("");
+    
+    // Generate new words for the random topic
+    handleGenerateTopicWords(randomTopic);
   };
 
   // Handle feedback practice prompt in summary
   const handleSummaryPracticePrompt = (problemSound: string) => {
-    // Generate new words with the problem sound and reset the session
-    handleGenerateWordsWithSound(problemSound);
+    // Reset session and generate words with the problem sound
     setShowSummary(false);
     setSummaryFeedback(null);
     setShowFeedbackInSummary(true);
+    setProcessedWords([]);
+    setCurrentCarouselIndex(0);
+    setSelectedTopic("Words that contain...");
+    setSelectedSound(problemSound);
+    
+    // Generate new words with the problem sound using proper logic
+    handleGenerateWordsWithSound(problemSound);
   };
 
   // Close feedback suggestion
@@ -1807,14 +1855,21 @@ export default function Words() {
                   <div key={word.id} className="embla__slide flex-[0_0_100%] px-2">
                     {word.id === 'summary-card' ? (
                       // Summary Card
-                      <Card className="h-full shadow-lg border-0 card-content bg-gradient-to-br from-green-600 to-blue-800">
-                        <CardHeader className="text-center text-white pb-4">
-                          <CardTitle className="text-3xl font-bold flex items-center justify-center gap-2">
-                            <Flag className="h-6 w-6" />
-                            Practice Session Complete!
+                      <Card className="h-full shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
+                        <CardHeader className="text-center text-white pb-4 relative overflow-hidden">
+                          {/* Celebratory particles effect */}
+                          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                            <div className="absolute top-4 left-4 w-2 h-2 bg-yellow-300 rounded-full animate-pulse"></div>
+                            <div className="absolute top-8 right-6 w-1 h-1 bg-white rounded-full animate-bounce"></div>
+                            <div className="absolute top-12 left-1/3 w-1.5 h-1.5 bg-yellow-200 rounded-full animate-ping"></div>
+                            <div className="absolute top-6 right-1/4 w-1 h-1 bg-white/80 rounded-full animate-pulse"></div>
+                          </div>
+                          <CardTitle className="text-3xl font-bold flex items-center justify-center gap-2 relative z-10">
+                            <Flag className="h-6 w-6 text-yellow-300" />
+                            🎉 Practice Session Complete! 🎉
                           </CardTitle>
-                          <CardDescription className="text-green-100 mt-2 text-lg">
-                            Great job completing your word practice session
+                          <CardDescription className="text-white/90 mt-2 text-lg relative z-10">
+                            Excellent work! You've completed your practice session
                           </CardDescription>
                         </CardHeader>
                         
@@ -2205,19 +2260,23 @@ export default function Words() {
                   onClick={handleFinishPractice}
                   className="bg-[#1947e5] hover:bg-[#1947e5]/90 text-white"
                   size="sm"
+                  disabled={isGeneratingFeedback}
                 >
-                  <Flag className="h-4 w-4 mr-1" />
-                  Finish
+                  {isGeneratingFeedback ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Flag className="h-4 w-4 mr-1" />
+                      Finish
+                    </>
+                  )}
                 </Button>
               ) : showSummary && currentCarouselIndex >= processedWords.length - 1 ? (
                 <Button
-                  onClick={() => {
-                    setShowSummary(false);
-                    setSummaryFeedback(null);
-                    setShowFeedbackInSummary(true);
-                    // Remove summary card and generate new words
-                    setProcessedWords(prev => prev.filter(word => word.id !== 'summary-card'));
-                  }}
+                  onClick={handlePracticeMoreWords}
                   className="bg-[#1947e5] hover:bg-[#1947e5]/90 text-white"
                   size="sm"
                 >
