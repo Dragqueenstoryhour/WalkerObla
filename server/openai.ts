@@ -392,15 +392,12 @@ export async function generateReadingContent(topic: string, difficulty: Difficul
     const readingContent: ReadingContent = {
       id: Date.now(),
       title: parsedContent.title,
+      source: "ai-generated",
       content: parsedContent.content,
       wordCount: calculatedWordCount,
       readingTime: calculatedWordCount * 3,
       difficulty: difficultyString, // Ensure it's a string
       createdAt: new Date().toISOString(), // Store directly as ISO string for compatibility
-      vocabulary: parsedContent.vocabulary || [],
-      keyPhrases: parsedContent.keyPhrases || [],
-      comprehensionQuestions: parsedContent.comprehensionQuestions || [],
-      summary: parsedContent.summary || "",
     };
 
     // Return the content
@@ -615,10 +612,37 @@ export async function generatePronunciationFeedback(activities: any[]): Promise<
   };
 }> {
   if (!activities || activities.length === 0) {
-    return { suggestions: ["Keep practicing regularly to improve your pronunciation skills!"] };
+    return { 
+      suggestions: ["Keep practicing regularly to improve your pronunciation skills!"],
+      practicePrompt: {
+        question: "Would you like to try words from a new topic to keep challenging yourself?",
+        problemSound: "new_topic"
+      }
+    };
   }
 
   try {
+    // Calculate average score to determine feedback strategy
+    const totalScore = activities.reduce((sum, activity) => sum + (activity.score || 0), 0);
+    const averageScore = totalScore / activities.length;
+    
+    // Get list of 50+ random topics for high performers
+    const randomTopics = [
+      "Animals and Nature", "Food and Cooking", "Travel and Adventure", "Technology and Innovation",
+      "Sports and Fitness", "Arts and Culture", "Science and Discovery", "Health and Wellness",
+      "Family and Relationships", "Education and Learning", "Business and Work", "Entertainment and Media",
+      "Weather and Seasons", "Transportation", "Shopping and Commerce", "Music and Dance",
+      "Books and Literature", "Movies and Theater", "Photography", "Gardening and Plants",
+      "Fashion and Style", "Architecture and Design", "History and Heritage", "Geography and Places",
+      "Space and Astronomy", "Ocean and Marine Life", "Mountains and Hiking", "Cities and Urban Life",
+      "Rural and Country Life", "Festivals and Celebrations", "Hobbies and Crafts", "Games and Puzzles",
+      "Tools and Equipment", "Vehicles and Machinery", "Colors and Shapes", "Numbers and Mathematics",
+      "Time and Schedules", "Money and Finance", "Communication and Language", "Emotions and Feelings",
+      "Dreams and Goals", "Challenges and Solutions", "Success and Achievement", "Friendship and Community",
+      "Volunteering and Helping", "Environment and Conservation", "Innovation and Creativity", "Peace and Harmony",
+      "Adventure and Exploration", "Comfort and Home", "Celebration and Joy", "Wisdom and Knowledge"
+    ];
+
     // Prepare activity data for AI analysis
     const analysisData = activities.map(activity => ({
       type: activity.activityType,
@@ -634,41 +658,55 @@ export async function generatePronunciationFeedback(activities: any[]): Promise<
       date: activity.createdAt
     }));
 
-    const prompt = `You are a helpful and encouraging speech coach analyzing pronunciation practice data. Review the following recent practice activities and provide specific, actionable feedback.
+    // Enhanced prompt that ensures feedback for all performance levels
+    const prompt = `You are a supportive speech coach analyzing pronunciation practice data. Review the practice activities and ALWAYS provide encouraging, actionable feedback regardless of performance level.
 
-Practice Data:
+Practice Data (Average Score: ${averageScore}%):
 ${JSON.stringify(analysisData, null, 2)}
 
-Please analyze this data holistically to identify:
-1. Common pronunciation challenges or patterns
-2. Areas showing improvement or consistent performance
-3. Specific opportunities for focused practice
+IMPORTANT: You MUST always provide feedback that encourages continued practice. Follow these guidelines based on performance:
+
+For High Performers (80%+ average):
+- Celebrate their success and suggest increasing difficulty or trying new challenges
+- Always include a practicePrompt suggesting they try a new topic area
+- Encourage them to maintain momentum with variety
+
+For Medium Performers (50-79% average):
+- Identify specific areas for improvement
+- Provide targeted practice suggestions
+- Include practicePrompt focusing on problem areas if detected
+
+For Lower Performers (<50% average):
+- Focus on encouragement and foundational skills
+- Suggest slower, more careful practice
+- Include practicePrompt for basic sound practice
 
 Provide your analysis as a JSON response with this exact structure:
 {
   "suggestions": [
-    "Up to 3 bullet points with specific observations and encouraging suggestions"
+    "2-3 specific, encouraging bullet points based on their performance level"
   ],
   "practicePrompt": {
-    "question": "I noticed it may be helpful to practice [problem sound/letter/phoneme] - do you want to try some?",
-    "problemSound": "specific sound, letter, or phoneme to focus on"
+    "question": "Personalized question based on their performance - ALWAYS include this",
+    "problemSound": "specific sound/topic recommendation"
   }
 }
 
+For high performers, randomly select from these topics for variety: ${randomTopics.slice(0, 20).join(', ')}, and many others.
+
 Guidelines:
-- Be encouraging and supportive in tone
-- Focus on the most impactful areas for improvement
-- If you identify a recurring pronunciation challenge, include it in the practicePrompt
-- If no clear pattern emerges, provide general encouragement without practicePrompt
-- Keep suggestions concise and actionable
-- Use everyday language, not technical jargon`;
+- ALWAYS provide a practicePrompt - never leave it empty
+- Be encouraging regardless of performance level
+- For 90%+ scores, suggest difficulty increase AND new topics
+- Keep language simple and supportive
+- Focus on continued engagement and growth`;
 
     const response = await openai.chat.completions.create({
       model: ADVANCED_MODEL, // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       messages: [
         {
           role: "system",
-          content: "You are a supportive speech coach helping stroke recovery patients improve their pronunciation. Respond with valid JSON only."
+          content: "You are a supportive speech coach helping users improve their pronunciation. You MUST always provide encouraging feedback and practice suggestions. Respond with valid JSON only."
         },
         {
           role: "user",
@@ -676,29 +714,64 @@ Guidelines:
         }
       ],
       response_format: { type: "json_object" },
-      temperature: 0.7
+      temperature: 0.8
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
     
+    // Enhanced fallback logic - ensure we ALWAYS have a practice prompt
+    let practicePrompt = result.practicePrompt;
+    
+    if (!practicePrompt || !practicePrompt.question) {
+      const randomTopic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
+      
+      if (averageScore >= 90) {
+        practicePrompt = {
+          question: `Excellent work! You're scoring ${Math.round(averageScore)}% - would you like to increase the difficulty level or try words from "${randomTopic}"?`,
+          problemSound: "difficulty_increase"
+        };
+      } else if (averageScore >= 70) {
+        practicePrompt = {
+          question: `Great progress! Would you like to try some challenging words from "${randomTopic}" to keep improving?`,
+          problemSound: "new_topic"
+        };
+      } else {
+        practicePrompt = {
+          question: "Would you like to practice some words with the 'r' sound to help improve your pronunciation?",
+          problemSound: "r"
+        };
+      }
+    }
+    
     // Validate and sanitize the response
     return {
-      suggestions: Array.isArray(result.suggestions) 
+      suggestions: Array.isArray(result.suggestions) && result.suggestions.length > 0
         ? result.suggestions.slice(0, 3) 
-        : ["Keep practicing regularly to improve your pronunciation skills!"],
-      practicePrompt: result.practicePrompt && result.practicePrompt.question && result.practicePrompt.problemSound
-        ? result.practicePrompt
-        : undefined
+        : [
+            `Great job completing your practice session with ${Math.round(averageScore)}% average!`,
+            "Consistent practice is the key to continued improvement",
+            "Keep challenging yourself with new words and topics"
+          ],
+      practicePrompt
     };
 
   } catch (error) {
     console.error("Error generating pronunciation feedback:", error);
+    
+    // Robust fallback that always provides actionable feedback
+    const randomTopics = ["Animals", "Food", "Travel", "Sports", "Music", "Nature"];
+    const randomTopic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
+    
     return {
       suggestions: [
         "Great job staying consistent with your practice!",
-        "Try focusing on clear pronunciation of each syllable",
-        "Remember to speak slowly and clearly for best results"
-      ]
+        "Every practice session helps improve your speaking confidence",
+        "Try focusing on clear pronunciation of each syllable"
+      ],
+      practicePrompt: {
+        question: `Would you like to practice some words about "${randomTopic}" to keep challenging yourself?`,
+        problemSound: "new_topic"
+      }
     };
   }
 }

@@ -743,16 +743,45 @@ export default function Words() {
 
   // Handle feedback practice prompt in summary
   const handleSummaryPracticePrompt = (problemSound: string) => {
-    // Reset session and generate words with the problem sound
+    // Reset session and handle different types of practice suggestions
     setShowSummary(false);
     setSummaryFeedback(null);
     setShowFeedbackInSummary(true);
     setProcessedWords([]);
     setCurrentCarouselIndex(0);
-    setSelectedTopicType("contain");
     
-    // Generate new words with the problem sound using proper logic
-    handleGenerateWordsWithSound(problemSound);
+    // Handle different types of practice suggestions
+    if (problemSound === "difficulty_increase") {
+      // For high performers, increase difficulty and generate new topic words
+      const newDifficultyNum = Math.min(difficulty + 1, 7);
+      const newDifficulty = newDifficultyNum.toString() as DifficultyLevel;
+      setDifficulty(newDifficultyNum);
+      
+      // Generate words with increased difficulty from random topic
+      const randomTopics = [
+        "Technology and Innovation", "Science and Discovery", "Arts and Culture", 
+        "Business and Work", "Travel and Adventure", "Health and Wellness",
+        "Entertainment and Media", "Education and Learning", "Sports and Fitness"
+      ];
+      const randomTopic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
+      handleGenerateTopicWords(randomTopic);
+    } else if (problemSound === "new_topic") {
+      // Generate words from a random new topic
+      const randomTopics = [
+        "Animals and Nature", "Food and Cooking", "Travel and Adventure", "Technology and Innovation",
+        "Sports and Fitness", "Arts and Culture", "Science and Discovery", "Health and Wellness",
+        "Family and Relationships", "Education and Learning", "Business and Work", "Entertainment and Media",
+        "Weather and Seasons", "Transportation", "Shopping and Commerce", "Music and Dance",
+        "Books and Literature", "Movies and Theater", "Photography", "Gardening and Plants",
+        "Fashion and Style", "Architecture and Design", "History and Heritage", "Geography and Places"
+      ];
+      const randomTopic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
+      handleGenerateTopicWords(randomTopic);
+    } else {
+      // Handle specific sound practice
+      setSelectedTopicType("contain");
+      handleGenerateWordsWithSound(problemSound);
+    }
   };
 
   // Close feedback suggestion
