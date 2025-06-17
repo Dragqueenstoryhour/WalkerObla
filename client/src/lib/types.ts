@@ -79,6 +79,15 @@ export interface PronunciationAssessmentResult {
     phonemes?: Array<{  // Phoneme-level details
       phoneme: string;  // IPA phoneme
       score: number;    // Phoneme accuracy score
+      offset?: number;  // Start time offset in milliseconds
+      duration?: number; // Duration in milliseconds
+    }>;
+    syllables?: Array<{ // Syllable-level details
+      syllable: string; // Syllable text
+      grapheme: string; // Written form of syllable
+      accuracyScore: number; // Syllable accuracy score
+      offset?: number;  // Start time offset in milliseconds  
+      duration?: number; // Duration in milliseconds
     }>;
   }[];
   rawJson?: any;        // Raw JSON response for debugging

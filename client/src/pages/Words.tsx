@@ -1656,16 +1656,17 @@ export default function Words() {
                         <CardTitle className="text-3xl font-bold text-white">{word.text}</CardTitle>
                         {word.syllabication && (
                           <div className="text-lg italic mt-2">
-                            {word.status === "complete" && word.assessmentResult?.wordLevelResults?.[0]?.syllables ? (
+                            {word.status === "complete" && word.assessmentResult?.wordLevelResults?.[0] && 
+                             (word.assessmentResult.wordLevelResults[0] as any).syllables ? (
                               // Show color-coded syllables based on assessment results
-                              mapSyllablesToDisplay(word.syllabication, word.assessmentResult.wordLevelResults[0].syllables).map((syllable, index) => (
+                              mapSyllablesToDisplay(word.syllabication, (word.assessmentResult.wordLevelResults[0] as any).syllables).map((syllable, index) => (
                                 <span 
                                   key={index}
                                   style={{ color: syllable.color }}
                                   className="font-semibold"
                                 >
                                   {syllable.text}
-                                  {index < mapSyllablesToDisplay(word.syllabication, word.assessmentResult.wordLevelResults[0].syllables).length - 1 && '-'}
+                                  {index < mapSyllablesToDisplay(word.syllabication || '', (word.assessmentResult?.wordLevelResults?.[0] as any)?.syllables || []).length - 1 && '-'}
                                 </span>
                               ))
                             ) : (
@@ -1806,11 +1807,12 @@ export default function Words() {
                             </div>
 
                             {/* Syllable-Level Feedback */}
-                            {word.assessmentResult.wordLevelResults?.[0]?.syllables && word.assessmentResult.wordLevelResults[0].syllables.length > 0 && (
+                            {word.assessmentResult.wordLevelResults?.[0] && (word.assessmentResult.wordLevelResults[0] as any).syllables && 
+                             (word.assessmentResult.wordLevelResults[0] as any).syllables.length > 0 && (
                               <div className="mb-4">
                                 <h4 className="text-sm font-semibold text-gray-700 mb-2">Syllable Breakdown</h4>
                                 <div className="grid grid-cols-1 gap-2">
-                                  {word.assessmentResult.wordLevelResults[0].syllables.map((syllable, index) => (
+                                  {((word.assessmentResult.wordLevelResults[0] as any).syllables as any[]).map((syllable: any, index: number) => (
                                     <div key={index} className="flex items-center justify-between bg-gray-50 rounded p-2">
                                       <span className="text-sm font-medium text-gray-800">{syllable.grapheme}</span>
                                       <div className="flex items-center gap-2">
