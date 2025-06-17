@@ -104,7 +104,7 @@ const visemeImages = {
   20: viseme20,
   21: viseme21,
 };
-import { useDifficulty } from "@/contexts/DifficultyContext";
+import { useDifficulty, DifficultyLevel } from "@/contexts/DifficultyContext";
 import { DifficultyDropdown } from "@/components/difficulty/SimplifiedDifficultySelector";
 import { SummaryCard } from "@/components/SummaryCard";
 import useEmblaCarousel from 'embla-carousel-react';
@@ -753,9 +753,10 @@ export default function Words() {
     // Handle different types of practice suggestions
     if (problemSound === "difficulty_increase") {
       // For high performers, increase difficulty and generate new topic words
-      const newDifficultyNum = Math.min(difficulty + 1, 7);
+      const currentDifficultyNum = parseInt(difficulty, 10);
+      const newDifficultyNum = Math.min(currentDifficultyNum + 1, 8);
       const newDifficulty = newDifficultyNum.toString() as DifficultyLevel;
-      setDifficulty(newDifficultyNum);
+      setDifficulty(newDifficulty);
       
       // Generate words with increased difficulty from random topic
       const randomTopics = [
