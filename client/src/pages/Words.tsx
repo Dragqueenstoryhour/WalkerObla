@@ -2187,276 +2187,125 @@ export default function Words() {
               </div>
             </div>
 
-                                    {/* Navigation controls */}
-                                    <div className="flex justify-center space-x-4">
-                                      <Button
-                                        onClick={() => emblaApi?.scrollPrev()}
-                                        disabled={currentCarouselIndex === 0}
-                                        variant="outline"
-                                        size="sm"
-                                        className="previous-button"
-                                      >
-                                        <ChevronLeft className="h-4 w-4 mr-1" />
-                                        Previous
-                                      </Button>
+            {/* Navigation controls */}
+            <div className="flex justify-center space-x-4 mt-6">
+              <Button
+                onClick={() => emblaApi?.scrollPrev()}
+                disabled={currentCarouselIndex === 0}
+                variant="outline"
+                size="sm"
+                className="previous-button"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
 
-                                      {currentCarouselIndex >= processedWords.length - 1 && !showSummary ? (
-                                        <Button
-                                          onClick={handleFinishPractice}
-                                          className="bg-[#1947e5] hover:bg-[#1947e5]/90 text-white"
-                                          size="sm"
-                                        >
-                                          <Flag className="h-4 w-4 mr-1" />
-                                          Finish
-                                        </Button>
-                                      ) : showSummary && currentCarouselIndex >= processedWords.length - 1 ? (
-                                        <Button
-                                          onClick={() => {
-                                            setShowSummary(false);
-                                            setSummaryFeedback(null);
-                                            setShowFeedbackInSummary(true);
-                                            // Remove summary card and generate new words
-                                            setProcessedWords(prev => prev.filter(word => word.id !== 'summary-card'));
-                                          }}
-                                          className="bg-[#1947e5] hover:bg-[#1947e5]/90 text-white"
-                                          size="sm"
-                                        >
-                                          Practice More Words
-                                        </Button>
-                                      ) : (
-                                        <Button
-                                          onClick={() => emblaApi?.scrollNext()}
-                                          disabled={currentCarouselIndex >= processedWords.length - 1}
-                                          variant="outline"
-                                          size="sm"
-                                          className="next-button"
-                                        >
-                                          Next
-                                          <ChevronRight className="h-4 w-4 ml-1" />
-                                        </Button>
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
+              {currentCarouselIndex >= processedWords.length - 1 && !showSummary ? (
+                <Button
+                  onClick={handleFinishPractice}
+                  className="bg-[#1947e5] hover:bg-[#1947e5]/90 text-white"
+                  size="sm"
+                >
+                  <Flag className="h-4 w-4 mr-1" />
+                  Finish
+                </Button>
+              ) : showSummary && currentCarouselIndex >= processedWords.length - 1 ? (
+                <Button
+                  onClick={() => {
+                    setShowSummary(false);
+                    setSummaryFeedback(null);
+                    setShowFeedbackInSummary(true);
+                    // Remove summary card and generate new words
+                    setProcessedWords(prev => prev.filter(word => word.id !== 'summary-card'));
+                  }}
+                  className="bg-[#1947e5] hover:bg-[#1947e5]/90 text-white"
+                  size="sm"
+                >
+                  Practice More Words
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => emblaApi?.scrollNext()}
+                  disabled={currentCarouselIndex >= processedWords.length - 1}
+                  variant="outline"
+                  size="sm"
+                  className="next-button"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
-                              {/* Summary Card with Feedback */}
-                              {showSummary && (
-                                <Card className="max-w-3xl mx-auto mt-8 bg-white shadow-lg">
-                                  <CardHeader className="bg-gradient-to-r from-green-50 to-blue-50 text-center">
-                                    <CardTitle className="text-2xl font-bold text-gray-800 flex items-center justify-center gap-2">
-                                      <Flag className="h-6 w-6 text-green-600" />
-                                      Practice Session Complete!
-                                    </CardTitle>
-                                    <CardDescription className="text-gray-600 mt-2">
-                                      Great job completing your word practice session
-                                    </CardDescription>
-                                  </CardHeader>
-                                  
-                                  <CardContent className="p-6">
-                                    {/* Overall Scores */}
-                                    <div className="mb-6">
-                                      <h3 className="text-lg font-semibold text-gray-800 mb-4">Overall Performance</h3>
-                                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                                        {(() => {
-                                          const wordsWithScores = processedWords.filter(word => 
-                                            word.assessmentResult && word.assessmentResult.pronunciationScore !== null
-                                          );
-                                          const avgPronunciation = wordsWithScores.length > 0 
-                                            ? Math.round(wordsWithScores.reduce((sum, word) => sum + (word.assessmentResult?.pronunciationScore || 0), 0) / wordsWithScores.length)
-                                            : 0;
-                                          const avgAccuracy = wordsWithScores.length > 0 
-                                            ? Math.round(wordsWithScores.reduce((sum, word) => sum + (word.assessmentResult?.accuracyScore || 0), 0) / wordsWithScores.length)
-                                            : 0;
-                                          const avgFluency = wordsWithScores.length > 0 
-                                            ? Math.round(wordsWithScores.reduce((sum, word) => sum + (word.assessmentResult?.fluencyScore || 0), 0) / wordsWithScores.length)
-                                            : 0;
-                                          const avgCompleteness = wordsWithScores.length > 0 
-                                            ? Math.round(wordsWithScores.reduce((sum, word) => sum + (word.assessmentResult?.completenessScore || 0), 0) / wordsWithScores.length)
-                                            : 0;
-                                          
-                                          return (
-                                            <>
-                                              <div className="text-center p-3 bg-blue-50 rounded-lg">
-                                                <div className="text-2xl font-bold text-blue-600">{avgPronunciation}%</div>
-                                                <div className="text-sm text-blue-700">Pronunciation</div>
-                                              </div>
-                                              <div className="text-center p-3 bg-green-50 rounded-lg">
-                                                <div className="text-2xl font-bold text-green-600">{avgAccuracy}%</div>
-                                                <div className="text-sm text-green-700">Accuracy</div>
-                                              </div>
-                                              <div className="text-center p-3 bg-purple-50 rounded-lg">
-                                                <div className="text-2xl font-bold text-purple-600">{avgFluency}%</div>
-                                                <div className="text-sm text-purple-700">Fluency</div>
-                                              </div>
-                                              <div className="text-center p-3 bg-yellow-50 rounded-lg">
-                                                <div className="text-2xl font-bold text-yellow-600">{avgCompleteness}%</div>
-                                                <div className="text-sm text-yellow-700">Completeness</div>
-                                              </div>
-                                            </>
-                                          );
-                                        })()}
-                                      </div>
-                                    </div>
-
-                                    {/* AI Feedback Section */}
-                                    {summaryFeedback && showFeedbackInSummary && (
-                                      <div className="mb-6 p-4 border border-blue-200 rounded-lg bg-blue-50">
-                                        <div className="flex items-start justify-between">
-                                          <div className="flex-1">
-                                            <h4 className="text-lg font-semibold text-blue-800 mb-3 flex items-center gap-2">
-                                              <Lightbulb className="h-5 w-5" />
-                                              Personalized Feedback
-                                            </h4>
-                                            {summaryFeedback.practicePrompt && (
-                                              <div className="mb-4 p-3 bg-white rounded-md border-l-4 border-blue-400">
-                                                <p className="text-gray-700 mb-3">{summaryFeedback.practicePrompt.question}</p>
-                                                <div className="flex gap-2">
-                                                  <Button
-                                                    onClick={() => handleSummaryPracticePrompt(summaryFeedback.practicePrompt!.problemSound)}
-                                                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                                                    size="sm"
-                                                  >
-                                                    Yes
-                                                  </Button>
-                                                  <Button
-                                                    onClick={closeFeedbackSuggestion}
-                                                    variant="outline"
-                                                    size="sm"
-                                                  >
-                                                    No Thanks
-                                                  </Button>
-                                                </div>
-                                              </div>
-                                            )}
-                                          </div>
-                                          <Button
-                                            onClick={closeFeedbackSuggestion}
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-gray-400 hover:text-gray-600"
-                                          >
-                                            <X className="h-4 w-4" />
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* Words Below 70% */}
-                                    {(() => {
-                                      const wordsBelow70 = processedWords.filter(word => 
-                                        word.assessmentResult && word.assessmentResult.pronunciationScore < 70
-                                      );
-                                      
-                                      if (wordsBelow70.length > 0) {
-                                        return (
-                                          <div className="mb-6">
-                                            <h4 className="text-lg font-semibold text-gray-800 mb-3">Words to Practice More</h4>
-                                            <div className="grid gap-2">
-                                              {wordsBelow70.map((word, index) => (
-                                                <div key={index} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
-                                                  <div className="flex items-center gap-3">
-                                                    <span className="font-medium text-gray-800">{word.text}</span>
-                                                    {word.syllabication && (
-                                                      <span className="text-sm text-gray-600">({word.syllabication})</span>
-                                                    )}
-                                                  </div>
-                                                  <div className="text-right">
-                                                    <div className="text-sm font-semibold text-red-600">
-                                                      {Math.round(word.assessmentResult?.pronunciationScore || 0)}%
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                              ))}
-                                            </div>
-                                          </div>
-                                        );
-                                      }
-                                      return null;
-                                    })()}
-
-                                    <div className="flex justify-center gap-4 mt-6">
-                                      <Button
-                                        onClick={() => {
-                                          setShowSummary(false);
-                                          setSummaryFeedback(null);
-                                          setShowFeedbackInSummary(true);
-                                        }}
-                                        className="bg-[#1947e5] hover:bg-[#1947e5]/90 text-white"
-                                      >
-                                        Practice More Words
-                                      </Button>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              )}
-
-                              {/* Joyride Tutorial Component */}
-                              <Joyride
-                                steps={tutorialSteps}
-                                run={runTutorial}
-                                stepIndex={stepIndex}
-                                callback={handleJoyrideCallback}
-                                continuous={true}
-                                showProgress={true}
-                                showSkipButton={true}
-                                styles={{
-                                  options: {
-                                    primaryColor: '#FF9692',
-                                    backgroundColor: '#1947e5',
-                                    textColor: '#ffffff',
-                                    arrowColor: '#1947e5',
-                                  },
-                                  tooltip: {
-                                    backgroundColor: '#1947e5',
-                                    color: '#ffffff',
-                                    borderRadius: '8px',
-                                  },
-                                  tooltipContainer: {
-                                    textAlign: 'left',
-                                  },
-                                  tooltipTitle: {
-                                    color: '#ffffff',
-                                    fontSize: '18px',
-                                    fontWeight: 'bold',
-                                  },
-                                  tooltipContent: {
-                                    color: '#ffffff',
-                                    fontSize: '16px',
-                                    padding: '16px',
-                                  },
-                                  buttonNext: {
-                                    backgroundColor: '#FF9692',
-                                    color: '#ffffff',
-                                    fontSize: '14px',
-                                    fontWeight: 'bold',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                  },
-                                  buttonBack: {
-                                    backgroundColor: 'transparent',
-                                    color: '#ffffff',
-                                    fontSize: '14px',
-                                    marginRight: '10px',
-                                    border: '1px solid #ffffff',
-                                    borderRadius: '6px',
-                                  },
-                                  buttonSkip: {
-                                    color: '#ffffff',
-                                    fontSize: '14px',
-                                  },
-                                  buttonClose: {
-                                    color: '#ffffff',
-                                  },
-                                }}
-                                locale={{
-                                  back: 'Back',
-                                  close: 'Close',
-                                  last: 'Finish',
-                                  next: 'Next',
-                                  skip: 'Skip Tutorial'
-                                }}
-                              />
-                            </div>
-                          );
-                        }
+      {/* Joyride Tutorial Component */}
+      <Joyride
+        steps={tutorialSteps}
+        run={runTutorial}
+        stepIndex={stepIndex}
+        callback={handleJoyrideCallback}
+        continuous={true}
+        showProgress={true}
+        showSkipButton={true}
+        styles={{
+          options: {
+            primaryColor: '#FF9692',
+            backgroundColor: '#1947e5',
+            textColor: '#ffffff',
+            arrowColor: '#1947e5',
+          },
+          tooltip: {
+            backgroundColor: '#1947e5',
+            color: '#ffffff',
+            borderRadius: '8px',
+          },
+          tooltipContainer: {
+            textAlign: 'left',
+          },
+          tooltipTitle: {
+            color: '#ffffff',
+            fontSize: '18px',
+            fontWeight: 'bold',
+          },
+          tooltipContent: {
+            color: '#ffffff',
+            fontSize: '16px',
+            padding: '16px',
+          },
+          buttonNext: {
+            backgroundColor: '#FF9692',
+            color: '#ffffff',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            border: 'none',
+            borderRadius: '6px',
+          },
+          buttonBack: {
+            backgroundColor: 'transparent',
+            color: '#ffffff',
+            fontSize: '14px',
+            marginRight: '10px',
+            border: '1px solid #ffffff',
+            borderRadius: '6px',
+          },
+          buttonSkip: {
+            color: '#ffffff',
+            fontSize: '14px',
+          },
+          buttonClose: {
+            color: '#ffffff',
+          },
+        }}
+        locale={{
+          back: 'Back',
+          close: 'Close',
+          last: 'Finish',
+          next: 'Next',
+          skip: 'Skip Tutorial'
+        }}
+      />
+    </div>
+  );
+}
