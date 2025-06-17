@@ -133,6 +133,50 @@ interface VisemeResponse {
   duration: number;
 }
 
+// Helper function to get syllable color based on accuracy score
+const getSyllableColor = (accuracyScore: number): string => {
+  const threshold = 70; // Define accuracy threshold
+  if (accuracyScore >= threshold) {
+    return '#2a9d8f'; // Green for correct pronunciation
+  } else {
+    return '#e76f51'; // Red for incorrect pronunciation
+  }
+};
+
+// Helper function to map syllables from assessment results to syllabication display
+const mapSyllablesToDisplay = (syllabication: string, syllables: any[]): Array<{text: string, color: string}> => {
+  if (!syllables || syllables.length === 0) {
+    // No syllable data available, return default styling
+    return syllabication.split('-').map(syllable => ({
+      text: syllable,
+      color: '#ffffff' // Default white color
+    }));
+  }
+  
+  const displaySyllables = syllabication.split('-');
+  const resultSyllables = displaySyllables.map((displaySyllable, index) => {
+    // Try to match with assessment syllables
+    const matchingSyllable = syllables.find(s => 
+      s.syllable.toLowerCase().includes(displaySyllable.toLowerCase()) ||
+      s.grapheme.toLowerCase().includes(displaySyllable.toLowerCase())
+    );
+    
+    if (matchingSyllable) {
+      return {
+        text: displaySyllable,
+        color: getSyllableColor(matchingSyllable.accuracyScore)
+      };
+    } else {
+      return {
+        text: displaySyllable,
+        color: '#ffffff' // Default white if no match found
+      };
+    }
+  });
+  
+  return resultSyllables;
+};
+
 export default function Words() {
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
@@ -1611,8 +1655,23 @@ export default function Words() {
                       <CardHeader className="text-center">
                         <CardTitle className="text-3xl font-bold text-white">{word.text}</CardTitle>
                         {word.syllabication && (
-                          <div className="text-lg italic text-white/80 mt-2">
-                            {word.syllabication}
+                          <div className="text-lg italic mt-2">
+                            {word.status === "complete" && word.assessmentResult?.wordLevelResults?.[0]?.syllables ? (
+                              // Show color-coded syllables based on assessment results
+                              mapSyllablesToDisplay(word.syllabication, word.assessmentResult.wordLevelResults[0].syllables).map((syllable, index) => (
+                                <span 
+                                  key={index}
+                                  style={{ color: syllable.color }}
+                                  className="font-semibold"
+                                >
+                                  {syllable.text}
+                                  {index < mapSyllablesToDisplay(word.syllabication, word.assessmentResult.wordLevelResults[0].syllables).length - 1 && '-'}
+                                </span>
+                              ))
+                            ) : (
+                              // Default display when no assessment data is available
+                              <span className="text-white/80">{word.syllabication}</span>
+                            )}
                           </div>
                         )}
                       </CardHeader>
@@ -1745,6 +1804,32 @@ export default function Words() {
                                   : "Good effort! Try again to improve your score."}
                               </p>
                             </div>
+
+                            {/* Syllable-Level Feedback */}
+                            {word.assessmentResult.wordLevelResults?.[0]?.syllables && word.assessmentResult.wordLevelResults[0].syllables.length > 0 && (
+                              <div className="mb-4">
+                                <h4 className="text-sm font-semibold text-gray-700 mb-2">Syllable Breakdown</h4>
+                                <div className="grid grid-cols-1 gap-2">
+                                  {word.assessmentResult.wordLevelResults[0].syllables.map((syllable, index) => (
+                                    <div key={index} className="flex items-center justify-between bg-gray-50 rounded p-2">
+                                      <span className="text-sm font-medium text-gray-800">{syllable.grapheme}</span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs text-gray-600">{Math.round(syllable.accuracyScore)}%</span>
+                                        <div className="w-16 bg-gray-200 rounded-full h-1.5">
+                                          <div
+                                            className="h-1.5 rounded-full"
+                                            style={{
+                                              width: `${Math.round(syllable.accuracyScore)}%`,
+                                              backgroundColor: getSyllableColor(syllable.accuracyScore)
+                                            }}
+                                          ></div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
 
                             {/* Detailed Scores with Bar Charts */}
                             <div className="space-y-1">

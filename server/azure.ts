@@ -20,6 +20,15 @@ interface PronunciationAssessmentResult {
     phonemes?: Array<{          // Phoneme-level details
       phoneme: string;          // IPA phoneme
       score: number;            // Phoneme accuracy score
+      offset?: number;          // Start time offset in milliseconds
+      duration?: number;        // Duration in milliseconds
+    }>;
+    syllables?: Array<{         // Syllable-level details
+      syllable: string;         // Syllable text
+      grapheme: string;         // Written form of syllable
+      accuracyScore: number;    // Syllable accuracy score
+      offset?: number;          // Start time offset in milliseconds
+      duration?: number;        // Duration in milliseconds
     }>;
   }[];
   rawJson?: any;                // Raw JSON response for debugging
@@ -209,6 +218,44 @@ function createMockAssessmentResults(referenceText: string): PronunciationAssess
     const offset = currentOffset;
     currentOffset += duration + Math.round(Math.random() * 100); // Add some silence between words
     
+    // Generate syllable data based on the word
+    const syllables = [];
+    const syllablePattern = cleanWord.toLowerCase().split(/[aeiou]+/);
+    let syllableOffset = offset;
+    
+    // Create mock syllables for the word
+    if (cleanWord.length <= 4) {
+      // Short word - single syllable
+      syllables.push({
+        syllable: cleanWord.toLowerCase(),
+        grapheme: cleanWord,
+        accuracyScore: accuracyScore,
+        offset: syllableOffset,
+        duration: duration
+      });
+    } else {
+      // Longer word - split into syllables
+      const midPoint = Math.floor(cleanWord.length / 2);
+      const firstSyllable = cleanWord.substring(0, midPoint);
+      const secondSyllable = cleanWord.substring(midPoint);
+      
+      syllables.push({
+        syllable: firstSyllable.toLowerCase(),
+        grapheme: firstSyllable,
+        accuracyScore: Math.max(40, Math.min(100, accuracyScore + (Math.random() * 20 - 10))),
+        offset: syllableOffset,
+        duration: Math.floor(duration * 0.4)
+      });
+      
+      syllables.push({
+        syllable: secondSyllable.toLowerCase(),
+        grapheme: secondSyllable,
+        accuracyScore: Math.max(40, Math.min(100, accuracyScore + (Math.random() * 20 - 10))),
+        offset: syllableOffset + Math.floor(duration * 0.4),
+        duration: Math.floor(duration * 0.6)
+      });
+    }
+
     // Return a complete word result matching Azure's structure
     return {
       word: cleanWord,
@@ -216,7 +263,8 @@ function createMockAssessmentResults(referenceText: string): PronunciationAssess
       errorType,
       duration,
       offset,
-      phonemes
+      phonemes,
+      syllables
     };
   });
 
@@ -391,17 +439,35 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
                   console.warn("Could not parse JSON response:", parseError);
                 }
                 
-                // Extract word-level results
+                // Extract word-level results with syllable and phoneme data
                 const wordLevelResults: any[] = [];
                 if (jsonResult.NBest && jsonResult.NBest[0] && jsonResult.NBest[0].Words) {
                   jsonResult.NBest[0].Words.forEach((wordData: any) => {
+                    // Extract phoneme data
+                    const phonemes = wordData.Phonemes ? wordData.Phonemes.map((p: any) => ({
+                      phoneme: p.Phoneme,
+                      score: p.PronunciationAssessment?.AccuracyScore || 0,
+                      offset: p.Offset || 0,
+                      duration: p.Duration || 0
+                    })) : [];
+                    
+                    // Extract syllable data
+                    const syllables = wordData.Syllables ? wordData.Syllables.map((s: any) => ({
+                      syllable: s.Syllable,
+                      grapheme: s.Grapheme,
+                      accuracyScore: s.PronunciationAssessment?.AccuracyScore || 0,
+                      offset: s.Offset || 0,
+                      duration: s.Duration || 0
+                    })) : [];
+                    
                     wordLevelResults.push({
                       word: wordData.Word,
                       accuracyScore: wordData.PronunciationAssessment?.AccuracyScore || 0,
                       errorType: wordData.PronunciationAssessment?.ErrorType || "None",
                       offset: wordData.Offset || 0,
                       duration: wordData.Duration || 0,
-                      phonemes: [] // Keep empty for now to avoid complexity
+                      phonemes,
+                      syllables
                     });
                   });
                 }
