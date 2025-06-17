@@ -733,6 +733,35 @@ export default function Phrases() {
               />
             </div>
 
+            {/* Navigation Controls */}
+            <div className="flex justify-between items-center bg-white rounded-lg p-4 shadow-lg border-0">
+              <Button
+                onClick={() => emblaApi?.scrollPrev()}
+                disabled={currentCarouselIndex === 0}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              
+              <span className="text-sm text-gray-600">
+                {currentCarouselIndex + 1} of {processedPhrases.length}
+              </span>
+
+              <Button
+                onClick={() => emblaApi?.scrollNext()}
+                disabled={currentCarouselIndex >= processedPhrases.length - 1}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+
             {/* Carousel */}
             <div className="embla overflow-hidden" ref={emblaRef}>
               <div className="embla__container flex">
@@ -947,28 +976,7 @@ export default function Phrases() {
               </div>
             </div>
 
-            {/* Navigation controls */}
-            <div className="flex justify-center space-x-4">
-              <Button
-                onClick={() => emblaApi?.scrollPrev()}
-                disabled={currentCarouselIndex === 0}
-                variant="outline"
-                size="sm"
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
-              </Button>
-              
-              <Button
-                onClick={() => emblaApi?.scrollNext()}
-                disabled={currentCarouselIndex >= processedPhrases.length - 1}
-                variant="outline"
-                size="sm"
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
+
           </div>
         )}
       </div>
