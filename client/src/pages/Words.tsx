@@ -1985,48 +1985,48 @@ export default function Words() {
                 <span className="text-sm text-gray-600">
                   {currentCarouselIndex + 1} of {processedWords.length + (showSummary ? 1 : 0)}
                 </span>
-                {/* Always show Finish button if not on summary and have practiced words */}
-                {!showSummary && processedWords.filter(w => w.status === 'complete' && w.id !== 'summary-card').length > 0 && (
-                  <Button
-                    onClick={handleFinishPractice}
-                    disabled={isGeneratingFeedback}
-                    className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-                    size="sm"
-                  >
-                    {isGeneratingFeedback ? (
-                      <>
-                        <RotateCw className="h-4 w-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <Flag className="h-4 w-4" />
-                        Finish
-                      </>
-                    )}
-                  </Button>
-                )}
-                {showSummary && (
-                  <Button
-                    onClick={handlePracticeMoreWords}
-                    className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-                    size="sm"
-                  >
-                    Practice More Words
-                  </Button>
-                )}
               </div>
 
-              <Button
-                onClick={scrollNext}
-                disabled={!canScrollNext || (showSummary && currentCarouselIndex >= processedWords.length)}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+              {/* Show Finish button only at the end instead of Next, or Practice More if on summary */}
+              {showSummary ? (
+                <Button
+                  onClick={handlePracticeMoreWords}
+                  className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                  size="sm"
+                >
+                  Practice More Words
+                </Button>
+              ) : (!canScrollNext && processedWords.filter(w => w.status === 'complete' && w.id !== 'summary-card').length > 0) ? (
+                <Button
+                  onClick={handleFinishPractice}
+                  disabled={isGeneratingFeedback}
+                  className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                  size="sm"
+                >
+                  {isGeneratingFeedback ? (
+                    <>
+                      <RotateCw className="h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Flag className="h-4 w-4" />
+                      Finish
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  onClick={scrollNext}
+                  disabled={!canScrollNext}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              )}
             </div>
 
             {/* Carousel */}
