@@ -160,3 +160,36 @@
 .animate-ping {
   animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
+
+/* Summary card size constraints - CRITICAL FIXES */
+.embla__slide {
+  flex: 0 0 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.embla__slide .card-content {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.embla__slide .card-content * {
+  max-width: 100% !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  hyphens: auto !important;
+  box-sizing: border-box !important;
+}
+
+.embla__slide .card-content p,
+.embla__slide .card-content div:not([class*="animate"]),
+.embla__slide .card-content span {
+  white-space: pre-wrap !important;
+  word-break: break-all !important;
+  overflow-wrap: anywhere !important;
+  max-width: 100% !important;
+}

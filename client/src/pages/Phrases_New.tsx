@@ -953,8 +953,8 @@ export default function Phrases() {
             </div>
           </div>
 
-          {/* Navigation controls */}
-          <div className="flex justify-center space-x-4">
+          {/* Top Navigation Controls */}
+          <div className="flex justify-between items-center mb-4">
             <Button
               onClick={goToPrevious}
               disabled={currentCarouselIndex === 0}
@@ -965,15 +965,29 @@ export default function Phrases() {
               Previous
             </Button>
             
-            <Button
-              onClick={goToNext}
-              disabled={currentCarouselIndex >= processedPhrases.length + (showSummary ? 1 : 0) - 1}
-              variant="outline"
-              size="sm"
-            >
-              Next
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
+            <div className="text-sm text-gray-600">
+              {currentCarouselIndex + 1} of {processedPhrases.length + (showSummary ? 1 : 0)}
+            </div>
+            
+            {currentCarouselIndex >= processedPhrases.length + (showSummary ? 1 : 0) - 1 ? (
+              <Button
+                onClick={handleFinishPractice}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                size="sm"
+              >
+                Finish
+              </Button>
+            ) : (
+              <Button
+                onClick={goToNext}
+                disabled={currentCarouselIndex >= processedPhrases.length + (showSummary ? 1 : 0) - 1}
+                variant="outline"
+                size="sm"
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            )}
           </div>
         </div>
       )}

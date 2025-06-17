@@ -2035,8 +2035,8 @@ export default function Words() {
                 {processedWords.map((word, index) => (
                   <div key={`${word.id}-${index}`} className="embla__slide flex-[0_0_100%] px-2">
                     {word.id === 'summary-card' ? (
-                      // Summary Card
-                      <Card className="h-full shadow-lg border-0 card-content max-w-full overflow-hidden" style={{ backgroundColor: '#1947e5' }}>
+                      // Summary Card - Match exact styling of regular word cards
+                      <Card className="h-full shadow-lg border-0 card-content w-full max-w-full overflow-hidden" style={{ backgroundColor: '#1947e5' }}>
                         <CardHeader className="text-center text-white pb-4 relative overflow-hidden">
                           {/* Celebratory particles effect */}
                           <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -2045,17 +2045,17 @@ export default function Words() {
                             <div className="absolute top-12 left-1/3 w-1.5 h-1.5 bg-yellow-200 rounded-full animate-ping"></div>
                             <div className="absolute top-6 right-1/4 w-1 h-1 bg-white/80 rounded-full animate-pulse"></div>
                           </div>
-                          <CardTitle className="text-3xl font-bold flex items-center justify-center gap-2 relative z-10">
+                          <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2 relative z-10 break-words">
                             🎉 Practice Session Complete! 🎉
                           </CardTitle>
-                          <CardDescription className="text-white/90 mt-2 text-lg relative z-10">
+                          <CardDescription className="text-white/90 mt-2 text-base relative z-10 break-words">
                             Excellent work! You've completed your practice session
                           </CardDescription>
                         </CardHeader>
                         
-                        <CardContent className="px-6 pb-6 text-white space-y-6">
+                        <CardContent className="px-4 pb-4 text-white space-y-4 max-h-96 overflow-y-auto w-full">
                           {/* Performance Bubbles */}
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-2 gap-2 w-full">
                             {(() => {
                               const wordsWithScores = processedWords.filter(w => 
                                 w.assessmentResult && w.assessmentResult.pronunciationScore !== null && w.id !== 'summary-card'
@@ -2063,9 +2063,9 @@ export default function Words() {
                               
                               if (wordsWithScores.length === 0) {
                                 return (
-                                  <div className="col-span-2 text-center p-4 bg-white/20 rounded-lg backdrop-blur-sm">
-                                    <div className="text-lg text-white">No scores available yet</div>
-                                    <div className="text-sm text-blue-100">Practice some words to see your results</div>
+                                  <div className="col-span-2 text-center p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                                    <div className="text-sm text-white">No scores available yet</div>
+                                    <div className="text-xs text-blue-100">Practice some words to see your results</div>
                                   </div>
                                 );
                               }
@@ -2077,21 +2077,21 @@ export default function Words() {
                               
                               return (
                                 <>
-                                  <div className="text-center p-4 bg-white/20 rounded-full backdrop-blur-sm">
-                                    <div className="text-2xl font-bold text-white">{avgPronunciation}%</div>
-                                    <div className="text-sm text-blue-100">Pronunciation</div>
+                                  <div className="text-center p-2 bg-white/20 rounded-full backdrop-blur-sm">
+                                    <div className="text-lg font-bold text-white">{avgPronunciation}%</div>
+                                    <div className="text-xs text-blue-100">Pronunciation</div>
                                   </div>
-                                  <div className="text-center p-4 bg-white/20 rounded-full backdrop-blur-sm">
-                                    <div className="text-2xl font-bold text-white">{avgAccuracy}%</div>
-                                    <div className="text-sm text-blue-100">Accuracy</div>
+                                  <div className="text-center p-2 bg-white/20 rounded-full backdrop-blur-sm">
+                                    <div className="text-lg font-bold text-white">{avgAccuracy}%</div>
+                                    <div className="text-xs text-blue-100">Accuracy</div>
                                   </div>
-                                  <div className="text-center p-4 bg-white/20 rounded-full backdrop-blur-sm">
-                                    <div className="text-2xl font-bold text-white">{avgFluency}%</div>
-                                    <div className="text-sm text-blue-100">Fluency</div>
+                                  <div className="text-center p-2 bg-white/20 rounded-full backdrop-blur-sm">
+                                    <div className="text-lg font-bold text-white">{avgFluency}%</div>
+                                    <div className="text-xs text-blue-100">Fluency</div>
                                   </div>
-                                  <div className="text-center p-4 bg-white/20 rounded-full backdrop-blur-sm">
-                                    <div className="text-2xl font-bold text-white">{avgCompleteness}%</div>
-                                    <div className="text-sm text-blue-100">Completeness</div>
+                                  <div className="text-center p-2 bg-white/20 rounded-full backdrop-blur-sm">
+                                    <div className="text-lg font-bold text-white">{avgCompleteness}%</div>
+                                    <div className="text-xs text-blue-100">Completeness</div>
                                   </div>
                                 </>
                               );
@@ -2100,24 +2100,26 @@ export default function Words() {
 
                           {/* AI Feedback Section */}
                           {isGeneratingFeedback ? (
-                            <div className="p-3 md:p-4 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20 mx-1">
-                              <h4 className="text-base md:text-lg font-semibold text-white mb-3 flex items-center gap-2 flex-wrap">
-                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white flex-shrink-0"></div>
-                                <span className="break-words">Generating Personalized Feedback...</span>
+                            <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20 w-full max-w-full">
+                              <h4 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white flex-shrink-0"></div>
+                                <span className="break-words">Generating Feedback...</span>
                               </h4>
-                              <p className="text-white/80 text-sm md:text-base break-words">Analyzing your practice session to provide targeted suggestions</p>
+                              <p className="text-white/80 text-xs break-words">Analyzing your practice session</p>
                             </div>
                           ) : summaryFeedback && showFeedbackInSummary && summaryFeedback.practicePrompt && (
-                            <div className="p-3 md:p-4 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20 mx-2 max-w-full">
-                              <h4 className="text-base md:text-lg font-semibold text-white mb-3 flex items-center gap-2 flex-wrap">
-                                <Lightbulb className="h-5 w-5 flex-shrink-0" />
+                            <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20 w-full max-w-full overflow-hidden">
+                              <h4 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
+                                <Lightbulb className="h-4 w-4 flex-shrink-0" />
                                 <span className="break-words">Personalized Feedback</span>
                               </h4>
-                              <p className="text-white/90 mb-4 text-sm md:text-base break-words hyphens-auto word-wrap overflow-wrap-anywhere max-w-full">{summaryFeedback.practicePrompt.question}</p>
-                              <div className="flex gap-2 md:gap-3 flex-wrap">
+                              <div className="max-h-20 overflow-y-auto mb-2">
+                                <p className="text-white/90 text-xs break-all whitespace-pre-wrap overflow-wrap-anywhere leading-tight">{summaryFeedback.practicePrompt.question}</p>
+                              </div>
+                              <div className="flex gap-1 flex-wrap">
                                 <Button
                                   onClick={() => handleSummaryPracticePrompt(summaryFeedback.practicePrompt!.problemSound)}
-                                  className="bg-white/20 hover:bg-white/30 text-white border-white/30 text-sm md:text-base"
+                                  className="bg-white/20 hover:bg-white/30 text-white border-white/30 text-xs px-2 py-1"
                                   size="sm"
                                   variant="outline"
                                 >
@@ -2125,7 +2127,7 @@ export default function Words() {
                                 </Button>
                                 <Button
                                   onClick={closeFeedbackSuggestion}
-                                  className="bg-white/10 hover:bg-white/20 text-white border-white/30 text-sm md:text-base"
+                                  className="bg-white/10 hover:bg-white/20 text-white border-white/30 text-xs px-2 py-1"
                                   size="sm"
                                   variant="outline"
                                 >
@@ -2143,18 +2145,18 @@ export default function Words() {
                             
                             if (wordsBelow70.length > 0) {
                               return (
-                                <div>
-                                  <h4 className="text-lg font-semibold text-white mb-3">Words to Practice More</h4>
-                                  <div className="space-y-2">
+                                <div className="w-full max-w-full">
+                                  <h4 className="text-sm font-semibold text-white mb-2">Words to Practice More</h4>
+                                  <div className="space-y-1 max-h-24 overflow-y-auto">
                                     {wordsBelow70.slice(0, 3).map((w, i) => (
-                                      <div key={i} className="flex items-center justify-between p-3 bg-red-500/20 rounded-lg border border-red-400/30">
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-white font-medium">{w.text}</span>
+                                      <div key={i} className="flex items-center justify-between p-2 bg-red-500/20 rounded border border-red-400/30">
+                                        <div className="flex items-center gap-1 flex-1 min-w-0">
+                                          <span className="text-white text-xs font-medium truncate">{w.text}</span>
                                           {w.syllabication && (
-                                            <span className="text-red-200 text-sm">({w.syllabication})</span>
+                                            <span className="text-red-200 text-xs truncate">({w.syllabication})</span>
                                           )}
                                         </div>
-                                        <span className="text-red-200 font-bold">{Math.round(w.assessmentResult?.pronunciationScore || 0)}%</span>
+                                        <span className="text-red-200 text-xs font-bold flex-shrink-0">{Math.round(w.assessmentResult?.pronunciationScore || 0)}%</span>
                                       </div>
                                     ))}
                                   </div>
