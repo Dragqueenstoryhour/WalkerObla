@@ -49,6 +49,7 @@ import {
   X,
   ArrowRight,
   Snail,
+  Lightbulb,
   Ear,
   Eye,
   Play,
