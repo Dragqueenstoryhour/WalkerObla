@@ -133,6 +133,14 @@ interface VisemeResponse {
   duration: number;
 }
 
+interface PronunciationFeedback {
+  suggestions: string[];
+  practicePrompt?: {
+    question: string;
+    problemSound: string;
+  };
+}
+
 // Helper function to get syllable color based on accuracy score
 const getSyllableColor = (accuracyScore: number): string => {
   const threshold = 70; // Define accuracy threshold
@@ -203,6 +211,8 @@ export default function Words() {
   const [pendingSaveIndex, setPendingSaveIndex] = useState<number | null>(null);
   const [slowPlaybackWords, setSlowPlaybackWords] = useState<{ [key: string]: boolean }>({});
   const [showSummary, setShowSummary] = useState(false);
+  const [summaryFeedback, setSummaryFeedback] = useState<PronunciationFeedback | null>(null);
+  const [showFeedbackInSummary, setShowFeedbackInSummary] = useState(true);
 
   // Tutorial state
   const [runTutorial, setRunTutorial] = useState(false);
@@ -626,6 +636,66 @@ export default function Words() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Handle finish practice and generate summary with feedback
+  const handleFinishPractice = async () => {
+    const wordsWithScores = processedWords.filter(word => 
+      word.assessmentResult && word.assessmentResult.pronunciationScore !== null
+    );
+    
+    const wordsBelow70 = wordsWithScores.filter(word => 
+      word.assessmentResult && word.assessmentResult.pronunciationScore < 70
+    );
+
+    // Generate AI feedback based on current session words
+    if (wordsWithScores.length > 0) {
+      try {
+        const sessionData = wordsWithScores.map(word => ({
+          activityType: 'word_practice',
+          itemPracticed: word.text,
+          score: word.assessmentResult?.pronunciationScore || 0,
+          accuracy: word.assessmentResult?.accuracyScore || 0,
+          fluency: word.assessmentResult?.fluencyScore || 0,
+          completeness: word.assessmentResult?.completenessScore || 0,
+          difficulty: difficulty,
+          metadata: word.assessmentResult,
+          createdAt: new Date().toISOString()
+        }));
+
+        const response = await fetch('/api/user/pronunciation-feedback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({ sessionActivities: sessionData })
+        });
+
+        if (response.ok) {
+          const feedback = await response.json();
+          setSummaryFeedback(feedback);
+        }
+      } catch (error) {
+        console.error('Error generating session feedback:', error);
+      }
+    }
+
+    setShowSummary(true);
+  };
+
+  // Handle feedback practice prompt in summary
+  const handleSummaryPracticePrompt = (problemSound: string) => {
+    // Generate new words with the problem sound and reset the session
+    handleGenerateWordsWithSound(problemSound);
+    setShowSummary(false);
+    setSummaryFeedback(null);
+    setShowFeedbackInSummary(true);
+  };
+
+  // Close feedback suggestion
+  const closeFeedbackSuggestion = () => {
+    setShowFeedbackInSummary(false);
   };
 
   // Auto-scroll to practice section after words are generated
@@ -1996,16 +2066,27 @@ export default function Words() {
                                         Previous
                                       </Button>
 
-                                      <Button
-                                        onClick={() => emblaApi?.scrollNext()}
-                                        disabled={currentCarouselIndex >= processedWords.length - 1}
-                                        variant="outline"
-                                        size="sm"
-                                        className="next-button"
-                                      >
-                                        Next
-                                        <ChevronRight className="h-4 w-4 ml-1" />
-                                      </Button>
+                                      {currentCarouselIndex >= processedWords.length - 1 ? (
+                                        <Button
+                                          onClick={handleFinishPractice}
+                                          className="bg-[#1947e5] hover:bg-[#1947e5]/90 text-white"
+                                          size="sm"
+                                        >
+                                          <Flag className="h-4 w-4 mr-1" />
+                                          Finish
+                                        </Button>
+                                      ) : (
+                                        <Button
+                                          onClick={() => emblaApi?.scrollNext()}
+                                          disabled={currentCarouselIndex >= processedWords.length - 1}
+                                          variant="outline"
+                                          size="sm"
+                                          className="next-button"
+                                        >
+                                          Next
+                                          <ChevronRight className="h-4 w-4 ml-1" />
+                                        </Button>
+                                      )}
                                     </div>
                                   </div>
                                 )}

@@ -132,6 +132,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate AI-powered feedback based on session activities
+  app.post('/api/user/pronunciation-feedback', isAuthenticated, async (req: any, res) => {
+    try {
+      const { sessionActivities } = req.body;
+      
+      if (!sessionActivities || !Array.isArray(sessionActivities)) {
+        return res.status(400).json({ error: 'sessionActivities array is required' });
+      }
+      
+      // Generate feedback using OpenAI based on session data
+      const feedback = await generatePronunciationFeedback(sessionActivities);
+      
+      res.json(feedback);
+    } catch (error) {
+      console.error("Error generating session pronunciation feedback:", error);
+      res.status(500).json({ message: "Failed to generate session pronunciation feedback" });
+    }
+  });
+
   // Record user activity
   app.post('/api/user/activity', isAuthenticated, async (req: any, res) => {
     try {
