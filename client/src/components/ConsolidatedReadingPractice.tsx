@@ -11,6 +11,57 @@ import useEnhancedVoice from '@/hooks/useEnhancedVoice';
 import { PronunciationAssessmentResult } from '@/lib/types';
 import { queryClient } from '@/lib/queryClient';
 
+// Helper function to get word color based on phoneme accuracy scores
+const getWordColorFromPhonemes = (wordResult: any): string => {
+  if (!wordResult.phonemes || wordResult.phonemes.length === 0) {
+    // If no phoneme data, use overall word accuracy score
+    return wordResult.accuracyScore >= 70 ? '#2a9d8f' : '#e76f51';
+  }
+  
+  // Check if any phoneme in the word has accuracy below 70%
+  const hasLowAccuracyPhoneme = wordResult.phonemes.some((phoneme: any) => phoneme.score < 70);
+  
+  if (hasLowAccuracyPhoneme) {
+    return '#e76f51'; // Red for words with any low-accuracy phonemes
+  } else {
+    return '#2a9d8f'; // Green for words where all phonemes are above 70%
+  }
+};
+
+// Helper function to render reading text with color-coded words based on assessment results
+const renderColorCodedReadingText = (readingText: string, assessmentResult: any): JSX.Element => {
+  if (!assessmentResult?.wordLevelResults) {
+    // No assessment data available, return default text
+    return <span className="text-gray-800">{readingText}</span>;
+  }
+  
+  const words = readingText.split(/\s+/);
+  const wordResults = assessmentResult.wordLevelResults;
+  
+  return (
+    <span>
+      {words.map((word, index) => {
+        // Find matching word result (case-insensitive, remove punctuation)
+        const cleanWord = word.toLowerCase().replace(/[^\w]/g, '');
+        const matchingResult = wordResults.find((wr: any) => 
+          wr.word.toLowerCase() === cleanWord
+        );
+        
+        const color = matchingResult 
+          ? getWordColorFromPhonemes(matchingResult)
+          : '#374151'; // Default gray if no match
+        
+        return (
+          <span key={index} style={{ color }} className="font-medium">
+            {word}
+            {index < words.length - 1 && ' '}
+          </span>
+        );
+      })}
+    </span>
+  );
+};
+
 interface ConsolidatedReadingPracticeProps {
   onAssessmentReceived?: (assessment: PronunciationAssessmentResult) => void;
   onNewContent?: () => void;
@@ -790,10 +841,17 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
           <CardContent className="p-6 space-y-4">
             {/* Reading Content Display */}
             <div 
-              ref={readingContentRef}
-              className="text-base font-semibold leading-relaxed p-4 rounded-lg min-h-[200px] max-h-[400px] overflow-y-auto text-white"
+              className="text-base font-semibold leading-relaxed p-4 rounded-lg min-h-[200px] max-h-[400px] overflow-y-auto"
               style={{ lineHeight: '1.8', backgroundColor: '#1947e5' }}
-            />
+            >
+              {phrase.status === "complete" && phrase.assessmentResult && currentContent?.content ? 
+                renderColorCodedReadingText(currentContent.content, phrase.assessmentResult) :
+                <div 
+                  ref={readingContentRef}
+                  className="text-white"
+                />
+              }
+            </div>
 
             {/* Responsive Controls Layout */}
             <div className="space-y-4 sm:space-y-0">

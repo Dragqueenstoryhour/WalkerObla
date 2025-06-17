@@ -55,6 +55,66 @@ import { DifficultyDropdown } from "@/components/difficulty/SimplifiedDifficulty
 import { SummaryCard } from "@/components/SummaryCard";
 import useEmblaCarousel from 'embla-carousel-react';
 
+// Helper function to get word color based on phoneme accuracy scores
+const getWordColorFromPhonemes = (wordResult: any): string => {
+  if (!wordResult.phonemes || wordResult.phonemes.length === 0) {
+    // If no phoneme data, use overall word accuracy score
+    return wordResult.accuracyScore >= 70 ? '#2a9d8f' : '#e76f51';
+  }
+  
+  // Check if any phoneme in the word has accuracy below 70%
+  const hasLowAccuracyPhoneme = wordResult.phonemes.some((phoneme: any) => phoneme.score < 70);
+  
+  if (hasLowAccuracyPhoneme) {
+    return '#e76f51'; // Red for words with any low-accuracy phonemes
+  } else {
+    return '#2a9d8f'; // Green for words where all phonemes are above 70%
+  }
+};
+
+// Helper function to render phrase text with color-coded words based on assessment results
+const renderColorCodedPhraseText = (phraseText: string, assessmentResult: any): JSX.Element => {
+  if (!assessmentResult?.wordLevelResults) {
+    // No assessment data available, return default white text
+    return <span className="text-white">{phraseText}</span>;
+  }
+  
+  const words = phraseText.split(/\s+/);
+  const wordResults = assessmentResult.wordLevelResults;
+  
+  return (
+    <span>
+      {words.map((word, index) => {
+        // Find matching word result (case-insensitive, remove punctuation)
+        const cleanWord = word.toLowerCase().replace(/[^\w]/g, '');
+        const matchingResult = wordResults.find((wr: any) => 
+          wr.word.toLowerCase() === cleanWord
+        );
+        
+        const color = matchingResult 
+          ? getWordColorFromPhonemes(matchingResult)
+          : '#ffffff'; // Default white if no match
+        
+        return (
+          <span key={index} style={{ color }} className="font-semibold">
+            {word}
+            {index < words.length - 1 && ' '}
+          </span>
+        );
+      })}
+    </span>
+  );
+};
+
+// Helper function to determine text size based on phrase length
+const getTextSizeClass = (text: string): string => {
+  const length = text.length;
+  if (length > 80) return 'text-sm';
+  if (length > 50) return 'text-base';
+  if (length > 30) return 'text-lg';
+  return 'text-xl';
+};
+
 interface ProcessedPhrase {
   id: string;
   text: string;
@@ -680,8 +740,11 @@ export default function Phrases() {
                   <div key={phrase.id} className="embla__slide flex-[0_0_100%] px-2 flex justify-center">
                     <Card className="w-full max-w-xs sm:max-w-sm shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
                       <CardHeader className="text-center px-3 py-4">
-                        <CardTitle className={`${getTextSizeClass(phrase.text)} font-bold text-white leading-relaxed px-2`}>
-                          {phrase.text}
+                        <CardTitle className={`${getTextSizeClass(phrase.text)} font-bold leading-relaxed px-2`}>
+                          {phrase.status === "complete" && phrase.assessmentResult ? 
+                            renderColorCodedPhraseText(phrase.text, phrase.assessmentResult) :
+                            <span className="text-white">{phrase.text}</span>
+                          }
                         </CardTitle>
                       </CardHeader>
                       
