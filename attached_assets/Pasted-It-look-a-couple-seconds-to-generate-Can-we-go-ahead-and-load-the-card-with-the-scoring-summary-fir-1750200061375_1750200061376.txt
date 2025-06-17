@@ -1,0 +1,45 @@
+It look a couple seconds to generate. Can we go ahead and load the card with the scoring summary first and then populate the feedback when it's ready to generate? If not, consider Replacing the Finish text and flag on the button button into a "generating.." with a loading circle while it generates.
+It initially generated two different finish cards. Ensure only one finish card generates.
+Update the Finish card background to 1947e5 and revise the style to look like the other cards but celebratory.
+When I press Practice More Words, it should select a random topic from above to generate a new set of words.
+When I said yes to generating more words that contain "r", it did not properly regenerate a fresh said of words that contain "r" the way it functions properly when the "Words that contain.." card is selected followed by R. Ensure we are following that logic and fix and root causes or errors.
+5 hours ago
+GL
+
+adamlowendick
+
+9 messages & 10 actions
+I'll fix these issues by implementing loading states, preventing duplicate finish cards, updating the styling, and ensuring proper word generation logic.
+5 hours ago
+•
+Enhance practice session feedback and word generation for better experience
+
+9 messages & 8 actions
+I need to fix the duplicate key warnings and add the AI feedback loading state. Let me update the carousel keys and complete the implementation.
+5 hours ago
+•
+Improve user experience during word practice and feedback generation
+Good job. It said it was generating the personalized feedback but ultimately nothing displayed. Please fix and ensure it always generates something that prompts the user to want to practice more words. Even if the user scores 99% on everything, suggest they increase the difficulty level then add "or would you like try words in the topic of [random topic]? Randomly select a random topic out of 50 potential options.
+
+5 hours ago
+GL
+
+adamlowendick
+
+12 messages & 15 actions
+I need to fix the AI feedback generation issue. Looking at the logs, I can see that the pronunciation assessment is working but the AI feedback isn't displaying. Let me check the backend implementation and ensure it always generates meaningful feedback.
+5 hours ago
+•
+Improve practice feedback by providing new topics or higher difficulty
+
+11 messages & 12 actions
+I'm fixing the type issues and completing the AI feedback implementation. Let me fix the difficulty conversion issue:
+5 hours ago
+•
+Ensure feedback is always provided and encourage more practice
+
+1 message & 1 action
+I'm completing the AI feedback implementation and testing it to ensure it works properly. Let me now test the system by attempting to trigger the feedback generation.
+On Words, When the Personalized Feedback generates on the summary card it makes the width larger than the screen. Ensure the summary card logic including the feedback scales the fit smaller screens like iphones without bleeding off the edge.
+On both Words and Phrases, Move the Previous and Next (and Finish) buttons to above the practice card carousel, below the progress bar.
+Fix the logic on the Feedback random topic generation when it generates Feedback for someone with good scores. It suggested adventure and travel which is great but when I clicked Yes, instead of just entering "adventure and travel" and selecting Generate, it entered "Words that include "Why not try practicing words related to 'Travel and Adventure' to see how you fare? Keep up the great work!"" which makes no since and then the generate button did not get hit to generate the cards. Please comprehensively resolve this prompt logic and ensure the generate function gets cued.
