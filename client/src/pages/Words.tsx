@@ -817,17 +817,60 @@ export default function Words() {
       handleGenerateWordsWithSound(problemSound);
     } else {
       // If it's a longer string, treat it as a topic suggestion
-      // Extract the actual topic from the feedback question
-      const topicMatch = problemSound.match(/'([^']+)'/);
-      if (topicMatch) {
-        const extractedTopic = topicMatch[1];
+      // Try multiple extraction patterns for topic suggestions
+      let extractedTopic = null;
+      
+      // Pattern 1: Text in single quotes
+      const singleQuoteMatch = problemSound.match(/'([^']+)'/);
+      if (singleQuoteMatch) {
+        extractedTopic = singleQuoteMatch[1];
+      }
+      
+      // Pattern 2: Text in double quotes
+      if (!extractedTopic) {
+        const doubleQuoteMatch = problemSound.match(/"([^"]+)"/);
+        if (doubleQuoteMatch) {
+          extractedTopic = doubleQuoteMatch[1];
+        }
+      }
+      
+      // Pattern 3: Look for common topic phrases without quotes
+      if (!extractedTopic) {
+        const topicPatterns = [
+          /about\s+([^?.!]+)/i,
+          /practice\s+([^?.!]+)/i,
+          /try\s+([^?.!]+)/i,
+          /focus\s+on\s+([^?.!]+)/i,
+          /work\s+on\s+([^?.!]+)/i,
+        ];
+        
+        for (const pattern of topicPatterns) {
+          const match = problemSound.match(pattern);
+          if (match) {
+            extractedTopic = match[1].trim();
+            // Remove common ending words
+            extractedTopic = extractedTopic.replace(/\s+(words|topics|sounds|practice)$/i, '');
+            break;
+          }
+        }
+      }
+      
+      // Pattern 4: If problemSound itself looks like a topic (no special chars, reasonable length)
+      if (!extractedTopic && problemSound.length > 3 && problemSound.length < 50 && 
+          !problemSound.includes('?') && !problemSound.includes('.') && 
+          !problemSound.includes('!') && /^[a-zA-Z\s]+$/.test(problemSound)) {
+        extractedTopic = problemSound.trim();
+      }
+      
+      if (extractedTopic) {
+        console.log(`Extracted topic from feedback: "${extractedTopic}"`);
         setAiGenerateTopic(extractedTopic);
         handleGenerateTopicWords(extractedTopic);
       } else {
-        // Fallback: use a default topic
-        const fallbackTopic = "Commonly Used Words";
-        setAiGenerateTopic(fallbackTopic);
-        handleGenerateTopicWords(fallbackTopic);
+        // Fallback: use the problemSound directly as topic if it's reasonable
+        console.log(`Using problemSound directly as topic: "${problemSound}"`);
+        setAiGenerateTopic(problemSound);
+        handleGenerateTopicWords(problemSound);
       }
     }
   };
@@ -1940,13 +1983,14 @@ export default function Words() {
               
               <div className="flex items-center gap-4">
                 <span className="text-sm text-gray-600">
-                  {currentCarouselIndex + 1} of {processedWords.length}
+                  {currentCarouselIndex + 1} of {processedWords.length + (showSummary ? 1 : 0)}
                 </span>
-                {currentCarouselIndex === processedWords.length - 1 && !showSummary && (
+                {/* Always show Finish button if not on summary and have practiced words */}
+                {!showSummary && processedWords.filter(w => w.status === 'complete' && w.id !== 'summary-card').length > 0 && (
                   <Button
                     onClick={handleFinishPractice}
                     disabled={isGeneratingFeedback}
-                    className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+                    className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
                     size="sm"
                   >
                     {isGeneratingFeedback ? (
@@ -1957,16 +2001,25 @@ export default function Words() {
                     ) : (
                       <>
                         <Flag className="h-4 w-4" />
-                        Finish Practice
+                        Finish
                       </>
                     )}
+                  </Button>
+                )}
+                {showSummary && (
+                  <Button
+                    onClick={handlePracticeMoreWords}
+                    className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                    size="sm"
+                  >
+                    Practice More Words
                   </Button>
                 )}
               </div>
 
               <Button
                 onClick={scrollNext}
-                disabled={!canScrollNext}
+                disabled={!canScrollNext || (showSummary && currentCarouselIndex >= processedWords.length)}
                 variant="outline"
                 size="sm"
                 className="flex items-center gap-2"
@@ -2055,12 +2108,12 @@ export default function Words() {
                               <p className="text-white/80 text-sm md:text-base break-words">Analyzing your practice session to provide targeted suggestions</p>
                             </div>
                           ) : summaryFeedback && showFeedbackInSummary && summaryFeedback.practicePrompt && (
-                            <div className="p-3 md:p-4 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20 mx-1">
+                            <div className="p-3 md:p-4 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20 mx-2 max-w-full">
                               <h4 className="text-base md:text-lg font-semibold text-white mb-3 flex items-center gap-2 flex-wrap">
                                 <Lightbulb className="h-5 w-5 flex-shrink-0" />
                                 <span className="break-words">Personalized Feedback</span>
                               </h4>
-                              <p className="text-white/90 mb-4 text-sm md:text-base break-words hyphens-auto">{summaryFeedback.practicePrompt.question}</p>
+                              <p className="text-white/90 mb-4 text-sm md:text-base break-words hyphens-auto word-wrap overflow-wrap-anywhere max-w-full">{summaryFeedback.practicePrompt.question}</p>
                               <div className="flex gap-2 md:gap-3 flex-wrap">
                                 <Button
                                   onClick={() => handleSummaryPracticePrompt(summaryFeedback.practicePrompt!.problemSound)}
@@ -2377,59 +2430,7 @@ export default function Words() {
               </div>
             </div>
 
-            {/* Navigation controls */}
-            <div className="flex justify-center space-x-4 mt-6">
-              <Button
-                onClick={() => emblaApi?.scrollPrev()}
-                disabled={currentCarouselIndex === 0}
-                variant="outline"
-                size="sm"
-                className="previous-button"
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
-              </Button>
 
-              {currentCarouselIndex >= processedWords.length - 1 && !showSummary ? (
-                <Button
-                  onClick={handleFinishPractice}
-                  className="bg-[#1947e5] hover:bg-[#1947e5]/90 text-white"
-                  size="sm"
-                  disabled={isGeneratingFeedback}
-                >
-                  {isGeneratingFeedback ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Flag className="h-4 w-4 mr-1" />
-                      Finish
-                    </>
-                  )}
-                </Button>
-              ) : showSummary && currentCarouselIndex >= processedWords.length - 1 ? (
-                <Button
-                  onClick={handlePracticeMoreWords}
-                  className="bg-[#1947e5] hover:bg-[#1947e5]/90 text-white"
-                  size="sm"
-                >
-                  Practice More Words
-                </Button>
-              ) : (
-                <Button
-                  onClick={() => emblaApi?.scrollNext()}
-                  disabled={currentCarouselIndex >= processedWords.length - 1}
-                  variant="outline"
-                  size="sm"
-                  className="next-button"
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              )}
-            </div>
           </div>
         )}
       </div>
