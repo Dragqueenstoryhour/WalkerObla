@@ -34,6 +34,7 @@ export interface ReadingFeedback {
 export interface PronunciationIssue {
   word: string;
   phonetic: string;
+  syllabication?: string;
   score: number;
   id: string;
   status?: "idle" | "recording" | "assessing" | "complete";

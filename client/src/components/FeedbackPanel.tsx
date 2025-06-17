@@ -28,6 +28,51 @@ async function getPhoneticDisplay(word: string): Promise<string> {
   }
 }
 
+// Helper function to get syllable color based on accuracy score
+const getSyllableColor = (accuracyScore: number): string => {
+  const threshold = 70; // Define accuracy threshold
+  if (accuracyScore >= threshold) {
+    return '#2a9d8f'; // Green for correct pronunciation
+  } else {
+    return '#e76f51'; // Red for incorrect pronunciation
+  }
+};
+
+// Helper function to map syllables from assessment results to syllabication display
+const mapSyllablesToDisplay = (syllabication: string, syllables: any[]): Array<{text: string, color: string}> => {
+  if (!syllables || syllables.length === 0) {
+    // No syllable data available, return default styling
+    return syllabication.split('-').map(syllable => ({
+      text: syllable,
+      color: '#ffffff' // Default white color
+    }));
+  }
+  
+  const displaySyllables = syllabication.split('-');
+  const resultSyllables = displaySyllables.map((displaySyllable, index) => {
+    // Try to match with assessment syllables
+    const matchingSyllable = syllables.find(s => 
+      s.syllable && s.grapheme &&
+      (s.syllable.toLowerCase().includes(displaySyllable.toLowerCase()) ||
+      s.grapheme.toLowerCase().includes(displaySyllable.toLowerCase()))
+    );
+    
+    if (matchingSyllable) {
+      return {
+        text: displaySyllable,
+        color: getSyllableColor(matchingSyllable.accuracyScore)
+      };
+    } else {
+      return {
+        text: displaySyllable,
+        color: '#ffffff' // Default white if no match found
+      };
+    }
+  });
+  
+  return resultSyllables;
+};
+
 const FeedbackPanel = () => {
   const { pronunciationResults } = useReading();
   const { toast } = useToast();
@@ -87,13 +132,27 @@ const FeedbackPanel = () => {
           pronunciationResults.wordLevelResults
             .filter(result => result.accuracyScore < 75) // Filter for words with accuracy less than 75%
             .slice(0, 6) // Limit to maximum 6 words
-            .map(async (result, index) => ({
-              word: result.word,
-              phonetic: await getPhoneticDisplay(result.word), // Get proper syllable breakdown
-              score: result.accuracyScore,
-              id: `issue-${Date.now()}-${index}`,
-              status: "idle" as const
-            }))
+            .map(async (result, index) => {
+              const phoneticDisplay = await getPhoneticDisplay(result.word);
+              // Extract syllabication from phonetic display (format: "WORD (N syllables)" or "SYL-LA-BLE")
+              let syllabication = '';
+              if (phoneticDisplay.includes('-')) {
+                // If phonetic already contains hyphens, use it as syllabication
+                syllabication = phoneticDisplay.split(' ')[0];
+              } else {
+                // Try to create basic syllabication from the word
+                syllabication = result.word.toLowerCase();
+              }
+              
+              return {
+                word: result.word,
+                phonetic: phoneticDisplay,
+                syllabication,
+                score: result.accuracyScore,
+                id: `issue-${Date.now()}-${index}`,
+                status: "idle" as const
+              };
+            })
         );
         setPronunciationIssues(issues);
         setCurrentCarouselIndex(0);
@@ -536,6 +595,27 @@ const FeedbackPanel = () => {
                       <Card className="h-full shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
                         <CardHeader className="text-center">
                           <CardTitle className="text-3xl font-bold text-white">{issue.word}</CardTitle>
+                          {issue.syllabication && (
+                            <div className="text-lg italic mt-2">
+                              {issue.status === "complete" && issue.assessmentResult?.wordLevelResults?.[0] && 
+                               (issue.assessmentResult.wordLevelResults[0] as any).syllables ? (
+                                // Show color-coded syllables based on assessment results
+                                mapSyllablesToDisplay(issue.syllabication, (issue.assessmentResult.wordLevelResults[0] as any).syllables).map((syllable, index) => (
+                                  <span
+                                    key={index}
+                                    style={{ color: syllable.color }}
+                                    className="font-semibold"
+                                  >
+                                    {syllable.text}
+                                    {index < mapSyllablesToDisplay(issue.syllabication || '', (issue.assessmentResult?.wordLevelResults?.[0] as any)?.syllables || []).length - 1 && '-'}
+                                  </span>
+                                ))
+                              ) : (
+                                // Default display when no assessment data is available
+                                <span className="text-white/80">{issue.syllabication}</span>
+                              )}
+                            </div>
+                          )}
                         </CardHeader>
                         
                         <CardContent className="space-y-4">
