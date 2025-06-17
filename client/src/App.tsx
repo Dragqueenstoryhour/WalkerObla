@@ -10,7 +10,7 @@ import Subscription from "@/pages/Subscription";
 import Checkout from "@/pages/Checkout";
 import SubscriptionSuccess from "@/pages/SubscriptionSuccess";
 import AzureTest from "@/pages/AzureTest";
-import NewPhrases from "@/pages/NewPhrases";
+
 import Words from "@/pages/Words";
 import Phrases from "@/pages/Phrases";
 import MyWordsNew from "@/pages/MyWordsNew";
@@ -136,8 +136,7 @@ function Router() {
         <Route path="/checkout" component={Checkout} />
         <Route path="/subscription/success" component={SubscriptionSuccess} />
         <Route path="/azure-test" component={AzureTest} />
-        <Route path="/new-phrases" component={NewPhrases} />
-        <Route path="/shared-phrases/:shareId" component={NewPhrases} />
+
         <Route path="/my-words" component={MyWordsNew} />
         <Route path="/account" component={Account} />
         <Route path="/my-account" component={MyAccount} />
