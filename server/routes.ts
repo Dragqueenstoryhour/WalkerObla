@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { assessPronunciation, synthesizeSpeech, synthesizeSpeechFromSSML, getWordPronunciation } from "./azure";
 import { generateSpeechWithVisemes } from "./azureViseme";
-import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases, generateSampleContent, generateSpeechResponse } from "./openai";
+import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases, generateSampleContent, generateSpeechResponse, generatePronunciationFeedback } from "./openai";
 import { sendContactForm } from "./email";
 import multer from "multer";
 import { z } from "zod";
@@ -111,6 +111,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching recent activities:", error);
       res.status(500).json({ message: "Failed to fetch recent activities" });
+    }
+  });
+
+  // Get AI-powered pronunciation feedback based on recent activities
+  app.get('/api/user/pronunciation-feedback', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Get last 20 activities for AI analysis
+      const recentActivities = await storage.getRecentActivities(userId, 20, 0);
+      
+      // Generate feedback using OpenAI
+      const feedback = await generatePronunciationFeedback(recentActivities);
+      
+      res.json(feedback);
+    } catch (error) {
+      console.error("Error generating pronunciation feedback:", error);
+      res.status(500).json({ message: "Failed to generate pronunciation feedback" });
     }
   });
 

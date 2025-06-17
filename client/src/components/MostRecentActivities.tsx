@@ -3,8 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Book, MessageSquare, BookOpen } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Book, MessageSquare, BookOpen, Lightbulb, CheckCircle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { useLocation } from 'wouter';
 
 interface Activity {
   id: number;
@@ -32,6 +33,14 @@ interface RecentActivitiesResponse {
 
 interface MostRecentActivitiesProps {
   className?: string;
+}
+
+interface PronunciationFeedback {
+  suggestions: string[];
+  practicePrompt?: {
+    question: string;
+    problemSound: string;
+  };
 }
 
 const getActivityTypeColor = (activityType: string) => {
@@ -83,6 +92,7 @@ const getScoreColor = (score: number | null) => {
 
 export function MostRecentActivities({ className }: MostRecentActivitiesProps) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [, setLocation] = useLocation();
   const limit = 10;
 
   const { data: recentActivities, isLoading, error } = useQuery<RecentActivitiesResponse>({
@@ -98,6 +108,20 @@ export function MostRecentActivities({ className }: MostRecentActivitiesProps) {
     }
   });
 
+  const { data: feedback, isLoading: feedbackLoading } = useQuery<PronunciationFeedback>({
+    queryKey: ['/api/user/pronunciation-feedback'],
+    queryFn: async () => {
+      const response = await fetch('/api/user/pronunciation-feedback', {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch pronunciation feedback');
+      }
+      return response.json();
+    },
+    enabled: !isLoading && recentActivities?.activities.length > 0
+  });
+
   const handlePrevPage = () => {
     if (recentActivities?.hasPrevPage) {
       setCurrentPage(prev => prev - 1);
@@ -108,6 +132,11 @@ export function MostRecentActivities({ className }: MostRecentActivitiesProps) {
     if (recentActivities?.hasNextPage) {
       setCurrentPage(prev => prev + 1);
     }
+  };
+
+  const handlePracticePrompt = (problemSound: string) => {
+    // Navigate to Words page with the problem sound as a search parameter
+    setLocation(`/words?focus=${encodeURIComponent(problemSound)}`);
   };
 
   const truncateText = (text: string, maxLength: number = 60) => {

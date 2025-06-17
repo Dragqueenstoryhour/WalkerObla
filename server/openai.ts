@@ -605,6 +605,105 @@ export async function generateSimilarPhrases(
 }
 
 /**
+ * Generate AI feedback based on pronunciation assessment data
+ */
+export async function generatePronunciationFeedback(activities: any[]): Promise<{
+  suggestions: string[];
+  practicePrompt?: {
+    question: string;
+    problemSound: string;
+  };
+}> {
+  if (!activities || activities.length === 0) {
+    return { suggestions: ["Keep practicing regularly to improve your pronunciation skills!"] };
+  }
+
+  try {
+    // Prepare activity data for AI analysis
+    const analysisData = activities.map(activity => ({
+      type: activity.activityType,
+      item: activity.itemPracticed,
+      scores: {
+        overall: activity.score,
+        accuracy: activity.accuracy,
+        fluency: activity.fluency,
+        completeness: activity.completeness
+      },
+      difficulty: activity.difficulty,
+      metadata: activity.metadata,
+      date: activity.createdAt
+    }));
+
+    const prompt = `You are a helpful and encouraging speech coach analyzing pronunciation practice data. Review the following recent practice activities and provide specific, actionable feedback.
+
+Practice Data:
+${JSON.stringify(analysisData, null, 2)}
+
+Please analyze this data holistically to identify:
+1. Common pronunciation challenges or patterns
+2. Areas showing improvement or consistent performance
+3. Specific opportunities for focused practice
+
+Provide your analysis as a JSON response with this exact structure:
+{
+  "suggestions": [
+    "Up to 3 bullet points with specific observations and encouraging suggestions"
+  ],
+  "practicePrompt": {
+    "question": "I noticed it may be helpful to practice [problem sound/letter/phoneme] - do you want to try some?",
+    "problemSound": "specific sound, letter, or phoneme to focus on"
+  }
+}
+
+Guidelines:
+- Be encouraging and supportive in tone
+- Focus on the most impactful areas for improvement
+- If you identify a recurring pronunciation challenge, include it in the practicePrompt
+- If no clear pattern emerges, provide general encouragement without practicePrompt
+- Keep suggestions concise and actionable
+- Use everyday language, not technical jargon`;
+
+    const response = await openai.chat.completions.create({
+      model: ADVANCED_MODEL, // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      messages: [
+        {
+          role: "system",
+          content: "You are a supportive speech coach helping stroke recovery patients improve their pronunciation. Respond with valid JSON only."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || "{}");
+    
+    // Validate and sanitize the response
+    return {
+      suggestions: Array.isArray(result.suggestions) 
+        ? result.suggestions.slice(0, 3) 
+        : ["Keep practicing regularly to improve your pronunciation skills!"],
+      practicePrompt: result.practicePrompt && result.practicePrompt.question && result.practicePrompt.problemSound
+        ? result.practicePrompt
+        : undefined
+    };
+
+  } catch (error) {
+    console.error("Error generating pronunciation feedback:", error);
+    return {
+      suggestions: [
+        "Great job staying consistent with your practice!",
+        "Try focusing on clear pronunciation of each syllable",
+        "Remember to speak slowly and clearly for best results"
+      ]
+    };
+  }
+}
+
+/**
  * Create basic syllabication for a word using simple rules
  */
 function createBasicSyllabication(word: string): string {
