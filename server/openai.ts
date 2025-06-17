@@ -759,6 +759,70 @@ function createBasicSyllabication(word: string): string {
   return cleanedSyllables.join('-');
 }
 
+/**
+ * Generate words containing a specific sound or letter for targeted practice
+ */
+export async function generateWordsWithSound(
+  targetSound: string,
+  difficulty: DifficultyLevel = "4",
+  count: number = 8
+): Promise<any[]> {
+  try {
+    const difficultyInfo = DIFFICULTY_SCALE[difficulty];
+    const prompt = `Generate exactly ${count} English words that contain the sound or letter "${targetSound}". The words should be at a ${difficultyInfo.name} difficulty level.
+
+Requirements:
+- Each word must contain the sound/letter "${targetSound}" (case-insensitive)
+- Words should be appropriate for ${difficultyInfo.name} level (${difficultyInfo.syllableRange})
+- Provide syllabication for each word using hyphens (e.g., "beau-ti-ful")
+- Focus on words that are useful for pronunciation practice
+
+Respond with valid JSON in this exact format:
+{
+  "words": [
+    {"text": "word1", "syllabication": "syl-la-bles"},
+    {"text": "word2", "syllabication": "syl-la-bles"}
+  ]
+}`;
+
+    const response = await openai.chat.completions.create({
+      model: MODEL,
+      messages: [
+        {
+          role: "system",
+          content: "You are a helpful assistant that generates practice words for speech therapy. Always respond with valid JSON only."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.8
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || "{}");
+    
+    if (!result.words || !Array.isArray(result.words)) {
+      throw new Error("Invalid response format from OpenAI");
+    }
+
+    return result.words.map((word: any) => ({
+      text: word.text || "",
+      syllabication: word.syllabication || word.text || ""
+    }));
+
+  } catch (error) {
+    console.error("Error generating words with sound:", error);
+    // Return fallback words containing the target sound
+    return [
+      { text: "practice", syllabication: "prac-tice" },
+      { text: "sound", syllabication: "sound" },
+      { text: "speech", syllabication: "speech" }
+    ].slice(0, count);
+  }
+}
+
 export async function generateTopicPhrases(
   topic: string,
   difficulty: DifficultyLevel = "4", // Use DifficultyLevel type

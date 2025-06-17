@@ -184,6 +184,10 @@ export default function Words() {
   const shareId = params.shareId;
   const { difficulty, setDifficulty, setCurrentMode } = useDifficulty();
 
+  // Get focus parameter from URL for targeted practice
+  const urlParams = new URLSearchParams(window.location.search);
+  const focusSound = urlParams.get('focus');
+
   // State variables
   const [aiGenerateTopic, setAiGenerateTopic] = useState("Commonly Used Words");
   const [processedWords, setProcessedWords] = useState<ProcessedWord[]>([]);

@@ -119,7 +119,7 @@ export function MostRecentActivities({ className }: MostRecentActivitiesProps) {
       }
       return response.json();
     },
-    enabled: !isLoading && recentActivities?.activities.length > 0
+    enabled: !isLoading && (recentActivities?.activities?.length ?? 0) > 0
   });
 
   const handlePrevPage = () => {
@@ -187,6 +187,65 @@ export function MostRecentActivities({ className }: MostRecentActivitiesProps) {
         </p>
       </CardHeader>
       <CardContent>
+        {/* AI-Powered Feedback Section */}
+        {feedback && !feedbackLoading && (
+          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+            <div className="flex items-center gap-2 mb-3">
+              <Lightbulb className="h-5 w-5 text-blue-600" />
+              <h3 className="font-semibold text-blue-800">Feedback</h3>
+            </div>
+            
+            {/* Suggestions */}
+            <div className="space-y-2 mb-4">
+              {feedback.suggestions.map((suggestion, index) => (
+                <div key={index} className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <p className="text-sm text-gray-700">{suggestion}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Practice Prompt */}
+            {feedback.practicePrompt && (
+              <div className="mt-4 p-3 bg-white rounded-lg border border-blue-300">
+                <p className="text-sm text-gray-800 mb-3">{feedback.practicePrompt.question}</p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => handlePracticePrompt(feedback.practicePrompt!.problemSound)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Yes
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-gray-600 border-gray-300"
+                  >
+                    <XCircle className="h-4 w-4 mr-1" />
+                    No thanks
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Loading state for feedback */}
+        {feedbackLoading && (
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+            <div className="flex items-center gap-2 mb-2">
+              <Lightbulb className="h-5 w-5 text-gray-400" />
+              <h3 className="font-semibold text-gray-600">Feedback</h3>
+            </div>
+            <div className="animate-pulse space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            </div>
+          </div>
+        )}
+
         {recentActivities?.activities.length === 0 ? (
           <p className="text-gray-500 text-center py-8">No activities yet. Start practicing to see your progress!</p>
         ) : (

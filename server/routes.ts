@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { assessPronunciation, synthesizeSpeech, synthesizeSpeechFromSSML, getWordPronunciation } from "./azure";
 import { generateSpeechWithVisemes } from "./azureViseme";
-import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases, generateSampleContent, generateSpeechResponse, generatePronunciationFeedback } from "./openai";
+import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases, generateSampleContent, generateSpeechResponse, generatePronunciationFeedback, generateWordsWithSound } from "./openai";
 import { sendContactForm } from "./email";
 import multer from "multer";
 import { z } from "zod";
