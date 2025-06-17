@@ -769,13 +769,15 @@ export async function generateWordsWithSound(
 ): Promise<any[]> {
   try {
     const difficultyInfo = DIFFICULTY_SCALE[difficulty];
-    const prompt = `Generate exactly ${count} English words that contain the sound or letter "${targetSound}". The words should be at a ${difficultyInfo.name} difficulty level.
+    const prompt = `Generate exactly ${count} English words that physically contain the letter "${targetSound}" in their spelling.
 
-Requirements:
-- Each word must contain the sound/letter "${targetSound}" (case-insensitive)
-- Words should be appropriate for ${difficultyInfo.name} level (${difficultyInfo.syllableRange})
-- Provide syllabication for each word using hyphens (e.g., "beau-ti-ful")
-- Focus on words that are useful for pronunciation practice
+CRITICAL REQUIREMENTS:
+- EVERY word must contain the letter "${targetSound}" somewhere in its spelling
+- For example, if targetSound is "s": words like "sun", "house", "music", "sister", "practice"
+- For example, if targetSound is "r": words like "red", "car", "friend", "surprise", "brother"
+- Words should be at ${difficultyInfo.name} difficulty level (${difficultyInfo.syllableRange})
+- Provide syllabication using hyphens (e.g., "sis-ter")
+- VERIFY each word contains "${targetSound}" before including it
 
 Respond with valid JSON in this exact format:
 {
@@ -790,7 +792,7 @@ Respond with valid JSON in this exact format:
       messages: [
         {
           role: "system",
-          content: "You are a helpful assistant that generates practice words for speech therapy. Always respond with valid JSON only."
+          content: `You are a speech therapy assistant. Generate ONLY words that contain the specified letter. Double-check each word contains the target letter before including it.`
         },
         {
           role: "user",
@@ -798,7 +800,7 @@ Respond with valid JSON in this exact format:
         }
       ],
       response_format: { type: "json_object" },
-      temperature: 0.8
+      temperature: 0.5
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
@@ -807,20 +809,77 @@ Respond with valid JSON in this exact format:
       throw new Error("Invalid response format from OpenAI");
     }
 
-    return result.words.map((word: any) => ({
+    // Verify words actually contain the target sound
+    const verifiedWords = result.words.filter((word: any) => {
+      const text = (word.text || "").toLowerCase();
+      const target = targetSound.toLowerCase();
+      return text.includes(target);
+    });
+
+    console.log(`Generated ${verifiedWords.length} verified words containing "${targetSound}":`, verifiedWords);
+
+    // If we don't have enough verified words, add fallback words
+    if (verifiedWords.length < count) {
+      const fallbackWords = getFallbackWordsWithSound(targetSound, count - verifiedWords.length);
+      return [...verifiedWords, ...fallbackWords].slice(0, count);
+    }
+
+    return verifiedWords.slice(0, count).map((word: any) => ({
       text: word.text || "",
       syllabication: word.syllabication || word.text || ""
     }));
 
   } catch (error) {
     console.error("Error generating words with sound:", error);
-    // Return fallback words containing the target sound
-    return [
-      { text: "practice", syllabication: "prac-tice" },
-      { text: "sound", syllabication: "sound" },
-      { text: "speech", syllabication: "speech" }
-    ].slice(0, count);
+    return getFallbackWordsWithSound(targetSound, count);
   }
+}
+
+function getFallbackWordsWithSound(targetSound: string, count: number): any[] {
+  const soundMaps: { [key: string]: any[] } = {
+    's': [
+      { text: "sun", syllabication: "sun" },
+      { text: "house", syllabication: "house" },
+      { text: "music", syllabication: "mu-sic" },
+      { text: "sister", syllabication: "sis-ter" },
+      { text: "simple", syllabication: "sim-ple" },
+      { text: "smile", syllabication: "smile" },
+      { text: "person", syllabication: "per-son" },
+      { text: "noise", syllabication: "noise" }
+    ],
+    'r': [
+      { text: "red", syllabication: "red" },
+      { text: "car", syllabication: "car" },
+      { text: "friend", syllabication: "friend" },
+      { text: "brother", syllabication: "broth-er" },
+      { text: "surprise", syllabication: "sur-prise" },
+      { text: "street", syllabication: "street" },
+      { text: "bright", syllabication: "bright" },
+      { text: "party", syllabication: "par-ty" }
+    ],
+    'th': [
+      { text: "think", syllabication: "think" },
+      { text: "mother", syllabication: "moth-er" },
+      { text: "bath", syllabication: "bath" },
+      { text: "weather", syllabication: "weath-er" },
+      { text: "three", syllabication: "three" },
+      { text: "birthday", syllabication: "birth-day" },
+      { text: "nothing", syllabication: "noth-ing" },
+      { text: "healthy", syllabication: "health-y" }
+    ]
+  };
+
+  const defaultWords = [
+    { text: "practice", syllabication: "prac-tice" },
+    { text: "exercise", syllabication: "ex-er-cise" },
+    { text: "learning", syllabication: "learn-ing" },
+    { text: "speaking", syllabication: "speak-ing" }
+  ];
+
+  const availableWords = soundMaps[targetSound.toLowerCase()] || 
+    defaultWords.filter(word => word.text.toLowerCase().includes(targetSound.toLowerCase()));
+  
+  return availableWords.slice(0, count);
 }
 
 export async function generateTopicPhrases(

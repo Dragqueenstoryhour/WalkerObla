@@ -167,8 +167,9 @@ const mapSyllablesToDisplay = (syllabication: string, syllables: any[]): Array<{
   const resultSyllables = displaySyllables.map((displaySyllable, index) => {
     // Try to match with assessment syllables
     const matchingSyllable = syllables.find(s => 
-      s.syllable.toLowerCase().includes(displaySyllable.toLowerCase()) ||
-      s.grapheme.toLowerCase().includes(displaySyllable.toLowerCase())
+      s.syllable && s.grapheme &&
+      (s.syllable.toLowerCase().includes(displaySyllable.toLowerCase()) ||
+      s.grapheme.toLowerCase().includes(displaySyllable.toLowerCase()))
     );
     
     if (matchingSyllable) {
@@ -640,14 +641,10 @@ export default function Words() {
     }
   };
 
-  // Handle finish practice and generate summary with feedback
+  // Handle finish practice and add summary card to carousel
   const handleFinishPractice = async () => {
     const wordsWithScores = processedWords.filter(word => 
       word.assessmentResult && word.assessmentResult.pronunciationScore !== null
-    );
-    
-    const wordsBelow70 = wordsWithScores.filter(word => 
-      word.assessmentResult && word.assessmentResult.pronunciationScore < 70
     );
 
     // Generate AI feedback based on current session words
@@ -683,7 +680,22 @@ export default function Words() {
       }
     }
 
+    // Add summary card as final carousel item and navigate to it
+    const summaryWord: ProcessedWord = {
+      id: 'summary-card',
+      text: 'Practice Session Complete!',
+      status: 'complete'
+    };
+
+    setProcessedWords(prev => [...prev, summaryWord]);
     setShowSummary(true);
+    
+    // Navigate to the summary card
+    setTimeout(() => {
+      if (emblaApi) {
+        emblaApi.scrollTo(processedWords.length); // Go to the new summary card
+      }
+    }, 100);
   };
 
   // Handle feedback practice prompt in summary
@@ -1793,9 +1805,128 @@ export default function Words() {
               <div className="embla__container flex">
                 {processedWords.map((word, index) => (
                   <div key={word.id} className="embla__slide flex-[0_0_100%] px-2">
-                    <Card className="h-full shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
-                      <CardHeader className="text-center">
-                        <CardTitle className="text-3xl font-bold text-white">{word.text}</CardTitle>
+                    {word.id === 'summary-card' ? (
+                      // Summary Card
+                      <Card className="h-full shadow-lg border-0 card-content bg-gradient-to-br from-green-600 to-blue-800">
+                        <CardHeader className="text-center text-white pb-4">
+                          <CardTitle className="text-3xl font-bold flex items-center justify-center gap-2">
+                            <Flag className="h-6 w-6" />
+                            Practice Session Complete!
+                          </CardTitle>
+                          <CardDescription className="text-green-100 mt-2 text-lg">
+                            Great job completing your word practice session
+                          </CardDescription>
+                        </CardHeader>
+                        
+                        <CardContent className="px-6 pb-6 text-white space-y-6">
+                          {/* Performance Bubbles */}
+                          <div className="grid grid-cols-2 gap-4">
+                            {(() => {
+                              const wordsWithScores = processedWords.filter(w => 
+                                w.assessmentResult && w.assessmentResult.pronunciationScore !== null && w.id !== 'summary-card'
+                              );
+                              
+                              if (wordsWithScores.length === 0) {
+                                return (
+                                  <div className="col-span-2 text-center p-4 bg-white/20 rounded-lg backdrop-blur-sm">
+                                    <div className="text-lg text-white">No scores available yet</div>
+                                    <div className="text-sm text-blue-100">Practice some words to see your results</div>
+                                  </div>
+                                );
+                              }
+                              
+                              const avgPronunciation = Math.round(wordsWithScores.reduce((sum, w) => sum + (w.assessmentResult?.pronunciationScore || 0), 0) / wordsWithScores.length);
+                              const avgAccuracy = Math.round(wordsWithScores.reduce((sum, w) => sum + (w.assessmentResult?.accuracyScore || 0), 0) / wordsWithScores.length);
+                              const avgFluency = Math.round(wordsWithScores.reduce((sum, w) => sum + (w.assessmentResult?.fluencyScore || 0), 0) / wordsWithScores.length);
+                              const avgCompleteness = Math.round(wordsWithScores.reduce((sum, w) => sum + (w.assessmentResult?.completenessScore || 0), 0) / wordsWithScores.length);
+                              
+                              return (
+                                <>
+                                  <div className="text-center p-4 bg-white/20 rounded-full backdrop-blur-sm">
+                                    <div className="text-2xl font-bold text-white">{avgPronunciation}%</div>
+                                    <div className="text-sm text-blue-100">Pronunciation</div>
+                                  </div>
+                                  <div className="text-center p-4 bg-white/20 rounded-full backdrop-blur-sm">
+                                    <div className="text-2xl font-bold text-white">{avgAccuracy}%</div>
+                                    <div className="text-sm text-blue-100">Accuracy</div>
+                                  </div>
+                                  <div className="text-center p-4 bg-white/20 rounded-full backdrop-blur-sm">
+                                    <div className="text-2xl font-bold text-white">{avgFluency}%</div>
+                                    <div className="text-sm text-blue-100">Fluency</div>
+                                  </div>
+                                  <div className="text-center p-4 bg-white/20 rounded-full backdrop-blur-sm">
+                                    <div className="text-2xl font-bold text-white">{avgCompleteness}%</div>
+                                    <div className="text-sm text-blue-100">Completeness</div>
+                                  </div>
+                                </>
+                              );
+                            })()}
+                          </div>
+
+                          {/* AI Feedback Section */}
+                          {summaryFeedback && showFeedbackInSummary && summaryFeedback.practicePrompt && (
+                            <div className="p-4 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20">
+                              <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                                <Lightbulb className="h-5 w-5" />
+                                Personalized Feedback
+                              </h4>
+                              <p className="text-blue-100 mb-4">{summaryFeedback.practicePrompt.question}</p>
+                              <div className="flex gap-3">
+                                <Button
+                                  onClick={() => handleSummaryPracticePrompt(summaryFeedback.practicePrompt!.problemSound)}
+                                  className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+                                  size="sm"
+                                  variant="outline"
+                                >
+                                  Yes
+                                </Button>
+                                <Button
+                                  onClick={closeFeedbackSuggestion}
+                                  className="bg-white/10 hover:bg-white/20 text-white border-white/30"
+                                  size="sm"
+                                  variant="outline"
+                                >
+                                  No Thanks
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Words Below 70% */}
+                          {(() => {
+                            const wordsBelow70 = processedWords.filter(w => 
+                              w.assessmentResult && w.assessmentResult.pronunciationScore < 70 && w.id !== 'summary-card'
+                            );
+                            
+                            if (wordsBelow70.length > 0) {
+                              return (
+                                <div>
+                                  <h4 className="text-lg font-semibold text-white mb-3">Words to Practice More</h4>
+                                  <div className="space-y-2">
+                                    {wordsBelow70.slice(0, 3).map((w, i) => (
+                                      <div key={i} className="flex items-center justify-between p-3 bg-red-500/20 rounded-lg border border-red-400/30">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-white font-medium">{w.text}</span>
+                                          {w.syllabication && (
+                                            <span className="text-red-200 text-sm">({w.syllabication})</span>
+                                          )}
+                                        </div>
+                                        <span className="text-red-200 font-bold">{Math.round(w.assessmentResult?.pronunciationScore || 0)}%</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      // Regular Word Card
+                      <Card className="h-full shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
+                        <CardHeader className="text-center">
+                          <CardTitle className="text-3xl font-bold text-white">{word.text}</CardTitle>
                         {word.syllabication && (
                           <div className="text-lg italic mt-2">
                             {word.status === "complete" && word.assessmentResult?.wordLevelResults?.[0] && 
@@ -2049,11 +2180,12 @@ export default function Words() {
                         )}
 
                         </CardContent>
-                                            </Card>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
+                      </Card>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
 
                                     {/* Navigation controls */}
                                     <div className="flex justify-center space-x-4">
@@ -2068,7 +2200,7 @@ export default function Words() {
                                         Previous
                                       </Button>
 
-                                      {currentCarouselIndex >= processedWords.length - 1 ? (
+                                      {currentCarouselIndex >= processedWords.length - 1 && !showSummary ? (
                                         <Button
                                           onClick={handleFinishPractice}
                                           className="bg-[#1947e5] hover:bg-[#1947e5]/90 text-white"
@@ -2076,6 +2208,20 @@ export default function Words() {
                                         >
                                           <Flag className="h-4 w-4 mr-1" />
                                           Finish
+                                        </Button>
+                                      ) : showSummary && currentCarouselIndex >= processedWords.length - 1 ? (
+                                        <Button
+                                          onClick={() => {
+                                            setShowSummary(false);
+                                            setSummaryFeedback(null);
+                                            setShowFeedbackInSummary(true);
+                                            // Remove summary card and generate new words
+                                            setProcessedWords(prev => prev.filter(word => word.id !== 'summary-card'));
+                                          }}
+                                          className="bg-[#1947e5] hover:bg-[#1947e5]/90 text-white"
+                                          size="sm"
+                                        >
+                                          Practice More Words
                                         </Button>
                                       ) : (
                                         <Button
