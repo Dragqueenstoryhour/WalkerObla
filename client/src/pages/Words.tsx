@@ -218,6 +218,7 @@ export default function Words() {
   const [showFeedbackInSummary, setShowFeedbackInSummary] = useState(true);
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
 
+
   // Tutorial state
   const [runTutorial, setRunTutorial] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
@@ -733,8 +734,8 @@ export default function Words() {
     setShowFeedbackInSummary(true);
     setProcessedWords([]);
     setCurrentCarouselIndex(0);
-    setSelectedTopic(randomTopic);
-    setSelectedSound("");
+    // Reset topic selection to null to use topic-based generation
+    setSelectedTopicType(null);
     
     // Generate new words for the random topic
     handleGenerateTopicWords(randomTopic);
@@ -748,8 +749,7 @@ export default function Words() {
     setShowFeedbackInSummary(true);
     setProcessedWords([]);
     setCurrentCarouselIndex(0);
-    setSelectedTopic("Words that contain...");
-    setSelectedSound(problemSound);
+    setSelectedTopicType("contain");
     
     // Generate new words with the problem sound using proper logic
     handleGenerateWordsWithSound(problemSound);
@@ -1852,7 +1852,7 @@ export default function Words() {
             <div className="embla" ref={emblaRef}>
               <div className="embla__container flex">
                 {processedWords.map((word, index) => (
-                  <div key={word.id} className="embla__slide flex-[0_0_100%] px-2">
+                  <div key={`${word.id}-${index}`} className="embla__slide flex-[0_0_100%] px-2">
                     {word.id === 'summary-card' ? (
                       // Summary Card
                       <Card className="h-full shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
@@ -1919,13 +1919,21 @@ export default function Words() {
                           </div>
 
                           {/* AI Feedback Section */}
-                          {summaryFeedback && showFeedbackInSummary && summaryFeedback.practicePrompt && (
+                          {isGeneratingFeedback ? (
+                            <div className="p-4 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20">
+                              <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                Generating Personalized Feedback...
+                              </h4>
+                              <p className="text-white/80">Analyzing your practice session to provide targeted suggestions</p>
+                            </div>
+                          ) : summaryFeedback && showFeedbackInSummary && summaryFeedback.practicePrompt && (
                             <div className="p-4 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20">
                               <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                                 <Lightbulb className="h-5 w-5" />
                                 Personalized Feedback
                               </h4>
-                              <p className="text-blue-100 mb-4">{summaryFeedback.practicePrompt.question}</p>
+                              <p className="text-white/90 mb-4">{summaryFeedback.practicePrompt.question}</p>
                               <div className="flex gap-3">
                                 <Button
                                   onClick={() => handleSummaryPracticePrompt(summaryFeedback.practicePrompt!.problemSound)}
