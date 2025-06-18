@@ -811,7 +811,26 @@ Return only the syllabicated word in lowercase, nothing else.`;
     const result = response.choices[0].message.content?.trim().toLowerCase();
     
     if (result && result.length > 0) {
-      return result;
+      // Clean up the response to handle various OpenAI formatting issues
+      let cleanResult = result
+        .split(/[\n\r]+/)[0] // Take only first line
+        .replace(/["""''`]/g, '') // Remove quotes
+        .replace(/^\s*[\-\→\>]*\s*/, '') // Remove leading arrows or dashes
+        .replace(/\s*[\-\→\<]*\s*$/, '') // Remove trailing arrows or dashes
+        .trim();
+      
+      // Only keep letters, hyphens, and spaces
+      cleanResult = cleanResult.replace(/[^\w\s-]/g, '');
+      
+      // If multiple words are present, take only the one that looks like syllabication
+      if (cleanResult.includes(' ')) {
+        const words = cleanResult.split(/\s+/);
+        // Find the word that contains hyphens or matches the original word
+        const syllabicatedWord = words.find(w => w.includes('-') || w.toLowerCase() === word.toLowerCase());
+        cleanResult = syllabicatedWord || words[0];
+      }
+      
+      return cleanResult.trim() || word.toLowerCase();
     } else {
       throw new Error("Empty response from OpenAI");
     }

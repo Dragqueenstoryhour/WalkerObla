@@ -128,32 +128,50 @@ const FeedbackPanel = () => {
     if (pronunciationResults) {
       // Extract word-level issues for words scoring under 75%
       const processIssues = async () => {
-        const issues: PronunciationIssue[] = await Promise.all(
-          pronunciationResults.wordLevelResults
-            .filter(result => result.accuracyScore < 75) // Filter for words with accuracy less than 75%
-            .slice(0, 6) // Limit to maximum 6 words
-            .map(async (result, index) => {
-              const phoneticDisplay = await getPhoneticDisplay(result.word);
-              // Extract syllabication from phonetic display (format: "WORD (N syllables)" or "SYL-LA-BLE")
-              let syllabication = '';
-              if (phoneticDisplay.includes('-')) {
-                // If phonetic already contains hyphens, use it as syllabication
-                syllabication = phoneticDisplay.split(' ')[0];
-              } else {
-                // Try to create basic syllabication from the word
-                syllabication = result.word.toLowerCase();
-              }
-              
-              return {
-                word: result.word,
-                phonetic: phoneticDisplay,
-                syllabication,
-                score: result.accuracyScore,
-                id: `issue-${Date.now()}-${index}`,
-                status: "idle" as const
-              };
-            })
-        );
+        const filteredResults = pronunciationResults.wordLevelResults
+          .filter(result => result.accuracyScore < 75) // Filter for words with accuracy less than 75%
+          .slice(0, 6); // Limit to maximum 6 words
+
+        // Get phonetic displays for all words
+        const phoneticPromises = filteredResults.map(result => getPhoneticDisplay(result.word));
+        const phoneticDisplays = await Promise.all(phoneticPromises);
+
+        // Get proper syllabication using the same OpenAI logic as Words page
+        const wordsToSyllabicate = filteredResults.map(result => result.word);
+        let syllabicationData: { word: string; syllabication: string }[] = [];
+        
+        try {
+          const response = await fetch('/api/pronunciation/syllabication', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ words: wordsToSyllabicate }),
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            syllabicationData = data.results;
+          }
+        } catch (error) {
+          console.error('Error fetching syllabication:', error);
+        }
+
+        const issues: PronunciationIssue[] = filteredResults.map((result, index) => {
+          const phoneticDisplay = phoneticDisplays[index];
+          const syllabicationInfo = syllabicationData.find(s => s.word === result.word);
+          const syllabication = syllabicationInfo?.syllabication || result.word.toLowerCase();
+          
+          return {
+            word: result.word,
+            phonetic: phoneticDisplay,
+            syllabication,
+            score: result.accuracyScore,
+            id: `issue-${Date.now()}-${index}`,
+            status: "idle" as const
+          };
+        });
+
         setPronunciationIssues(issues);
         setCurrentCarouselIndex(0);
       };
