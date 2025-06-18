@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { assessPronunciation, synthesizeSpeech, synthesizeSpeechFromSSML, getWordPronunciation } from "./azure";
 import { generateSpeechWithVisemes } from "./azureViseme";
-import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases, generateSampleContent, generateSpeechResponse, generatePronunciationFeedback, generateWordsWithSound } from "./openai";
+import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases, generateSampleContent, generateSpeechResponse, generatePronunciationFeedback, generateWordsWithSound, generateSyllabication } from "./openai";
 import { sendContactForm } from "./email";
 import multer from "multer";
 import { z } from "zod";
@@ -502,6 +502,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Word pronunciation error:', error);
       res.status(500).json({ 
         error: 'Word pronunciation failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Word syllabication endpoint - generates proper syllabication using OpenAI
+  app.post('/api/pronunciation/syllabication', async (req, res) => {
+    try {
+      const { words } = req.body;
+      
+      if (!words || !Array.isArray(words)) {
+        return res.status(400).json({ error: 'Words array is required' });
+      }
+
+      // Generate syllabication for each word
+      const results = await Promise.all(
+        words.map(async (word) => {
+          try {
+            const syllabication = await generateSyllabication(word);
+            return {
+              word: word,
+              syllabication: syllabication
+            };
+          } catch (error) {
+            console.error(`Error generating syllabication for "${word}":`, error);
+            // Fallback to basic syllabication
+            const basicSyllabication = word.toLowerCase();
+            return {
+              word: word,
+              syllabication: basicSyllabication
+            };
+          }
+        })
+      );
+      
+      res.json({ results });
+    } catch (error) {
+      console.error('Syllabication generation error:', error);
+      res.status(500).json({ 
+        error: 'Syllabication generation failed',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }

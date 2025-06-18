@@ -777,6 +777,52 @@ Guidelines:
 }
 
 /**
+ * Generate proper syllabication for a word using OpenAI
+ */
+export async function generateSyllabication(word: string): Promise<string> {
+  try {
+    const prompt = `Provide the correct syllabication for the word "${word}" using hyphens to separate syllables.
+
+Examples:
+- "elephant" → "el-e-phant"
+- "computer" → "com-pu-ter"
+- "create" → "cre-ate"
+- "beautiful" → "beau-ti-ful"
+- "friend" → "friend"
+
+Return only the syllabicated word in lowercase, nothing else.`;
+
+    const response = await openai.chat.completions.create({
+      model: MODEL,
+      messages: [
+        {
+          role: "system",
+          content: "You are a linguistic expert. Provide accurate syllabication for English words using hyphens."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      temperature: 0.1,
+      max_tokens: 50
+    });
+
+    const result = response.choices[0].message.content?.trim().toLowerCase();
+    
+    if (result && result.length > 0) {
+      return result;
+    } else {
+      throw new Error("Empty response from OpenAI");
+    }
+  } catch (error) {
+    console.error(`Error generating syllabication for "${word}":`, error);
+    // Fallback to basic syllabication
+    return createBasicSyllabication(word);
+  }
+}
+
+/**
  * Create basic syllabication for a word using simple rules
  */
 function createBasicSyllabication(word: string): string {
