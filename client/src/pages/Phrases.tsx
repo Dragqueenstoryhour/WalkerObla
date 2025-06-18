@@ -62,13 +62,13 @@ const getWordColorFromPhonemes = (wordResult: any): string => {
     return wordResult.accuracyScore >= 70 ? '#2a9d8f' : '#e76f51';
   }
   
-  // Check if any phoneme in the word has accuracy below 70%
-  const hasLowAccuracyPhoneme = wordResult.phonemes.some((phoneme: any) => phoneme.score < 70);
+  // Check if any phoneme in the word has accuracy below 60%
+  const hasLowAccuracyPhoneme = wordResult.phonemes.some((phoneme: any) => phoneme.score < 60);
   
   if (hasLowAccuracyPhoneme) {
     return '#e76f51'; // Red for words with any low-accuracy phonemes
   } else {
-    return '#2a9d8f'; // Green for words where all phonemes are above 70%
+    return '#2a9d8f'; // Green for words where all phonemes are above 60%
   }
 };
 
