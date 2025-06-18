@@ -683,18 +683,62 @@ export default function Phrases() {
     }
   };
 
-  // Handle summary practice prompt - navigate to Words page for letter practice
+  // Handle summary practice prompt - different logic for phrases vs words
   const handleSummaryPracticePrompt = async (problemSound: string) => {
     if (!problemSound) return;
     
+    // Close the feedback suggestion
+    setShowFeedbackInSummary(false);
+    
     try {
-      // Extract the letter/sound from the problem description
-      const extractedTopic = problemSound.toLowerCase().includes('sound') 
-        ? `${problemSound} sound in words`
-        : `${problemSound} sound in words`;
-      
-      // Navigate to Words page with the extracted topic
-      window.location.href = `/words?topic=${encodeURIComponent(extractedTopic)}`;
+      // Handle different types of practice suggestions
+      if (problemSound === "difficulty_increase") {
+        // For high performers, increase difficulty and generate new topic phrases
+        const currentDifficultyNum = parseInt(difficulty, 10);
+        const newDifficultyNum = Math.min(currentDifficultyNum + 1, 8);
+        const newDifficulty = newDifficultyNum.toString();
+        setDifficulty(newDifficulty as any);
+        
+        // Generate phrases with increased difficulty from random topic
+        const randomTopics = [
+          "Business Conversations", "Academic Discussions", "Professional Presentations", 
+          "Technical Explanations", "Creative Expressions", "Complex Narratives"
+        ];
+        const randomTopic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
+        setAiGenerateTopic(randomTopic);
+        await handleGenerateTopicPhrases(randomTopic, newDifficulty);
+      } else if (problemSound === "new_topic") {
+        // Generate phrases from a random new topic
+        const randomTopics = [
+          "Technology and Innovation", "Science and Discovery", "Arts and Culture", 
+          "Business and Work", "Travel and Adventure", "Health and Wellness",
+          "Entertainment and Media", "Education and Learning", "Sports and Fitness"
+        ];
+        const randomTopic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
+        setAiGenerateTopic(randomTopic);
+        await handleGenerateTopicPhrases(randomTopic);
+      } else if (problemSound.toLowerCase().includes('sound') || problemSound.toLowerCase().includes('letter')) {
+        // For letter/sound practice, navigate to Words page
+        const extractedTopic = problemSound.toLowerCase().includes('sound') 
+          ? `${problemSound} sound in words`
+          : `${problemSound} sound in words`;
+        
+        window.location.href = `/words?topic=${encodeURIComponent(extractedTopic)}`;
+      } else {
+        // For any other topic suggestion, treat it as a phrase topic
+        // Extract clean topic name from the feedback question if possible
+        let topicToUse = problemSound;
+        
+        // If the feedback contains a quoted topic, extract it
+        const feedbackQuestion = summaryFeedback?.practicePrompt?.question || '';
+        const quotedTopicMatch = feedbackQuestion.match(/"([^"]+)"/);
+        if (quotedTopicMatch) {
+          topicToUse = quotedTopicMatch[1];
+        }
+        
+        setAiGenerateTopic(topicToUse);
+        await handleGenerateTopicPhrases(topicToUse);
+      }
     } catch (error) {
       console.error('Error handling practice prompt:', error);
     }
