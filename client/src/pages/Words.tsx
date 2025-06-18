@@ -1976,8 +1976,8 @@ export default function Words() {
               <div className="flex items-center gap-4">
                 <span className="text-sm text-gray-600">
                   {showSummary && currentCarouselIndex >= processedWords.length - 1 
-                    ? `${processedWords.length - 1} of ${processedWords.length - 1}` 
-                    : `${currentCarouselIndex + 1} of ${processedWords.length - 1}`}
+                    ? `${processedWords.filter(w => w.id !== 'summary-card').length} of ${processedWords.filter(w => w.id !== 'summary-card').length}` 
+                    : `${currentCarouselIndex + 1} of ${processedWords.filter(w => w.id !== 'summary-card').length}`}
                 </span>
               </div>
 

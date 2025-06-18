@@ -726,13 +726,6 @@ export default function Phrases() {
         const randomTopic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
         setAiGenerateTopic(randomTopic);
         await handleGenerateTopicPhrases(randomTopic);
-      } else if (problemSound.toLowerCase().includes('sound') || problemSound.toLowerCase().includes('letter')) {
-        // For letter/sound practice, navigate to Words page
-        const extractedTopic = problemSound.toLowerCase().includes('sound') 
-          ? `${problemSound} sound in words`
-          : `${problemSound} sound in words`;
-        
-        window.location.href = `/words?topic=${encodeURIComponent(extractedTopic)}`;
       } else {
         // For any other feedback, only extract clean topic names from quotes or use a random topic
         let extractedTopic = null;
@@ -906,8 +899,8 @@ export default function Phrases() {
                 <span className="text-sm font-medium text-[#264653]">Practice Progress</span>
                 <span className="text-sm text-[#264653]">
                   {showSummary && currentCarouselIndex >= processedPhrases.length - 1 
-                    ? `${processedPhrases.length - 1} of ${processedPhrases.length - 1}` 
-                    : `${currentCarouselIndex + 1} of ${processedPhrases.length - 1}`}
+                    ? `${processedPhrases.filter(p => p.id !== 'summary-card').length} of ${processedPhrases.filter(p => p.id !== 'summary-card').length}` 
+                    : `${currentCarouselIndex + 1} of ${processedPhrases.filter(p => p.id !== 'summary-card').length}`}
                 </span>
               </div>
               <Progress 

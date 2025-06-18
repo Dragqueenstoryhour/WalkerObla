@@ -698,7 +698,17 @@ Guidelines:
 - Be encouraging regardless of performance level
 - For 90%+ scores, suggest difficulty increase AND new topics
 - Keep language simple and supportive
-- Focus on continued engagement and growth`;
+- Focus on continued engagement and growth
+- IMPORTANT: When suggesting a specific topic in the question, put the EXACT SAME topic name in the problemSound field (not "new_topic")
+
+Example correct format:
+{
+  "suggestions": ["Great work! You're improving steadily."],
+  "practicePrompt": {
+    "question": "Would you like to try some words about \"Animals\"?",
+    "problemSound": "Animals"
+  }
+}`;
 
     const response = await openai.chat.completions.create({
       model: ADVANCED_MODEL, // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
@@ -732,7 +742,7 @@ Guidelines:
       } else if (averageScore >= 70) {
         practicePrompt = {
           question: `Great progress! Would you like to try some challenging words from "${randomTopic}" to keep improving?`,
-          problemSound: "new_topic"
+          problemSound: randomTopic
         };
       } else {
         practicePrompt = {
