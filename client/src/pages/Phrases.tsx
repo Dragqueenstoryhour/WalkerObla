@@ -715,9 +715,13 @@ export default function Phrases() {
       } else if (problemSound === "new_topic") {
         // Generate phrases from a random new topic
         const randomTopics = [
-          "Technology and Innovation", "Science and Discovery", "Arts and Culture", 
-          "Business and Work", "Travel and Adventure", "Health and Wellness",
-          "Entertainment and Media", "Education and Learning", "Sports and Fitness"
+          "Animals", "Food", "Travel", "Sports", "Music", "Nature", "Technology", "Science",
+          "Arts", "Business", "Health", "Education", "Entertainment", "Fashion", "Weather",
+          "Family", "Friends", "Work", "Home", "Shopping", "Transportation", "Hobbies",
+          "Books", "Movies", "Games", "Cooking", "Gardening", "Photography", "Exercise",
+          "Medicine", "History", "Geography", "Culture", "Language", "Literature", "Architecture",
+          "Mathematics", "Physics", "Chemistry", "Biology", "Environment", "Politics", "Economy",
+          "Philosophy", "Psychology", "Sociology", "Religion", "Astronomy", "Agriculture", "Engineering"
         ];
         const randomTopic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
         setAiGenerateTopic(randomTopic);
@@ -730,19 +734,49 @@ export default function Phrases() {
         
         window.location.href = `/words?topic=${encodeURIComponent(extractedTopic)}`;
       } else {
-        // For any other topic suggestion, treat it as a phrase topic
-        // Extract clean topic name from the feedback question if possible
-        let topicToUse = problemSound;
+        // For any other feedback, only extract clean topic names from quotes or use a random topic
+        let extractedTopic = null;
         
-        // If the feedback contains a quoted topic, extract it
-        const feedbackQuestion = summaryFeedback?.practicePrompt?.question || '';
-        const quotedTopicMatch = feedbackQuestion.match(/"([^"]+)"/);
+        // Only extract text from quotes (clean topic names)
+        const quotedTopicMatch = problemSound.match(/"([^"]+)"|'([^']+)'/);
         if (quotedTopicMatch) {
-          topicToUse = quotedTopicMatch[1];
+          extractedTopic = quotedTopicMatch[1] || quotedTopicMatch[2];
+          // Only use if it's a reasonable topic name (short and clean)
+          if (extractedTopic && extractedTopic.length <= 30 && !extractedTopic.includes('.') && 
+              !extractedTopic.includes('?') && !extractedTopic.includes('!')) {
+            console.log(`Extracted topic from feedback: "${extractedTopic}"`);
+            setAiGenerateTopic(extractedTopic);
+            await handleGenerateTopicPhrases(extractedTopic);
+          } else {
+            // Fall back to random topic if extracted text is too complex
+            const randomTopics = [
+              "Animals", "Food", "Travel", "Sports", "Music", "Nature", "Technology", "Science",
+              "Arts", "Business", "Health", "Education", "Entertainment", "Fashion", "Weather",
+              "Family", "Friends", "Work", "Home", "Shopping", "Transportation", "Hobbies",
+              "Books", "Movies", "Games", "Cooking", "Gardening", "Photography", "Exercise",
+              "Medicine", "History", "Geography", "Culture", "Language", "Literature", "Architecture",
+              "Mathematics", "Physics", "Chemistry", "Biology", "Environment", "Politics", "Economy",
+              "Philosophy", "Psychology", "Sociology", "Religion", "Astronomy", "Agriculture", "Engineering"
+            ];
+            const randomTopic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
+            setAiGenerateTopic(randomTopic);
+            await handleGenerateTopicPhrases(randomTopic);
+          }
+        } else {
+          // No quotes found, use random topic
+          const randomTopics = [
+            "Animals", "Food", "Travel", "Sports", "Music", "Nature", "Technology", "Science",
+            "Arts", "Business", "Health", "Education", "Entertainment", "Fashion", "Weather",
+            "Family", "Friends", "Work", "Home", "Shopping", "Transportation", "Hobbies",
+            "Books", "Movies", "Games", "Cooking", "Gardening", "Photography", "Exercise",
+            "Medicine", "History", "Geography", "Culture", "Language", "Literature", "Architecture",
+            "Mathematics", "Physics", "Chemistry", "Biology", "Environment", "Politics", "Economy",
+            "Philosophy", "Psychology", "Sociology", "Religion", "Astronomy", "Agriculture", "Engineering"
+          ];
+          const randomTopic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
+          setAiGenerateTopic(randomTopic);
+          await handleGenerateTopicPhrases(randomTopic);
         }
-        
-        setAiGenerateTopic(topicToUse);
-        await handleGenerateTopicPhrases(topicToUse);
       }
     } catch (error) {
       console.error('Error handling practice prompt:', error);
