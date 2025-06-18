@@ -148,6 +148,9 @@ export default function Phrases() {
   const [pendingSaveIndex, setPendingSaveIndex] = useState<number | null>(null);
   const [slowPlaybackPhrases, setSlowPlaybackPhrases] = useState<{ [key: string]: boolean }>({});
   const [showSummary, setShowSummary] = useState(false);
+  const [summaryFeedback, setSummaryFeedback] = useState<any>(null);
+  const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
+  const [showFeedbackInSummary, setShowFeedbackInSummary] = useState(true);
 
   // Carousel state
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
@@ -618,6 +621,101 @@ export default function Phrases() {
     }
   };
 
+  // Handle finish practice session and generate summary
+  const handleFinishPractice = async () => {
+    const phrasesWithScores = processedPhrases.filter(p => 
+      p.assessmentResult && p.assessmentResult.pronunciationScore !== null
+    );
+    
+    // Add summary card immediately with loading state
+    const summaryPhrase: ProcessedPhrase = {
+      id: 'summary-card',
+      text: 'Practice Session Complete!',
+      status: 'complete'
+    };
+
+    setProcessedPhrases(prev => [...prev, summaryPhrase]);
+    setShowSummary(true);
+    setIsGeneratingFeedback(true);
+    
+    // Navigate to the summary card
+    setTimeout(() => {
+      if (emblaApi) {
+        emblaApi.scrollTo(processedPhrases.length); // Go to the new summary card
+      }
+    }, 100);
+
+    // Generate AI feedback asynchronously
+    if (phrasesWithScores.length > 0) {
+      try {
+        const sessionData = phrasesWithScores.map(phrase => ({
+          activityType: 'phrase_practice',
+          itemPracticed: phrase.text,
+          score: phrase.assessmentResult?.pronunciationScore || 0,
+          accuracy: phrase.assessmentResult?.accuracyScore || 0,
+          fluency: phrase.assessmentResult?.fluencyScore || 0,
+          completeness: phrase.assessmentResult?.completenessScore || 0,
+          difficulty: difficulty,
+          metadata: phrase.assessmentResult,
+          createdAt: new Date().toISOString()
+        }));
+
+        const response = await fetch('/api/user/pronunciation-feedback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({ sessionActivities: sessionData })
+        });
+
+        if (response.ok) {
+          const feedbackData = await response.json();
+          setSummaryFeedback(feedbackData);
+        }
+      } catch (error) {
+        console.error('Error generating feedback:', error);
+      } finally {
+        setIsGeneratingFeedback(false);
+      }
+    } else {
+      setIsGeneratingFeedback(false);
+    }
+  };
+
+  // Handle summary practice prompt - navigate to Words page for letter practice
+  const handleSummaryPracticePrompt = async (problemSound: string) => {
+    if (!problemSound) return;
+    
+    try {
+      // Extract the letter/sound from the problem description
+      const extractedTopic = problemSound.toLowerCase().includes('sound') 
+        ? `${problemSound} sound in words`
+        : `${problemSound} sound in words`;
+      
+      // Navigate to Words page with the extracted topic
+      window.location.href = `/words?topic=${encodeURIComponent(extractedTopic)}`;
+    } catch (error) {
+      console.error('Error handling practice prompt:', error);
+    }
+  };
+
+  // Handle topic-based practice prompt - generate new phrases
+  const handleTopicPracticePrompt = async (suggestedTopic: string) => {
+    if (!suggestedTopic) return;
+    
+    // Close the feedback suggestion
+    setShowFeedbackInSummary(false);
+    
+    // Generate new phrases for the suggested topic
+    await handleGenerateTopicPhrases(suggestedTopic);
+  };
+
+  // Close feedback suggestion
+  const closeFeedbackSuggestion = () => {
+    setShowFeedbackInSummary(false);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 bg-green-50 min-h-screen">
       {/* Shared phrases notification dialog */}
@@ -724,11 +822,13 @@ export default function Phrases() {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-[#264653]">Practice Progress</span>
                 <span className="text-sm text-[#264653]">
-                  {currentCarouselIndex + 1} of {processedPhrases.length}
+                  {currentCarouselIndex + 1} of {processedPhrases.length + (showSummary ? 0 : 0)}
                 </span>
               </div>
               <Progress 
-                value={((currentCarouselIndex + 1) / processedPhrases.length) * 100} 
+                value={showSummary && currentCarouselIndex === processedPhrases.length - 1 
+                  ? 100 
+                  : ((currentCarouselIndex + 1) / processedPhrases.length) * 100} 
                 className="h-2"
               />
             </div>
@@ -747,35 +847,209 @@ export default function Phrases() {
               </Button>
               
               <span className="text-sm text-gray-600">
-                {currentCarouselIndex + 1} of {processedPhrases.length}
+                {currentCarouselIndex + 1} of {processedPhrases.length + (showSummary ? 1 : 0)}
               </span>
 
-              <Button
-                onClick={() => emblaApi?.scrollNext()}
-                disabled={currentCarouselIndex >= processedPhrases.length - 1}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+              {(() => {
+                const phrasesWithoutSummary = processedPhrases.filter(p => p.id !== 'summary-card');
+                const completedCount = phrasesWithoutSummary.filter(p => p.status === 'complete').length;
+                const isOnLastPhrase = currentCarouselIndex >= phrasesWithoutSummary.length - 1;
+                const hasCompletedPhrases = completedCount > 0;
+                const canFinish = isOnLastPhrase && hasCompletedPhrases && !showSummary;
+
+                if (canFinish) {
+                  return (
+                    <Button
+                      onClick={handleFinishPractice}
+                      className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
+                      size="sm"
+                    >
+                      <Flag className="h-4 w-4" />
+                      Finish
+                    </Button>
+                  );
+                } else {
+                  return (
+                    <Button
+                      onClick={() => emblaApi?.scrollNext()}
+                      disabled={currentCarouselIndex >= processedPhrases.length - 1}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  );
+                }
+              })()}
             </div>
 
             {/* Carousel */}
             <div className="embla overflow-hidden" ref={emblaRef}>
               <div className="embla__container flex">
                 {processedPhrases.map((phrase, index) => (
-                  <div key={phrase.id} className="embla__slide flex-[0_0_100%] px-2 flex justify-center">
-                    <Card className="w-full max-w-xs sm:max-w-sm shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
-                      <CardHeader className="text-center px-3 py-4">
-                        <CardTitle className={`${getTextSizeClass(phrase.text)} font-bold leading-relaxed px-2`}>
-                          {phrase.status === "complete" && phrase.assessmentResult ? 
-                            renderColorCodedPhraseText(phrase.text, phrase.assessmentResult) :
-                            <span className="text-white">{phrase.text}</span>
-                          }
-                        </CardTitle>
-                      </CardHeader>
+                  <div key={`${phrase.id}-${index}`} className="embla__slide flex-[0_0_100%] px-2 flex justify-center">
+                    {phrase.id === 'summary-card' ? (
+                      // Summary Card - Match exact styling of regular phrase cards
+                      <Card className="w-full max-w-xs sm:max-w-sm shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
+                        <CardHeader className="text-center text-white pb-4 relative overflow-hidden">
+                          {/* Celebratory particles effect */}
+                          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                            <div className="absolute top-4 left-4 w-2 h-2 bg-yellow-300 rounded-full animate-pulse"></div>
+                            <div className="absolute top-8 right-6 w-1 h-1 bg-white rounded-full animate-bounce"></div>
+                            <div className="absolute top-12 left-1/3 w-1.5 h-1.5 bg-yellow-200 rounded-full animate-ping"></div>
+                            <div className="absolute top-6 right-1/4 w-1 h-1 bg-white/80 rounded-full animate-pulse"></div>
+                          </div>
+                          <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2 relative z-10 break-words">
+                            🎉 Practice Session Complete! 🎉
+                          </CardTitle>
+                          <CardDescription className="text-white/90 mt-2 text-base relative z-10 break-words">
+                            Excellent work! You've completed your phrase practice session
+                          </CardDescription>
+                        </CardHeader>
+                        
+                        <CardContent className="px-4 pb-4 text-white space-y-4 max-h-96 overflow-y-auto w-full">
+                          {/* Performance Bubbles */}
+                          <div className="grid grid-cols-4 gap-2 w-full">
+                            {(() => {
+                              const phrasesWithScores = processedPhrases.filter(p => 
+                                p.assessmentResult && p.assessmentResult.pronunciationScore !== null && p.id !== 'summary-card'
+                              );
+                              
+                              if (phrasesWithScores.length === 0) {
+                                return (
+                                  <div className="col-span-4 text-center p-2 bg-white rounded-lg">
+                                    <div className="text-sm text-gray-700">No scores available yet</div>
+                                    <div className="text-xs text-gray-500">Practice some phrases to see your results</div>
+                                  </div>
+                                );
+                              }
+                              
+                              const avgPronunciation = Math.round(phrasesWithScores.reduce((sum, p) => sum + (p.assessmentResult?.pronunciationScore || 0), 0) / phrasesWithScores.length);
+                              const avgAccuracy = Math.round(phrasesWithScores.reduce((sum, p) => sum + (p.assessmentResult?.accuracyScore || 0), 0) / phrasesWithScores.length);
+                              const avgFluency = Math.round(phrasesWithScores.reduce((sum, p) => sum + (p.assessmentResult?.fluencyScore || 0), 0) / phrasesWithScores.length);
+                              const avgCompleteness = Math.round(phrasesWithScores.reduce((sum, p) => sum + (p.assessmentResult?.completenessScore || 0), 0) / phrasesWithScores.length);
+                              
+                              return (
+                                <>
+                                  <div className="text-center p-2 bg-white rounded-lg">
+                                    <div className="text-lg font-bold text-[#1947e5]">{avgPronunciation}%</div>
+                                    <div className="text-xs text-gray-600">Pronunciation</div>
+                                  </div>
+                                  <div className="text-center p-2 bg-white rounded-lg">
+                                    <div className="text-lg font-bold text-[#1947e5]">{avgAccuracy}%</div>
+                                    <div className="text-xs text-gray-600">Accuracy</div>
+                                  </div>
+                                  <div className="text-center p-2 bg-white rounded-lg">
+                                    <div className="text-lg font-bold text-[#1947e5]">{avgFluency}%</div>
+                                    <div className="text-xs text-gray-600">Fluency</div>
+                                  </div>
+                                  <div className="text-center p-2 bg-white rounded-lg">
+                                    <div className="text-lg font-bold text-[#1947e5]">{avgCompleteness}%</div>
+                                    <div className="text-xs text-gray-600">Completeness</div>
+                                  </div>
+                                </>
+                              );
+                            })()}
+                          </div>
+
+                          {/* AI Feedback Section */}
+                          {isGeneratingFeedback ? (
+                            <div className="p-3 bg-white rounded-lg w-full max-w-full">
+                              <h4 className="text-sm font-semibold text-[#1947e5] mb-2 flex items-center gap-2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#1947e5] flex-shrink-0"></div>
+                                <span className="break-words">Generating Feedback...</span>
+                              </h4>
+                              <p className="text-gray-600 text-xs break-words">Analyzing your practice session</p>
+                            </div>
+                          ) : summaryFeedback && showFeedbackInSummary && summaryFeedback.practicePrompt && (
+                            <div className="p-3 bg-white rounded-lg w-full max-w-full overflow-hidden">
+                              <h4 className="text-sm font-semibold text-[#1947e5] mb-2 flex items-center gap-2">
+                                <div className="h-4 w-4 flex-shrink-0">💡</div>
+                                <span className="break-words">Personalized Feedback</span>
+                              </h4>
+                              <div className="max-h-20 overflow-y-auto mb-3">
+                                <p className="text-gray-700 text-xs break-words whitespace-normal leading-tight">{summaryFeedback.practicePrompt.question}</p>
+                              </div>
+                              <div className="flex gap-2 justify-center">
+                                <Button
+                                  onClick={() => handleSummaryPracticePrompt(summaryFeedback.practicePrompt!.problemSound)}
+                                  className="bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 text-xs px-3 py-1"
+                                  size="sm"
+                                >
+                                  Yes
+                                </Button>
+                                <Button
+                                  onClick={closeFeedbackSuggestion}
+                                  className="bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0 text-xs px-3 py-1"
+                                  size="sm"
+                                >
+                                  No Thanks
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Phrases Below 70% */}
+                          {(() => {
+                            const phrasesBelow70 = processedPhrases.filter(p => 
+                              p.assessmentResult && p.assessmentResult.pronunciationScore < 70 && p.id !== 'summary-card'
+                            );
+                            
+                            if (phrasesBelow70.length > 0) {
+                              return (
+                                <div className="w-full max-w-full p-3 bg-white rounded-lg">
+                                  <h4 className="text-sm font-semibold text-[#1947e5] mb-2">Phrases to Practice More</h4>
+                                  <div className="space-y-1 max-h-24 overflow-y-auto">
+                                    {phrasesBelow70.slice(0, 3).map((p, i) => (
+                                      <div key={i} className="flex items-center justify-between p-2 bg-red-50 rounded border border-red-200">
+                                        <div className="flex items-center gap-1 flex-1 min-w-0">
+                                          <span className="text-gray-800 text-xs font-medium truncate">{p.text}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                          <Button
+                                            onClick={() => {
+                                              // Find the phrase index in processedPhrases and save it
+                                              const phraseIndex = processedPhrases.findIndex(phrase => phrase.text === p.text);
+                                              if (phraseIndex !== -1) {
+                                                savePhraseToCollection(phraseIndex);
+                                              }
+                                            }}
+                                            variant="outline"
+                                            size="sm"
+                                            className={`h-6 px-2 text-xs border-0 ${
+                                              savedPhrases.has(p.text)
+                                                ? "bg-green-600 hover:bg-green-700 text-white"
+                                                : "bg-[#6366F1] hover:bg-[#5855EB] text-white"
+                                            }`}
+                                            disabled={savedPhrases.has(p.text)}
+                                          >
+                                            <Star className={`h-3 w-3 ${savedPhrases.has(p.text) ? 'fill-white' : ''}`} />
+                                          </Button>
+                                          <span className="text-red-600 text-xs font-bold">{Math.round(p.assessmentResult?.pronunciationScore || 0)}%</span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      // Regular Phrase Card
+                      <Card className="w-full max-w-xs sm:max-w-sm shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
+                        <CardHeader className="text-center px-3 py-4">
+                          <CardTitle className={`${getTextSizeClass(phrase.text)} font-bold leading-relaxed px-2`}>
+                            {phrase.status === "complete" && phrase.assessmentResult ? 
+                              renderColorCodedPhraseText(phrase.text, phrase.assessmentResult) :
+                              <span className="text-white">{phrase.text}</span>
+                            }
+                          </CardTitle>
+                        </CardHeader>
                       
                       <CardContent className="space-y-3 px-3 pb-4">
                         {/* Recording Controls */}
@@ -968,9 +1242,9 @@ export default function Phrases() {
                             </div>
                           </div>
                         )}
-
                       </CardContent>
-                    </Card>
+                      </Card>
+                    )}
                   </div>
                 ))}
               </div>

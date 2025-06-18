@@ -2114,7 +2114,7 @@ export default function Words() {
                                 <span className="break-words">Personalized Feedback</span>
                               </h4>
                               <div className="max-h-20 overflow-y-auto mb-3">
-                                <p className="text-gray-700 text-xs break-all whitespace-pre-wrap overflow-wrap-anywhere leading-tight">{summaryFeedback.practicePrompt.question}</p>
+                                <p className="text-gray-700 text-xs break-words whitespace-normal leading-tight">{summaryFeedback.practicePrompt.question}</p>
                               </div>
                               <div className="flex gap-2 justify-center">
                                 <Button
@@ -2154,7 +2154,28 @@ export default function Words() {
                                             <span className="text-gray-600 text-xs truncate">({w.syllabication})</span>
                                           )}
                                         </div>
-                                        <span className="text-red-600 text-xs font-bold flex-shrink-0">{Math.round(w.assessmentResult?.pronunciationScore || 0)}%</span>
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                          <Button
+                                            onClick={() => {
+                                              // Find the word index in processedWords and save it
+                                              const wordIndex = processedWords.findIndex(word => word.text === w.text);
+                                              if (wordIndex !== -1) {
+                                                saveWordToCollection(wordIndex);
+                                              }
+                                            }}
+                                            variant="outline"
+                                            size="sm"
+                                            className={`h-6 px-2 text-xs border-0 ${
+                                              savedWords.has(w.text)
+                                                ? "bg-green-600 hover:bg-green-700 text-white"
+                                                : "bg-[#6366F1] hover:bg-[#5855EB] text-white"
+                                            }`}
+                                            disabled={savedWords.has(w.text)}
+                                          >
+                                            <Star className={`h-3 w-3 ${savedWords.has(w.text) ? 'fill-white' : ''}`} />
+                                          </Button>
+                                          <span className="text-red-600 text-xs font-bold">{Math.round(w.assessmentResult?.pronunciationScore || 0)}%</span>
+                                        </div>
                                       </div>
                                     ))}
                                   </div>
