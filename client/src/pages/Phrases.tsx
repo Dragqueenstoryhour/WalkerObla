@@ -727,21 +727,45 @@ export default function Phrases() {
         setAiGenerateTopic(randomTopic);
         await handleGenerateTopicPhrases(randomTopic);
       } else {
-        // For any other feedback, only extract clean topic names from quotes or use a random topic
+        // For any other feedback, check if problemSound is already a clean topic name or extract from quotes
         let extractedTopic = null;
         
-        // Only extract text from quotes (clean topic names)
-        const quotedTopicMatch = problemSound.match(/"([^"]+)"|'([^']+)'/);
-        if (quotedTopicMatch) {
-          extractedTopic = quotedTopicMatch[1] || quotedTopicMatch[2];
-          // Only use if it's a reasonable topic name (short and clean)
-          if (extractedTopic && extractedTopic.length <= 30 && !extractedTopic.includes('.') && 
-              !extractedTopic.includes('?') && !extractedTopic.includes('!')) {
-            console.log(`Extracted topic from feedback: "${extractedTopic}"`);
-            setAiGenerateTopic(extractedTopic);
-            await handleGenerateTopicPhrases(extractedTopic);
+        // First check if problemSound is already a clean topic name (direct from AI feedback)
+        if (problemSound && problemSound.length <= 30 && !problemSound.includes('.') && 
+            !problemSound.includes('?') && !problemSound.includes('!') && 
+            !problemSound.toLowerCase().includes('sound') && !problemSound.toLowerCase().includes('letter')) {
+          // Use the problemSound directly as the topic
+          console.log(`Using direct topic from feedback: "${problemSound}"`);
+          setAiGenerateTopic(problemSound);
+          await handleGenerateTopicPhrases(problemSound);
+        } else {
+          // Try to extract text from quotes
+          const quotedTopicMatch = problemSound.match(/"([^"]+)"|'([^']+)'/);
+          if (quotedTopicMatch) {
+            extractedTopic = quotedTopicMatch[1] || quotedTopicMatch[2];
+            // Only use if it's a reasonable topic name (short and clean)
+            if (extractedTopic && extractedTopic.length <= 30 && !extractedTopic.includes('.') && 
+                !extractedTopic.includes('?') && !extractedTopic.includes('!')) {
+              console.log(`Extracted topic from feedback: "${extractedTopic}"`);
+              setAiGenerateTopic(extractedTopic);
+              await handleGenerateTopicPhrases(extractedTopic);
+            } else {
+              // Fall back to random topic
+              const randomTopics = [
+                "Animals", "Food", "Travel", "Sports", "Music", "Nature", "Technology", "Science",
+                "Arts", "Business", "Health", "Education", "Entertainment", "Fashion", "Weather",
+                "Family", "Friends", "Work", "Home", "Shopping", "Transportation", "Hobbies",
+                "Books", "Movies", "Games", "Cooking", "Gardening", "Photography", "Exercise",
+                "Medicine", "History", "Geography", "Culture", "Language", "Literature", "Architecture",
+                "Mathematics", "Physics", "Chemistry", "Biology", "Environment", "Politics", "Economy",
+                "Philosophy", "Psychology", "Sociology", "Religion", "Astronomy", "Agriculture", "Engineering"
+              ];
+              const randomTopic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
+              setAiGenerateTopic(randomTopic);
+              await handleGenerateTopicPhrases(randomTopic);
+            }
           } else {
-            // Fall back to random topic if extracted text is too complex
+            // No quotes found, use random topic
             const randomTopics = [
               "Animals", "Food", "Travel", "Sports", "Music", "Nature", "Technology", "Science",
               "Arts", "Business", "Health", "Education", "Entertainment", "Fashion", "Weather",
@@ -755,20 +779,6 @@ export default function Phrases() {
             setAiGenerateTopic(randomTopic);
             await handleGenerateTopicPhrases(randomTopic);
           }
-        } else {
-          // No quotes found, use random topic
-          const randomTopics = [
-            "Animals", "Food", "Travel", "Sports", "Music", "Nature", "Technology", "Science",
-            "Arts", "Business", "Health", "Education", "Entertainment", "Fashion", "Weather",
-            "Family", "Friends", "Work", "Home", "Shopping", "Transportation", "Hobbies",
-            "Books", "Movies", "Games", "Cooking", "Gardening", "Photography", "Exercise",
-            "Medicine", "History", "Geography", "Culture", "Language", "Literature", "Architecture",
-            "Mathematics", "Physics", "Chemistry", "Biology", "Environment", "Politics", "Economy",
-            "Philosophy", "Psychology", "Sociology", "Religion", "Astronomy", "Agriculture", "Engineering"
-          ];
-          const randomTopic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
-          setAiGenerateTopic(randomTopic);
-          await handleGenerateTopicPhrases(randomTopic);
         }
       }
     } catch (error) {

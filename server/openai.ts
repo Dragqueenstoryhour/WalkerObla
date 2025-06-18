@@ -779,7 +779,7 @@ Example correct format:
       ],
       practicePrompt: {
         question: `Would you like to practice some words about "${randomTopic}" to keep challenging yourself?`,
-        problemSound: "new_topic"
+        problemSound: randomTopic
       }
     };
   }
