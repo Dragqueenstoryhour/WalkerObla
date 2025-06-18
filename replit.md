@@ -119,6 +119,7 @@ This is a voice-based language learning application called "Obla" that helps use
 - **Database Connection Pooling**: Optimized PostgreSQL connections
 
 # Changelog
+- June 17, 2025. Added syllabication breakdown to Reading Practice carousel with same styling and coloring logic as Words section
 - June 13, 2025. Initial setup
 
 # User Preferences
