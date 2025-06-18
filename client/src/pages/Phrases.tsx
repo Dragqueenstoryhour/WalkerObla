@@ -701,8 +701,13 @@ export default function Phrases() {
         
         // Generate phrases with increased difficulty from random topic
         const randomTopics = [
-          "Business Conversations", "Academic Discussions", "Professional Presentations", 
-          "Technical Explanations", "Creative Expressions", "Complex Narratives"
+          "Animals", "Food", "Travel", "Sports", "Music", "Nature", "Technology", "Science",
+          "Arts", "Business", "Health", "Education", "Entertainment", "Fashion", "Weather",
+          "Family", "Friends", "Work", "Home", "Shopping", "Transportation", "Hobbies",
+          "Books", "Movies", "Games", "Cooking", "Gardening", "Photography", "Exercise",
+          "Medicine", "History", "Geography", "Culture", "Language", "Literature", "Architecture",
+          "Mathematics", "Physics", "Chemistry", "Biology", "Environment", "Politics", "Economy",
+          "Philosophy", "Psychology", "Sociology", "Religion", "Astronomy", "Agriculture", "Engineering"
         ];
         const randomTopic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
         setAiGenerateTopic(randomTopic);
@@ -866,7 +871,9 @@ export default function Phrases() {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-[#264653]">Practice Progress</span>
                 <span className="text-sm text-[#264653]">
-                  {currentCarouselIndex + 1} of {processedPhrases.length + (showSummary ? 0 : 0)}
+                  {showSummary && currentCarouselIndex >= processedPhrases.length - 1 
+                    ? `${processedPhrases.length - 1} of ${processedPhrases.length - 1}` 
+                    : `${currentCarouselIndex + 1} of ${processedPhrases.length - 1}`}
                 </span>
               </div>
               <Progress 

@@ -791,9 +791,13 @@ export default function Words() {
       
       // Generate words with increased difficulty from random topic
       const randomTopics = [
-        "Technology and Innovation", "Science and Discovery", "Arts and Culture", 
-        "Business and Work", "Travel and Adventure", "Health and Wellness",
-        "Entertainment and Media", "Education and Learning", "Sports and Fitness"
+        "Animals", "Food", "Travel", "Sports", "Music", "Nature", "Technology", "Science",
+        "Arts", "Business", "Health", "Education", "Entertainment", "Fashion", "Weather",
+        "Family", "Friends", "Work", "Home", "Shopping", "Transportation", "Hobbies",
+        "Books", "Movies", "Games", "Cooking", "Gardening", "Photography", "Exercise",
+        "Medicine", "History", "Geography", "Culture", "Language", "Literature", "Architecture",
+        "Mathematics", "Physics", "Chemistry", "Biology", "Environment", "Politics", "Economy",
+        "Philosophy", "Psychology", "Sociology", "Religion", "Astronomy", "Agriculture", "Engineering"
       ];
       const randomTopic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
       setAiGenerateTopic(randomTopic);
@@ -801,12 +805,13 @@ export default function Words() {
     } else if (problemSound === "new_topic") {
       // Generate words from a random new topic
       const randomTopics = [
-        "Animals and Nature", "Food and Cooking", "Travel and Adventure", "Technology and Innovation",
-        "Sports and Fitness", "Arts and Culture", "Science and Discovery", "Health and Wellness",
-        "Family and Relationships", "Education and Learning", "Business and Work", "Entertainment and Media",
-        "Weather and Seasons", "Transportation", "Shopping and Commerce", "Music and Dance",
-        "Books and Literature", "Movies and Theater", "Photography", "Gardening and Plants",
-        "Fashion and Style", "Architecture and Design", "History and Heritage", "Geography and Places"
+        "Animals", "Food", "Travel", "Sports", "Music", "Nature", "Technology", "Science",
+        "Arts", "Business", "Health", "Education", "Entertainment", "Fashion", "Weather",
+        "Family", "Friends", "Work", "Home", "Shopping", "Transportation", "Hobbies",
+        "Books", "Movies", "Games", "Cooking", "Gardening", "Photography", "Exercise",
+        "Medicine", "History", "Geography", "Culture", "Language", "Literature", "Architecture",
+        "Mathematics", "Physics", "Chemistry", "Biology", "Environment", "Politics", "Economy",
+        "Philosophy", "Psychology", "Sociology", "Religion", "Astronomy", "Agriculture", "Engineering"
       ];
       const randomTopic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
       setAiGenerateTopic(randomTopic);
@@ -816,61 +821,48 @@ export default function Words() {
       setSelectedTopicType("contain");
       handleGenerateWordsWithSound(problemSound);
     } else {
-      // If it's a longer string, treat it as a topic suggestion
-      // Try multiple extraction patterns for topic suggestions
+      // For any other feedback, only extract clean topic names from quotes or use a random topic
       let extractedTopic = null;
       
-      // Pattern 1: Text in single quotes
-      const singleQuoteMatch = problemSound.match(/'([^']+)'/);
-      if (singleQuoteMatch) {
-        extractedTopic = singleQuoteMatch[1];
-      }
-      
-      // Pattern 2: Text in double quotes
-      if (!extractedTopic) {
-        const doubleQuoteMatch = problemSound.match(/"([^"]+)"/);
-        if (doubleQuoteMatch) {
-          extractedTopic = doubleQuoteMatch[1];
+      // Only extract text from quotes (clean topic names)
+      const quotedTopicMatch = problemSound.match(/"([^"]+)"|'([^']+)'/);
+      if (quotedTopicMatch) {
+        extractedTopic = quotedTopicMatch[1] || quotedTopicMatch[2];
+        // Only use if it's a reasonable topic name (short and clean)
+        if (extractedTopic && extractedTopic.length <= 30 && !extractedTopic.includes('.') && 
+            !extractedTopic.includes('?') && !extractedTopic.includes('!')) {
+          console.log(`Extracted topic from feedback: "${extractedTopic}"`);
+          setAiGenerateTopic(extractedTopic);
+          handleGenerateTopicWords(extractedTopic);
+        } else {
+          // Fall back to random topic if extracted text is too complex
+          const randomTopics = [
+            "Animals", "Food", "Travel", "Sports", "Music", "Nature", "Technology", "Science",
+            "Arts", "Business", "Health", "Education", "Entertainment", "Fashion", "Weather",
+            "Family", "Friends", "Work", "Home", "Shopping", "Transportation", "Hobbies",
+            "Books", "Movies", "Games", "Cooking", "Gardening", "Photography", "Exercise",
+            "Medicine", "History", "Geography", "Culture", "Language", "Literature", "Architecture",
+            "Mathematics", "Physics", "Chemistry", "Biology", "Environment", "Politics", "Economy",
+            "Philosophy", "Psychology", "Sociology", "Religion", "Astronomy", "Agriculture", "Engineering"
+          ];
+          const randomTopic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
+          setAiGenerateTopic(randomTopic);
+          handleGenerateTopicWords(randomTopic);
         }
-      }
-      
-      // Pattern 3: Look for common topic phrases without quotes
-      if (!extractedTopic) {
-        const topicPatterns = [
-          /about\s+([^?.!]+)/i,
-          /practice\s+([^?.!]+)/i,
-          /try\s+([^?.!]+)/i,
-          /focus\s+on\s+([^?.!]+)/i,
-          /work\s+on\s+([^?.!]+)/i,
-        ];
-        
-        for (const pattern of topicPatterns) {
-          const match = problemSound.match(pattern);
-          if (match) {
-            extractedTopic = match[1].trim();
-            // Remove common ending words
-            extractedTopic = extractedTopic.replace(/\s+(words|topics|sounds|practice)$/i, '');
-            break;
-          }
-        }
-      }
-      
-      // Pattern 4: If problemSound itself looks like a topic (no special chars, reasonable length)
-      if (!extractedTopic && problemSound.length > 3 && problemSound.length < 50 && 
-          !problemSound.includes('?') && !problemSound.includes('.') && 
-          !problemSound.includes('!') && /^[a-zA-Z\s]+$/.test(problemSound)) {
-        extractedTopic = problemSound.trim();
-      }
-      
-      if (extractedTopic) {
-        console.log(`Extracted topic from feedback: "${extractedTopic}"`);
-        setAiGenerateTopic(extractedTopic);
-        handleGenerateTopicWords(extractedTopic);
       } else {
-        // Fallback: use the problemSound directly as topic if it's reasonable
-        console.log(`Using problemSound directly as topic: "${problemSound}"`);
-        setAiGenerateTopic(problemSound);
-        handleGenerateTopicWords(problemSound);
+        // No quotes found, use random topic
+        const randomTopics = [
+          "Animals", "Food", "Travel", "Sports", "Music", "Nature", "Technology", "Science",
+          "Arts", "Business", "Health", "Education", "Entertainment", "Fashion", "Weather",
+          "Family", "Friends", "Work", "Home", "Shopping", "Transportation", "Hobbies",
+          "Books", "Movies", "Games", "Cooking", "Gardening", "Photography", "Exercise",
+          "Medicine", "History", "Geography", "Culture", "Language", "Literature", "Architecture",
+          "Mathematics", "Physics", "Chemistry", "Biology", "Environment", "Politics", "Economy",
+          "Philosophy", "Psychology", "Sociology", "Religion", "Astronomy", "Agriculture", "Engineering"
+        ];
+        const randomTopic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
+        setAiGenerateTopic(randomTopic);
+        handleGenerateTopicWords(randomTopic);
       }
     }
   };
@@ -1983,7 +1975,9 @@ export default function Words() {
               
               <div className="flex items-center gap-4">
                 <span className="text-sm text-gray-600">
-                  {currentCarouselIndex + 1} of {processedWords.length + (showSummary ? 1 : 0)}
+                  {showSummary && currentCarouselIndex >= processedWords.length - 1 
+                    ? `${processedWords.length - 1} of ${processedWords.length - 1}` 
+                    : `${currentCarouselIndex + 1} of ${processedWords.length - 1}`}
                 </span>
               </div>
 
