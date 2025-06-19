@@ -119,7 +119,7 @@ This is a voice-based language learning application called "Obla" that helps use
 - **Database Connection Pooling**: Optimized PostgreSQL connections
 
 # Changelog
-- June 18, 2025. Optimized summary card interface in Words page with white backgrounds and improved contrast. Added Save buttons to Words to Practice More section. Implemented Finish button and summary card logic on Phrases page with proper feedback flow optimization - topic suggestions now auto-fill and generate new phrases instead of creating complex URLs. Fixed progress display issues showing correct counts (8 of 8, 9 of 9). Enhanced topic suggestion system with 50 diverse topics and ensured suggested topics flow correctly to content generation. Removed redirect logic from Phrases to Words page.
+- June 18, 2025. Optimized summary card interface in Words page with white backgrounds and improved contrast. Added Save buttons to Words to Practice More section. Implemented Finish button and summary card logic on Phrases page with proper feedback flow optimization - topic suggestions now auto-fill and generate new phrases instead of creating complex URLs. Fixed progress display issues showing correct counts (8 of 8, 9 of 9). Enhanced topic suggestion system with 50 diverse topics and ensured suggested topics flow correctly to content generation. Removed redirect logic from Phrases to Words page. Fixed carousel reset functionality in Phrases - when users select a suggested topic, carousel now resets to 1 of 8 and enables complete flow cycle with summary cards.
 - June 17, 2025. Added syllabication breakdown to Reading Practice carousel with same styling and coloring logic as Words section
 - June 13, 2025. Initial setup
 

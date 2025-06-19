@@ -288,6 +288,20 @@ export default function Phrases() {
 
       setProcessedPhrases(newPhrases);
       setCurrentPhraseIndex(0);
+      setCurrentCarouselIndex(0);
+      
+      // Reset summary state for fresh cycle
+      setShowSummary(false);
+      setSummaryFeedback(null);
+      setShowFeedbackInSummary(false);
+      
+      // Reset carousel to first position
+      setTimeout(() => {
+        if (emblaApi) {
+          emblaApi.scrollTo(0);
+        }
+      }, 100);
+      
       scrollToPracticeSection();
     } catch (error) {
       console.error("Error generating phrases:", error);
@@ -687,8 +701,14 @@ export default function Phrases() {
   const handleSummaryPracticePrompt = async (problemSound: string) => {
     if (!problemSound) return;
     
-    // Close the feedback suggestion
+    // Close the feedback suggestion and reset summary state
     setShowFeedbackInSummary(false);
+    setShowSummary(false);
+    setSummaryFeedback(null);
+    
+    // Reset carousel state for new content
+    setProcessedPhrases([]);
+    setCurrentCarouselIndex(0);
     
     try {
       // Handle different types of practice suggestions
