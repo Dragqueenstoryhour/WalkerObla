@@ -130,7 +130,7 @@ const FeedbackPanel = () => {
       const processIssues = async () => {
         const filteredResults = pronunciationResults.wordLevelResults
           .filter(result => result.accuracyScore < 75) // Filter for words with accuracy less than 75%
-          .slice(0, 6); // Limit to maximum 6 words
+          .slice(0, 8); // Limit to maximum 8 words
 
         // Get phonetic displays for all words
         const phoneticPromises = filteredResults.map(result => getPhoneticDisplay(result.word));
