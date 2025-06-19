@@ -852,7 +852,9 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
                 <div 
                   ref={readingContentRef}
                   className="text-white"
-                />
+                >
+                  {currentContent?.content || ''}
+                </div>
               }
             </div>
 
@@ -944,7 +946,16 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
                 {/* First Row: Try Again and Listen to me buttons */}
                 <div className="flex justify-center gap-4">
                   <Button
-                    onClick={startPhrasePractice}
+                    onClick={() => {
+                      // Reset the phrase state to idle to show original text
+                      setPhrase(prev => ({
+                        ...prev,
+                        status: "idle",
+                        assessmentResult: undefined,
+                        recordingUrl: undefined,
+                        recordingBlob: undefined
+                      }));
+                    }}
                     className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 px-8 py-3 text-base"
                   >
                     <RefreshCw className="h-5 w-5" />
