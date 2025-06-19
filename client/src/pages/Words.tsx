@@ -307,6 +307,35 @@ export default function Words() {
     };
   }, [emblaApi]);
 
+  // Cleanup viseme animation on component unmount
+  useEffect(() => {
+    return () => {
+      // Clear all timeouts
+      animationTimeoutsRef.current.forEach(clearTimeout);
+      animationTimeoutsRef.current = [];
+
+      // Clean up audio event listeners
+      if (visemeAudioRef.current) {
+        const audio = visemeAudioRef.current;
+        
+        if (currentEventListenersRef.current.timeupdate) {
+          audio.removeEventListener("timeupdate", currentEventListenersRef.current.timeupdate);
+        }
+        if (currentEventListenersRef.current.ended) {
+          audio.removeEventListener("ended", currentEventListenersRef.current.ended);
+        }
+        if (currentEventListenersRef.current.error) {
+          audio.removeEventListener("error", currentEventListenersRef.current.error);
+        }
+      }
+
+      // Clean up any blob URLs to prevent memory leaks
+      if (visemeAudioUrl) {
+        URL.revokeObjectURL(visemeAudioUrl);
+      }
+    };
+  }, [visemeAudioUrl]);
+
   // Use audio recording hook for consistent recording management
   const {
     isRecording,
@@ -345,6 +374,11 @@ export default function Words() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const currentWordIndexRef = useRef<number>(-1);
   const tutorialAudioRef = useRef<HTMLAudioElement | null>(null);
+  const currentEventListenersRef = useRef<{
+    timeupdate?: () => void;
+    ended?: () => void;
+    error?: (e: Event) => void;
+  }>({});
 
   // Predefined word topics
   const wordTopics = [
@@ -893,6 +927,39 @@ export default function Words() {
       }
     }, 500);
   };
+
+  // Preload all viseme images on component mount for optimal performance
+  useEffect(() => {
+    const preloadAllVisemeImages = async () => {
+      console.log("Preloading all viseme images for optimal performance...");
+      const allVisemeIds = Array.from({ length: 22 }, (_, i) => i); // Visemes 0-21
+      
+      try {
+        const loadPromises = allVisemeIds.map((id) => {
+          return new Promise<HTMLImageElement>((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error(`Failed to load viseme ${id}`));
+            img.crossOrigin = "anonymous";
+            img.src = visemeImages[id as keyof typeof visemeImages];
+          });
+        });
+
+        const loadedImages = await Promise.all(loadPromises);
+        const imageMap: { [key: number]: HTMLImageElement } = {};
+        allVisemeIds.forEach((id, index) => {
+          imageMap[id] = loadedImages[index];
+        });
+        
+        setPreloadedImages(imageMap);
+        console.log("All viseme images preloaded successfully");
+      } catch (error) {
+        console.warn("Some viseme images failed to preload:", error);
+      }
+    };
+
+    preloadAllVisemeImages();
+  }, []);
 
   // Auto-load focused words or common words when the page opens
   useEffect(() => {
@@ -1551,6 +1618,22 @@ export default function Words() {
       audio.currentTime = 0;
       audio.playbackRate = 1.0;
 
+      // Clean up any existing event listeners
+      const cleanupEventListeners = () => {
+        if (currentEventListenersRef.current.timeupdate) {
+          audio.removeEventListener("timeupdate", currentEventListenersRef.current.timeupdate);
+        }
+        if (currentEventListenersRef.current.ended) {
+          audio.removeEventListener("ended", currentEventListenersRef.current.ended);
+        }
+        if (currentEventListenersRef.current.error) {
+          audio.removeEventListener("error", currentEventListenersRef.current.error);
+        }
+        currentEventListenersRef.current = {};
+      };
+
+      cleanupEventListeners();
+
       // Set up precise synchronization using timeupdate events
       const handleTimeUpdate = () => {
         const currentTime = audio.currentTime * 1000; // Convert to milliseconds
@@ -1580,18 +1663,21 @@ export default function Words() {
         console.log("Audio playback completed");
         setIsPlayingVisemes(false);
         setCurrentVisemeId(0);
-        audio.removeEventListener("timeupdate", handleTimeUpdate);
-        audio.removeEventListener("ended", handleAudioEnd);
-        audio.removeEventListener("error", handleAudioError);
+        cleanupEventListeners();
       };
 
       const handleAudioError = (e: Event) => {
         console.error("Audio error during synchronized playback:", e);
         setIsPlayingVisemes(false);
         setCurrentVisemeId(0);
-        audio.removeEventListener("timeupdate", handleTimeUpdate);
-        audio.removeEventListener("ended", handleAudioEnd);
-        audio.removeEventListener("error", handleAudioError);
+        cleanupEventListeners();
+      };
+
+      // Store event listeners in ref for cleanup
+      currentEventListenersRef.current = {
+        timeupdate: handleTimeUpdate,
+        ended: handleAudioEnd,
+        error: handleAudioError
       };
 
       // Attach event listeners for synchronization
@@ -1624,10 +1710,17 @@ export default function Words() {
     if (visemeAudioRef.current) {
       const audio = visemeAudioRef.current;
       
-      // Remove all event listeners to prevent memory leaks
-      audio.removeEventListener("timeupdate", () => {});
-      audio.removeEventListener("ended", () => {});
-      audio.removeEventListener("error", () => {});
+      // Clean up event listeners using the stored references
+      if (currentEventListenersRef.current.timeupdate) {
+        audio.removeEventListener("timeupdate", currentEventListenersRef.current.timeupdate);
+      }
+      if (currentEventListenersRef.current.ended) {
+        audio.removeEventListener("ended", currentEventListenersRef.current.ended);
+      }
+      if (currentEventListenersRef.current.error) {
+        audio.removeEventListener("error", currentEventListenersRef.current.error);
+      }
+      currentEventListenersRef.current = {};
       
       audio.pause();
       audio.currentTime = 0;
