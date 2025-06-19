@@ -106,7 +106,7 @@ const FeedbackPanel = () => {
         const issues: PronunciationIssue[] = await Promise.all(
           pronunciationResults.wordLevelResults
             .filter(result => result.accuracyScore < 75) // Filter for words with accuracy less than 75%
-            .slice(0, 8) // Limit to maximum 8 words
+            .slice(0, 6) // Limit to maximum 6 words
             .map(async (result, index) => ({
               word: result.word,
               phonetic: await getPhoneticDisplay(result.word), // Get proper syllable breakdown

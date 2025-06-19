@@ -324,21 +324,6 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
 
   // Generate new content
   const generateNewContent = async () => {
-    // Prevent multiple simultaneous generations
-    if (isGenerating || isGeneratingCustom) {
-      console.log("Content generation already in progress, ignoring new content request");
-      return;
-    }
-
-    // Cancel any ongoing generation
-    if (generationAbortController.current) {
-      generationAbortController.current.abort();
-    }
-
-    // Create new abort controller for this request
-    generationAbortController.current = new AbortController();
-    const signal = generationAbortController.current.signal;
-
     setIsGenerating(true);
     resetPracticeSection(); // Reset practice section when generating new content
     
@@ -350,35 +335,16 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
       const randomTopic = topics[Math.floor(Math.random() * topics.length)];
       const serverDifficulty = mapDifficultyToServer(difficulty);
       
-      // Check if request was aborted before making API call
-      if (signal.aborted) {
-        console.log("New content generation request was aborted");
-        return;
-      }
-      
       const content = await generateReadingContent(randomTopic, serverDifficulty);
-      
-      // Check if request was aborted before setting content
-      if (signal.aborted) {
-        console.log("New content generation request was aborted before setting content");
-        return;
-      }
-      
       setCurrentContent(content);
-      console.log(`Successfully generated new content: "${content.title}"`);
       
       if (onNewContent) {
         onNewContent();
       }
     } catch (error) {
-      if (signal.aborted) {
-        console.log("New content generation was cancelled");
-        return;
-      }
       console.error("Error generating content:", error);
     } finally {
       setIsGenerating(false);
-      generationAbortController.current = null;
     }
   };
 
