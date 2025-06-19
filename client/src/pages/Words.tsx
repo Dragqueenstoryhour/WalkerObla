@@ -251,7 +251,7 @@ export default function Words() {
   ];
 
 
-  // Viseme animation state
+  // Enhanced Viseme animation state with comprehensive readiness tracking
   const [showVisemeDialog, setShowVisemeDialog] = useState(false);
   const [isGeneratingVisemes, setIsGeneratingVisemes] = useState(false);
   const [isPlayingVisemes, setIsPlayingVisemes] = useState(false);
@@ -263,6 +263,9 @@ export default function Words() {
   const [imagesReady, setImagesReady] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
   const [animationReady, setAnimationReady] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState({ images: 0, audio: 0 });
+  const [canPlay, setCanPlay] = useState(false);
+  const [nextVisemeIndex, setNextVisemeIndex] = useState(0);
 
 
   // Carousel state
@@ -371,6 +374,7 @@ export default function Words() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const visemeAudioRef = useRef<HTMLAudioElement | null>(null);
   const animationTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
+  const animationFrameRef = useRef<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const currentWordIndexRef = useRef<number>(-1);
   const tutorialAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -379,6 +383,7 @@ export default function Words() {
     ended?: () => void;
     error?: (e: Event) => void;
   }>({});
+  const cleanupFunctionsRef = useRef<(() => void)[]>([]);
 
   // Predefined word topics
   const wordTopics = [
@@ -473,13 +478,87 @@ export default function Words() {
     },
   ];
 
-  // Preload viseme images for smooth transitions
-  useEffect(() => {
-    Object.values(visemeImages).forEach((src) => {
-      const img = new Image();
-      img.src = src;
+  // 1. Robust Image Preloading and Readiness Check using counter-based system with Promise.all
+  const preloadAllVisemeImages = React.useCallback(async (): Promise<{ [key: number]: HTMLImageElement }> => {
+    console.log("Preloading all viseme images for optimal performance...");
+    const allVisemeIds = Array.from({ length: 22 }, (_, i) => i); // Visemes 0-21
+    let loadedCount = 0;
+    
+    setLoadingProgress(prev => ({ ...prev, images: 0 }));
+    
+    const loadPromises = allVisemeIds.map((id) => {
+      return new Promise<HTMLImageElement>((resolve, reject) => {
+        // Check if image is already loaded and cached with proper validation
+        if (preloadedImages[id] && preloadedImages[id].complete && preloadedImages[id].naturalHeight > 0) {
+          console.log(`Viseme image ${id} already preloaded and cached`);
+          loadedCount++;
+          setLoadingProgress(prev => ({ ...prev, images: Math.round((loadedCount / allVisemeIds.length) * 100) }));
+          resolve(preloadedImages[id]);
+          return;
+        }
+
+        const img = new Image();
+        
+        img.onload = () => {
+          loadedCount++;
+          const progress = Math.round((loadedCount / allVisemeIds.length) * 100);
+          setLoadingProgress(prev => ({ ...prev, images: progress }));
+          console.log(`Successfully preloaded viseme image ${id} (${progress}%)`);
+          resolve(img);
+        };
+        
+        img.onerror = (e) => {
+          console.error(`Failed to preload viseme image ${id}:`, e);
+          reject(new Error(`Failed to load viseme image ${id}`));
+        };
+
+        // Set crossOrigin and src for proper loading
+        img.crossOrigin = "anonymous";
+        img.src = visemeImages[id as keyof typeof visemeImages];
+
+        // Timeout to prevent hanging
+        setTimeout(() => {
+          if (!img.complete) {
+            console.warn(`Timeout loading viseme image ${id}`);
+            reject(new Error(`Timeout loading viseme image ${id}`));
+          }
+        }, 10000);
+      });
     });
-  }, []);
+
+    try {
+      const loadedImages = await Promise.all(loadPromises);
+      
+      // Store all preloaded images with direct HTMLImageElement access
+      const imageMap: { [key: number]: HTMLImageElement } = {};
+      allVisemeIds.forEach((id, index) => {
+        imageMap[id] = loadedImages[index];
+      });
+      
+      setLoadingProgress(prev => ({ ...prev, images: 100 }));
+      console.log("All viseme images preloaded successfully");
+      return imageMap;
+    } catch (error) {
+      console.error("Error preloading viseme images:", error);
+      // Return partial results instead of failing completely
+      const partialImageMap: { [key: number]: HTMLImageElement } = {};
+      allVisemeIds.forEach((id) => {
+        if (preloadedImages[id] && preloadedImages[id].complete) {
+          partialImageMap[id] = preloadedImages[id];
+        }
+      });
+      return partialImageMap;
+    }
+  }, [preloadedImages]);
+
+  // Preload all viseme images on component mount
+  useEffect(() => {
+    console.log("Preloading all viseme images for optimal performance...");
+    preloadAllVisemeImages().then((imageMap) => {
+      setPreloadedImages(imageMap);
+      console.log("All viseme images preloaded on component mount");
+    });
+  }, [preloadAllVisemeImages]);
 
   // Clear animation timeouts when component unmounts
   useEffect(() => {
@@ -1542,8 +1621,8 @@ export default function Words() {
     }
   };
 
-  // Prepare audio for synchronized playback
-  const prepareAudioForPlayback = async (audioUrl: string): Promise<void> => {
+  // 2. Guaranteed Audio Readiness and Playback Control with explicit canplaythrough event
+  const prepareAudioForPlayback = React.useCallback(async (audioUrl: string): Promise<void> => {
     return new Promise<void>((resolve, reject) => {
       if (!visemeAudioRef.current) {
         reject(new Error("Audio element not available"));
@@ -1551,12 +1630,16 @@ export default function Words() {
       }
 
       const audio = visemeAudioRef.current;
+      setLoadingProgress(prev => ({ ...prev, audio: 0 }));
       
       const handleCanPlayThrough = () => {
-        console.log("Audio ready for synchronized playback");
+        console.log("Audio ready for synchronized playback - canplaythrough event received");
         setAudioReady(true);
+        setLoadingProgress(prev => ({ ...prev, audio: 100 }));
         audio.removeEventListener('canplaythrough', handleCanPlayThrough);
         audio.removeEventListener('error', handleError);
+        audio.removeEventListener('loadstart', handleLoadStart);
+        audio.removeEventListener('progress', handleProgress);
         resolve();
       };
 
@@ -1564,32 +1647,61 @@ export default function Words() {
         console.error("Audio preparation failed:", e);
         audio.removeEventListener('canplaythrough', handleCanPlayThrough);
         audio.removeEventListener('error', handleError);
+        audio.removeEventListener('loadstart', handleLoadStart);
+        audio.removeEventListener('progress', handleProgress);
         reject(new Error("Audio preparation failed"));
       };
 
+      const handleLoadStart = () => {
+        console.log("Audio loading started");
+        setLoadingProgress(prev => ({ ...prev, audio: 10 }));
+      };
+
+      const handleProgress = () => {
+        if (audio.buffered.length > 0) {
+          const bufferedEnd = audio.buffered.end(audio.buffered.length - 1);
+          const duration = audio.duration || 1;
+          const progress = Math.round((bufferedEnd / duration) * 90); // 90% max for progress, 100% for canplaythrough
+          setLoadingProgress(prev => ({ ...prev, audio: Math.min(progress, 90) }));
+        }
+      };
+
+      // Add comprehensive event listeners for loading feedback
       audio.addEventListener('canplaythrough', handleCanPlayThrough);
       audio.addEventListener('error', handleError);
+      audio.addEventListener('loadstart', handleLoadStart);
+      audio.addEventListener('progress', handleProgress);
       
       // Set audio source and preload
       audio.src = audioUrl;
       audio.preload = 'auto';
       audio.load();
 
-      // Timeout fallback
+      // Extended timeout with better fallback handling
       setTimeout(() => {
         if (!audioReady) {
-          console.warn("Audio preparation timeout, proceeding anyway");
-          setAudioReady(true);
+          console.warn("Audio preparation timeout, checking readyState");
+          // Check if audio is actually ready despite timeout
+          if (audio.readyState >= 3) { // HAVE_FUTURE_DATA or HAVE_ENOUGH_DATA
+            console.log("Audio appears ready despite timeout, proceeding");
+            setAudioReady(true);
+            setLoadingProgress(prev => ({ ...prev, audio: 100 }));
+            resolve();
+          } else {
+            console.error("Audio not ready after timeout");
+            reject(new Error("Audio preparation timeout"));
+          }
           audio.removeEventListener('canplaythrough', handleCanPlayThrough);
           audio.removeEventListener('error', handleError);
-          resolve();
+          audio.removeEventListener('loadstart', handleLoadStart);
+          audio.removeEventListener('progress', handleProgress);
         }
-      }, 3000);
+      }, 8000); // Extended timeout
     });
-  };
+  }, [audioReady]);
 
-  // Centralized animation controller with precise audio-visual synchronization
-  const playVisemeAnimation = async () => {
+  // 3. Precise Audio-Visual Synchronization Logic with requestAnimationFrame and optimized nextVisemeIndex lookup
+  const playVisemeAnimation = React.useCallback(async () => {
     if (!visemeAudioRef.current || !visemeData.length || !visemeAudioUrl) {
       console.error("Animation prerequisites not met");
       return;
@@ -1601,12 +1713,16 @@ export default function Words() {
       return;
     }
 
-    // Clear any existing timeouts and reset state
+    // Clear any existing animation frames and timeouts
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
     animationTimeoutsRef.current.forEach(clearTimeout);
     animationTimeoutsRef.current = [];
 
     setIsPlayingVisemes(true);
     setCurrentVisemeId(0);
+    setNextVisemeIndex(0);
 
     console.log("Starting synchronized viseme animation with", visemeData.length, "visemes");
     console.log("Viseme timing data:", visemeData.map(v => ({ id: v.visemeId, offset: v.audioOffset })));
@@ -1618,7 +1734,7 @@ export default function Words() {
       audio.currentTime = 0;
       audio.playbackRate = 1.0;
 
-      // Clean up any existing event listeners
+      // Centralized cleanup function
       const cleanupEventListeners = () => {
         if (currentEventListenersRef.current.timeupdate) {
           audio.removeEventListener("timeupdate", currentEventListenersRef.current.timeupdate);
@@ -1630,64 +1746,83 @@ export default function Words() {
           audio.removeEventListener("error", currentEventListenersRef.current.error);
         }
         currentEventListenersRef.current = {};
+        
+        // Cancel any pending animation frames
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = null;
+        }
       };
 
-      cleanupEventListeners();
+      // Store cleanup function for later use
+      cleanupFunctionsRef.current.push(cleanupEventListeners);
 
-      // Set up precise synchronization using timeupdate events
-      const handleTimeUpdate = () => {
+      // Optimized viseme synchronization using requestAnimationFrame
+      let currentVisemeIndex = 0;
+      const syncVisemeWithAudio = () => {
+        if (!audio || audio.paused || audio.ended) return;
+        
         const currentTime = audio.currentTime * 1000; // Convert to milliseconds
         
-        // Find the most appropriate viseme for current time
-        let targetVisemeId = 0; // Default to neutral
-        
-        for (let i = visemeData.length - 1; i >= 0; i--) {
-          if (currentTime >= visemeData[i].audioOffset) {
-            targetVisemeId = visemeData[i].visemeId;
-            break;
-          }
+        // Optimized nextVisemeIndex lookup to minimize drift
+        while (currentVisemeIndex < visemeData.length - 1 && 
+               currentTime >= visemeData[currentVisemeIndex + 1].audioOffset) {
+          currentVisemeIndex++;
         }
         
-        // Only update if viseme changed to reduce unnecessary re-renders
+        const targetVisemeId = visemeData[currentVisemeIndex]?.visemeId || 0;
+        
+        // Update viseme with requestAnimationFrame for smooth rendering
         setCurrentVisemeId(prevId => {
           if (prevId !== targetVisemeId) {
-            console.log(`Syncing viseme ${targetVisemeId} at time ${currentTime.toFixed(0)}ms`);
+            console.log(`RAF: Syncing viseme ${targetVisemeId} at time ${currentTime.toFixed(0)}ms`);
             return targetVisemeId;
           }
           return prevId;
         });
+        
+        // Schedule next frame
+        animationFrameRef.current = requestAnimationFrame(syncVisemeWithAudio);
       };
 
-      // Set up event handlers for precise control
-      const handleAudioEnd = () => {
+      // Set up event handlers for precise control with useCallback optimization
+      const handleAudioEnd = React.useCallback(() => {
         console.log("Audio playback completed");
         setIsPlayingVisemes(false);
         setCurrentVisemeId(0);
         cleanupEventListeners();
-      };
+      }, []);
 
-      const handleAudioError = (e: Event) => {
+      const handleAudioError = React.useCallback((e: Event) => {
         console.error("Audio error during synchronized playback:", e);
         setIsPlayingVisemes(false);
         setCurrentVisemeId(0);
         cleanupEventListeners();
-      };
+        
+        toast({
+          title: "Audio Error",
+          description: "Audio playback encountered an error.",
+          variant: "destructive",
+        });
+      }, [toast]);
 
       // Store event listeners in ref for cleanup
       currentEventListenersRef.current = {
-        timeupdate: handleTimeUpdate,
         ended: handleAudioEnd,
         error: handleAudioError
       };
 
-      // Attach event listeners for synchronization
-      audio.addEventListener("timeupdate", handleTimeUpdate);
+      // Attach event listeners for control
       audio.addEventListener("ended", handleAudioEnd);
       audio.addEventListener("error", handleAudioError);
 
-      // Start playback
+      // Start audio playback and animation synchronization
       await audio.play();
-      console.log("Synchronized audio-visual playback started successfully");
+      
+      // Start requestAnimationFrame-based synchronization for smooth visuals
+      animationFrameRef.current = requestAnimationFrame(syncVisemeWithAudio);
+      
+      console.log("Synchronized audio-visual playback started successfully with RAF");
 
     } catch (error) {
       console.error("Error in synchronized playback:", error);
@@ -1700,7 +1835,7 @@ export default function Words() {
         variant: "destructive",
       });
     }
-  };
+  }, [visemeAudioRef, visemeData, visemeAudioUrl, animationReady, imagesReady, audioReady, toast]);
 
   // Stop viseme animation with proper cleanup
   const stopVisemeAnimation = () => {
