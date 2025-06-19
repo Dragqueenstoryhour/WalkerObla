@@ -85,6 +85,7 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
   const { difficulty, setDifficulty, setCurrentMode } = useDifficulty();
   const [isGenerating, setIsGenerating] = useState(false);
   const readingContentRef = useRef<HTMLDivElement>(null);
+  const generationAbortController = useRef<AbortController | null>(null);
 
   // Topic selection states
   const [customTopic, setCustomTopic] = useState('');
