@@ -126,11 +126,11 @@ const FeedbackPanel = () => {
   // Update feedback when pronunciation results change
   useEffect(() => {
     if (pronunciationResults) {
-      // Extract word-level issues for words scoring under 75%
+      // Extract word-level issues for words scoring under 70%
       const processIssues = async () => {
         const filteredResults = pronunciationResults.wordLevelResults
-          .filter(result => result.accuracyScore < 75) // Filter for words with accuracy less than 75%
-          .slice(0, 6); // Limit to maximum 6 words
+          .filter(result => result.accuracyScore < 70) // Filter for words with accuracy less than 70%
+          .slice(0, 8); // Limit to maximum 8 words
 
         // Get phonetic displays for all words
         const phoneticPromises = filteredResults.map(result => getPhoneticDisplay(result.word));
@@ -186,7 +186,7 @@ const FeedbackPanel = () => {
       const overallPronunciationScore = pronunciationResults.pronunciationScore;
       const fluencyScore = pronunciationResults.fluencyScore;
       const prosodyScore = pronunciationResults.prosodyScore; // Can be null/undefined
-      const problemWordCount = pronunciationResults.wordLevelResults.filter(result => result.accuracyScore < 75).length;
+      const problemWordCount = pronunciationResults.wordLevelResults.filter(result => result.accuracyScore < 70).length;
 
       if (overallPronunciationScore >= 90 && fluencyScore >= 90 && (prosodyScore === undefined || prosodyScore >= 90)) {
         setGeneralFeedback("Excellent job! Your reading was clear, fluent, and natural. Keep up the great work!");
@@ -597,7 +597,7 @@ const FeedbackPanel = () => {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Ear className="h-5 w-5" />
-              Words to Practice ({pronunciationIssues.length})
+              Words to Practice
             </CardTitle>
             <CardDescription>
               Focus on these words to improve your pronunciation
