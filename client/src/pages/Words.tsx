@@ -310,12 +310,22 @@ export default function Words() {
     };
   }, [emblaApi]);
 
-  // Cleanup viseme animation on component unmount
+  // 4. Optimized useEffect Dependencies and Cleanup with consolidated cleanup logic
   useEffect(() => {
     return () => {
       // Clear all timeouts
       animationTimeoutsRef.current.forEach(clearTimeout);
       animationTimeoutsRef.current = [];
+
+      // Cancel any pending animation frames
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+
+      // Execute all stored cleanup functions
+      cleanupFunctionsRef.current.forEach(cleanup => cleanup());
+      cleanupFunctionsRef.current = [];
 
       // Clean up audio event listeners
       if (visemeAudioRef.current) {
@@ -337,7 +347,16 @@ export default function Words() {
         URL.revokeObjectURL(visemeAudioUrl);
       }
     };
-  }, [visemeAudioUrl]);
+  }, [visemeAudioUrl]); // Correct dependencies specification
+
+  // Effect to update canPlay state when all assets are ready
+  useEffect(() => {
+    const allReady = animationReady && imagesReady && audioReady;
+    if (allReady !== canPlay) {
+      setCanPlay(allReady);
+      console.log("Animation readiness state updated:", { animationReady, imagesReady, audioReady, canPlay: allReady });
+    }
+  }, [animationReady, imagesReady, audioReady, canPlay]);
 
   // Use audio recording hook for consistent recording management
   const {
@@ -1837,10 +1856,21 @@ export default function Words() {
     }
   }, [visemeAudioRef, visemeData, visemeAudioUrl, animationReady, imagesReady, audioReady, toast]);
 
-  // Stop viseme animation with proper cleanup
-  const stopVisemeAnimation = () => {
+  // 6. Centralized Animation Control with comprehensive cleanup
+  const stopVisemeAnimation = React.useCallback(() => {
+    // Clear all timeouts
     animationTimeoutsRef.current.forEach(clearTimeout);
     animationTimeoutsRef.current = [];
+
+    // Cancel any pending animation frames
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+
+    // Execute all stored cleanup functions
+    cleanupFunctionsRef.current.forEach(cleanup => cleanup());
+    cleanupFunctionsRef.current = [];
 
     if (visemeAudioRef.current) {
       const audio = visemeAudioRef.current;
@@ -1861,9 +1891,15 @@ export default function Words() {
       audio.currentTime = 0;
     }
 
+    // Clean up blob URLs to prevent memory leaks
+    if (visemeAudioUrl) {
+      URL.revokeObjectURL(visemeAudioUrl);
+    }
+
     setIsPlayingVisemes(false);
     setCurrentVisemeId(0);
-  };
+    setCanPlay(false);
+  }, [visemeAudioUrl]);
 
   // Save a word to user's collection
   const saveWordToCollection = async (wordIndex: number) => {
@@ -2057,49 +2093,87 @@ export default function Words() {
           </div>
 
           <div className="space-y-4">
-
-            {/* Status */}
-            <div className="text-center">
-              {isGeneratingVisemes && (
-                <p className="text-blue-700 font-medium">Generating animation...</p>
-              )}
-              {!isGeneratingVisemes && visemeData.length > 0 && !animationReady && (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  <p className="text-blue-700 font-medium">Loading animation...</p>
+            
+            {/* 5. Enhanced Loading States and User Feedback */}
+            {(isGeneratingVisemes || !canPlay) && (
+              <div className="bg-white rounded-lg p-4 border border-blue-200">
+                <div className="space-y-3">
+                  {/* Image Loading Progress */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-blue-700">Loading Images</span>
+                      <span className="text-sm text-blue-600">{loadingProgress.images}%</span>
+                    </div>
+                    <Progress value={loadingProgress.images} className="h-2" />
+                  </div>
+                  
+                  {/* Audio Loading Progress */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-blue-700">Loading Audio</span>
+                      <span className="text-sm text-blue-600">{loadingProgress.audio}%</span>
+                    </div>
+                    <Progress value={loadingProgress.audio} className="h-2" />
+                  </div>
+                  
+                  {/* Status Messages */}
+                  <div className="text-center pt-2">
+                    {isGeneratingVisemes && (
+                      <p className="text-blue-700 font-medium">Generating lip animation data...</p>
+                    )}
+                    {!isGeneratingVisemes && !imagesReady && (
+                      <p className="text-blue-600">Loading viseme images...</p>
+                    )}
+                    {!isGeneratingVisemes && !audioReady && imagesReady && (
+                      <p className="text-blue-600">Preparing audio for synchronized playback...</p>
+                    )}
+                    {!isGeneratingVisemes && imagesReady && audioReady && !canPlay && (
+                      <p className="text-blue-600">Finalizing animation setup...</p>
+                    )}
+                  </div>
                 </div>
-              )}
-              {isPlayingVisemes && (
-                <p className="text-blue-700 font-medium">Animation playing</p>
-              )}
-              {!isGeneratingVisemes && !isPlayingVisemes && animationReady && visemeData.length > 0 && (
-                <p className="text-blue-600">Ready to replay</p>
-              )}
-            </div>
-
-            {/* Control buttons */}
-            {visemeData.length > 0 && !isGeneratingVisemes && (
-              <div className="flex gap-2">
-                <Button
-                  onClick={playVisemeAnimation}
-                  disabled={isPlayingVisemes || !animationReady}
-                  variant="default"
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  {animationReady ? "Replay" : "Loading..."}
-                </Button>
-                <Button
-                  onClick={stopVisemeAnimation}
-                  disabled={!isPlayingVisemes}
-                  variant="outline"
-                  className="flex-1 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
-                >
-                  <Square className="h-4 w-4 mr-2" />
-                  Stop
-                </Button>
               </div>
             )}
+
+            {/* Status and Controls */}
+            <div className="text-center">
+              {!isGeneratingVisemes && canPlay && (
+                <div className="space-y-3">
+                  <p className="text-green-600 font-medium">Animation ready to play!</p>
+                  
+                  <div className="flex justify-center space-x-3">
+                    <Button
+                      onClick={playVisemeAnimation}
+                      disabled={isPlayingVisemes || !canPlay}
+                      className="bg-blue-500 hover:bg-blue-600 text-white"
+                    >
+                      {isPlayingVisemes ? (
+                        <>
+                          <Square className="h-4 w-4 mr-2" />
+                          Playing...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-4 w-4 mr-2" />
+                          Play Animation
+                        </>
+                      )}
+                    </Button>
+                    
+                    {isPlayingVisemes && (
+                      <Button
+                        onClick={stopVisemeAnimation}
+                        variant="outline"
+                        className="border-red-500 text-red-500 hover:bg-red-50"
+                      >
+                        <Square className="h-4 w-4 mr-2" />
+                        Stop
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Hidden audio element for viseme playback */}
