@@ -335,9 +335,11 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
       const randomTopic = topics[Math.floor(Math.random() * topics.length)];
       const serverDifficulty = mapDifficultyToServer(difficulty);
       
+      console.log(`Generating new content about "${randomTopic}" with difficulty "${serverDifficulty}"`);
       const content = await generateReadingContent(randomTopic, serverDifficulty);
       setCurrentContent(content);
       
+      // Call onNewContent to reset states in parent component after content is set
       if (onNewContent) {
         onNewContent();
       }

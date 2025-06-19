@@ -79,19 +79,11 @@ const Read = () => {
     setArticleCompleted(false);
   }, [currentContent]);
 
-  // Handle generating new content
+  // Handle new content generation - reset recording state only
   const handleNewContent = async () => {
+    // Only reset the recording state when new content is generated
+    // The actual content generation is handled by ConsolidatedReadingPractice
     setHasCompletedRecording(false);
-    try {
-      const response = await fetch('/api/content/sample');
-      if (!response.ok) {
-        throw new Error('Failed to fetch new content');
-      }
-      const newContent = await response.json() as ReadingContentType;
-      setCurrentContent(newContent);
-    } catch (error) {
-      console.error("Error loading new content:", error);
-    }
   };
 
   return (
