@@ -332,10 +332,10 @@ export default function Phrases() {
       // Start recording using the hook
       await startRecording();
 
-      toast({
-        title: "Recording Started",
-        description: `Recording phrase: "${phrase.text}"`,
-      });
+      //toast({
+       // title: "Recording Started",
+       // description: `Recording phrase: "${phrase.text}"`,
+      // });
     } catch (error) {
       console.error("Error starting recording:", error);
       toast({
