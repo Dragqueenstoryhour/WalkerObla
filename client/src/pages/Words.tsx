@@ -2355,26 +2355,26 @@ export default function Words() {
                     <div className="w-full max-w-md mx-auto">
                       {word.id === 'summary-card' ? (
                         // Summary Card - Match exact styling of regular word cards
-                      <Card className="h-full shadow-lg border-0 card-content w-full max-w-full overflow-hidden" style={{ backgroundColor: '#1947e5' }}>
-                        <CardHeader className="text-center text-white pb-4 relative overflow-hidden">
-                          {/* Celebratory particles effect */}
-                          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                            <div className="absolute top-4 left-4 w-2 h-2 bg-yellow-300 rounded-full animate-pulse"></div>
-                            <div className="absolute top-8 right-6 w-1 h-1 bg-white rounded-full animate-bounce"></div>
-                            <div className="absolute top-12 left-1/3 w-1.5 h-1.5 bg-yellow-200 rounded-full animate-ping"></div>
-                            <div className="absolute top-6 right-1/4 w-1 h-1 bg-white/80 rounded-full animate-pulse"></div>
-                          </div>
-                          <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2 relative z-10 break-words">
-                            🎉 Practice Session Complete! 🎉
-                          </CardTitle>
-                          <CardDescription className="text-white/90 mt-2 text-base relative z-10 break-words">
-                            Excellent work! You've completed your practice session
-                          </CardDescription>
-                        </CardHeader>
-                        
-                        <CardContent className="px-4 pb-4 text-white space-y-4 max-h-96 overflow-y-auto w-full">
-                          {/* Performance Bubbles */}
-                          <div className="grid grid-cols-4 gap-2 w-full">
+                        <Card className="h-full shadow-lg border-0 card-content w-full max-w-full overflow-hidden" style={{ backgroundColor: '#1947e5' }}>
+                          <CardHeader className="text-center text-white pb-4 relative overflow-hidden">
+                            {/* Celebratory particles effect */}
+                            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                              <div className="absolute top-4 left-4 w-2 h-2 bg-yellow-300 rounded-full animate-pulse"></div>
+                              <div className="absolute top-8 right-6 w-1 h-1 bg-white rounded-full animate-bounce"></div>
+                              <div className="absolute top-12 left-1/3 w-1.5 h-1.5 bg-yellow-200 rounded-full animate-ping"></div>
+                              <div className="absolute top-6 right-1/4 w-1 h-1 bg-white/80 rounded-full animate-pulse"></div>
+                            </div>
+                            <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2 relative z-10 break-words">
+                              🎉 Practice Session Complete! 🎉
+                            </CardTitle>
+                            <CardDescription className="text-white/90 mt-2 text-base relative z-10 break-words">
+                              Excellent work! You've completed your practice session
+                            </CardDescription>
+                          </CardHeader>
+                          
+                          <CardContent className="px-4 pb-4 text-white space-y-4 max-h-96 overflow-y-auto w-full">
+                            {/* Performance Bubbles */}
+                            <div className="grid grid-cols-4 gap-2 w-full">
                             {(() => {
                               const wordsWithScores = processedWords.filter(w => 
                                 w.assessmentResult && w.assessmentResult.pronunciationScore !== null && w.id !== 'summary-card'
@@ -2762,8 +2762,8 @@ export default function Words() {
                           </div>
                         )}
 
-                        </CardContent>
-                      </Card>
+                          </CardContent>
+                        </Card>
                       ) : (
                         <Card className="bg-white shadow-lg border-0 h-full card-content">
                           <CardContent className="p-6">
