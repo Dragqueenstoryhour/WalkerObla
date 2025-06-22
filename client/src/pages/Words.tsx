@@ -2351,7 +2351,8 @@ export default function Words() {
             <div className="embla" ref={emblaRef}>
               <div className="embla__container flex">
                 {processedWords.map((word, index) => (
-                  <div key={`${word.id}-${index}`} className="embla__slide flex-[0_0_100%] min-w-0 flex justify-center items-center">
+                  <div key={`${word.id}-${index}`} className="embla__slide flex-[0_0_100%] min-w-0 flex justify-center items-center px-4">
+                    <div className="w-full max-w-md mx-auto">
                     {word.id === 'summary-card' ? (
                       // Summary Card - Match exact styling of regular word cards
                       <Card className="h-full shadow-lg border-0 card-content w-full max-w-full overflow-hidden" style={{ backgroundColor: '#1947e5' }}>
@@ -2763,7 +2764,8 @@ export default function Words() {
 
                         </CardContent>
                       </Card>
-                    )}
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
