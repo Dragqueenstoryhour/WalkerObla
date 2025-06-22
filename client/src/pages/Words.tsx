@@ -2353,8 +2353,8 @@ export default function Words() {
                 {processedWords.map((word, index) => (
                   <div key={`${word.id}-${index}`} className="embla__slide flex-[0_0_100%] min-w-0 flex justify-center items-center px-4">
                     <div className="w-full max-w-md mx-auto">
-                    {word.id === 'summary-card' ? (
-                      // Summary Card - Match exact styling of regular word cards
+                      {word.id === 'summary-card' ? (
+                        // Summary Card - Match exact styling of regular word cards
                       <Card className="h-full shadow-lg border-0 card-content w-full max-w-full overflow-hidden" style={{ backgroundColor: '#1947e5' }}>
                         <CardHeader className="text-center text-white pb-4 relative overflow-hidden">
                           {/* Celebratory particles effect */}
@@ -2764,6 +2764,30 @@ export default function Words() {
 
                         </CardContent>
                       </Card>
+                      ) : (
+                        <Card className="bg-white shadow-lg border-0 h-full card-content">
+                          <CardContent className="p-6">
+                            <div className="text-center">
+                              <div className="text-3xl font-bold mb-2" style={{ color: '#1947e5' }}>
+                                {word.text}
+                              </div>
+                              {word.syllabication && (
+                                <div className="text-lg text-gray-600 mb-4">
+                                  {word.syllabication}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex justify-center">
+                              <Button
+                                onClick={() => startWordPractice(index)}
+                                className="bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
+                              >
+                                <MicIcon className="w-4 h-4 mr-2" />
+                                Start Recording
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
                       )}
                     </div>
                   </div>

@@ -997,7 +997,8 @@ export default function Phrases() {
             <div className="embla overflow-hidden" ref={emblaRef}>
               <div className="embla__container flex">
                 {processedPhrases.map((phrase, index) => (
-                  <div key={`${phrase.id}-${index}`} className="embla__slide flex-[0_0_100%] px-2 flex justify-center">
+                  <div key={`${phrase.id}-${index}`} className="embla__slide flex-[0_0_100%] min-w-0 flex justify-center items-center px-4">
+                    <div className="w-full max-w-md mx-auto">
                     {phrase.id === 'summary-card' ? (
                       // Summary Card - Match exact styling of regular phrase cards
                       <Card className="w-full max-w-xs sm:max-w-sm shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
