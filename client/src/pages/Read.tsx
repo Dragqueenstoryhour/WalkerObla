@@ -93,7 +93,7 @@ const Read = () => {
         onHelpClick={() => setShowHelpModal(true)}
       />
 
-      <main className="container flex-1 px-4 py-6 md:py-8">
+      <main className="container flex flex-col items-center justify-center mx-auto px-4 py-6 md:py-8">
         {isLoading ? (
           <div className="flex justify-center items-center h-52">
             <div className="loader animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>

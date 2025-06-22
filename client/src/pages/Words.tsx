@@ -162,7 +162,7 @@ const mapSyllablesToDisplay = (syllabication: string, syllables: any[]): Array<{
       color: '#ffffff' // Default white color
     }));
   }
-  
+
   const displaySyllables = syllabication.split('-');
   const resultSyllables = displaySyllables.map((displaySyllable, index) => {
     // Try to match with assessment syllables
@@ -171,7 +171,7 @@ const mapSyllablesToDisplay = (syllabication: string, syllables: any[]): Array<{
       (s.syllable.toLowerCase().includes(displaySyllable.toLowerCase()) ||
       s.grapheme.toLowerCase().includes(displaySyllable.toLowerCase()))
     );
-    
+
     if (matchingSyllable) {
       return {
         text: displaySyllable,
@@ -184,7 +184,7 @@ const mapSyllablesToDisplay = (syllabication: string, syllables: any[]): Array<{
       };
     }
   });
-  
+
   return resultSyllables;
 };
 
@@ -330,7 +330,7 @@ export default function Words() {
       // Clean up audio event listeners
       if (visemeAudioRef.current) {
         const audio = visemeAudioRef.current;
-        
+
         if (currentEventListenersRef.current.timeupdate) {
           audio.removeEventListener("timeupdate", currentEventListenersRef.current.timeupdate);
         }
@@ -502,9 +502,9 @@ export default function Words() {
     console.log("Preloading all viseme images for optimal performance...");
     const allVisemeIds = Array.from({ length: 22 }, (_, i) => i); // Visemes 0-21
     let loadedCount = 0;
-    
+
     setLoadingProgress(prev => ({ ...prev, images: 0 }));
-    
+
     const loadPromises = allVisemeIds.map((id) => {
       return new Promise<HTMLImageElement>((resolve, reject) => {
         // Check if image is already loaded and cached with proper validation
@@ -517,7 +517,7 @@ export default function Words() {
         }
 
         const img = new Image();
-        
+
         img.onload = () => {
           loadedCount++;
           const progress = Math.round((loadedCount / allVisemeIds.length) * 100);
@@ -525,7 +525,7 @@ export default function Words() {
           console.log(`Successfully preloaded viseme image ${id} (${progress}%)`);
           resolve(img);
         };
-        
+
         img.onerror = (e) => {
           console.error(`Failed to preload viseme image ${id}:`, e);
           reject(new Error(`Failed to load viseme image ${id}`));
@@ -547,13 +547,13 @@ export default function Words() {
 
     try {
       const loadedImages = await Promise.all(loadPromises);
-      
+
       // Store all preloaded images with direct HTMLImageElement access
       const imageMap: { [key: number]: HTMLImageElement } = {};
       allVisemeIds.forEach((id, index) => {
         imageMap[id] = loadedImages[index];
       });
-      
+
       setLoadingProgress(prev => ({ ...prev, images: 100 }));
       console.log("All viseme images preloaded successfully");
       return imageMap;
@@ -638,10 +638,10 @@ export default function Words() {
 
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
-      
+
       const audio = new Audio(audioUrl);
       tutorialAudioRef.current = audio;
-      
+
       // Add event listeners for better error handling
       audio.addEventListener('loadeddata', () => {
         audio.play().catch(error => {
@@ -649,11 +649,11 @@ export default function Words() {
           setIsSpeaking(false);
         });
       });
-      
+
       audio.addEventListener('ended', () => {
         URL.revokeObjectURL(audioUrl);
         setIsSpeaking(false);
-        
+
         // Auto-advance to next step after TTS finishes if not manually advanced
         if (!manualAdvance && stepIndex < tutorialSteps.length - 1) {
           setTimeout(() => {
@@ -663,12 +663,12 @@ export default function Words() {
         // Reset manual advance flag after TTS ends
         setManualAdvance(false);
       });
-      
+
       audio.addEventListener('error', (error) => {
         console.error('Audio playback error:', error);
         setIsSpeaking(false);
       });
-      
+
       audio.load();
     } catch (error) {
       console.error('Error in tutorial TTS:', error);
@@ -689,7 +689,7 @@ export default function Words() {
         tutorialAudioRef.current.pause(); // Stop any ongoing speech
       }
       setIsSpeaking(false);
-      
+
       // Play completion message when finished
       if (status === STATUS.FINISHED) {
         setTimeout(() => {
@@ -703,7 +703,7 @@ export default function Words() {
       // Set manual advance flag when user clicks Next
       if (action === ACTIONS.NEXT) {
         setManualAdvance(true);
-        
+
         // Stop current TTS before speaking next step
         if (tutorialAudioRef.current) {
           tutorialAudioRef.current.pause();
@@ -717,12 +717,12 @@ export default function Words() {
   // Handle TTS for tutorial steps based on stepIndex changes
   useEffect(() => {
     if (!runTutorial || !tutorialSteps[stepIndex]) return;
-    
+
     // Delay TTS to allow Joyride to render the step
     const timer = setTimeout(() => {
       speakTutorialInstruction(tutorialSteps[stepIndex].content);
     }, 1000);
-    
+
     return () => clearTimeout(timer);
   }, [stepIndex, runTutorial]);
 
@@ -785,12 +785,12 @@ export default function Words() {
       if (emblaApi) {
         emblaApi.scrollTo(0);
       }
-      
+
       // Update topic to show focused practice
       setAiGenerateTopic(`Words that include "${targetSound}"`);
-      
+
       scrollToPracticeSection();
-      
+
       // Show success message
       toast({
         title: "Focused Practice Ready",
@@ -829,7 +829,7 @@ export default function Words() {
     setProcessedWords(prev => [...prev, summaryWord]);
     setShowSummary(true);
     setIsGeneratingFeedback(true);
-    
+
     // Navigate to the summary card
     setTimeout(() => {
       if (emblaApi) {
@@ -890,9 +890,9 @@ export default function Words() {
       "Technology and Innovation",
       "Entertainment and Hobbies"
     ];
-    
+
     const randomTopic = topics[Math.floor(Math.random() * topics.length)];
-    
+
     // Reset session and generate new words
     setShowSummary(false);
     setSummaryFeedback(null);
@@ -901,7 +901,7 @@ export default function Words() {
     setCurrentCarouselIndex(0);
     // Reset topic selection to null to use topic-based generation
     setSelectedTopicType(null);
-    
+
     // Generate new words for the random topic
     handleGenerateTopicWords(randomTopic);
   };
@@ -914,7 +914,7 @@ export default function Words() {
     setShowFeedbackInSummary(true);
     setProcessedWords([]);
     setCurrentCarouselIndex(0);
-    
+
     // Handle different types of practice suggestions
     if (problemSound === "difficulty_increase") {
       // For high performers, increase difficulty and generate new topic words
@@ -922,7 +922,7 @@ export default function Words() {
       const newDifficultyNum = Math.min(currentDifficultyNum + 1, 8);
       const newDifficulty = newDifficultyNum.toString() as DifficultyLevel;
       setDifficulty(newDifficulty);
-      
+
       // Generate words with increased difficulty from random topic
       const randomTopics = [
         "Animals", "Food", "Travel", "Sports", "Music", "Nature", "Technology", "Science",
@@ -957,7 +957,7 @@ export default function Words() {
     } else {
       // For any other feedback, check if problemSound is already a clean topic name or extract from quotes
       let extractedTopic = null;
-      
+
       // First check if problemSound is already a clean topic name (direct from AI feedback)
       if (problemSound && problemSound.length <= 30 && !problemSound.includes('.') && 
           !problemSound.includes('?') && !problemSound.includes('!') && 
@@ -1031,7 +1031,7 @@ export default function Words() {
     const preloadAllVisemeImages = async () => {
       console.log("Preloading all viseme images for optimal performance...");
       const allVisemeIds = Array.from({ length: 22 }, (_, i) => i); // Visemes 0-21
-      
+
       try {
         const loadPromises = allVisemeIds.map((id) => {
           return new Promise<HTMLImageElement>((resolve, reject) => {
@@ -1048,7 +1048,7 @@ export default function Words() {
         allVisemeIds.forEach((id, index) => {
           imageMap[id] = loadedImages[index];
         });
-        
+
         setPreloadedImages(imageMap);
         console.log("All viseme images preloaded successfully");
       } catch (error) {
@@ -1513,12 +1513,12 @@ export default function Words() {
         }
 
         const img = new Image();
-        
+
         img.onload = () => {
           console.log(`Successfully preloaded viseme image ${id}`);
           resolve(img);
         };
-        
+
         img.onerror = (e) => {
           console.error(`Failed to preload viseme image ${id}:`, e);
           reject(new Error(`Failed to load viseme image ${id}`));
@@ -1540,13 +1540,13 @@ export default function Words() {
 
     try {
       const loadedImages = await Promise.all(loadPromises);
-      
+
       // Update preloaded images state with all loaded images
       const newPreloadedImages: { [key: number]: HTMLImageElement } = { ...preloadedImages };
       idsToLoad.forEach((id, index) => {
         newPreloadedImages[id] = loadedImages[index];
       });
-      
+
       setPreloadedImages(newPreloadedImages);
       setImagesReady(true);
       console.log("All viseme images preloaded successfully");
@@ -1650,7 +1650,7 @@ export default function Words() {
 
       const audio = visemeAudioRef.current;
       setLoadingProgress(prev => ({ ...prev, audio: 0 }));
-      
+
       const handleCanPlayThrough = () => {
         console.log("Audio ready for synchronized playback - canplaythrough event received");
         setAudioReady(true);
@@ -1690,7 +1690,7 @@ export default function Words() {
       audio.addEventListener('error', handleError);
       audio.addEventListener('loadstart', handleLoadStart);
       audio.addEventListener('progress', handleProgress);
-      
+
       // Set audio source and preload
       audio.src = audioUrl;
       audio.preload = 'auto';
@@ -1748,7 +1748,7 @@ export default function Words() {
 
     try {
       const audio = visemeAudioRef.current;
-      
+
       // Reset audio to beginning
       audio.currentTime = 0;
       audio.playbackRate = 1.0;
@@ -1765,7 +1765,7 @@ export default function Words() {
           audio.removeEventListener("error", currentEventListenersRef.current.error);
         }
         currentEventListenersRef.current = {};
-        
+
         // Cancel any pending animation frames
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
@@ -1780,17 +1780,17 @@ export default function Words() {
       let currentVisemeIndex = 0;
       const syncVisemeWithAudio = () => {
         if (!audio || audio.paused || audio.ended) return;
-        
+
         const currentTime = audio.currentTime * 1000; // Convert to milliseconds
-        
+
         // Optimized nextVisemeIndex lookup to minimize drift
         while (currentVisemeIndex < visemeData.length - 1 && 
                currentTime >= visemeData[currentVisemeIndex + 1].audioOffset) {
           currentVisemeIndex++;
         }
-        
+
         const targetVisemeId = visemeData[currentVisemeIndex]?.visemeId || 0;
-        
+
         // Update viseme with requestAnimationFrame for smooth rendering
         setCurrentVisemeId(prevId => {
           if (prevId !== targetVisemeId) {
@@ -1799,7 +1799,7 @@ export default function Words() {
           }
           return prevId;
         });
-        
+
         // Schedule next frame
         animationFrameRef.current = requestAnimationFrame(syncVisemeWithAudio);
       };
@@ -1817,7 +1817,7 @@ export default function Words() {
         setIsPlayingVisemes(false);
         setCurrentVisemeId(0);
         cleanupEventListeners();
-        
+
         toast({
           title: "Audio Error",
           description: "Audio playback encountered an error.",
@@ -1837,17 +1837,17 @@ export default function Words() {
 
       // Start audio playback and animation synchronization
       await audio.play();
-      
+
       // Start requestAnimationFrame-based synchronization for smooth visuals
       animationFrameRef.current = requestAnimationFrame(syncVisemeWithAudio);
-      
+
       console.log("Synchronized audio-visual playback started successfully with RAF");
 
     } catch (error) {
       console.error("Error in synchronized playback:", error);
       setIsPlayingVisemes(false);
       setCurrentVisemeId(0);
-      
+
       toast({
         title: "Playback Error",
         description: "Could not play the animation. Please try again.",
@@ -1874,7 +1874,7 @@ export default function Words() {
 
     if (visemeAudioRef.current) {
       const audio = visemeAudioRef.current;
-      
+
       // Clean up event listeners using the stored references
       if (currentEventListenersRef.current.timeupdate) {
         audio.removeEventListener("timeupdate", currentEventListenersRef.current.timeupdate);
@@ -1886,7 +1886,7 @@ export default function Words() {
         audio.removeEventListener("error", currentEventListenersRef.current.error);
       }
       currentEventListenersRef.current = {};
-      
+
       audio.pause();
       audio.currentTime = 0;
     }
@@ -2093,7 +2093,7 @@ export default function Words() {
           </div>
 
           <div className="space-y-4">
-            
+
             {/* 5. Enhanced Loading States and User Feedback */}
             {(isGeneratingVisemes || !canPlay) && (
               <div className="bg-white rounded-lg p-4 border border-blue-200">
@@ -2106,7 +2106,7 @@ export default function Words() {
                     </div>
                     <Progress value={loadingProgress.images} className="h-2" />
                   </div>
-                  
+
                   {/* Audio Loading Progress */}
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
@@ -2115,7 +2115,7 @@ export default function Words() {
                     </div>
                     <Progress value={loadingProgress.audio} className="h-2" />
                   </div>
-                  
+
                   {/* Status Messages */}
                   <div className="text-center pt-2">
                     {isGeneratingVisemes && (
@@ -2140,7 +2140,7 @@ export default function Words() {
               {!isGeneratingVisemes && canPlay && (
                 <div className="space-y-3">
                   <p className="text-green-600 font-medium">Animation ready to play!</p>
-                  
+
                   <div className="flex justify-center space-x-3">
                     <Button
                       onClick={playVisemeAnimation}
@@ -2159,7 +2159,7 @@ export default function Words() {
                         </>
                       )}
                     </Button>
-                    
+
                     {isPlayingVisemes && (
                       <Button
                         onClick={stopVisemeAnimation}
@@ -2274,572 +2274,574 @@ export default function Words() {
         </Card>
 
         {/* Practice section */}
-        {processedWords.length > 0 && (
-          <div id="practice-words-section" className="space-y-6 practice-cards-area">
-            {/* Progress indicator */}
-            <div className="bg-white rounded-lg p-4 shadow-lg border-0">
-              <Progress 
-                value={((currentCarouselIndex + 1) / processedWords.length) * 100} 
-                className="h-2 [&>div]:bg-[#1947e5]"
-              />
-            </div>
+                {processedWords.length > 0 && (
+                  <div id="practice-words-section" className="space-y-6 practice-cards-area">
+                    {/* Progress indicator */}
+                    <div className="bg-white rounded-lg p-4 shadow-lg border-0 max-w-xl mx-auto">
+                      <Progress 
+                        value={((currentCarouselIndex + 1) / processedWords.length) * 100} 
+                        className="h-2 [&>div]:bg-[#1947e5]"
+                      />
+                    </div>
 
-            {/* Navigation Controls */}
-            <div className="flex justify-between items-center bg-white rounded-lg p-4 shadow-lg border-0">
-              <Button
-                onClick={scrollPrev}
-                disabled={!canScrollPrev}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-gray-600">
-                  {showSummary && currentCarouselIndex >= processedWords.length - 1 
-                    ? `${processedWords.filter(w => w.id !== 'summary-card').length} of ${processedWords.filter(w => w.id !== 'summary-card').length}` 
-                    : `${currentCarouselIndex + 1} of ${processedWords.filter(w => w.id !== 'summary-card').length}`}
-                </span>
-              </div>
+                    {/* Navigation Controls */}
+                    <div className="flex justify-between items-center bg-white rounded-lg p-4 shadow-lg border-0 max-w-xl mx-auto">
+                      <Button
+                        onClick={scrollPrev}
+                        disabled={!canScrollPrev}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous
+                      </Button>
 
-              {/* Show Finish button only at the end instead of Next, or Practice More if on summary */}
-              {showSummary ? (
-                <Button
-                  onClick={handlePracticeMoreWords}
-                  className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-                  size="sm"
-                >
-                  Practice More Words
-                </Button>
-              ) : (!canScrollNext && processedWords.filter(w => w.status === 'complete' && w.id !== 'summary-card').length > 0) ? (
-                <Button
-                  onClick={handleFinishPractice}
-                  disabled={isGeneratingFeedback}
-                  className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-                  size="sm"
-                >
-                  {isGeneratingFeedback ? (
-                    <>
-                      <RotateCw className="h-4 w-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Flag className="h-4 w-4" />
-                      Finish
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <Button
-                  onClick={scrollNext}
-                  disabled={!canScrollNext}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2"
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm text-gray-600">
+                          {showSummary && currentCarouselIndex >= processedWords.length - 1 
+                            ? `${processedWords.filter(w => w.id !== 'summary-card').length} of ${processedWords.filter(w => w.id !== 'summary-card').length}` 
+                            : `${currentCarouselIndex + 1} of ${processedWords.filter(w => w.id !== 'summary-card').length}`}
+                        </span>
+                      </div>
 
-            {/* Carousel */}
-            <div className="embla" ref={emblaRef}>
-              <div className="embla__container flex">
-                {processedWords.map((word, index) => (
-                  <div key={`${word.id}-${index}`} className="embla__slide flex-[0_0_100%] min-w-0 flex justify-center items-center">
-                    {word.id === 'summary-card' ? (
-                      // Summary Card - Match exact styling of regular word cards
-                      <Card className="h-full shadow-lg border-0 card-content w-full max-w-full overflow-hidden" style={{ backgroundColor: '#1947e5' }}>
-                        <CardHeader className="text-center text-white pb-4 relative overflow-hidden">
-                          {/* Celebratory particles effect */}
-                          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                            <div className="absolute top-4 left-4 w-2 h-2 bg-yellow-300 rounded-full animate-pulse"></div>
-                            <div className="absolute top-8 right-6 w-1 h-1 bg-white rounded-full animate-bounce"></div>
-                            <div className="absolute top-12 left-1/3 w-1.5 h-1.5 bg-yellow-200 rounded-full animate-ping"></div>
-                            <div className="absolute top-6 right-1/4 w-1 h-1 bg-white/80 rounded-full animate-pulse"></div>
-                          </div>
-                          <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2 relative z-10 break-words">
-                            🎉 Practice Session Complete! 🎉
-                          </CardTitle>
-                          <CardDescription className="text-white/90 mt-2 text-base relative z-10 break-words">
-                            Excellent work! You've completed your practice session
-                          </CardDescription>
-                        </CardHeader>
-                        
-                        <CardContent className="px-4 pb-4 text-white space-y-4 max-h-96 overflow-y-auto w-full">
-                          {/* Performance Bubbles */}
-                          <div className="grid grid-cols-4 gap-2 w-full">
-                            {(() => {
-                              const wordsWithScores = processedWords.filter(w => 
-                                w.assessmentResult && w.assessmentResult.pronunciationScore !== null && w.id !== 'summary-card'
-                              );
-                              
-                              if (wordsWithScores.length === 0) {
-                                return (
-                                  <div className="col-span-4 text-center p-2 bg-white rounded-lg">
-                                    <div className="text-sm text-gray-700">No scores available yet</div>
-                                    <div className="text-xs text-gray-500">Practice some words to see your results</div>
-                                  </div>
-                                );
-                              }
-                              
-                              const avgPronunciation = Math.round(wordsWithScores.reduce((sum, w) => sum + (w.assessmentResult?.pronunciationScore || 0), 0) / wordsWithScores.length);
-                              const avgAccuracy = Math.round(wordsWithScores.reduce((sum, w) => sum + (w.assessmentResult?.accuracyScore || 0), 0) / wordsWithScores.length);
-                              const avgFluency = Math.round(wordsWithScores.reduce((sum, w) => sum + (w.assessmentResult?.fluencyScore || 0), 0) / wordsWithScores.length);
-                              const avgCompleteness = Math.round(wordsWithScores.reduce((sum, w) => sum + (w.assessmentResult?.completenessScore || 0), 0) / wordsWithScores.length);
-                              
-                              return (
-                                <>
-                                  <div className="text-center p-2 bg-white rounded-lg">
-                                    <div className="text-lg font-bold text-[#1947e5]">{avgPronunciation}%</div>
-                                    <div className="text-xs text-gray-600">Pronunciation</div>
-                                  </div>
-                                  <div className="text-center p-2 bg-white rounded-lg">
-                                    <div className="text-lg font-bold text-[#1947e5]">{avgAccuracy}%</div>
-                                    <div className="text-xs text-gray-600">Accuracy</div>
-                                  </div>
-                                  <div className="text-center p-2 bg-white rounded-lg">
-                                    <div className="text-lg font-bold text-[#1947e5]">{avgFluency}%</div>
-                                    <div className="text-xs text-gray-600">Fluency</div>
-                                  </div>
-                                  <div className="text-center p-2 bg-white rounded-lg">
-                                    <div className="text-lg font-bold text-[#1947e5]">{avgCompleteness}%</div>
-                                    <div className="text-xs text-gray-600">Completeness</div>
-                                  </div>
-                                </>
-                              );
-                            })()}
-                          </div>
-
-                          {/* AI Feedback Section */}
+                      {/* Show Finish button only at the end instead of Next, or Practice More if on summary */}
+                      {showSummary ? (
+                        <Button
+                          onClick={handlePracticeMoreWords}
+                          className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                          size="sm"
+                        >
+                          Practice More Words
+                        </Button>
+                      ) : (!canScrollNext && processedWords.filter(w => w.status === 'complete' && w.id !== 'summary-card').length > 0) ? (
+                        <Button
+                          onClick={handleFinishPractice}
+                          disabled={isGeneratingFeedback}
+                          className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                          size="sm"
+                        >
                           {isGeneratingFeedback ? (
-                            <div className="p-3 bg-white rounded-lg w-full max-w-full">
-                              <h4 className="text-sm font-semibold text-[#1947e5] mb-2 flex items-center gap-2">
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#1947e5] flex-shrink-0"></div>
-                                <span className="break-words">Generating Feedback...</span>
-                              </h4>
-                              <p className="text-gray-600 text-xs break-words">Analyzing your practice session</p>
-                            </div>
-                          ) : summaryFeedback && showFeedbackInSummary && summaryFeedback.practicePrompt && (
-                            <div className="p-3 bg-white rounded-lg w-full max-w-full overflow-hidden">
-                              <h4 className="text-sm font-semibold text-[#1947e5] mb-2 flex items-center gap-2">
-                                <Lightbulb className="h-4 w-4 flex-shrink-0" />
-                                <span className="break-words">Personalized Feedback</span>
-                              </h4>
-                              <div className="max-h-20 overflow-y-auto mb-3">
-                                <p className="text-gray-700 text-xs break-words whitespace-normal leading-tight">{summaryFeedback.practicePrompt.question}</p>
-                              </div>
-                              <div className="flex gap-2 justify-center">
-                                <Button
-                                  onClick={() => handleSummaryPracticePrompt(summaryFeedback.practicePrompt!.problemSound)}
-                                  className="bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 text-xs px-3 py-1"
-                                  size="sm"
-                                >
-                                  Yes
-                                </Button>
-                                <Button
-                                  onClick={closeFeedbackSuggestion}
-                                  className="bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0 text-xs px-3 py-1"
-                                  size="sm"
-                                >
-                                  No Thanks
-                                </Button>
-                              </div>
-                            </div>
+                            <>
+                              <RotateCw className="h-4 w-4 animate-spin" />
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <Flag className="h-4 w-4" />
+                              Finish
+                            </>
                           )}
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={scrollNext}
+                          disabled={!canScrollNext}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2"
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
 
-                          {/* Words Below 70% */}
-                          {(() => {
-                            const wordsBelow70 = processedWords.filter(w => 
-                              w.assessmentResult && w.assessmentResult.pronunciationScore < 70 && w.id !== 'summary-card'
-                            );
-                            
-                            if (wordsBelow70.length > 0) {
-                              return (
-                                <div className="w-full max-w-full p-3 bg-white rounded-lg">
-                                  <h4 className="text-sm font-semibold text-[#1947e5] mb-2">Words to Practice More</h4>
-                                  <div className="space-y-1 max-h-24 overflow-y-auto">
-                                    {wordsBelow70.slice(0, 3).map((w, i) => (
-                                      <div key={i} className="flex items-center justify-between p-2 bg-red-50 rounded border border-red-200">
-                                        <div className="flex items-center gap-1 flex-1 min-w-0">
-                                          <span className="text-gray-800 text-xs font-medium truncate">{w.text}</span>
-                                          {w.syllabication && (
-                                            <span className="text-gray-600 text-xs truncate">({w.syllabication})</span>
-                                          )}
+                    {/* Carousel - Centered with max width */}
+                    <div className="flex justify-center">
+                      <div className="embla w-full max-w-lg" ref={emblaRef}>
+                        <div className="embla__container flex">
+                          {processedWords.map((word, index) => (
+                            <div key={`${word.id}-${index}`} className="embla__slide flex-[0_0_100%] px-2">
+                              {word.id === 'summary-card' ? (
+                                // Summary Card - Match exact styling of regular word cards
+                                <Card className="h-full shadow-lg border-0 card-content w-full max-w-full overflow-hidden" style={{ backgroundColor: '#1947e5' }}>
+                                  <CardHeader className="text-center text-white pb-4 relative overflow-hidden">
+                                    {/* Celebratory particles effect */}
+                                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                                      <div className="absolute top-4 left-4 w-2 h-2 bg-yellow-300 rounded-full animate-pulse"></div>
+                                      <div className="absolute top-8 right-6 w-1 h-1 bg-white rounded-full animate-bounce"></div>
+                                      <div className="absolute top-12 left-1/3 w-1.5 h-1.5 bg-yellow-200 rounded-full animate-ping"></div>
+                                      <div className="absolute top-6 right-1/4 w-1 h-1 bg-white/80 rounded-full animate-pulse"></div>
+                                    </div>
+                                    <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2 relative z-10 break-words">
+                                      🎉 Practice Session Complete! 🎉
+                                    </CardTitle>
+                                    <CardDescription className="text-white/90 mt-2 text-base relative z-10 break-words">
+                                      Excellent work! You've completed your practice session
+                                    </CardDescription>
+                                  </CardHeader>
+
+                                  <CardContent className="px-4 pb-4 text-white space-y-4 max-h-96 overflow-y-auto w-full">
+                                    {/* Performance Bubbles */}
+                                    <div className="grid grid-cols-4 gap-2 w-full">
+                                      {(() => {
+                                        const wordsWithScores = processedWords.filter(w => 
+                                          w.assessmentResult && w.assessmentResult.pronunciationScore !== null && w.id !== 'summary-card'
+                                        );
+
+                                        if (wordsWithScores.length === 0) {
+                                          return (
+                                            <div className="col-span-4 text-center p-2 bg-white rounded-lg">
+                                              <div className="text-sm text-gray-700">No scores available yet</div>
+                                              <div className="text-xs text-gray-500">Practice some words to see your results</div>
+                                            </div>
+                                          );
+                                        }
+
+                                        const avgPronunciation = Math.round(wordsWithScores.reduce((sum, w) => sum + (w.assessmentResult?.pronunciationScore || 0), 0) / wordsWithScores.length);
+                                        const avgAccuracy = Math.round(wordsWithScores.reduce((sum, w) => sum + (w.assessmentResult?.accuracyScore || 0), 0) / wordsWithScores.length);
+                                        const avgFluency = Math.round(wordsWithScores.reduce((sum, w) => sum + (w.assessmentResult?.fluencyScore || 0), 0) / wordsWithScores.length);
+                                        const avgCompleteness = Math.round(wordsWithScores.reduce((sum, w) => sum + (w.assessmentResult?.completenessScore || 0), 0) / wordsWithScores.length);
+
+                                        return (
+                                          <>
+                                            <div className="text-center p-2 bg-white rounded-lg">
+                                              <div className="text-lg font-bold text-[#1947e5]">{avgPronunciation}%</div>
+                                              <div className="text-xs text-gray-600">Pronunciation</div>
+                                            </div>
+                                            <div className="text-center p-2 bg-white rounded-lg">
+                                              <div className="text-lg font-bold text-[#1947e5]">{avgAccuracy}%</div>
+                                              <div className="text-xs text-gray-600">Accuracy</div>
+                                            </div>
+                                            <div className="text-center p-2 bg-white rounded-lg">
+                                              <div className="text-lg font-bold text-[#1947e5]">{avgFluency}%</div>
+                                              <div className="text-xs text-gray-600">Fluency</div>
+                                            </div>
+                                            <div className="text-center p-2 bg-white rounded-lg">
+                                              <div className="text-lg font-bold text-[#1947e5]">{avgCompleteness}%</div>
+                                              <div className="text-xs text-gray-600">Completeness</div>
+                                            </div>
+                                          </>
+                                        );
+                                      })()}
+                                    </div>
+
+                                    {/* AI Feedback Section */}
+                                    {isGeneratingFeedback ? (
+                                      <div className="p-3 bg-white rounded-lg w-full max-w-full">
+                                        <h4 className="text-sm font-semibold text-[#1947e5] mb-2 flex items-center gap-2">
+                                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#1947e5] flex-shrink-0"></div>
+                                          <span className="break-words">Generating Feedback...</span>
+                                        </h4>
+                                        <p className="text-gray-600 text-xs break-words">Analyzing your practice session</p>
+                                      </div>
+                                    ) : summaryFeedback && showFeedbackInSummary && summaryFeedback.practicePrompt && (
+                                      <div className="p-3 bg-white rounded-lg w-full max-w-full overflow-hidden">
+                                        <h4 className="text-sm font-semibold text-[#1947e5] mb-2 flex items-center gap-2">
+                                          <Lightbulb className="h-4 w-4 flex-shrink-0" />
+                                          <span className="break-words">Personalized Feedback</span>
+                                        </h4>
+                                        <div className="max-h-20 overflow-y-auto mb-3">
+                                          <p className="text-gray-700 text-xs break-words whitespace-normal leading-tight">{summaryFeedback.practicePrompt.question}</p>
                                         </div>
-                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                        <div className="flex gap-2 justify-center">
                                           <Button
-                                            onClick={() => {
-                                              // Find the word index in processedWords and save it
-                                              const wordIndex = processedWords.findIndex(word => word.text === w.text);
-                                              if (wordIndex !== -1) {
-                                                saveWordToCollection(wordIndex);
-                                              }
-                                            }}
-                                            variant="outline"
+                                            onClick={() => handleSummaryPracticePrompt(summaryFeedback.practicePrompt!.problemSound)}
+                                            className="bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 text-xs px-3 py-1"
                                             size="sm"
-                                            className={`h-6 px-2 text-xs border-0 ${
-                                              savedWords.has(w.text)
-                                                ? "bg-green-600 hover:bg-green-700 text-white"
-                                                : "bg-[#6366F1] hover:bg-[#5855EB] text-white"
-                                            }`}
-                                            disabled={savedWords.has(w.text)}
                                           >
-                                            <Star className={`h-3 w-3 ${savedWords.has(w.text) ? 'fill-white' : ''}`} />
+                                            Yes
                                           </Button>
-                                          <span className="text-red-600 text-xs font-bold">{Math.round(w.assessmentResult?.pronunciationScore || 0)}%</span>
+                                          <Button
+                                            onClick={closeFeedbackSuggestion}
+                                            className="bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0 text-xs px-3 py-1"
+                                            size="sm"
+                                          >
+                                            No Thanks
+                                          </Button>
                                         </div>
                                       </div>
-                                    ))}
+                                    )}
+
+                                    {/* Words Below 70% */}
+                                    {(() => {
+                                      const wordsBelow70 = processedWords.filter(w => 
+                                        w.assessmentResult && w.assessmentResult.pronunciationScore < 70 && w.id !== 'summary-card'
+                                      );
+
+                                      if (wordsBelow70.length > 0) {
+                                        return (
+                                          <div className="w-full max-w-full p-3 bg-white rounded-lg">
+                                            <h4 className="text-sm font-semibold text-[#1947e5] mb-2">Words to Practice More</h4>
+                                            <div className="space-y-1 max-h-24 overflow-y-auto">
+                                              {wordsBelow70.slice(0, 3).map((w, i) => (
+                                                <div key={i} className="flex items-center justify-between p-2 bg-red-50 rounded border border-red-200">
+                                                  <div className="flex items-center gap-1 flex-1 min-w-0">
+                                                    <span className="text-gray-800 text-xs font-medium truncate">{w.text}</span>
+                                                    {w.syllabication && (
+                                                      <span className="text-gray-600 text-xs truncate">({w.syllabication})</span>
+                                                    )}
+                                                  </div>
+                                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                                    <Button
+                                                      onClick={() => {
+                                                        // Find the word index in processedWords and save it
+                                                        const wordIndex = processedWords.findIndex(word => word.text === w.text);
+                                                        if (wordIndex !== -1) {
+                                                          saveWordToCollection(wordIndex);
+                                                        }
+                                                      }}
+                                                      variant="outline"
+                                                      size="sm"
+                                                      className={`h-6 px-2 text-xs border-0 ${
+                                                        savedWords.has(w.text)
+                                                          ? "bg-green-600 hover:bg-green-700 text-white"
+                                                          : "bg-[#6366F1] hover:bg-[#5855EB] text-white"
+                                                      }`}
+                                                      disabled={savedWords.has(w.text)}
+                                                    >
+                                                      <Star className={`h-3 w-3 ${savedWords.has(w.text) ? 'fill-white' : ''}`} />
+                                                    </Button>
+                                                    <span className="text-red-600 text-xs font-bold">{Math.round(w.assessmentResult?.pronunciationScore || 0)}%</span>
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
+                                  </CardContent>
+                                </Card>
+                              ) : (
+                                // Regular Word Card
+                                <Card className="h-full shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
+                                  <CardHeader className="text-center">
+                                    <CardTitle className="text-3xl font-bold text-white">{word.text}</CardTitle>
+                                  {word.syllabication && (
+                                    <div className="text-lg italic mt-2">
+                                      {word.status === "complete" && word.assessmentResult?.wordLevelResults?.[0] && 
+                                       (word.assessmentResult.wordLevelResults[0] as any).syllables ? (
+                                        // Show color-coded syllables based on assessment results
+                                        mapSyllablesToDisplay(word.syllabication, (word.assessmentResult.wordLevelResults[0] as any).syllables).map((syllable, index) => (
+                                          <span 
+                                            key={index}
+                                            style={{ color: syllable.color }}
+                                            className="font-semibold"
+                                          >
+                                            {syllable.text}
+                                            {index < mapSyllablesToDisplay(word.syllabication || '', (word.assessmentResult?.wordLevelResults?.[0] as any)?.syllables || []).length - 1 && '-'}
+                                          </span>
+                                        ))
+                                      ) : (
+                                        // Default display when no assessment data is available
+                                        <span className="text-white/80">{word.syllabication}</span>
+                                      )}
+                                    </div>
+                                  )}
+                                </CardHeader>
+
+                                <CardContent className="space-y-4">
+                                  {/* Recording Controls */}
+                                  <div className="flex justify-center gap-2">
+                                    {word.status === "idle" && (
+                                      <Button
+                                        onClick={() => startWordPractice(index)}
+                                        className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 start-recording-button"
+                                        disabled={isRecording || isProcessingRecording}
+                                      >
+                                        <Mic className="h-5 w-5" />
+                                        Start Recording
+                                      </Button>
+                                    )}
+
+                                    {word.status === "recording" && (
+                                      <Button
+                                        onClick={stopWordPractice}
+                                        variant="destructive"
+                                        className="flex items-center gap-2 stop-recording-button"
+                                      >
+                                        <StopCircleIcon className="h-4 w-4" />
+                                        Stop Recording
+                                      </Button>
+                                    )}
+
+                                    {word.status === "assessing" && (
+                                      <Button disabled className="flex items-center gap-2">
+                                        <RotateCw className="h-4 w-4 animate-spin" />
+                                        Analyzing...
+                                      </Button>
+                                    )}
+
+                                    {word.status === "complete" && (
+                                      <div className="flex gap-2">
+                                        <Button
+                                          onClick={() => startWordPractice(index)}
+                                          className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
+                                        >
+                                          <RotateCw className="h-5 w-5" />
+                                          Try Again
+                                        </Button>
+                                        {word.recordingUrl && (
+                                          <AudioPlaybackButton
+                                            audioUrl={word.recordingUrl}
+                                            buttonText="Listen to me"
+                                            variant="outline"
+                                            size="sm"
+                                            className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0"
+                                            icon={<Volume2 className="h-4 w-4" />}
+                                          />
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
-                                </div>
-                              );
-                            }
-                            return null;
-                          })()}
-                        </CardContent>
-                      </Card>
-                    ) : (
-                      // Regular Word Card
-                      <Card className="h-full shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
-                        <CardHeader className="text-center">
-                          <CardTitle className="text-3xl font-bold text-white">{word.text}</CardTitle>
-                        {word.syllabication && (
-                          <div className="text-lg italic mt-2">
-                            {word.status === "complete" && word.assessmentResult?.wordLevelResults?.[0] && 
-                             (word.assessmentResult.wordLevelResults[0] as any).syllables ? (
-                              // Show color-coded syllables based on assessment results
-                              mapSyllablesToDisplay(word.syllabication, (word.assessmentResult.wordLevelResults[0] as any).syllables).map((syllable, index) => (
-                                <span 
-                                  key={index}
-                                  style={{ color: syllable.color }}
-                                  className="font-semibold"
-                                >
-                                  {syllable.text}
-                                  {index < mapSyllablesToDisplay(word.syllabication || '', (word.assessmentResult?.wordLevelResults?.[0] as any)?.syllables || []).length - 1 && '-'}
-                                </span>
-                              ))
-                            ) : (
-                              // Default display when no assessment data is available
-                              <span className="text-white/80">{word.syllabication}</span>
-                            )}
-                          </div>
-                        )}
-                      </CardHeader>
 
-                      <CardContent className="space-y-4">
-                        {/* Recording Controls */}
-                        <div className="flex justify-center gap-2">
-                          {word.status === "idle" && (
-                            <Button
-                              onClick={() => startWordPractice(index)}
-                              className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 start-recording-button"
-                              disabled={isRecording || isProcessingRecording}
-                            >
-                              <Mic className="h-5 w-5" />
-                              Start Recording
-                            </Button>
-                          )}
+                                  {/* Hear, Slow Switch + See */}
+                                  <div className="flex justify-center gap-2">
+                                    <Button
+                                      onClick={() => handleTextToSpeech(index)}
+                                      variant="outline"
+                                      className="h-10 px-4 bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0 hear-button"
+                                    >
+                                      <Ear className="h-4 w-4 mr-1" />
+                                      Hear
+                                    </Button>
+                                    <button
+                                      onClick={() => toggleSlowPlayback(word.id)}
+                                      className={`relative inline-flex h-10 w-16 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 slow-toggle ${
+                                        slowPlaybackWords[word.id] ? 'bg-[#FFE8E8]' : 'bg-gray-300'
+                                      }`}
+                                      role="switch"
+                                      aria-checked={slowPlaybackWords[word.id]}
+                                      aria-label="Toggle slow playback"
+                                    >
+                                      <span
+                                        className={`inline-flex h-8 w-8 transform rounded-full bg-white transition-transform duration-200 ease-in-out items-center justify-center ${
+                                          slowPlaybackWords[word.id] ? 'translate-x-8' : 'translate-x-1'
+                                        }`}
+                                      >
+                                        <Snail className="h-3 w-3 text-gray-600" />
+                                      </span>
+                                    </button>
+                                    <Button
+                                      onClick={() => generateVisemeAnimation(word.text)}
+                                      variant="outline"
+                                      className="h-10 px-4 bg-[#F59E0B] hover:bg-[#D97706] text-white border-0 see-button"
+                                    >
+                                      <Eye className="h-4 w-4 mr-1" />
+                                      See
+                                    </Button>
+                                  </div>
 
-                          {word.status === "recording" && (
-                            <Button
-                              onClick={stopWordPractice}
-                              variant="destructive"
-                              className="flex items-center gap-2 stop-recording-button"
-                            >
-                              <StopCircleIcon className="h-4 w-4" />
-                              Stop Recording
-                            </Button>
-                          )}
+                                  {/* Save button in new row */}
+                                  <div className="flex justify-center mt-2">
+                                    <Button
+                                      onClick={() => saveWordToCollection(index)}
+                                      variant="outline"
+                                      className={`h-10 px-4 text-white border-0 save-button ${
+                                        savedWords.has(processedWords[index]?.text)
+                                          ? "bg-green-600 hover:bg-green-700"
+                                          : "bg-[#6366F1] hover:bg-[#5855EB]"
+                                      }`}
+                                      disabled={savedWords.has(processedWords[index]?.text)}
+                                    >
+                                      <Star className={`h-4 w-4 mr-1 ${savedWords.has(processedWords[index]?.text) ? 'fill-white' : ''}`} />
+                                      {savedWords.has(processedWords[index]?.text) ? "Word Saved" : "Save"}
+                                    </Button>
+                                  </div>
 
-                          {word.status === "assessing" && (
-                            <Button disabled className="flex items-center gap-2">
-                              <RotateCw className="h-4 w-4 animate-spin" />
-                              Analyzing...
-                            </Button>
-                          )}
+                                  {/* Assessment Results with Bar Charts */}
+                                  {word.status === "complete" && word.assessmentResult && (
+                                    <div className="space-y-4 mt-6 bg-white rounded-lg p-4 mx-2">
+                                      {/* Overall Score */}
+                                      <div className="text-center">
+                                        <div 
+                                          className="text-3xl font-bold mb-2" 
+                                          style={{ 
+                                            color: word.assessmentResult.pronunciationScore >= 80 ? '#2a9d8f' : '#e76f51' 
+                                          }}
+                                        >
+                                          {Math.round(word.assessmentResult.pronunciationScore)}%
+                                        </div>
+                                        <p className="text-gray-600 text-sm mb-4">
+                                          {word.assessmentResult.pronunciationScore >= 80
+                                            ? "Great job! Your pronunciation is very clear."
+                                            : "Good effort! Try again to improve your score."}
+                                        </p>
+                                      </div>
 
-                          {word.status === "complete" && (
-                            <div className="flex gap-2">
-                              <Button
-                                onClick={() => startWordPractice(index)}
-                                className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
-                              >
-                                <RotateCw className="h-5 w-5" />
-                                Try Again
-                              </Button>
-                              {word.recordingUrl && (
-                                <AudioPlaybackButton
-                                  audioUrl={word.recordingUrl}
-                                  buttonText="Listen to me"
-                                  variant="outline"
-                                  size="sm"
-                                  className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0"
-                                  icon={<Volume2 className="h-4 w-4" />}
-                                />
-                              )}
-                            </div>
-                          )}
-                        </div>
+                                      {/* Syllable-Level Feedback */}
+                                      {word.assessmentResult.wordLevelResults?.[0] && (word.assessmentResult.wordLevelResults[0] as any).syllables && 
+                                       (word.assessmentResult.wordLevelResults[0] as any).syllables.length > 0 && (
+                                        <div className="mb-4">
+                                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Syllable Breakdown</h4>
+                                          <div className="grid grid-cols-1 gap-2">
+                                            {((word.assessmentResult.wordLevelResults[0] as any).syllables as any[]).map((syllable: any, index: number) => (
+                                              <div key={index} className="flex items-center justify-between bg-gray-50 rounded p-2">
+                                                <span className="text-sm font-medium text-gray-800">{syllable.grapheme}</span>
+                                                <div className="flex items-center gap-2">
+                                                  <span className="text-xs text-gray-600">{Math.round(syllable.accuracyScore)}%</span>
+                                                  <div className="w-16 bg-gray-200 rounded-full h-1.5">
+                                                    <div
+                                                      className="h-1.5 rounded-full"
+                                                      style={{
+                                                        width: `${Math.round(syllable.accuracyScore)}%`,
+                                                        backgroundColor: getSyllableColor(syllable.accuracyScore)
+                                                      }}
+                                                    ></div>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
 
-                        {/* Hear, Slow Switch + See */}
-                        <div className="flex justify-center gap-2">
-                          <Button
-                            onClick={() => handleTextToSpeech(index)}
-                            variant="outline"
-                            className="h-10 px-4 bg-[#FF9692] hover:bg-[#FF7F7C] text-white border-0 hear-button"
-                          >
-                            <Ear className="h-4 w-4 mr-1" />
-                            Hear
-                          </Button>
-                          <button
-                            onClick={() => toggleSlowPlayback(word.id)}
-                            className={`relative inline-flex h-10 w-16 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 slow-toggle ${
-                              slowPlaybackWords[word.id] ? 'bg-[#FFE8E8]' : 'bg-gray-300'
-                            }`}
-                            role="switch"
-                            aria-checked={slowPlaybackWords[word.id]}
-                            aria-label="Toggle slow playback"
-                          >
-                            <span
-                              className={`inline-flex h-8 w-8 transform rounded-full bg-white transition-transform duration-200 ease-in-out items-center justify-center ${
-                                slowPlaybackWords[word.id] ? 'translate-x-8' : 'translate-x-1'
-                              }`}
-                            >
-                              <Snail className="h-3 w-3 text-gray-600" />
-                            </span>
-                          </button>
-                          <Button
-                            onClick={() => generateVisemeAnimation(word.text)}
-                            variant="outline"
-                            className="h-10 px-4 bg-[#F59E0B] hover:bg-[#D97706] text-white border-0 see-button"
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            See
-                          </Button>
-                        </div>
+                                      {/* Detailed Scores with Bar Charts */}
+                                      <div className="space-y-1">
+                                        <div className="space-y-1">
+                                          <div className="flex justify-between text-xs">
+                                            <span className="font-medium text-gray-700">Pronunciation</span>
+                                            <span className="text-gray-700">{Math.round(word.assessmentResult.pronunciationScore)}%</span>
+                                          </div>
+                                          <div className="w-full bg-gray-200 rounded-full h-2">
+                                            <div
+                                              className="h-2 rounded-full"
+                                              style={{
+                                                width: `${Math.round(word.assessmentResult.pronunciationScore)}%`,
+                                                backgroundColor: word.assessmentResult.pronunciationScore >= 80 ? '#2a9d8f' :
+                                                                 word.assessmentResult.pronunciationScore >= 60 ? '#e9c46a' : '#e76f51'
+                                              }}
+                                            ></div>
+                                          </div>
+                                        </div>
 
-                        {/* Save button in new row */}
-                        <div className="flex justify-center mt-2">
-                          <Button
-                            onClick={() => saveWordToCollection(index)}
-                            variant="outline"
-                            className={`h-10 px-4 text-white border-0 save-button ${
-                              savedWords.has(processedWords[index]?.text)
-                                ? "bg-green-600 hover:bg-green-700"
-                                : "bg-[#6366F1] hover:bg-[#5855EB]"
-                            }`}
-                            disabled={savedWords.has(processedWords[index]?.text)}
-                          >
-                            <Star className={`h-4 w-4 mr-1 ${savedWords.has(processedWords[index]?.text) ? 'fill-white' : ''}`} />
-                            {savedWords.has(processedWords[index]?.text) ? "Word Saved" : "Save"}
-                          </Button>
-                        </div>
+                                        <div className="space-y-1">
+                                          <div className="flex justify-between text-xs">
+                                            <span className="font-medium text-gray-700">Accuracy</span>
+                                            <span className="text-gray-700">{Math.round(word.assessmentResult.accuracyScore || 0)}%</span>
+                                          </div>
+                                          <div className="w-full bg-gray-200 rounded-full h-2">
+                                            <div
+                                              className="h-2 rounded-full"
+                                              style={{
+                                                width: `${Math.round(word.assessmentResult.accuracyScore || 0)}%`,
+                                                backgroundColor: (word.assessmentResult.accuracyScore || 0) >= 80 ? '#2a9d8f' :
+                                                                (word.assessmentResult.accuracyScore || 0) >= 60 ? '#e9c46a' : '#e76f51'
+                                              }}
+                                            ></div>
+                                          </div>
+                                        </div>
 
-                        {/* Assessment Results with Bar Charts */}
-                        {word.status === "complete" && word.assessmentResult && (
-                          <div className="space-y-4 mt-6 bg-white rounded-lg p-4 mx-2">
-                            {/* Overall Score */}
-                            <div className="text-center">
-                              <div 
-                                className="text-3xl font-bold mb-2" 
-                                style={{ 
-                                  color: word.assessmentResult.pronunciationScore >= 80 ? '#2a9d8f' : '#e76f51' 
-                                }}
-                              >
-                                {Math.round(word.assessmentResult.pronunciationScore)}%
-                              </div>
-                              <p className="text-gray-600 text-sm mb-4">
-                                {word.assessmentResult.pronunciationScore >= 80
-                                  ? "Great job! Your pronunciation is very clear."
-                                  : "Good effort! Try again to improve your score."}
-                              </p>
-                            </div>
+                                        <div className="space-y-1">
+                                          <div className="flex justify-between text-xs">
+                                            <span className="font-medium text-gray-700">Fluency</span>
+                                            <span className="text-gray-700">{Math.round(word.assessmentResult.fluencyScore || 0)}%</span>
+                                          </div>
+                                          <div className="w-full bg-gray-200 rounded-full h-2">
+                                            <div
+                                              className="h-2 rounded-full"
+                                              style={{
+                                                width: `${Math.round(word.assessmentResult.fluencyScore || 0)}%`,
+                                                backgroundColor: (word.assessmentResult.fluencyScore || 0) >= 80 ? '#2a9d8f' :
+                                                                (word.assessmentResult.fluencyScore || 0) >= 60 ? '#e9c46a' : '#e76f51'
+                                              }}
+                                            ></div>
+                                          </div>
+                                        </div>
 
-                            {/* Syllable-Level Feedback */}
-                            {word.assessmentResult.wordLevelResults?.[0] && (word.assessmentResult.wordLevelResults[0] as any).syllables && 
-                             (word.assessmentResult.wordLevelResults[0] as any).syllables.length > 0 && (
-                              <div className="mb-4">
-                                <h4 className="text-sm font-semibold text-gray-700 mb-2">Syllable Breakdown</h4>
-                                <div className="grid grid-cols-1 gap-2">
-                                  {((word.assessmentResult.wordLevelResults[0] as any).syllables as any[]).map((syllable: any, index: number) => (
-                                    <div key={index} className="flex items-center justify-between bg-gray-50 rounded p-2">
-                                      <span className="text-sm font-medium text-gray-800">{syllable.grapheme}</span>
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-xs text-gray-600">{Math.round(syllable.accuracyScore)}%</span>
-                                        <div className="w-16 bg-gray-200 rounded-full h-1.5">
-                                          <div
-                                            className="h-1.5 rounded-full"
-                                            style={{
-                                              width: `${Math.round(syllable.accuracyScore)}%`,
-                                              backgroundColor: getSyllableColor(syllable.accuracyScore)
-                                            }}
-                                          ></div>
+                                        <div className="space-y-1">
+                                          <div className="flex justify-between text-xs">
+                                            <span className="font-medium text-gray-700">Completeness</span>
+                                            <span className="text-gray-700">{Math.round(word.assessmentResult.completenessScore || 0)}%</span>
+                                          </div>
+                                          <div className="w-full bg-gray-200 rounded-full h-2">
+                                            <div
+                                              className="h-2 rounded-full"
+                                              style={{
+                                                width: `${Math.round(word.assessmentResult.completenessScore || 0)}%`,
+                                                backgroundColor: (word.assessmentResult.completenessScore || 0) >= 80 ? '#2a9d8f' :
+                                                                (word.assessmentResult.completenessScore || 0) >= 60 ? '#e9c46a' : '#e76f51'
+                                              }}
+                                            ></div>
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
+                                  )}
 
-                            {/* Detailed Scores with Bar Charts */}
-                            <div className="space-y-1">
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-xs">
-                                  <span className="font-medium text-gray-700">Pronunciation</span>
-                                  <span className="text-gray-700">{Math.round(word.assessmentResult.pronunciationScore)}%</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className="h-2 rounded-full"
-                                    style={{
-                                      width: `${Math.round(word.assessmentResult.pronunciationScore)}%`,
-                                      backgroundColor: word.assessmentResult.pronunciationScore >= 80 ? '#2a9d8f' :
-                                                       word.assessmentResult.pronunciationScore >= 60 ? '#e9c46a' : '#e76f51'
-                                    }}
-                                  ></div>
-                                </div>
-                              </div>
-
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-xs">
-                                  <span className="font-medium text-gray-700">Accuracy</span>
-                                  <span className="text-gray-700">{Math.round(word.assessmentResult.accuracyScore || 0)}%</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className="h-2 rounded-full"
-                                    style={{
-                                      width: `${Math.round(word.assessmentResult.accuracyScore || 0)}%`,
-                                      backgroundColor: (word.assessmentResult.accuracyScore || 0) >= 80 ? '#2a9d8f' :
-                                                      (word.assessmentResult.accuracyScore || 0) >= 60 ? '#e9c46a' : '#e76f51'
-                                    }}
-                                  ></div>
-                                </div>
-                              </div>
-
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-xs">
-                                  <span className="font-medium text-gray-700">Fluency</span>
-                                  <span className="text-gray-700">{Math.round(word.assessmentResult.fluencyScore || 0)}%</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className="h-2 rounded-full"
-                                    style={{
-                                      width: `${Math.round(word.assessmentResult.fluencyScore || 0)}%`,
-                                      backgroundColor: (word.assessmentResult.fluencyScore || 0) >= 80 ? '#2a9d8f' :
-                                                      (word.assessmentResult.fluencyScore || 0) >= 60 ? '#e9c46a' : '#e76f51'
-                                    }}
-                                  ></div>
-                                </div>
-                              </div>
-
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-xs">
-                                  <span className="font-medium text-gray-700">Completeness</span>
-                                  <span className="text-gray-700">{Math.round(word.assessmentResult.completenessScore || 0)}%</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className="h-2 rounded-full"
-                                    style={{
-                                      width: `${Math.round(word.assessmentResult.completenessScore || 0)}%`,
-                                      backgroundColor: (word.assessmentResult.completenessScore || 0) >= 80 ? '#2a9d8f' :
-                                                      (word.assessmentResult.completenessScore || 0) >= 60 ? '#e9c46a' : '#e76f51'
-                                    }}
-                                  ></div>
-                                </div>
-                              </div>
+                                  </CardContent>
+                                </Card>
+                              )}
                             </div>
-                          </div>
-                        )}
+                          ))}
+                        </div>
+                      </div>
+                    </div>
 
-                        </CardContent>
-                      </Card>
-                    )}
+
                   </div>
-                ))}
+                )}
               </div>
+
+              {/* Joyride Tutorial Component */}
+              <Joyride
+                steps={tutorialSteps}
+                run={runTutorial}
+                stepIndex={stepIndex}
+                callback={handleJoyrideCallback}
+                continuous={true}
+                showProgress={true}
+                showSkipButton={true}
+                styles={{
+                  options: {
+                    primaryColor: '#FF9692',
+                    backgroundColor: '#1947e5',
+                    textColor: '#ffffff',
+                    arrowColor: '#1947e5',
+                  },
+                  tooltip: {
+                    backgroundColor: '#1947e5',
+                    color: '#ffffff',
+                    borderRadius: '8px',
+                  },
+                  tooltipContainer: {
+                    textAlign: 'left',
+                  },
+                  tooltipTitle: {
+                    color: '#ffffff',
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                  },
+                  tooltipContent: {
+                    color: '#ffffff',
+                    fontSize: '16px',
+                    padding: '16px',
+                  },
+                  buttonNext: {
+                    backgroundColor: '#FF9692',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    border: 'none',
+                    borderRadius: '6px',
+                  },
+                  buttonBack: {
+                    backgroundColor: 'transparent',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                    marginRight: '10px',
+                    border: '1px solid #ffffff',
+                    borderRadius: '6px',
+                  },
+                  buttonSkip: {
+                    color: '#ffffff',
+                    fontSize: '14px',
+                  },
+                  buttonClose: {
+                    color: '#ffffff',
+                  },
+                }}
+                locale={{
+                  back: 'Back',
+                  close: 'Close',
+                  last: 'Finish',
+                  next: 'Next',
+                  skip: 'Skip Tutorial'
+                }}
+              />
             </div>
-
-
-          </div>
-        )}
-      </div>
-
-      {/* Joyride Tutorial Component */}
-      <Joyride
-        steps={tutorialSteps}
-        run={runTutorial}
-        stepIndex={stepIndex}
-        callback={handleJoyrideCallback}
-        continuous={true}
-        showProgress={true}
-        showSkipButton={true}
-        styles={{
-          options: {
-            primaryColor: '#FF9692',
-            backgroundColor: '#1947e5',
-            textColor: '#ffffff',
-            arrowColor: '#1947e5',
-          },
-          tooltip: {
-            backgroundColor: '#1947e5',
-            color: '#ffffff',
-            borderRadius: '8px',
-          },
-          tooltipContainer: {
-            textAlign: 'left',
-          },
-          tooltipTitle: {
-            color: '#ffffff',
-            fontSize: '18px',
-            fontWeight: 'bold',
-          },
-          tooltipContent: {
-            color: '#ffffff',
-            fontSize: '16px',
-            padding: '16px',
-          },
-          buttonNext: {
-            backgroundColor: '#FF9692',
-            color: '#ffffff',
-            fontSize: '14px',
-            fontWeight: 'bold',
-            border: 'none',
-            borderRadius: '6px',
-          },
-          buttonBack: {
-            backgroundColor: 'transparent',
-            color: '#ffffff',
-            fontSize: '14px',
-            marginRight: '10px',
-            border: '1px solid #ffffff',
-            borderRadius: '6px',
-          },
-          buttonSkip: {
-            color: '#ffffff',
-            fontSize: '14px',
-          },
-          buttonClose: {
-            color: '#ffffff',
-          },
-        }}
-        locale={{
-          back: 'Back',
-          close: 'Close',
-          last: 'Finish',
-          next: 'Next',
-          skip: 'Skip Tutorial'
-        }}
-      />
-    </div>
-  );
-}
+          );
+        }

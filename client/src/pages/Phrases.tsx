@@ -924,7 +924,7 @@ export default function Phrases() {
         {processedPhrases.length > 0 && (
           <div id="practice-phrases-section" className="space-y-6">
             {/* Progress indicator */}
-            <div className="bg-white rounded-lg p-4 shadow-lg border-0">
+            <div className="bg-white rounded-lg p-4 shadow-lg border-0 max-w-xl mx-auto">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-[#264653]">Practice Progress</span>
                 <span className="text-sm text-[#264653]">
@@ -942,7 +942,7 @@ export default function Phrases() {
             </div>
 
             {/* Navigation Controls */}
-            <div className="flex justify-between items-center bg-white rounded-lg p-4 shadow-lg border-0">
+            <div className="flex justify-between items-center bg-white rounded-lg p-4 shadow-lg border-0 max-w-xl mx-auto">
               <Button
                 onClick={() => emblaApi?.scrollPrev()}
                 disabled={currentCarouselIndex === 0}
@@ -994,13 +994,13 @@ export default function Phrases() {
             </div>
 
             {/* Carousel */}
-            <div className="embla overflow-hidden" ref={emblaRef}>
+            <div className="embla overflow-hidden max-w-md mx-auto" ref={emblaRef}>
               <div className="embla__container flex">
                 {processedPhrases.map((phrase, index) => (
-                  <div key={`${phrase.id}-${index}`} className="embla__slide flex-[0_0_100%] px-2 flex justify-center">
+            <div key={`${phrase.id}-${index}`} className="embla__slide flex-[0_0_auto] px-2 flex justify-center">
                     {phrase.id === 'summary-card' ? (
                       // Summary Card - Match exact styling of regular phrase cards
-                      <Card className="w-full max-w-xs sm:max-w-sm shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
+                    <Card className="w-72 shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
                         <CardHeader className="text-center text-white pb-4 relative overflow-hidden">
                           {/* Celebratory particles effect */}
                           <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -1149,7 +1149,7 @@ export default function Phrases() {
                       </Card>
                     ) : (
                       // Regular Phrase Card
-                      <Card className="w-full max-w-xs sm:max-w-sm shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
+                    <Card className="w-72 shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
                         <CardHeader className="text-center px-3 py-4">
                           <CardTitle className={`${getTextSizeClass(phrase.text)} font-bold leading-relaxed px-2`}>
                             {phrase.status === "complete" && phrase.assessmentResult ? 

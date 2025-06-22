@@ -840,7 +840,7 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
       <div id="practice-section" className="scroll-mt-4 mb-12">
         <h3 className="text-lg font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">Practice Text</h3>
         
-        <Card className="h-full">
+        <Card className="h-full max-w-2xl mx-auto">
           <CardContent className="p-6 space-y-4">
             {/* Reading Content Display */}
             <div 
