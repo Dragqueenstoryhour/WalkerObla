@@ -33,33 +33,52 @@ import { useEffect, useState } from "react";
 import { Book, Edit, Bookmark, UserCircle } from "lucide-react"; // Ensure your icons are imported
 
 // A new component for the "Apple-like" Flutter toggle bar
+// Replace your existing TabBar function in App.tsx with this updated version
 function TabBar() {
   const [location] = useLocation();
 
   const navItems = [
-    { href: "/", label: "Words", icon: Edit, color: "from-blue-500 to-indigo-500" },
-    { href: "/phrases", label: "Phrases", icon: Edit, color: "from-purple-500 to-pink-500" },
-    { href: "/reader", label: "Reading", icon: Book, color: "from-emerald-500 to-teal-500" },
-    { href: "/my-words", label: "My Journey", icon: Bookmark, color: "from-orange-500 to-red-500" },
+    { href: "/", label: "Words", icon: Edit },
+    { href: "/phrases", label: "Phrases", icon: Edit },
+    { href: "/reader", label: "Reading", icon: Book },
+    { href: "/my-words", label: "My Journey", icon: Bookmark },
   ];
 
   return (
-    <div className="relative flex items-center justify-center h-12 w-full">
-      <div className="flex bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl p-1.5 w-full justify-around mx-auto shadow-lg border border-gray-300">
-        {navItems.map((item) => {
+    <div className="relative flex items-center justify-center w-full">
+      <div className="flex bg-white rounded-2xl p-1 justify-around mx-auto shadow-lg border border-gray-200 max-w-2xl"
+           style={{ height: '60px', minWidth: '480px' }}>
+        {navItems.map((item, index) => {
           const isActive = location === item.href;
           const IconComponent = item.icon;
+
           return (
             <Link href={item.href} key={item.href}>
               <a
-                className={`flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-300 ease-in-out flex-grow transform hover:scale-105 ${
+                className={`flex flex-col items-center justify-center rounded-xl transition-all duration-300 ease-in-out transform hover:scale-105 ${
                   isActive 
-                    ? `bg-gradient-to-r ${item.color} text-white shadow-lg scale-105` 
-                    : "text-gray-600 hover:text-gray-800 hover:bg-white hover:shadow-md"
+                    ? "bg-blue-600 text-white shadow-md py-1.5 px-4" 
+                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-50 py-1.5 px-3"
                 }`}
+                style={{ height: '52px' }}
               >
-                <IconComponent className={`h-5 w-5 mb-0.5 ${isActive ? 'animate-pulse' : ''}`} />
-                <span className="text-xs font-bold">{item.label}</span>
+                <IconComponent 
+                  className="h-5 w-5 mb-0.5"
+                  style={{ 
+                    color: isActive ? '#FFFFFF' : '#9DB2CE',
+                    strokeWidth: isActive ? 2 : 1.5 
+                  }} 
+                />
+                <span 
+                  className={`font-bold text-xs ${isActive ? 'text-white' : 'text-gray-400'}`}
+                  style={{
+                    fontFamily: 'SF Pro Text, -apple-system, BlinkMacSystemFont, sans-serif',
+                    letterSpacing: '0.1px',
+                    color: isActive ? '#FFFFFF' : '#9DB2CE'
+                  }}
+                >
+                  {item.label}
+                </span>
               </a>
             </Link>
           );
