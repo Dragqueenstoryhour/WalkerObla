@@ -54,11 +54,10 @@ function TabBar() {
           return (
             <div
               key={`bg-circle-${index}`}
-              className="absolute rounded-full"
+              className="absolute rounded-full bg-gray-50"
               style={{
                 width: '34px',
                 height: '34px',
-                backgroundColor: '#D9D9D9',
                 left: '50%',
                 top: '-18px',
                 transform: 'translateX(-50%)',
@@ -104,11 +103,10 @@ function TabBar() {
                   <>
                     {/* Gray background circle - positioned higher and behind icons */}
                     <div 
-                      className="absolute rounded-full"
+                      className="absolute rounded-full bg-gray-50"
                       style={{
                         width: '34px',
                         height: '34px',
-                        backgroundColor: '#D9D9D9',
                         top: '-28px',
                         left: '50%',
                         transform: 'translateX(-50%)',
@@ -167,17 +165,12 @@ function TabBar() {
 
 function Navigation() {
   return (
-    <div className="bg-gradient-to-b from-slate-800 to-slate-900 py-2 px-4 mb-2">
-
-
-
-
-
+    <div className="bg-gray-50 py-2 px-4 mb-2">
       {/* Tab Bar - Full Width */}
       <div className="w-full mb-6">
         <TabBar />
       </div>
-      
+
       {/* Authentication Row - Right aligned to match Level button */}
       <div className="flex justify-end pr-4 pb-2">
         <AuthButtons
