@@ -29,11 +29,10 @@ import MyAccount from "./pages/MyAccount";
 import OurStory from "./pages/OurStory";
 import { DifficultyProvider, useDifficulty } from "./contexts/DifficultyContext";
 import { DifficultySelectionDialog } from "./components/difficulty/DifficultySelectionDialog";
-import { useEffect, useState } from "react";
-import { Book, Edit, Bookmark, UserCircle } from "lucide-react"; // Ensure your icons are imported
+import { useEffect, useState, useRef } from "react";
 
-// A new component for the "Apple-like" Flutter toggle bar
-// Replace your existing TabBar function in App.tsx with this updated version
+import { Book, Edit, Bookmark, UserCircle } from "lucide-react";
+
 function TabBar() {
   const [location] = useLocation();
 
@@ -46,8 +45,42 @@ function TabBar() {
 
   return (
     <div className="relative flex items-center justify-center w-full">
-      <div className="flex bg-white rounded-2xl p-1 justify-around mx-auto shadow-lg border border-gray-200 max-w-2xl"
-           style={{ height: '60px', minWidth: '480px' }}>
+      {/* Background indicator circles - positioned behind everything */}
+      <div className="absolute pointer-events-none" style={{ zIndex: 0 }}>
+        {navItems.map((item, index) => {
+          const isActive = location === item.href;
+          if (!isActive) return null;
+
+          return (
+            <div
+              key={`bg-circle-${index}`}
+              className="absolute rounded-full"
+              style={{
+                width: '34px',
+                height: '34px',
+                backgroundColor: '#D9D9D9',
+                left: '50%',
+                top: '-18px',
+                transform: 'translateX(-50%)',
+                zIndex: 0
+              }}
+            />
+          );
+        })}
+      </div>
+
+      {/* Main navigation container */}
+      <div 
+        className="relative flex bg-white rounded-lg shadow-sm border border-gray-100"
+        style={{ 
+          width: '428px', 
+          height: '75px',
+          padding: '0 16px',
+          justifyContent: 'space-between',
+          alignItems: 'flex-end',
+          zIndex: 1
+        }}
+      >
         {navItems.map((item, index) => {
           const isActive = location === item.href;
           const IconComponent = item.icon;
@@ -55,26 +88,70 @@ function TabBar() {
           return (
             <Link href={item.href} key={item.href}>
               <a
-                className={`flex flex-col items-center justify-center rounded-xl transition-all duration-300 ease-in-out transform hover:scale-105 ${
-                  isActive 
-                    ? "bg-blue-600 text-white shadow-md py-1.5 px-4" 
-                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-50 py-1.5 px-3"
-                }`}
-                style={{ height: '52px' }}
+                className="relative flex flex-col items-center justify-center transition-all duration-200"
+                style={{
+                  padding: '12.5px 15px',
+                  gap: '5px',
+                  height: '68px',
+                  minWidth: item.label === 'My Journey' ? '77px' : 
+                           item.label === 'Phrases' ? '70px' :
+                           item.label === 'Reading' ? '67px' : '64px',
+                  zIndex: 2
+                }}
               >
+                {/* Active indicator dot - positioned above the tab */}
+                {isActive && (
+                  <>
+                    {/* Gray background circle - positioned higher and behind icons */}
+                    <div 
+                      className="absolute rounded-full"
+                      style={{
+                        width: '34px',
+                        height: '34px',
+                        backgroundColor: '#D9D9D9',
+                        top: '-28px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        zIndex: -1
+                      }}
+                    />
+                    {/* Blue dot */}
+                    <div 
+                      className="absolute rounded-full"
+                      style={{
+                        width: '13px',
+                        height: '13px',
+                        top: '-17.5px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        backgroundColor: '#386BF6',
+                        zIndex: 1
+                      }}
+                    />
+                  </>
+                )}
+
+                {/* Icon - simplified to just change color */}
                 <IconComponent 
-                  className="h-5 w-5 mb-0.5"
+                  className="transition-colors duration-200"
                   style={{ 
-                    color: isActive ? '#FFFFFF' : '#9DB2CE',
-                    strokeWidth: isActive ? 2 : 1.5 
+                    width: '24px',
+                    height: '24px',
+                    color: isActive ? '#386BF6' : '#9DB2CE',
+                    strokeWidth: 1.5,
+                    fill: 'none'
                   }} 
                 />
+
+                {/* Label */}
                 <span 
-                  className={`font-bold text-xs ${isActive ? 'text-white' : 'text-gray-400'}`}
                   style={{
                     fontFamily: 'SF Pro Text, -apple-system, BlinkMacSystemFont, sans-serif',
-                    letterSpacing: '0.1px',
-                    color: isActive ? '#FFFFFF' : '#9DB2CE'
+                    fontWeight: 400,
+                    fontSize: '12px',
+                    lineHeight: '14px',
+                    color: isActive ? '#386BF6' : '#9DB2CE',
+                    textAlign: 'center'
                   }}
                 >
                   {item.label}
@@ -90,7 +167,12 @@ function TabBar() {
 
 function Navigation() {
   return (
-    <div className="bg-gradient-to-b from-white to-green-50 py-2 px-4 mb-2">
+    <div className="bg-gradient-to-b from-slate-800 to-slate-900 py-2 px-4 mb-2">
+
+
+
+
+
       {/* Tab Bar - Full Width */}
       <div className="w-full mb-6">
         <TabBar />
