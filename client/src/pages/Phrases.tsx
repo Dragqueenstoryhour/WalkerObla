@@ -1151,7 +1151,7 @@ export default function Phrases() {
                       // Regular Phrase Card
                     <Card className="w-72 shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
                         <CardHeader className="text-center px-3 py-4">
-                          <CardTitle className={`${getTextSizeClass(phrase.text)} font-bold leading-relaxed px-2 break-words`}>
+                          <CardTitle className={`${getTextSizeClass(phrase.text)} font-bold leading-relaxed px-2`} style={{ wordBreak: 'normal', overflowWrap: 'break-word', wordWrap: 'break-word' }}>
                             {phrase.status === "complete" && phrase.assessmentResult ? 
                               renderColorCodedPhraseText(phrase.text, phrase.assessmentResult) :
                               <span className="text-white">{phrase.text}</span>
