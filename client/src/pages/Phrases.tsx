@@ -155,6 +155,12 @@ export default function Phrases() {
   // State for topic card visibility
   const [showAllTopics, setShowAllTopics] = useState(false);
   const [topicPage, setTopicPage] = useState(0); // 0 for first 12, 1 for second 12
+  
+  // State for special topic dialogs
+  const [showAlphabetDialog, setShowAlphabetDialog] = useState(false);
+  const [showStartsWithDialog, setShowStartsWithDialog] = useState(false);
+  const [showContainsDialog, setShowContainsDialog] = useState(false);
+  const [showEndsWithDialog, setShowEndsWithDialog] = useState(false);
 
   // Carousel state
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
@@ -212,27 +218,50 @@ export default function Phrases() {
     return 'text-base sm:text-lg';                   // Smallest for very long phrases
   };
 
-  // Predefined phrase topics - Updated and reordered
+  // Predefined phrase topics - first four special interactive cards
+  const specialTopics = [
+    "Alphabet",
+    "Words that start with..",
+    "Words that contain..",
+    "Words that end with.."
+  ];
+
+  // Regular phrase topics - 24 total organized in 2 pages of 12 each
   const allPhraseTopics = [
-    "Emergency Phrases", // Moved from last four
-    "Social Phrases",     // Moved from last four
-    "Phone Conversations",// Moved from last four
-    "Weather Talk",       // Moved from last four
+    // First 12 topics (page 1)
     "Common Phrases",
     "Greetings",
     "Daily Conversations",
     "Restaurant Phrases",
     "Shopping Phrases",
-    "Travel Phrases",
+    "Travel",
     "Medical Phrases",
     "Business Phrases",
-    "Animals", "Food", "Sports", "Music", "Nature", "Technology", // Additional topics for page 2
-    "Science", "Arts", "Health", "Education", "Entertainment", "Fashion"
+    "Sports",
+    "Health",
+    "Tech",
+    "History",
+    // Second 12 topics (page 2)  
+    "Emergency Phrases",
+    "Social Phrases",
+    "Phone Conversations",
+    "Weather Talk",
+    "Animals",
+    "Food",
+    "Music",
+    "Nature",
+    "Recreation",
+    "Science",
+    "Arts",
+    "Entertainment"
   ];
 
   const topicsPerPage = 12;
   const currentTopics = allPhraseTopics.slice(topicPage * topicsPerPage, (topicPage + 1) * topicsPerPage);
-  const displayTopics = showAllTopics ? currentTopics : currentTopics.slice(0, 4);
+  
+  // Combine special topics with current regular topics
+  const allCurrentTopics = [...specialTopics, ...currentTopics];
+  const displayTopics = showAllTopics ? allCurrentTopics : specialTopics;
 
   // Update carousel index when slide changes
   useEffect(() => {
@@ -817,6 +846,26 @@ export default function Phrases() {
     }
   };
 
+  // Handle special topic clicks
+  const handleSpecialTopicClick = (topic: string) => {
+    switch (topic) {
+      case "Alphabet":
+        setShowAlphabetDialog(true);
+        break;
+      case "Words that start with..":
+        setShowStartsWithDialog(true);
+        break;
+      case "Words that contain..":
+        setShowContainsDialog(true);
+        break;
+      case "Words that end with..":
+        setShowEndsWithDialog(true);
+        break;
+      default:
+        handleGenerateTopicPhrases(topic);
+    }
+  };
+
   // Handle topic-based practice prompt - generate new phrases
   const handleTopicPracticePrompt = async (suggestedTopic: string) => {
     if (!suggestedTopic) return;
@@ -834,7 +883,7 @@ export default function Phrases() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 bg-green-50 min-h-screen">
+    <div className="container mx-auto px-4 py-8 bg-gray-50 min-h-screen">
       {/* Shared phrases notification dialog */}
       <Dialog open={showSharedDialog} onOpenChange={setShowSharedDialog}>
         <DialogContent>
@@ -860,6 +909,114 @@ export default function Phrases() {
         </DialogContent>
       </Dialog>
 
+      {/* Alphabet dialog */}
+      <Dialog open={showAlphabetDialog} onOpenChange={setShowAlphabetDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select a Letter</DialogTitle>
+            <DialogDescription>
+              Choose a letter to practice phrases with words starting with that letter.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-6 gap-2 p-4">
+            {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((letter) => (
+              <Button
+                key={letter}
+                variant="outline"
+                className="h-12 text-lg font-bold"
+                onClick={() => {
+                  handleGenerateTopicPhrases(`Phrases with words starting with ${letter}`);
+                  setShowAlphabetDialog(false);
+                }}
+              >
+                {letter}
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Words that start with dialog */}
+      <Dialog open={showStartsWithDialog} onOpenChange={setShowStartsWithDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Words That Start With...</DialogTitle>
+            <DialogDescription>
+              Choose a sound or letter combination to practice phrases with words that start with that sound.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-3 gap-2 p-4">
+            {['TH', 'CH', 'SH', 'ST', 'BR', 'CR', 'DR', 'FL', 'GR', 'PL', 'PR', 'TR'].map((sound) => (
+              <Button
+                key={sound}
+                variant="outline"
+                className="h-12 text-lg font-bold"
+                onClick={() => {
+                  handleGenerateTopicPhrases(`Phrases with words starting with ${sound}`);
+                  setShowStartsWithDialog(false);
+                }}
+              >
+                {sound}
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Words that contain dialog */}
+      <Dialog open={showContainsDialog} onOpenChange={setShowContainsDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Words That Contain...</DialogTitle>
+            <DialogDescription>
+              Choose a sound to practice phrases with words that contain that sound.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-3 gap-2 p-4">
+            {['AR', 'ER', 'IR', 'OR', 'UR', 'OO', 'EE', 'AY', 'AI', 'OW', 'OI', 'AU'].map((sound) => (
+              <Button
+                key={sound}
+                variant="outline"
+                className="h-12 text-lg font-bold"
+                onClick={() => {
+                  handleGenerateTopicPhrases(`Phrases with words containing ${sound}`);
+                  setShowContainsDialog(false);
+                }}
+              >
+                {sound}
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Words that end with dialog */}
+      <Dialog open={showEndsWithDialog} onOpenChange={setShowEndsWithDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Words That End With...</DialogTitle>
+            <DialogDescription>
+              Choose a sound or ending to practice phrases with words that end with that sound.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-3 gap-2 p-4">
+            {['ING', 'ED', 'ER', 'LY', 'ION', 'TION', 'NG', 'ST', 'NT', 'RD', 'TH', 'CK'].map((ending) => (
+              <Button
+                key={ending}
+                variant="outline"
+                className="h-12 text-lg font-bold"
+                onClick={() => {
+                  handleGenerateTopicPhrases(`Phrases with words ending with ${ending}`);
+                  setShowEndsWithDialog(false);
+                }}
+              >
+                {ending}
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
@@ -877,27 +1034,49 @@ export default function Phrases() {
               <DifficultyDropdown />
             </div>
 
-            {/* Choose a Topic Cards */}
+            {/* Topic Cards */}
             <div className="mb-6">
-              <h3 className="text-md font-bold mb-3">Choose a Topic</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 max-w-4xl mx-auto"> {/* Adjusted gap */}
-                {displayTopics.map((topic) => (
-                  <Card
-                    key={topic}
-                    className="cursor-pointer hover:shadow-md hover:bg-[#0F3CC9] transition-all duration-200 h-14 w-full" // Smaller cards
-                    style={{ backgroundColor: '#1947e5' }}
-                    onClick={() => handleGenerateTopicPhrases(topic)}
-                  >
-                    <CardContent className="p-2 text-center flex items-center justify-center h-full"> {/* Smaller padding */}
-                      <p className="font-bold text-white text-xs sm:text-sm">{topic}</p> {/* Smaller text */}
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="relative">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-5xl mx-auto"> 
+                  {displayTopics.map((topic) => (
+                    <Card
+                      key={topic}
+                      className="cursor-pointer hover:shadow-md hover:bg-[#0F3CC9] transition-all duration-200 h-12" 
+                      style={{ 
+                        backgroundColor: '#1947e5',
+                        maxWidth: '200px' // Cap the width
+                      }}
+                      onClick={() => handleSpecialTopicClick(topic)}
+                    >
+                      <CardContent className="p-2 text-center flex items-center justify-center h-full">
+                        <p className="font-bold text-white text-xs sm:text-sm truncate">{topic}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Controls positioned to the right, aligned to middle */}
+                {showAllTopics && (
+                  <div className="absolute right-0 top-1/2 transform -translate-y-1/2 flex flex-col gap-2">
+                    {(topicPage + 1) * topicsPerPage < allPhraseTopics.length && (
+                      <Button
+                        onClick={() => {
+                          setTopicPage(prev => prev + 1);
+                          setShowAllTopics(false);
+                        }}
+                        variant="ghost"
+                        className="text-purple-600 hover:text-purple-800 flex items-center gap-1 animate-slide"
+                      >
+                        More <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Show More / Pagination controls */}
-              <div className="flex justify-between items-center mt-4">
-                {!showAllTopics && currentTopics.length > 4 && (
+              {/* Show More / Show Less controls */}
+              <div className="flex justify-center mt-4">
+                {!showAllTopics ? (
                   <Button
                     onClick={() => setShowAllTopics(true)}
                     variant="ghost"
@@ -905,39 +1084,13 @@ export default function Phrases() {
                   >
                     Show More <ChevronDown className="h-4 w-4" />
                   </Button>
-                )}
-                {showAllTopics && (
+                ) : (
                   <Button
                     onClick={() => setShowAllTopics(false)}
                     variant="ghost"
                     className="text-purple-600 hover:text-purple-800 flex items-center gap-1"
                   >
-                    Show Less <ChevronRight className="h-4 w-4 rotate-90" />
-                  </Button>
-                )}
-                {/* Only show 'More' button if there are more topics on next page */}
-                {(topicPage + 1) * topicsPerPage < allPhraseTopics.length && (
-                  <Button
-                    onClick={() => {
-                      setTopicPage(prev => prev + 1);
-                      setShowAllTopics(false); // Reset to minimized view on page change
-                    }}
-                    variant="ghost"
-                    className="text-purple-600 hover:text-purple-800 flex items-center gap-1"
-                  >
-                    More <ArrowRight className="h-4 w-4" />
-                  </Button>
-                )}
-                {topicPage > 0 && ( // Show "Previous" button if not on the first page
-                  <Button
-                    onClick={() => {
-                      setTopicPage(prev => prev - 1);
-                      setShowAllTopics(false); // Reset to minimized view on page change
-                    }}
-                    variant="ghost"
-                    className="text-purple-600 hover:text-purple-800 flex items-center gap-1"
-                  >
-                    <ArrowRight className="h-4 w-4 rotate-180" /> Previous
+                    Show Less <ChevronRight className="h-4 w-4 rotate-180" />
                   </Button>
                 )}
               </div>
@@ -945,7 +1098,7 @@ export default function Phrases() {
 
             {/* Custom Topic Input */}
             <div className="mb-6">
-              <p className="text-base font-medium text-purple-600 mb-3">Or enter a custom topic:</p>
+              <p className="text-lg font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-3">Or enter a custom topic:</p>
               <div className="flex gap-2">
                 <Input
                   placeholder="Enter a topic you'd like to practice phrases about..."
