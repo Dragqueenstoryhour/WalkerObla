@@ -16,36 +16,66 @@ export const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 
 // Helper to get the current auth session
 export async function getSession() {
-  const { data, error } = await supabaseClient.auth.getSession();
-  if (error) {
-    console.error('Error getting session:', error);
+  try {
+    const { data, error } = await supabaseClient.auth.getSession();
+    if (error) {
+      // Handle specific error types gracefully
+      if (error.name === 'AuthRetryableFetchError' && error.status === 0) {
+        console.debug('Network error getting session (expected when offline):', error.status);
+      } else {
+        console.error('Error getting session:', error);
+      }
+      return null;
+    }
+    return data.session;
+  } catch (error) {
+    console.debug('Session retrieval failed:', error);
     return null;
   }
-  return data.session;
 }
 
 // Helper to get the current user
 export async function getCurrentUser() {
-  const { data, error } = await supabaseClient.auth.getUser();
-  if (error) {
-    console.error('Error getting user:', error);
+  try {
+    const { data, error } = await supabaseClient.auth.getUser();
+    if (error) {
+      // Handle specific error types gracefully
+      if (error.name === 'AuthRetryableFetchError' && error.status === 0) {
+        console.debug('Network error getting user (expected when offline):', error.status);
+      } else {
+        console.error('Error getting user:', error);
+      }
+      return null;
+    }
+    return data.user;
+  } catch (error) {
+    console.debug('User retrieval failed:', error);
     return null;
   }
-  return data.user;
 }
 
 // Get auth token for API requests
 export async function getAuthToken(): Promise<string | null> {
-  const session = await getSession();
-  return session?.access_token || null;
+  try {
+    const session = await getSession();
+    return session?.access_token || null;
+  } catch (error) {
+    console.debug('Token retrieval failed:', error);
+    return null;
+  }
 }
 
 // Add authorization header to fetch requests
 export async function getAuthHeaders(): Promise<HeadersInit> {
-  const token = await getAuthToken();
-  return token 
-    ? { Authorization: `Bearer ${token}` }
-    : {};
+  try {
+    const token = await getAuthToken();
+    return token 
+      ? { Authorization: `Bearer ${token}` }
+      : {};
+  } catch (error) {
+    console.debug('Auth headers generation failed:', error);
+    return {};
+  }
 }
 
 // Setup auth state change listener for debugging

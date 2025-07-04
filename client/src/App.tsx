@@ -86,8 +86,8 @@ function TabBar() {
 
           return (
             <Link href={item.href} key={item.href}>
-              <a
-                className="relative flex flex-col items-center justify-center transition-all duration-200"
+              <div
+                className="relative flex flex-col items-center justify-center transition-all duration-200 cursor-pointer"
                 style={{
                   padding: '12.5px 15px',
                   gap: '5px',
@@ -154,7 +154,7 @@ function TabBar() {
                 >
                   {item.label}
                 </span>
-              </a>
+              </div>
             </Link>
           );
         })}
