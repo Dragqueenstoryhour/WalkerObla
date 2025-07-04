@@ -239,49 +239,27 @@ export default function Phrases() {
     return 'text-base sm:text-lg';                   // Smallest for very long phrases
   };
 
-  // Predefined phrase topics - first three special interactive cards
-  const specialTopics = [
-    "Words that start with..",
-    "Words that contain..",
-    "Words that end with.."
+  // Page 1 topics - first 12 including Common Phrases as 4th
+  const page1Topics = [
+    "Travel Phrases", "Everyday Conversation", "Words that start with..", "Common Phrases", 
+    "Words that contain..", "Words that end with..", "Food & Dining", "Health & Medical", 
+    "Shopping", "Work & Business", "Family & Relationships", "Medical Phrases"
   ];
 
-  // Regular phrase topics - 24 total organized in 2 pages of 12 each
-  const allPhraseTopics = [
-    // First 12 topics (page 1)
-    "Common Phrases",
-    "Greetings",
-    "Daily Conversations",
-    "Restaurant Phrases",
-    "Shopping Phrases",
-    "Travel",
-    "Medical Phrases",
-    "Business Phrases",
-    "Sports",
-    "Health",
-    "Tech",
-    "History",
-    // Second 12 topics (page 2)  
-    "Emergency Phrases",
-    "Social Phrases",
-    "Phone Conversations",
-    "Weather Talk",
-    "Animals",
-    "Food",
-    "Music",
-    "Nature",
-    "Recreation",
-    "Science",
-    "Arts",
-    "Entertainment"
+  // Page 2 topics - 12 different topics  
+  const page2Topics = [
+    "Business Phrases", "Hobbies & Interests", "Weather & Seasons", "Transportation", 
+    "Technology", "Education", "Sports & Recreation", "Emergency Situations",
+    "Banking & Finance", "Home & Garden", "Entertainment", "Directions & Navigation"
   ];
 
+  // Get current page topics
+  const currentPageTopics = topicPage === 0 ? page1Topics : page2Topics;
   const topicsPerPage = 12;
-  const currentTopics = allPhraseTopics.slice(topicPage * topicsPerPage, (topicPage + 1) * topicsPerPage);
   
-  // Combine special topics with current regular topics
-  const allCurrentTopics = [...specialTopics, ...currentTopics];
-  const displayTopics = showAllTopics ? allCurrentTopics : specialTopics;
+  // Display logic: Show first 4 initially, all 12 when "Show More" is clicked
+  const initialTopics = currentPageTopics.slice(0, 4);
+  const displayTopics = showAllTopics ? currentPageTopics : initialTopics;
 
   // Update carousel index when slide changes
   useEffect(() => {
@@ -1034,7 +1012,7 @@ export default function Phrases() {
         </div>
 
         {/* Select Your Topic Section */}
-        <Card className="mb-6">
+        <Card className="mb-6 bg-white">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Select Your Topic</h2>
@@ -1044,7 +1022,15 @@ export default function Phrases() {
             {/* Topic Cards */}
             <div className="mb-6">
               <div className="relative">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto"> 
+                <div 
+                  className={`grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto transition-all duration-500 ${
+                    showAllTopics 
+                      ? topicPage === 0 
+                        ? 'animate-slide-down' 
+                        : 'animate-slide-right'
+                      : 'animate-slide-up'
+                  }`}
+                > 
                   {displayTopics.map((topic) => (
                     <Card
                       key={topic}
@@ -1065,29 +1051,29 @@ export default function Phrases() {
                 {/* Controls positioned to the right, aligned to middle */}
                 {showAllTopics && (
                   <div className="absolute right-0 top-1/2 transform -translate-y-1/2 flex flex-col gap-2">
-                    {(topicPage + 1) * topicsPerPage < allPhraseTopics.length ? (
+                    {topicPage === 0 ? (
                       <Button
                         onClick={() => {
-                          setTopicPage(prev => prev + 1);
+                          setTopicPage(1);
                           setShowAllTopics(false);
                         }}
                         variant="ghost"
-                        className="text-[#1947e5] hover:text-[#0F3CC9] flex items-center gap-1 animate-slide"
+                        className="text-[#1947e5] hover:text-[#0F3CC9] flex items-center gap-1 transition-all duration-300 animate-slide-right"
                       >
                         Next <ArrowRight className="h-4 w-4" />
                       </Button>
-                    ) : topicPage > 0 ? (
+                    ) : (
                       <Button
                         onClick={() => {
-                          setTopicPage(prev => prev - 1);
+                          setTopicPage(0);
                           setShowAllTopics(false);
                         }}
                         variant="ghost"
-                        className="text-[#1947e5] hover:text-[#0F3CC9] flex items-center gap-1 animate-slide"
+                        className="text-[#1947e5] hover:text-[#0F3CC9] flex items-center gap-1 transition-all duration-300 animate-slide-left"
                       >
                         <ArrowLeft className="h-4 w-4" /> Prev
                       </Button>
-                    ) : null}
+                    )}
                   </div>
                 )}
               </div>
@@ -1098,7 +1084,7 @@ export default function Phrases() {
                   <Button
                     onClick={() => setShowAllTopics(true)}
                     variant="ghost"
-                    className="text-[#1947e5] hover:text-[#0F3CC9] flex items-center gap-1"
+                    className="text-[#1947e5] hover:text-[#0F3CC9] flex items-center gap-1 transition-all duration-500 animate-slide-down"
                   >
                     Show More <ChevronDown className="h-4 w-4" />
                   </Button>
@@ -1106,7 +1092,7 @@ export default function Phrases() {
                   <Button
                     onClick={() => setShowAllTopics(false)}
                     variant="ghost"
-                    className="text-[#1947e5] hover:text-[#0F3CC9] flex items-center gap-1"
+                    className="text-[#1947e5] hover:text-[#0F3CC9] flex items-center gap-1 transition-all duration-500 animate-slide-up"
                   >
                     Show Less <ChevronUp className="h-4 w-4" />
                   </Button>
