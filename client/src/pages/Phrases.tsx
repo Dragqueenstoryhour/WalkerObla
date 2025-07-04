@@ -241,9 +241,8 @@ export default function Phrases() {
 
   // Page 1 topics - first 12 including Common Phrases as 4th
   const page1Topics = [
-    "Travel Phrases", "Everyday Conversation", "Words that start with..", "Common Phrases", 
-    "Words that contain..", "Words that end with..", "Food & Dining", "Health & Medical", 
-    "Shopping", "Work & Business", "Family & Relationships", "Medical Phrases"
+    "Words that start with..", "Words that contain..", "Words that end with..", "Common Phrases", "Food & Dining", "Health & Medical", 
+    "Shopping", "Work & Business", "Family & Relationships", "Medical Phrases", "Travel Phrases", "Everyday Conversation"
   ];
 
   // Page 2 topics - 12 different topics  
@@ -257,9 +256,9 @@ export default function Phrases() {
   const currentPageTopics = topicPage === 0 ? page1Topics : page2Topics;
   const topicsPerPage = 12;
   
-  // Display logic: Show first 4 initially, all 12 when "Show More" is clicked
+  // Display logic: Show first 4 initially, all 12 when "Show More" is clicked, or always all 12 on page 2
   const initialTopics = currentPageTopics.slice(0, 4);
-  const displayTopics = showAllTopics ? currentPageTopics : initialTopics;
+  const displayTopics = (showAllTopics || topicPage === 1) ? currentPageTopics : initialTopics; // <--- Modified line
 
   // Update carousel index when slide changes
   useEffect(() => {
@@ -295,7 +294,8 @@ export default function Phrases() {
 
     const difficultyToUse = customDifficulty || difficulty;
     setIsProcessing(true);
-    setShowAllTopics(false); // Revert to minimized view on topic selection
+    setTopicPage(0); // <--- Add this line
+    setShowAllTopics(false); // This line is already here, and is correct.
 
     try {
       const response = await fetch("/api/content/generate-topic-phrases", {
@@ -1022,15 +1022,15 @@ export default function Phrases() {
             {/* Topic Cards */}
             <div className="mb-6">
               <div className="relative">
-                <div 
-                  className={`grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto transition-all duration-500 ${
-                    showAllTopics 
-                      ? topicPage === 0 
-                        ? 'animate-slide-down' 
+                <div
+                  className={`grid grid-cols-2 md:grid-cols-4 gap-1 max-w-4xl mx-auto transition-all duration-500 ${ // Changed gap-3 to gap-1
+                    showAllTopics
+                      ? topicPage === 0
+                        ? 'animate-slide-down'
                         : 'animate-slide-right'
                       : 'animate-slide-up'
                   }`}
-                > 
+                >
                   {displayTopics.map((topic) => (
                     <Card
                       key={topic}
