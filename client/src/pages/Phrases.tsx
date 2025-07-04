@@ -1000,7 +1000,7 @@ export default function Phrases() {
       {/* Header */}
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-purple-800 mb-2">Speech Practice - Phrases</h1>
+          <h2 className="text-2xl font-bold text-[#1537cc]">Speech Practice - Phrases</h2>
           <p className="text-muted-foreground">
             Generate and practice phrases to improve your speech fluency and pronunciation
           </p>
@@ -1058,7 +1058,7 @@ export default function Phrases() {
                       handleGenerateTopicPhrases(aiGenerateTopic);
                     }
                   }}
-                  className="flex-1"
+                  className="flex-1 bg-[#f9fafb] border border-[#1537cc] focus:border-[#1537cc] focus:ring-[#1537cc]"
                   disabled={isProcessing}
                 />
                 <Button
@@ -1108,7 +1108,11 @@ export default function Phrases() {
                 disabled={currentCarouselIndex === 0}
                 variant="outline"
                 size="sm"
-                className="flex items-center gap-2"
+                className={`flex items-center gap-2 ${
+                  currentCarouselIndex === 0 // If disabled
+                    ? "bg-[#f9fafb] text-gray-400 border-gray-200" // Light grey when not selectable
+                    : "bg-[#f0eded] hover:bg-gray-300 text-gray-800 border-gray-400" // Dark grey when selectable
+                }`}
               >
                 <ChevronLeft className="h-4 w-4" />
                 Previous
@@ -1143,7 +1147,11 @@ export default function Phrases() {
                       disabled={currentCarouselIndex >= processedPhrases.length - 1}
                       variant="outline"
                       size="sm"
-                      className="flex items-center gap-2"
+                      className={`flex items-center gap-2 ${
+                        currentCarouselIndex >= processedPhrases.length - 1 // If disabled
+                          ? "bg-[#f9fafb] text-gray-400 border-gray-200" // Light grey when not selectable
+                          : "bg-[#f0eded] hover:bg-gray-300 text-gray-800 border-gray-400" // Dark grey when selectable
+                      }`}
                     >
                       Next
                       <ChevronRight className="h-4 w-4" />
