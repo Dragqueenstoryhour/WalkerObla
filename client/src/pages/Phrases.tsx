@@ -155,8 +155,7 @@ export default function Phrases() {
   const [summaryFeedback, setSummaryFeedback] = useState<any>(null);
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
   const [showFeedbackInSummary, setShowFeedbackInSummary] = useState(true);
-  // State for topic card visibility
-  const [showAllTopics, setShowAllTopics] = useState(false);
+  // State for topic card navigation
   const [topicPage, setTopicPage] = useState(0); // 0 for first 12, 1 for second 12
   
   // State for special topic dialogs
@@ -256,9 +255,8 @@ export default function Phrases() {
   const currentPageTopics = topicPage === 0 ? page1Topics : page2Topics;
   const topicsPerPage = 12;
   
-  // Display logic: Show first 4 initially, all 12 when "Show More" is clicked, or always all 12 on page 2
-  const initialTopics = currentPageTopics.slice(0, 4);
-  const displayTopics = (showAllTopics || topicPage === 1) ? currentPageTopics : initialTopics; // <--- Modified line
+  // Display logic: Always show first 4 topics, reset when topic is selected
+  const displayTopics = currentPageTopics.slice(0, 4);
 
   // Update carousel index when slide changes
   useEffect(() => {
@@ -294,8 +292,7 @@ export default function Phrases() {
 
     const difficultyToUse = customDifficulty || difficulty;
     setIsProcessing(true);
-    setTopicPage(0); // <--- Add this line
-    setShowAllTopics(false); // This line is already here, and is correct.
+    setTopicPage(0); // Reset to first page of topics
 
     try {
       const response = await fetch("/api/content/generate-topic-phrases", {
@@ -1022,80 +1019,44 @@ export default function Phrases() {
             {/* Topic Cards */}
             <div className="mb-6">
               <div className="relative">
-                <div
-                  className={`grid grid-cols-2 md:grid-cols-4 gap-1 max-w-4xl mx-auto transition-all duration-500 ${ // Changed gap-3 to gap-1
-                    showAllTopics
-                      ? topicPage === 0
-                        ? 'animate-slide-down'
-                        : 'animate-slide-right'
-                      : 'animate-slide-up'
-                  }`}
-                >
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto pr-16">
                   {displayTopics.map((topic) => (
                     <Card
                       key={topic}
-                      className="cursor-pointer hover:shadow-md hover:bg-[#0F3CC9] transition-all duration-200 h-12" 
-                      style={{ 
-                        backgroundColor: '#1947e5',
-                        maxWidth: '200px' // Cap the width
-                      }}
+                      className="cursor-pointer hover:shadow-md hover:border-[#0F3CC9] transition-all duration-200 h-12 bg-white border-2 border-[#1537cc]"
                       onClick={() => handleSpecialTopicClick(topic)}
                     >
                       <CardContent className="p-2 text-center flex items-center justify-center h-full">
-                        <p className="font-bold text-white text-xs sm:text-sm truncate">{topic}</p>
+                        <p className="font-bold text-[#1537cc] text-xs sm:text-sm truncate">{topic}</p>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
 
-                {/* Controls positioned to the right, aligned to middle */}
-                {showAllTopics && (
-                  <div className="absolute right-0 top-1/2 transform -translate-y-1/2 flex flex-col gap-2">
-                    {topicPage === 0 ? (
-                      <Button
-                        onClick={() => {
-                          setTopicPage(1);
-                          setShowAllTopics(false);
-                        }}
-                        variant="ghost"
-                        className="text-[#1947e5] hover:text-[#0F3CC9] flex items-center gap-1 transition-all duration-300 animate-slide-right"
-                      >
-                        Next <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() => {
-                          setTopicPage(0);
-                          setShowAllTopics(false);
-                        }}
-                        variant="ghost"
-                        className="text-[#1947e5] hover:text-[#0F3CC9] flex items-center gap-1 transition-all duration-300 animate-slide-left"
-                      >
-                        <ArrowLeft className="h-4 w-4" /> Prev
-                      </Button>
-                    )}
+                {/* Right arrow positioned in 3rd column */}
+                {topicPage === 0 && (
+                  <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
+                    <Button
+                      onClick={() => setTopicPage(1)}
+                      variant="ghost"
+                      className="text-[#1947e5] hover:text-[#0F3CC9] p-2 animate-bounce"
+                      style={{ animationDuration: '2s' }}
+                    >
+                      <ArrowRight className="h-6 w-6" />
+                    </Button>
                   </div>
                 )}
-              </div>
-
-              {/* Show More / Show Less controls */}
-              <div className="flex justify-center mt-4">
-                {!showAllTopics ? (
-                  <Button
-                    onClick={() => setShowAllTopics(true)}
-                    variant="ghost"
-                    className="text-[#1947e5] hover:text-[#0F3CC9] flex items-center gap-1 transition-all duration-500 animate-slide-down"
-                  >
-                    Show More <ChevronDown className="h-4 w-4" />
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={() => setShowAllTopics(false)}
-                    variant="ghost"
-                    className="text-[#1947e5] hover:text-[#0F3CC9] flex items-center gap-1 transition-all duration-500 animate-slide-up"
-                  >
-                    Show Less <ChevronUp className="h-4 w-4" />
-                  </Button>
+                {topicPage === 1 && (
+                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2">
+                    <Button
+                      onClick={() => setTopicPage(0)}
+                      variant="ghost"
+                      className="text-[#1947e5] hover:text-[#0F3CC9] p-2 animate-bounce"
+                      style={{ animationDuration: '2s' }}
+                    >
+                      <ArrowLeft className="h-6 w-6" />
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
