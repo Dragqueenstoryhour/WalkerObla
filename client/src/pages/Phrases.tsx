@@ -1111,7 +1111,7 @@ export default function Phrases() {
                 className={`flex items-center gap-2 ${
                   currentCarouselIndex === 0 // If disabled
                     ? "bg-[#f9fafb] text-gray-400 border-gray-200" // Light grey when not selectable
-                    : "bg-[#f0eded] hover:bg-gray-300 text-gray-800 border-gray-400" // Dark grey when selectable
+                    : "bg-[#e3e3e3] hover:bg-gray-300 text-gray-800 border-gray-400" // Dark grey when selectable
                 }`}
               >
                 <ChevronLeft className="h-4 w-4" />

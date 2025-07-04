@@ -218,6 +218,8 @@ export default function Words() {
   const [showFeedbackInSummary, setShowFeedbackInSummary] = useState(true);
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
 
+  // Topic pagination state
+  const [topicPage, setTopicPage] = useState(0);
 
   // Tutorial state
   const [runTutorial, setRunTutorial] = useState(false);
@@ -432,6 +434,15 @@ export default function Words() {
     "Words that Contain..",
     "Words that End with.."
   ];
+
+  // Pagination constants and logic
+  const topicsPerPage = 6;
+  const totalTopicPages = Math.ceil(wordTopics.length / topicsPerPage);
+  
+  const displayTopics = wordTopics.slice(
+    topicPage * topicsPerPage,
+    (topicPage + 1) * topicsPerPage
+  );
 
   // Tutorial steps definition
   const tutorialSteps = [
@@ -2223,8 +2234,8 @@ export default function Words() {
         </div>
 
         {/* Select Your Topic Section */}
-        <Card className="mb-6">
-          <CardContent className="p-6">
+        <Card className="mb-6 bg-white">
+          <CardContent className="p-6 bg-white">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-extrabold text-[#1537cc]">Select Your Topic</h2>
               <div className="words-level-button">
@@ -2234,24 +2245,38 @@ export default function Words() {
 
             {/* Topic Cards */}
             <div className="mb-6 topic-selection-area">
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-3 max-w-6xl mx-auto">
-                {wordTopics.map((topic) => (
-                  <Card
-                    key={topic}
-                    className="cursor-pointer hover:shadow-md hover:border-[#0F3CC9] transition-all duration-200 h-12 bg-white border-2 border-[#1537cc]"
-                    onClick={() => handleTopicCardClick(topic)}
+              <div className="relative">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-w-4xl mx-auto pr-16">
+                  {displayTopics.map((topic) => (
+                    <Card
+                      key={topic}
+                      className="cursor-pointer hover:shadow-md hover:border-[#0F3CC9] transition-all duration-200 h-12 bg-white border-2 border-[#1537cc]"
+                      onClick={() => handleTopicCardClick(topic)}
+                    >
+                      <CardContent className="p-2 text-center flex items-center justify-center h-full">
+                        <p className="font-bold text-[#1537cc] text-xs sm:text-sm truncate">{topic}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Right arrow positioned on the right */}
+                <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
+                  <Button
+                    onClick={() => setTopicPage((prevPage) => (prevPage + 1) % totalTopicPages)}
+                    variant="ghost"
+                    className="text-[#1947e5] hover:text-[#0F3CC9] p-2 animate-bounce"
+                    style={{ animationDuration: '2s' }}
                   >
-                    <CardContent className="p-3 text-center flex items-center justify-center h-full">
-                      <p className="font-bold text-[#1537cc] text-sm">{topic}</p>
-                    </CardContent>
-                  </Card>
-                ))}
+                    <ArrowRight className="h-6 w-6" />
+                  </Button>
+                </div>
               </div>
             </div>
 
             {/* Custom Topic Input */}
             <div className="mb-6">
-              <p className="text-base font-medium text-[#1537cc] mb-3">Or enter a custom topic:</p>
+              <p className="text-lg font-extrabold text-[#1537cc] mb-3">Or enter a custom topic:</p>
               <div className="flex gap-2">
                 <Input
                   placeholder="Enter a topic you'd like to practice words about..."
@@ -2262,7 +2287,7 @@ export default function Words() {
                       handleGenerateTopicWords(aiGenerateTopic);
                     }
                   }}
-                  className="flex-1 custom-topic-input"
+                  className="flex-1 bg-[#f9fafb] border border-[#1537cc] focus:border-[#1537cc] focus:ring-[#1537cc] custom-topic-input"
                   disabled={isProcessing}
                 />
                 <Button
