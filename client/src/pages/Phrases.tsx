@@ -156,8 +156,8 @@ export default function Phrases() {
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
   const [showFeedbackInSummary, setShowFeedbackInSummary] = useState(true);
   // State for topic card navigation
-  const [topicPage, setTopicPage] = useState(0); // 0 for first 12, 1 for second 12
-  
+  const [topicPage, setTopicPage] = useState(0); // 0 for first 6, 1 for second 6, etc.
+
   // State for special topic dialogs
   const [showLetterDialog, setShowLetterDialog] = useState(false);
   const [selectedTopicType, setSelectedTopicType] = useState<'start' | 'contain' | 'end' | null>(null);
@@ -238,25 +238,23 @@ export default function Phrases() {
     return 'text-base sm:text-lg';                   // Smallest for very long phrases
   };
 
-  // Page 1 topics - first 12 including Common Phrases as 4th
-  const page1Topics = [
+  // All topics combined for pagination
+  const allTopics = [
     "Words that start with..", "Words that contain..", "Words that end with..", "Common Phrases", "Food & Dining", "Health & Medical", 
-    "Shopping", "Work & Business", "Family & Relationships", "Medical Phrases", "Travel Phrases", "Everyday Conversation"
-  ];
-
-  // Page 2 topics - 12 different topics  
-  const page2Topics = [
+    "Shopping", "Work & Business", "Family & Relationships", "Medical Phrases", "Travel Phrases", "Everyday Conversation",
     "Business Phrases", "Hobbies & Interests", "Weather & Seasons", "Transportation", 
     "Technology", "Education", "Sports & Recreation", "Emergency Situations",
     "Banking & Finance", "Home & Garden", "Entertainment", "Directions & Navigation"
   ];
 
-  // Get current page topics
-  const currentPageTopics = topicPage === 0 ? page1Topics : page2Topics;
-  const topicsPerPage = 12;
-  
-  // Display logic: Always show first 4 topics, reset when topic is selected
-  const displayTopics = currentPageTopics.slice(0, 4);
+  const topicsPerPage = 6;
+  const totalTopicPages = Math.ceil(allTopics.length / topicsPerPage);
+
+  // Get current page topics for display
+  const displayTopics = allTopics.slice(
+    topicPage * topicsPerPage,
+    (topicPage + 1) * topicsPerPage
+  );
 
   // Update carousel index when slide changes
   useEffect(() => {
@@ -864,7 +862,7 @@ export default function Phrases() {
   // Handle letter selection for phrase generation
   const handleLetterSelection = (letter: string) => {
     setShowLetterDialog(false);
-    
+
     let topicText = "";
     if (selectedTopicType === 'start') {
       topicText = `Phrases with words starting with ${letter}`;
@@ -873,7 +871,7 @@ export default function Phrases() {
     } else if (selectedTopicType === 'end') {
       topicText = `Phrases with words ending with ${letter}`;
     }
-    
+
     if (topicText) {
       handleGenerateTopicPhrases(topicText);
     }
@@ -1012,14 +1010,14 @@ export default function Phrases() {
         <Card className="mb-6 bg-white">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Select Your Topic</h2>
+              <h2 className="text-lg font-extrabold text-[#1537cc]">Select Your Topic</h2>
               <DifficultyDropdown />
             </div>
 
             {/* Topic Cards */}
             <div className="mb-6">
               <div className="relative">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto pr-16">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-w-4xl mx-auto pr-16">
                   {displayTopics.map((topic) => (
                     <Card
                       key={topic}
@@ -1033,11 +1031,10 @@ export default function Phrases() {
                   ))}
                 </div>
 
-                {/* Right arrow positioned in 3rd column */}
-                {topicPage === 0 && (
+                {/* Right arrow positioned on the right */}
                   <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
                     <Button
-                      onClick={() => setTopicPage(1)}
+                      onClick={() => setTopicPage((prevPage) => (prevPage + 1) % totalTopicPages)}
                       variant="ghost"
                       className="text-[#1947e5] hover:text-[#0F3CC9] p-2 animate-bounce"
                       style={{ animationDuration: '2s' }}
@@ -1045,25 +1042,12 @@ export default function Phrases() {
                       <ArrowRight className="h-6 w-6" />
                     </Button>
                   </div>
-                )}
-                {topicPage === 1 && (
-                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2">
-                    <Button
-                      onClick={() => setTopicPage(0)}
-                      variant="ghost"
-                      className="text-[#1947e5] hover:text-[#0F3CC9] p-2 animate-bounce"
-                      style={{ animationDuration: '2s' }}
-                    >
-                      <ArrowLeft className="h-6 w-6" />
-                    </Button>
-                  </div>
-                )}
               </div>
             </div>
 
             {/* Custom Topic Input */}
             <div className="mb-6">
-              <p className="text-lg font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-3">Or enter a custom topic:</p>
+              <p className="text-lg font-extrabold text-[#1537cc] mb-3">Or enter a custom topic:</p>
               <div className="flex gap-2">
                 <Input
                   placeholder="Enter a topic you'd like to practice phrases about..."
@@ -1109,11 +1093,11 @@ export default function Phrases() {
                     : `${currentCarouselIndex + 1} of ${processedPhrases.filter(p => p.id !== 'summary-card').length}`}
                 </span>
               </div>
-              <Progress 
-                value={showSummary && currentCarouselIndex === processedPhrases.length - 1 
-                  ? 100 
-                  : ((currentCarouselIndex + 1) / processedPhrases.length) * 100} 
-                className="h-2"
+              <Progress
+                value={showSummary && currentCarouselIndex === processedPhrases.length - 1
+                  ? 100
+                  : ((currentCarouselIndex + 1) / processedPhrases.length) * 100}
+                className="h-3 bg-[#f9fafb] [&_div]:bg-[#1537cc]"
               />
             </div>
 
