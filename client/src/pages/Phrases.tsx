@@ -46,15 +46,18 @@ import {
   ChevronRight,
   ChevronLeft,
   ArrowRight,
+  ArrowLeft,
   Snail,
   Flag,
   Ear,
   ChevronDown, // Added ChevronDown for dropdown
+  ChevronUp, // Added ChevronUp for show less
 } from "lucide-react";
 import { useDifficulty } from "@/contexts/DifficultyContext";
 import { DifficultyDropdown } from "@/components/difficulty/SimplifiedDifficultySelector";
 import { SummaryCard } from "@/components/SummaryCard";
 import useEmblaCarousel from 'embla-carousel-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Helper function to get word color based on phoneme accuracy scores
 const getWordColorFromPhonemes = (wordResult: any): string => {
@@ -135,7 +138,7 @@ export default function Phrases() {
   const { difficulty, setDifficulty, setCurrentMode } = useDifficulty();
 
   // State variables
-  const [aiGenerateTopic, setAiGenerateTopic] = useState("Common Phrases");
+  const [aiGenerateTopic, setAiGenerateTopic] = useState("");
   const [processedPhrases, setProcessedPhrases] = useState<ProcessedPhrase[]>([]);
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(-1);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -157,10 +160,9 @@ export default function Phrases() {
   const [topicPage, setTopicPage] = useState(0); // 0 for first 12, 1 for second 12
   
   // State for special topic dialogs
-  const [showAlphabetDialog, setShowAlphabetDialog] = useState(false);
-  const [showStartsWithDialog, setShowStartsWithDialog] = useState(false);
-  const [showContainsDialog, setShowContainsDialog] = useState(false);
-  const [showEndsWithDialog, setShowEndsWithDialog] = useState(false);
+  const [showLetterDialog, setShowLetterDialog] = useState(false);
+  const [selectedTopicType, setSelectedTopicType] = useState<'start' | 'contain' | 'end' | null>(null);
+  const [selectedLetterTab, setSelectedLetterTab] = useState<"letters" | "otherSounds">("letters");
 
   // Carousel state
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
@@ -209,6 +211,25 @@ export default function Phrases() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentPhraseIndexRef = useRef<number>(-1);
 
+  // Letter and consonant group options (copied from Words.tsx)
+  const letterOptionsAlphabet = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+  ];
+
+  const letterOptionsStartSounds = [
+    'AR', 'BL', 'BR', 'CH', 'CL', 'CR', 'FR', 'GR', 'GL', 'KR', 'PL', 'PR', 'SK', 'SH', 'SHR', 'SL', 'SM', 'SN', 'ST', 'STR', 'TH', 'TR',
+  ];
+
+  const letterOptionsContainSounds = [
+    'AR', 'BL', 'BR', 'CH', 'CL', 'CR', 'FR', 'GR', 'GL', 'KR', 'PL', 'PR', 'SK', 'SH', 'SHR', 'SL', 'SM', 'SN', 'ST', 'STR', 'TH', 'TR',
+    'GR', 'RT', 'RS', 'RD*N', 'RT*N'
+  ];
+
+  const letterOptionsEndSounds = [
+    '-AR', '-CH', '-SK', '-SH', '-ST', '-TH', '-CIAL', '-CIOUS', '-ED', '-ES', '-EST', '-GEOUS', '-ING', '-IST', '-IZE', '-KLS', '-LOGY', '-METRY', '-PS', '-SIAN', '-SH', '-ESD', '-SION', '-ST', '-TIAL', '-TION',
+  ];
+
   // Helper function to determine font size based on text length
   const getTextSizeClass = (text: string) => {
     const length = text.length;
@@ -218,9 +239,8 @@ export default function Phrases() {
     return 'text-base sm:text-lg';                   // Smallest for very long phrases
   };
 
-  // Predefined phrase topics - first four special interactive cards
+  // Predefined phrase topics - first three special interactive cards
   const specialTopics = [
-    "Alphabet",
     "Words that start with..",
     "Words that contain..",
     "Words that end with.."
@@ -849,22 +869,63 @@ export default function Phrases() {
   // Handle special topic clicks
   const handleSpecialTopicClick = (topic: string) => {
     switch (topic) {
-      case "Alphabet":
-        setShowAlphabetDialog(true);
-        break;
       case "Words that start with..":
-        setShowStartsWithDialog(true);
+        setSelectedTopicType('start');
+        setShowLetterDialog(true);
         break;
       case "Words that contain..":
-        setShowContainsDialog(true);
+        setSelectedTopicType('contain');
+        setShowLetterDialog(true);
         break;
       case "Words that end with..":
-        setShowEndsWithDialog(true);
+        setSelectedTopicType('end');
+        setShowLetterDialog(true);
         break;
       default:
         handleGenerateTopicPhrases(topic);
     }
   };
+
+  // Handle letter selection for phrase generation
+  const handleLetterSelection = (letter: string) => {
+    setShowLetterDialog(false);
+    
+    let topicText = "";
+    if (selectedTopicType === 'start') {
+      topicText = `Phrases with words starting with ${letter}`;
+    } else if (selectedTopicType === 'contain') {
+      topicText = `Phrases with words containing ${letter}`;
+    } else if (selectedTopicType === 'end') {
+      topicText = `Phrases with words ending with ${letter}`;
+    }
+    
+    if (topicText) {
+      handleGenerateTopicPhrases(topicText);
+    }
+  };
+
+  // Get letter options based on selected topic type
+  const getLetterOptions = () => {
+    if (selectedTopicType === 'start') {
+      return {
+        letters: letterOptionsAlphabet,
+        otherSounds: letterOptionsStartSounds
+      };
+    } else if (selectedTopicType === 'contain') {
+      return {
+        letters: letterOptionsAlphabet,
+        otherSounds: letterOptionsContainSounds
+      };
+    } else if (selectedTopicType === 'end') {
+      return {
+        letters: letterOptionsAlphabet,
+        otherSounds: letterOptionsEndSounds
+      };
+    }
+    return { letters: [], otherSounds: [] };
+  };
+
+  const currentLetterOptions = getLetterOptions();
 
   // Handle topic-based practice prompt - generate new phrases
   const handleTopicPracticePrompt = async (suggestedTopic: string) => {
@@ -909,111 +970,57 @@ export default function Phrases() {
         </DialogContent>
       </Dialog>
 
-      {/* Alphabet dialog */}
-      <Dialog open={showAlphabetDialog} onOpenChange={setShowAlphabetDialog}>
-        <DialogContent>
+      {/* Letter Selection Dialog */}
+      <Dialog open={showLetterDialog} onOpenChange={setShowLetterDialog}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Select a Letter</DialogTitle>
-            <DialogDescription>
-              Choose a letter to practice phrases with words starting with that letter.
+            <DialogTitle className="text-white bg-blue-600 -mx-6 -mt-6 px-6 py-4 mb-4 rounded-t-lg">
+              {selectedTopicType === 'start' && "Words that Start with..."}
+              {selectedTopicType === 'contain' && "Words that Contain..."}
+              {selectedTopicType === 'end' && "Words that End with..."}
+            </DialogTitle>
+            <DialogDescription className="text-gray-700 font-medium">
+              Choose a letter or sound group to generate phrases.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-6 gap-2 p-4">
-            {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((letter) => (
-              <Button
-                key={letter}
-                variant="outline"
-                className="h-12 text-lg font-bold"
-                onClick={() => {
-                  handleGenerateTopicPhrases(`Phrases with words starting with ${letter}`);
-                  setShowAlphabetDialog(false);
-                }}
-              >
-                {letter}
-              </Button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Words that start with dialog */}
-      <Dialog open={showStartsWithDialog} onOpenChange={setShowStartsWithDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Words That Start With...</DialogTitle>
-            <DialogDescription>
-              Choose a sound or letter combination to practice phrases with words that start with that sound.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-3 gap-2 p-4">
-            {['TH', 'CH', 'SH', 'ST', 'BR', 'CR', 'DR', 'FL', 'GR', 'PL', 'PR', 'TR'].map((sound) => (
-              <Button
-                key={sound}
-                variant="outline"
-                className="h-12 text-lg font-bold"
-                onClick={() => {
-                  handleGenerateTopicPhrases(`Phrases with words starting with ${sound}`);
-                  setShowStartsWithDialog(false);
-                }}
-              >
-                {sound}
-              </Button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Words that contain dialog */}
-      <Dialog open={showContainsDialog} onOpenChange={setShowContainsDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Words That Contain...</DialogTitle>
-            <DialogDescription>
-              Choose a sound to practice phrases with words that contain that sound.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-3 gap-2 p-4">
-            {['AR', 'ER', 'IR', 'OR', 'UR', 'OO', 'EE', 'AY', 'AI', 'OW', 'OI', 'AU'].map((sound) => (
-              <Button
-                key={sound}
-                variant="outline"
-                className="h-12 text-lg font-bold"
-                onClick={() => {
-                  handleGenerateTopicPhrases(`Phrases with words containing ${sound}`);
-                  setShowContainsDialog(false);
-                }}
-              >
-                {sound}
-              </Button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Words that end with dialog */}
-      <Dialog open={showEndsWithDialog} onOpenChange={setShowEndsWithDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Words That End With...</DialogTitle>
-            <DialogDescription>
-              Choose a sound or ending to practice phrases with words that end with that sound.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-3 gap-2 p-4">
-            {['ING', 'ED', 'ER', 'LY', 'ION', 'TION', 'NG', 'ST', 'NT', 'RD', 'TH', 'CK'].map((ending) => (
-              <Button
-                key={ending}
-                variant="outline"
-                className="h-12 text-lg font-bold"
-                onClick={() => {
-                  handleGenerateTopicPhrases(`Phrases with words ending with ${ending}`);
-                  setShowEndsWithDialog(false);
-                }}
-              >
-                {ending}
-              </Button>
-            ))}
-          </div>
+          <Tabs value={selectedLetterTab} onValueChange={(value) => setSelectedLetterTab(value as "letters" | "otherSounds")} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4 bg-gray-200">
+              <TabsTrigger value="letters" className="data-[state=active]:bg-[#1947e5] data-[state=active]:text-white data-[state=active]:shadow-md">Letters</TabsTrigger>
+              <TabsTrigger value="otherSounds" className="data-[state=active]:bg-[#1947e5] data-[state=active]:text-white data-[state=active]:shadow-md">Other Sounds</TabsTrigger>
+            </TabsList>
+            <TabsContent value="letters">
+              <div className="grid grid-cols-6 md:grid-cols-8 gap-2 p-4">
+                {currentLetterOptions.letters.map((letter) => (
+                  <Card
+                    key={letter}
+                    className="cursor-pointer hover:shadow-md hover:bg-[#0F3CC9] transition-all duration-200 h-12"
+                    style={{ backgroundColor: '#1947e5' }}
+                    onClick={() => handleLetterSelection(letter)}
+                  >
+                    <CardContent className="p-2 text-center flex items-center justify-center h-full">
+                      <p className="font-bold text-white text-xs">{letter}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+            <TabsContent value="otherSounds">
+              <div className="grid grid-cols-4 md:grid-cols-6 gap-2 p-4">
+                {currentLetterOptions.otherSounds.map((sound) => (
+                  <Card
+                    key={sound}
+                    className="cursor-pointer hover:shadow-md hover:bg-[#0F3CC9] transition-all duration-200 h-12"
+                    style={{ backgroundColor: '#1947e5' }}
+                    onClick={() => handleLetterSelection(sound)}
+                  >
+                    <CardContent className="p-2 text-center flex items-center justify-center h-full">
+                      <p className="font-bold text-white text-xs">{sound.replace(/_/g, ' ')}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
@@ -1037,7 +1044,7 @@ export default function Phrases() {
             {/* Topic Cards */}
             <div className="mb-6">
               <div className="relative">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-5xl mx-auto"> 
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto"> 
                   {displayTopics.map((topic) => (
                     <Card
                       key={topic}
@@ -1058,18 +1065,29 @@ export default function Phrases() {
                 {/* Controls positioned to the right, aligned to middle */}
                 {showAllTopics && (
                   <div className="absolute right-0 top-1/2 transform -translate-y-1/2 flex flex-col gap-2">
-                    {(topicPage + 1) * topicsPerPage < allPhraseTopics.length && (
+                    {(topicPage + 1) * topicsPerPage < allPhraseTopics.length ? (
                       <Button
                         onClick={() => {
                           setTopicPage(prev => prev + 1);
                           setShowAllTopics(false);
                         }}
                         variant="ghost"
-                        className="text-purple-600 hover:text-purple-800 flex items-center gap-1 animate-slide"
+                        className="text-[#1947e5] hover:text-[#0F3CC9] flex items-center gap-1 animate-slide"
                       >
-                        More <ArrowRight className="h-4 w-4" />
+                        Next <ArrowRight className="h-4 w-4" />
                       </Button>
-                    )}
+                    ) : topicPage > 0 ? (
+                      <Button
+                        onClick={() => {
+                          setTopicPage(prev => prev - 1);
+                          setShowAllTopics(false);
+                        }}
+                        variant="ghost"
+                        className="text-[#1947e5] hover:text-[#0F3CC9] flex items-center gap-1 animate-slide"
+                      >
+                        <ArrowLeft className="h-4 w-4" /> Prev
+                      </Button>
+                    ) : null}
                   </div>
                 )}
               </div>
@@ -1080,7 +1098,7 @@ export default function Phrases() {
                   <Button
                     onClick={() => setShowAllTopics(true)}
                     variant="ghost"
-                    className="text-purple-600 hover:text-purple-800 flex items-center gap-1"
+                    className="text-[#1947e5] hover:text-[#0F3CC9] flex items-center gap-1"
                   >
                     Show More <ChevronDown className="h-4 w-4" />
                   </Button>
@@ -1088,9 +1106,9 @@ export default function Phrases() {
                   <Button
                     onClick={() => setShowAllTopics(false)}
                     variant="ghost"
-                    className="text-purple-600 hover:text-purple-800 flex items-center gap-1"
+                    className="text-[#1947e5] hover:text-[#0F3CC9] flex items-center gap-1"
                   >
-                    Show Less <ChevronRight className="h-4 w-4 rotate-180" />
+                    Show Less <ChevronUp className="h-4 w-4" />
                   </Button>
                 )}
               </div>
