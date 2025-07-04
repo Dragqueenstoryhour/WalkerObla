@@ -15,7 +15,7 @@ const Header = ({ onSettingsClick, onHelpClick }: HeaderProps) => {
     <header className="border-b border-secondary px-4 py-3 md:px-6" style={{ backgroundColor: '#f9fafb' }}>
       <div className="container mx-auto flex justify-between items-center">
         <div className="flex items-center">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold text-[#1537cc]">
             Reading Practice
           </h1>
         </div>
