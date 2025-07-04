@@ -49,6 +49,7 @@ import {
   Snail,
   Flag,
   Ear,
+  ChevronDown, // Added ChevronDown for dropdown
 } from "lucide-react";
 import { useDifficulty } from "@/contexts/DifficultyContext";
 import { DifficultyDropdown } from "@/components/difficulty/SimplifiedDifficultySelector";
@@ -61,10 +62,10 @@ const getWordColorFromPhonemes = (wordResult: any): string => {
     // If no phoneme data, use overall word accuracy score
     return wordResult.accuracyScore >= 70 ? '#2a9d8f' : '#e76f51';
   }
-  
+
   // Check if any phoneme in the word has accuracy below 60%
   const hasLowAccuracyPhoneme = wordResult.phonemes.some((phoneme: any) => phoneme.score < 60);
-  
+
   if (hasLowAccuracyPhoneme) {
     return '#e76f51'; // Red for words with any low-accuracy phonemes
   } else {
@@ -78,10 +79,10 @@ const renderColorCodedPhraseText = (phraseText: string, assessmentResult: any): 
     // No assessment data available, return default white text
     return <span className="text-white">{phraseText}</span>;
   }
-  
+
   const words = phraseText.split(/\s+/);
   const wordResults = assessmentResult.wordLevelResults;
-  
+
   return (
     <span>
       {words.map((word, index) => {
@@ -90,11 +91,11 @@ const renderColorCodedPhraseText = (phraseText: string, assessmentResult: any): 
         const matchingResult = wordResults.find((wr: any) => 
           wr.word.toLowerCase() === cleanWord
         );
-        
+
         const color = matchingResult 
           ? getWordColorFromPhonemes(matchingResult)
           : '#ffffff'; // Default white if no match
-        
+
         return (
           <span key={index} style={{ color }} className="font-semibold">
             {word}
@@ -151,6 +152,9 @@ export default function Phrases() {
   const [summaryFeedback, setSummaryFeedback] = useState<any>(null);
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
   const [showFeedbackInSummary, setShowFeedbackInSummary] = useState(true);
+  // State for topic card visibility
+  const [showAllTopics, setShowAllTopics] = useState(false);
+  const [topicPage, setTopicPage] = useState(0); // 0 for first 12, 1 for second 12
 
   // Carousel state
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
@@ -208,8 +212,12 @@ export default function Phrases() {
     return 'text-base sm:text-lg';                   // Smallest for very long phrases
   };
 
-  // Predefined phrase topics
-  const phraseTopics = [
+  // Predefined phrase topics - Updated and reordered
+  const allPhraseTopics = [
+    "Emergency Phrases", // Moved from last four
+    "Social Phrases",     // Moved from last four
+    "Phone Conversations",// Moved from last four
+    "Weather Talk",       // Moved from last four
     "Common Phrases",
     "Greetings",
     "Daily Conversations",
@@ -218,11 +226,13 @@ export default function Phrases() {
     "Travel Phrases",
     "Medical Phrases",
     "Business Phrases",
-    "Emergency Phrases",
-    "Social Phrases",
-    "Phone Conversations",
-    "Weather Talk"
+    "Animals", "Food", "Sports", "Music", "Nature", "Technology", // Additional topics for page 2
+    "Science", "Arts", "Health", "Education", "Entertainment", "Fashion"
   ];
+
+  const topicsPerPage = 12;
+  const currentTopics = allPhraseTopics.slice(topicPage * topicsPerPage, (topicPage + 1) * topicsPerPage);
+  const displayTopics = showAllTopics ? currentTopics : currentTopics.slice(0, 4);
 
   // Update carousel index when slide changes
   useEffect(() => {
@@ -258,6 +268,7 @@ export default function Phrases() {
 
     const difficultyToUse = customDifficulty || difficulty;
     setIsProcessing(true);
+    setShowAllTopics(false); // Revert to minimized view on topic selection
 
     try {
       const response = await fetch("/api/content/generate-topic-phrases", {
@@ -289,19 +300,19 @@ export default function Phrases() {
       setProcessedPhrases(newPhrases);
       setCurrentPhraseIndex(0);
       setCurrentCarouselIndex(0);
-      
+
       // Reset summary state for fresh cycle
       setShowSummary(false);
       setSummaryFeedback(null);
       setShowFeedbackInSummary(false);
-      
+
       // Reset carousel to first position
       setTimeout(() => {
         if (emblaApi) {
           emblaApi.scrollTo(0);
         }
       }, 100);
-      
+
       scrollToPracticeSection();
     } catch (error) {
       console.error("Error generating phrases:", error);
@@ -617,10 +628,10 @@ export default function Phrases() {
         newSet.add(phrase.text);
         return newSet;
       });
-      
+
       // Invalidate the saved phrases query to refresh My Journey
       queryClient.invalidateQueries({ queryKey: ['/api/user/saved-phrases'] });
-      
+
       toast({
         title: "Phrase Saved",
         description: "This phrase has been saved to your collection.",
@@ -640,7 +651,7 @@ export default function Phrases() {
     const phrasesWithScores = processedPhrases.filter(p => 
       p.assessmentResult && p.assessmentResult.pronunciationScore !== null
     );
-    
+
     // Add summary card immediately with loading state
     const summaryPhrase: ProcessedPhrase = {
       id: 'summary-card',
@@ -651,7 +662,7 @@ export default function Phrases() {
     setProcessedPhrases(prev => [...prev, summaryPhrase]);
     setShowSummary(true);
     setIsGeneratingFeedback(true);
-    
+
     // Navigate to the summary card
     setTimeout(() => {
       if (emblaApi) {
@@ -700,16 +711,16 @@ export default function Phrases() {
   // Handle summary practice prompt - different logic for phrases vs words
   const handleSummaryPracticePrompt = async (problemSound: string) => {
     if (!problemSound) return;
-    
+
     // Close the feedback suggestion and reset summary state
     setShowFeedbackInSummary(false);
     setShowSummary(false);
     setSummaryFeedback(null);
-    
+
     // Reset carousel state for new content
     setProcessedPhrases([]);
     setCurrentCarouselIndex(0);
-    
+
     try {
       // Handle different types of practice suggestions
       if (problemSound === "difficulty_increase") {
@@ -718,7 +729,7 @@ export default function Phrases() {
         const newDifficultyNum = Math.min(currentDifficultyNum + 1, 8);
         const newDifficulty = newDifficultyNum.toString();
         setDifficulty(newDifficulty as any);
-        
+
         // Generate phrases with increased difficulty from random topic
         const randomTopics = [
           "Animals", "Food", "Travel", "Sports", "Music", "Nature", "Technology", "Science",
@@ -749,7 +760,7 @@ export default function Phrases() {
       } else {
         // For any other feedback, check if problemSound is already a clean topic name or extract from quotes
         let extractedTopic = null;
-        
+
         // First check if problemSound is already a clean topic name (direct from AI feedback)
         if (problemSound && problemSound.length <= 30 && !problemSound.includes('.') && 
             !problemSound.includes('?') && !problemSound.includes('!') && 
@@ -809,10 +820,10 @@ export default function Phrases() {
   // Handle topic-based practice prompt - generate new phrases
   const handleTopicPracticePrompt = async (suggestedTopic: string) => {
     if (!suggestedTopic) return;
-    
+
     // Close the feedback suggestion
     setShowFeedbackInSummary(false);
-    
+
     // Generate new phrases for the suggested topic
     await handleGenerateTopicPhrases(suggestedTopic);
   };
@@ -869,19 +880,66 @@ export default function Phrases() {
             {/* Choose a Topic Cards */}
             <div className="mb-6">
               <h3 className="text-md font-bold mb-3">Choose a Topic</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto">
-                {phraseTopics.map((topic) => (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 max-w-4xl mx-auto"> {/* Adjusted gap */}
+                {displayTopics.map((topic) => (
                   <Card
                     key={topic}
-                    className="cursor-pointer hover:shadow-md hover:bg-[#0F3CC9] transition-all duration-200 h-16"
+                    className="cursor-pointer hover:shadow-md hover:bg-[#0F3CC9] transition-all duration-200 h-14 w-full" // Smaller cards
                     style={{ backgroundColor: '#1947e5' }}
                     onClick={() => handleGenerateTopicPhrases(topic)}
                   >
-                    <CardContent className="p-3 text-center flex items-center justify-center h-full">
-                      <p className="font-bold text-white text-sm">{topic}</p>
+                    <CardContent className="p-2 text-center flex items-center justify-center h-full"> {/* Smaller padding */}
+                      <p className="font-bold text-white text-xs sm:text-sm">{topic}</p> {/* Smaller text */}
                     </CardContent>
                   </Card>
                 ))}
+              </div>
+
+              {/* Show More / Pagination controls */}
+              <div className="flex justify-between items-center mt-4">
+                {!showAllTopics && currentTopics.length > 4 && (
+                  <Button
+                    onClick={() => setShowAllTopics(true)}
+                    variant="ghost"
+                    className="text-purple-600 hover:text-purple-800 flex items-center gap-1"
+                  >
+                    Show More <ChevronDown className="h-4 w-4" />
+                  </Button>
+                )}
+                {showAllTopics && (
+                  <Button
+                    onClick={() => setShowAllTopics(false)}
+                    variant="ghost"
+                    className="text-purple-600 hover:text-purple-800 flex items-center gap-1"
+                  >
+                    Show Less <ChevronRight className="h-4 w-4 rotate-90" />
+                  </Button>
+                )}
+                {/* Only show 'More' button if there are more topics on next page */}
+                {(topicPage + 1) * topicsPerPage < allPhraseTopics.length && (
+                  <Button
+                    onClick={() => {
+                      setTopicPage(prev => prev + 1);
+                      setShowAllTopics(false); // Reset to minimized view on page change
+                    }}
+                    variant="ghost"
+                    className="text-purple-600 hover:text-purple-800 flex items-center gap-1"
+                  >
+                    More <ArrowRight className="h-4 w-4" />
+                  </Button>
+                )}
+                {topicPage > 0 && ( // Show "Previous" button if not on the first page
+                  <Button
+                    onClick={() => {
+                      setTopicPage(prev => prev - 1);
+                      setShowAllTopics(false); // Reset to minimized view on page change
+                    }}
+                    variant="ghost"
+                    className="text-purple-600 hover:text-purple-800 flex items-center gap-1"
+                  >
+                    <ArrowRight className="h-4 w-4 rotate-180" /> Previous
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -953,7 +1011,7 @@ export default function Phrases() {
                 <ChevronLeft className="h-4 w-4" />
                 Previous
               </Button>
-              
+
               <span className="text-sm text-gray-600">
                 {currentCarouselIndex + 1} of {processedPhrases.length + (showSummary ? 1 : 0)}
               </span>
@@ -1010,13 +1068,13 @@ export default function Phrases() {
                             <div className="absolute top-6 right-1/4 w-1 h-1 bg-white/80 rounded-full animate-pulse"></div>
                           </div>
                           <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2 relative z-10 break-words">
-                            🎉 Practice Session Complete! 🎉
+                            <span role="img" aria-label="party popper">🎉</span> Practice Session Complete! <span role="img" aria-label="party popper">🎉</span>
                           </CardTitle>
                           <CardDescription className="text-white/90 mt-2 text-base relative z-10 break-words">
                             Excellent work! You've completed your phrase practice session
                           </CardDescription>
                         </CardHeader>
-                        
+
                         <CardContent className="px-4 pb-4 text-white space-y-4 max-h-96 overflow-y-auto w-full">
                           {/* Performance Bubbles */}
                           <div className="grid grid-cols-4 gap-2 w-full">
@@ -1024,7 +1082,7 @@ export default function Phrases() {
                               const phrasesWithScores = processedPhrases.filter(p => 
                                 p.assessmentResult && p.assessmentResult.pronunciationScore !== null && p.id !== 'summary-card'
                               );
-                              
+
                               if (phrasesWithScores.length === 0) {
                                 return (
                                   <div className="col-span-4 text-center p-2 bg-white rounded-lg">
@@ -1033,12 +1091,12 @@ export default function Phrases() {
                                   </div>
                                 );
                               }
-                              
+
                               const avgPronunciation = Math.round(phrasesWithScores.reduce((sum, p) => sum + (p.assessmentResult?.pronunciationScore || 0), 0) / phrasesWithScores.length);
                               const avgAccuracy = Math.round(phrasesWithScores.reduce((sum, p) => sum + (p.assessmentResult?.accuracyScore || 0), 0) / phrasesWithScores.length);
                               const avgFluency = Math.round(phrasesWithScores.reduce((sum, p) => sum + (p.assessmentResult?.fluencyScore || 0), 0) / phrasesWithScores.length);
                               const avgCompleteness = Math.round(phrasesWithScores.reduce((sum, p) => sum + (p.assessmentResult?.completenessScore || 0), 0) / phrasesWithScores.length);
-                              
+
                               return (
                                 <>
                                   <div className="text-center p-2 bg-white rounded-lg">
@@ -1074,7 +1132,7 @@ export default function Phrases() {
                           ) : summaryFeedback && showFeedbackInSummary && summaryFeedback.practicePrompt && (
                             <div className="p-3 bg-white rounded-lg w-full max-w-full overflow-hidden">
                               <h4 className="text-sm font-semibold text-[#1947e5] mb-2 flex items-center gap-2">
-                                <div className="h-4 w-4 flex-shrink-0">💡</div>
+                                <span role="img" aria-label="lightbulb">💡</span>
                                 <span className="break-words">Personalized Feedback</span>
                               </h4>
                               <div className="max-h-20 overflow-y-auto mb-3">
@@ -1104,7 +1162,7 @@ export default function Phrases() {
                             const phrasesBelow70 = processedPhrases.filter(p => 
                               p.assessmentResult && p.assessmentResult.pronunciationScore < 70 && p.id !== 'summary-card'
                             );
-                            
+
                             if (phrasesBelow70.length > 0) {
                               return (
                                 <div className="w-full max-w-full p-3 bg-white rounded-lg">
@@ -1158,7 +1216,7 @@ export default function Phrases() {
                             }
                           </CardTitle>
                         </CardHeader>
-                      
+
                       <CardContent className="space-y-3 px-3 pb-4">
                         {/* Recording Controls */}
                         <div className="flex justify-center gap-2 flex-wrap">
