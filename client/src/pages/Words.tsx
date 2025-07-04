@@ -408,10 +408,13 @@ export default function Words() {
 
   // Predefined word topics
   const wordTopics = [
+    "Words that Start with..",
+    "Words that Contain..",
+    "Words that End with..",
+    "Alphabet",
     "Commonly Used Words",
     "Animals",
     "Colors",
-    "Alphabet",
     "Body Parts",
     "Family Members",
     "Weather",
@@ -419,7 +422,6 @@ export default function Words() {
     "Food and Drinks",
     "Transportation",
     "Sports",
-    "Music",
     "Nature",
     "Technology",
     "Home Items",
@@ -430,9 +432,6 @@ export default function Words() {
     "Health",
     "Travel",
     "Hobbies",
-    "Words that Start with..",
-    "Words that Contain..",
-    "Words that End with.."
   ];
 
   // Pagination constants and logic

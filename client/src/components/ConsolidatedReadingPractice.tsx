@@ -3,7 +3,7 @@ import { useReading } from '@/contexts/ReadingContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { RefreshCw, BarChart2, MicIcon, Volume2, BookOpen, StopCircleIcon, Ear, Snail } from 'lucide-react';
+import { RefreshCw, BarChart2, MicIcon, Volume2, BookOpen, StopCircleIcon, Ear, Snail, ArrowRight } from 'lucide-react';
 import { generateReadingContent } from '@/lib/openai';
 import { useToast } from '@/hooks/use-toast';
 import { useDifficulty, mapDifficultyToServer, DifficultyLevel } from '@/contexts/DifficultyContext';
@@ -90,6 +90,9 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
   // Topic selection states
   const [customTopic, setCustomTopic] = useState('');
   const [isGeneratingCustom, setIsGeneratingCustom] = useState(false);
+  
+  // Topic pagination states
+  const [topicPage, setTopicPage] = useState(0);
 
   // Practice states
   const [phrase, setPhrase] = useState<ProcessedPhrase>({
@@ -116,8 +119,33 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
     'Science & Nature',
     'Food & Cooking',
     'Sports & Recreation',
-    'History & Biography'
+    'History & Biography',
+    'Arts & Entertainment',
+    'Business & Finance',
+    'Environment',
+    'Education',
+    'Fashion & Style',
+    'Home & Garden',
+    'Music & Musicians',
+    'Movies & Cinema',
+    'Books & Literature',
+    'Relationships',
+    'Personal Development',
+    'World Culture',
+    'Adventure & Outdoors',
+    'Photography',
+    'Social Media',
+    'Pets & Animals'
   ];
+
+  // Pagination constants and logic
+  const topicsPerPage = 6;
+  const totalTopicPages = Math.ceil(readingTopics.length / topicsPerPage);
+  
+  const displayTopics = readingTopics.slice(
+    topicPage * topicsPerPage,
+    (topicPage + 1) * topicsPerPage
+  );
 
   // --- Voice Control States and Refs ---
   const [isListeningVoiceCommand, setIsListeningVoiceCommand] = useState(false);
@@ -735,10 +763,10 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
   return (
     <div className="space-y-6">
       {/* Topic Selection Section */}
-      <Card className="mb-6" data-topic-selection>
-        <CardContent className="p-6">
+      <Card className="mb-6 bg-white" data-topic-selection>
+        <CardContent className="p-6 bg-white">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Select Your Topic</h2>
+            <h2 className="text-lg font-extrabold text-[#1537cc]">Reading Practice</h2>
           </div>
 
           {/* Voice Command Feedback Section */}
@@ -770,34 +798,46 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
             </div>
           )}
 
-          {/* Choose a Topic Cards */}
+          {/* Topic Cards */}
           <div className="mb-6">
-            <h3 className="text-md font-bold mb-3">Choose a Topic</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto">
-              {readingTopics.map((topic) => (
-                <Card
-                  key={topic}
-                  className="cursor-pointer hover:shadow-md hover:bg-[#0F3CC9] transition-all duration-200 h-16"
-                  style={{ backgroundColor: '#1947e5' }}
-                  onClick={() => handleTopicSelection(topic)}
+            <div className="relative">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-w-4xl mx-auto pr-16">
+                {displayTopics.map((topic) => (
+                  <Card
+                    key={topic}
+                    className="cursor-pointer hover:shadow-md hover:border-[#0F3CC9] transition-all duration-200 h-12 bg-white border-2 border-[#1537cc]"
+                    onClick={() => handleTopicSelection(topic)}
+                  >
+                    <CardContent className="p-2 text-center flex items-center justify-center h-full">
+                      <p className="font-bold text-[#1537cc] text-xs sm:text-sm truncate">{topic}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Right arrow positioned on the right */}
+              <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
+                <Button
+                  onClick={() => setTopicPage((prevPage) => (prevPage + 1) % totalTopicPages)}
+                  variant="ghost"
+                  className="text-[#1947e5] hover:text-[#0F3CC9] p-2 animate-bounce"
+                  style={{ animationDuration: '2s' }}
                 >
-                  <CardContent className="p-3 text-center flex items-center justify-center h-full">
-                    <p className="font-bold text-white text-sm">{topic}</p>
-                  </CardContent>
-                </Card>
-              ))}
+                  <ArrowRight className="h-6 w-6" />
+                </Button>
+              </div>
             </div>
           </div>
 
           {/* Custom Topic Section */}
           <div className="mb-6">
-            <h3 className="text-md font-bold mb-3">Or enter a custom topic:</h3>
-            <div className="flex gap-3 items-center max-w-md mx-auto">
+            <p className="text-lg font-extrabold text-[#1537cc] mb-3">Or enter a custom topic:</p>
+            <div className="flex gap-2">
               <Input
                 value={customTopic}
                 onChange={(e) => setCustomTopic(e.target.value)}
-                placeholder="e.g., space exploration, cooking tips..."
-                className="flex-1"
+                placeholder="Enter a topic you'd like to read about..."
+                className="flex-1 bg-[#f9fafb] border border-[#1537cc] focus:border-[#1537cc] focus:ring-[#1537cc]"
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
                     handleCustomTopicGeneration();
@@ -807,7 +847,7 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
               <Button
                 onClick={handleCustomTopicGeneration}
                 disabled={isGeneratingCustom || !customTopic.trim()}
-                className="bg-[#1947e5] hover:bg-[#0F3CC9] text-white"
+                className="bg-[#1947E5] hover:bg-[#1537CC] text-white border-0"
               >
                 {isGeneratingCustom ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -838,7 +878,7 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
 
       {/* Practice Section */}
       <div id="practice-section" className="scroll-mt-4 mb-12">
-        <h3 className="text-lg font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">Practice Text</h3>
+        <h3 className="text-lg font-extrabold text-[#1537cc] mb-4">Practice Text</h3>
         
         <Card className="h-full max-w-2xl mx-auto">
           <CardContent className="p-6 space-y-4">

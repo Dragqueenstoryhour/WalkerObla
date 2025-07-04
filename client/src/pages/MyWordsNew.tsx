@@ -715,7 +715,7 @@ export default function MyWords() {
 
   if (authLoading || phrasesLoading || activityStatsLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 bg-green-50 min-h-screen">
+      <div className="container mx-auto px-4 py-8 bg-[#f9fafb] min-h-screen">
         <div className="animate-pulse space-y-6">
           <div className="h-8 bg-gray-200 rounded w-1/3"></div>
           <div className="h-64 bg-gray-200 rounded"></div>
@@ -726,7 +726,7 @@ export default function MyWords() {
 
   if (!isAuthenticated) {
     return (
-      <div className="container mx-auto px-4 py-8 bg-green-50 min-h-screen">
+      <div className="container mx-auto px-4 py-8 bg-[#f9fafb] min-h-screen">
         <div className="text-center py-12">
           <BookOpen className="h-16 w-16 mx-auto text-gray-400 mb-4" />
           <h2 className="text-2xl font-semibold text-gray-600 mb-2">Sign in to view your journey</h2>
@@ -737,7 +737,7 @@ export default function MyWords() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 bg-green-50 min-h-screen">
+    <div className="container mx-auto px-4 py-8 bg-[#f9fafb] min-h-screen">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
