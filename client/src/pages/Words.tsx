@@ -409,12 +409,25 @@ export default function Words() {
     "Commonly Used Words",
     "Animals",
     "Colors",
-    "Food and Drinks",
+    "Alphabet",
     "Body Parts",
     "Family Members",
     "Weather",
     "Numbers",
-    "Alphabet",
+    "Food and Drinks",
+    "Transportation",
+    "Sports",
+    "Music",
+    "Nature",
+    "Technology",
+    "Home Items",
+    "Clothing",
+    "School",
+    "Work",
+    "Emotions",
+    "Health",
+    "Travel",
+    "Hobbies",
     "Words that Start with..",
     "Words that Contain..",
     "Words that End with.."
@@ -1963,7 +1976,7 @@ export default function Words() {
   const currentLetterOptions = getLetterOptions();
 
   return (
-    <div className="container mx-auto px-4 py-8 bg-green-50 min-h-screen">
+    <div className="container mx-auto px-4 py-8 bg-gray-50 min-h-screen">
       {/* Shared words notification dialog */}
       <Dialog open={showSharedDialog} onOpenChange={setShowSharedDialog}>
         <DialogContent>
@@ -2193,7 +2206,7 @@ export default function Words() {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-purple-800 mb-2">Speech Practice - Words</h1>
+              <h1 className="text-3xl font-bold text-[#1537cc] mb-2">Speech Practice - Words</h1>
               <p className="text-muted-foreground">
                 Generate and practice words to improve your speech clarity and pronunciation
               </p>
@@ -2213,25 +2226,23 @@ export default function Words() {
         <Card className="mb-6">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Select Your Topic</h2>
+              <h2 className="text-lg font-extrabold text-[#1537cc]">Select Your Topic</h2>
               <div className="words-level-button">
                 <DifficultyDropdown />
               </div>
             </div>
 
-            {/* Choose a Topic Cards */}
+            {/* Topic Cards */}
             <div className="mb-6 topic-selection-area">
-              <h3 className="text-md font-bold mb-3">Choose a Topic</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-3 max-w-6xl mx-auto">
                 {wordTopics.map((topic) => (
                   <Card
                     key={topic}
-                    className="cursor-pointer hover:shadow-md hover:bg-[#0F3CC9] transition-all duration-200 h-16"
-                    style={{ backgroundColor: '#1947e5' }}
+                    className="cursor-pointer hover:shadow-md hover:border-[#0F3CC9] transition-all duration-200 h-12 bg-white border-2 border-[#1537cc]"
                     onClick={() => handleTopicCardClick(topic)}
                   >
                     <CardContent className="p-3 text-center flex items-center justify-center h-full">
-                      <p className="font-bold text-white text-sm">{topic}</p>
+                      <p className="font-bold text-[#1537cc] text-sm">{topic}</p>
                     </CardContent>
                   </Card>
                 ))}
@@ -2240,7 +2251,7 @@ export default function Words() {
 
             {/* Custom Topic Input */}
             <div className="mb-6">
-              <p className="text-base font-medium text-purple-600 mb-3">Or enter a custom topic:</p>
+              <p className="text-base font-medium text-[#1537cc] mb-3">Or enter a custom topic:</p>
               <div className="flex gap-2">
                 <Input
                   placeholder="Enter a topic you'd like to practice words about..."
@@ -2280,7 +2291,7 @@ export default function Words() {
                     <div className="bg-white rounded-lg p-4 shadow-lg border-0 max-w-xl mx-auto">
                       <Progress 
                         value={((currentCarouselIndex + 1) / processedWords.length) * 100} 
-                        className="h-2 [&>div]:bg-[#1947e5]"
+                        className="h-3 bg-[#f9fafb] [&_div]:bg-[#1537cc]"
                       />
                     </div>
 
@@ -2291,7 +2302,11 @@ export default function Words() {
                         disabled={!canScrollPrev}
                         variant="outline"
                         size="sm"
-                        className="flex items-center gap-2"
+                        className={`flex items-center gap-2 ${
+                          !canScrollPrev
+                            ? "bg-[#f9fafb] text-gray-400 border-gray-200" // Light grey when not selectable
+                            : "bg-[#f0eded] hover:bg-gray-300 text-gray-800 border-gray-400" // Dark grey when selectable
+                        }`}
                       >
                         <ChevronLeft className="h-4 w-4" />
                         Previous
@@ -2339,7 +2354,11 @@ export default function Words() {
                           disabled={!canScrollNext}
                           variant="outline"
                           size="sm"
-                          className="flex items-center gap-2"
+                          className={`flex items-center gap-2 ${
+                            !canScrollNext
+                              ? "bg-[#f9fafb] text-gray-400 border-gray-200" // Light grey when not selectable
+                              : "bg-[#f0eded] hover:bg-gray-300 text-gray-800 border-gray-400" // Dark grey when selectable
+                          }`}
                         >
                           Next
                           <ChevronRight className="h-4 w-4" />
