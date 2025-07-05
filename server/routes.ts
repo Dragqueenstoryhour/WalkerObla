@@ -230,31 +230,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Save reading content for user
+  // Endpoint to save a new reading
   app.post('/api/readings/save', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const { title, content, difficulty, source, sourceId } = req.body;
-      
-      if (!title || !content) {
-        return res.status(400).json({ error: 'Title and content are required' });
-      }
+      try {
+        const userId = req.user.claims.sub;
+        const { title, content, difficulty, source, sourceId } = req.body;
 
-      // Save as a phrase with reader_content source to appear in readings
-      const savedReading = await storage.createUserSavedPhrase({
-        userId,
-        phrase: content,
-        phonetic: title, // Store title in phonetic field for display
-        difficulty: difficulty || 'intermediate',
-        source: 'reader_content',
-        sourceId: sourceId
-      });
-      
-      res.json(savedReading);
-    } catch (error) {
-      console.error('Error saving reading:', error);
-      res.status(500).json({ error: 'Failed to save reading' });
-    }
-  });
+        if (!title || !content) {
+          return res.status(400).json({ error: 'Title and content are required' });
+        }
+
+        // Save reading as a user saved phrase with specific source to separate from regular phrases
+        const savedReading = await storage.createUserSavedPhrase({
+          userId,
+          phrase: content, // Store content as phrase
+          difficulty: difficulty || 'intermediate',
+          source: 'reader_content' // This will distinguish it from regular phrases
+        });
+
+        res.json(savedReading);
+      } catch (error) {
+        console.error('Error saving reading:', error);
+        res.status(500).json({ error: 'Failed to save reading' });
+      }
+    });
+
+  // Endpoint to get user saved readings
+  app.get('/api/user/saved-readings', isAuthenticated, async (req: any, res) => {
+      try {
+        const userId = req.user.claims.sub;
+
+        // Fetch readings from userSavedPhrases with reader_content source
+        const allSavedPhrases = await storage.getUserSavedPhrases(userId);
+        const readings = allSavedPhrases.filter(phrase => phrase.source === 'reader_content');
+
+        res.json(readings);
+      } catch (error) {
+        console.error("Error fetching saved readings:", error);
+        res.status(500).json({ message: "Failed to fetch saved readings" });
+      }
+    });
+
+  // No direct change needed for /api/user/saved-phrases in routes.ts,
+  // but storage.getUserSavedPhrases (wherever it's defined)
+  // should ensure it only retrieves actual phrases, potentially by excluding source: 'reader_content' if necessary.
 
   // Activity recording endpoint
   app.post('/api/activities/record', isAuthenticated, async (req: any, res) => {
@@ -302,41 +321,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching saved phrases:", error);
       res.status(500).json({ message: "Failed to fetch saved phrases" });
-    }
-  });
-
-  // Get saved reading content separately
-  app.get('/api/user/saved-readings', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      
-      // Get activities with type reading_session that have content saved
-      const readingActivities = await db
-        .select()
-        .from(userActivity)
-        .where(
-          and(
-            eq(userActivity.userId, userId),
-            eq(userActivity.activityType, 'reading_session'),
-            isNotNull(userActivity.itemPracticed)
-          )
-        )
-        .orderBy(desc(userActivity.createdAt));
-      
-      // Transform to match expected format
-      const readings = readingActivities.map((activity: any) => ({
-        id: activity.id,
-        phrase: activity.itemPracticed, // The reading content
-        phonetic: activity.difficulty || 'Reading Content', // Use as title
-        difficulty: activity.difficulty,
-        source: 'readings',
-        createdAt: activity.createdAt
-      }));
-      
-      res.json(readings);
-    } catch (error) {
-      console.error("Error fetching saved readings:", error);
-      res.status(500).json({ message: "Failed to fetch saved readings" });
     }
   });
 

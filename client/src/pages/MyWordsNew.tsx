@@ -292,17 +292,22 @@ function AssignmentCarousel({ items, assignmentId }: { items: AssignmentItem[], 
   // Check if all assignment items are completed to show summary
   useEffect(() => {
     if (processedItems.length > 0) {
-      const completedCount = processedItems.filter(item => item.status === "complete").length;
-      if (completedCount === processedItems.length && !showAssignmentSummary) {
+      const completedCount = processedItems.filter(item => item.status === "complete" && item.source !== "summary").length;
+      const nonSummaryItems = processedItems.filter(item => item.source !== "summary");
+      
+      if (completedCount === nonSummaryItems.length && !showAssignmentSummary && nonSummaryItems.length > 0) {
         setTimeout(() => {
           setShowAssignmentSummary(true);
-          // Add summary card to processed items
-          setProcessedItems(prev => [...prev, {
-            id: 'assignment-summary-card',
-            text: 'Assignment Complete!',
-            status: 'complete',
-            source: 'summary'
-          }]);
+          // Add summary card to processed items only if not already added
+          const hasSummaryCard = processedItems.some(item => item.source === "summary");
+          if (!hasSummaryCard) {
+            setProcessedItems(prev => [...prev, {
+              id: 'assignment-summary-card',
+              text: 'Assignment Complete!',
+              status: 'complete',
+              source: 'summary'
+            }]);
+          }
           // Navigate to summary card
           if (emblaApi) {
             emblaApi.scrollTo(processedItems.length);

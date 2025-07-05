@@ -56,7 +56,7 @@ import {
   type InsertAssignmentResult,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, asc, and, or, sql, count, avg } from "drizzle-orm";
+import { eq, desc, asc, and, or, sql, count, avg, ne } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -130,6 +130,10 @@ export interface IStorage {
   getUserSavedPhrases(userId: string): Promise<UserSavedPhrase[]>;
   createUserSavedPhrase(phrase: InsertUserSavedPhrase): Promise<UserSavedPhrase>;
   deleteUserSavedPhrase(id: number): Promise<void>;
+
+  // User saved readings operations
+  getUserSavedReadings(userId: string): Promise<ReadingContent[]>;
+  createUserSavedReading(content: InsertReadingContent): Promise<ReadingContent>;
   
   // Practice group operations
   getPracticeGroups(userId: string): Promise<PracticeGroup[]>;
@@ -158,17 +162,19 @@ export interface IStorage {
   deleteAssignmentItem(id: number): Promise<void>;
   
   // Assignment result operations
-  getAssignmentResults(assignmentId: number): Promise<AssignmentResult[]>;
-  createAssignmentResult(result: InsertAssignmentResult): Promise<AssignmentResult>;
-  getAssignmentProgress(assignmentId: number): Promise<{
-    totalItems: number;
-    completedItems: number;
-    averageScore: number;
-  }>;
-  
-  // Health check for deployment readiness
-  healthCheck(): Promise<void>;
-}
+    getAssignmentResults(assignmentId: number): Promise<AssignmentResult[]>;
+    createAssignmentResult(result: InsertAssignmentResult): Promise<AssignmentResult>;
+    getAssignmentProgress(assignmentId: number): Promise<{
+      totalItems: number;
+      completedItems: number;
+      averageScore: number;
+    }>;
+    // User saved readings operations
+    getUserSavedReadings(userId: string): Promise<UserSavedPhrase[]>;
+    createUserSavedReading(content: InsertUserSavedPhrase): Promise<UserSavedPhrase>;
+    // Health check for deployment readiness
+    healthCheck(): Promise<void>;
+  } // Closing brace for IStorage interface
 
 export class DatabaseStorage implements IStorage {
   // User operations for Replit Auth
@@ -509,11 +515,15 @@ export class DatabaseStorage implements IStorage {
 
   // User saved phrases operations
   async getUserSavedPhrases(userId: string): Promise<UserSavedPhrase[]> {
-    return await db
+    const phrases = await db
       .select()
       .from(userSavedPhrases)
-      .where(eq(userSavedPhrases.userId, userId))
+      .where(and(
+        eq(userSavedPhrases.userId, userId),
+        ne(userSavedPhrases.source, 'reader_content')
+      ))
       .orderBy(desc(userSavedPhrases.createdAt));
+    return phrases;
   }
 
   async createUserSavedPhrase(phrase: InsertUserSavedPhrase): Promise<UserSavedPhrase> {
@@ -770,6 +780,24 @@ export class DatabaseStorage implements IStorage {
       completedItems,
       averageScore: Math.round(averageScore)
     };
+  }
+
+  // User saved readings operations (stored as phrases with reader_content source)
+  async getUserSavedReadings(userId: string): Promise<UserSavedPhrase[]> {
+    const readings = await db
+      .select()
+      .from(userSavedPhrases)
+      .where(and(
+        eq(userSavedPhrases.userId, userId),
+        eq(userSavedPhrases.source, 'reader_content')
+      ))
+      .orderBy(desc(userSavedPhrases.createdAt));
+    return readings;
+  }
+
+  async createUserSavedReading(content: InsertUserSavedPhrase): Promise<UserSavedPhrase> {
+    const [newReading] = await db.insert(userSavedPhrases).values(content).returning();
+    return newReading;
   }
 
   // Health check for deployment readiness
