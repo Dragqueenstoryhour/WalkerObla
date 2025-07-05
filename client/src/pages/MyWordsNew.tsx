@@ -1812,21 +1812,21 @@ export default function MyWordsNew() {
   }, [savedPhrases]);
 
   useEffect(() => {
-    if (practiceGroups.length > 0) {
-      const processedReadings: ProcessedItem[] = practiceGroups.flatMap((group: any) => 
-        group.phrases?.map((phrase: any) => ({
-          id: `reading-${phrase.id}`,
-          text: phrase.phrase,
-          syllabication: phrase.syllabication,
-          phonetic: phrase.phonetic || undefined,
-          difficulty: phrase.difficulty as "beginner" | "intermediate" | "advanced" | undefined,
-          status: "idle",
-          source: "readings"
-        })) || []
-      );
+    if (readingActivities.length > 0) {
+      const processedReadings: ProcessedItem[] = readingActivities.map((reading: any) => ({
+        id: `reading-${reading.id}`,
+        text: reading.phrase, // The content is stored in the phrase field
+        syllabication: reading.syllabication,
+        phonetic: reading.phonetic || undefined, // This contains the title
+        difficulty: reading.difficulty as "beginner" | "intermediate" | "advanced" | undefined,
+        status: "idle",
+        source: "readings"
+      }));
       setShuffledReadings(processedReadings);
+    } else {
+      setShuffledReadings([]);
     }
-  }, [practiceGroups]);
+  }, [readingActivities]);
 
   if (!isAuthenticated) {
     return (
