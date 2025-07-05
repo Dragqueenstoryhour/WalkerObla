@@ -29,14 +29,17 @@ const getWordColorFromPhonemes = (wordResult: any): string => {
 };
 
 // Helper function to render reading text with color-coded words based on assessment results
-const renderColorCodedReadingText = (readingText: string, assessmentResult: any): JSX.Element => {
-  if (!assessmentResult?.wordLevelResults) {
+const renderColorCodedReadingText = (readingText: string, assessmentResult: any, previousAssessmentResult?: any): JSX.Element => {
+  // Use current assessment result, or fall back to previous assessment result if available
+  const resultToUse = assessmentResult || previousAssessmentResult;
+  
+  if (!resultToUse?.wordLevelResults) {
     // No assessment data available, return default text
-    return <span className="text-gray-800">{readingText}</span>;
+    return <span className="text-white">{readingText}</span>;
   }
   
   const words = readingText.split(/\s+/);
-  const wordResults = assessmentResult.wordLevelResults;
+  const wordResults = resultToUse.wordLevelResults;
   
   return (
     <span>
@@ -49,7 +52,7 @@ const renderColorCodedReadingText = (readingText: string, assessmentResult: any)
         
         const color = matchingResult 
           ? getWordColorFromPhonemes(matchingResult)
-          : '#374151'; // Default gray if no match
+          : '#ffffff'; // Default white if no match
         
         return (
           <span key={index} style={{ color }} className="font-medium">
@@ -76,6 +79,7 @@ interface ProcessedPhrase {
   recordingUrl?: string | null;
   recordingBlob?: Blob;
   assessmentResult?: PronunciationAssessmentResult;
+  previousAssessmentResult?: PronunciationAssessmentResult; // For maintaining colors during retry
   status: "idle" | "recording" | "assessing" | "complete";
 }
 
@@ -381,7 +385,13 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
   // Start recording the phrase
   const startPhrasePractice = async () => {
     try {
-      setPhrase(prev => ({ ...prev, status: "recording" }));
+      // Preserve current assessment as previous for color coding during retry
+      setPhrase(prev => ({ 
+        ...prev, 
+        status: "recording",
+        // Preserve current assessment as previous for color coding during retry
+        previousAssessmentResult: prev.assessmentResult || prev.previousAssessmentResult
+      }));
       chunksRef.current = [];
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -887,8 +897,8 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
               className="text-base font-semibold leading-relaxed p-4 rounded-lg min-h-[200px] max-h-[400px] overflow-y-auto"
               style={{ lineHeight: '1.8', backgroundColor: '#1947e5' }}
             >
-              {phrase.status === "complete" && phrase.assessmentResult && currentContent?.content ? 
-                renderColorCodedReadingText(currentContent.content, phrase.assessmentResult) :
+              {((phrase.status === "complete" && phrase.assessmentResult) || phrase.previousAssessmentResult) && currentContent?.content ? 
+                renderColorCodedReadingText(currentContent.content, phrase.assessmentResult, phrase.previousAssessmentResult) :
                 <div 
                   ref={readingContentRef}
                   className="text-white"
@@ -987,14 +997,8 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
                 <div className="flex justify-center gap-4">
                   <Button
                     onClick={() => {
-                      // Reset the phrase state to idle to show original text
-                      setPhrase(prev => ({
-                        ...prev,
-                        status: "idle",
-                        assessmentResult: undefined,
-                        recordingUrl: undefined,
-                        recordingBlob: undefined
-                      }));
+                      // Start new recording but preserve colors from previous assessment
+                      startPhrasePractice();
                     }}
                     className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 px-8 py-3 text-base"
                   >

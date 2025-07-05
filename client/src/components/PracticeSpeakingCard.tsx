@@ -5,6 +5,60 @@ import { MicIcon, StopCircleIcon, Volume2, Star, BookmarkIcon, Ear, Snail, BookO
 
 import { PronunciationAssessmentResult } from '@/lib/types';
 
+// Helper function to get word color based on phoneme accuracy scores
+const getWordColorFromPhonemes = (wordResult: any): string => {
+  if (!wordResult.phonemes || wordResult.phonemes.length === 0) {
+    // If no phoneme data, use overall word accuracy score
+    return wordResult.accuracyScore >= 70 ? '#2a9d8f' : '#e76f51';
+  }
+  
+  // Check if any phoneme in the word has accuracy below 70%
+  const hasLowAccuracyPhoneme = wordResult.phonemes.some((phoneme: any) => phoneme.score < 70);
+  
+  if (hasLowAccuracyPhoneme) {
+    return '#e76f51'; // Red for words with any low-accuracy phonemes
+  } else {
+    return '#2a9d8f'; // Green for words where all phonemes are above 70%
+  }
+};
+
+// Helper function to render text with color-coded words based on assessment results
+const renderColorCodedText = (text: string, assessmentResult: any, previousAssessmentResult?: any): JSX.Element => {
+  // Use current assessment result, or fall back to previous assessment result if available
+  const resultToUse = assessmentResult || previousAssessmentResult;
+  
+  if (!resultToUse?.wordLevelResults) {
+    // No assessment data available, return default text
+    return <span className="text-gray-800">{text}</span>;
+  }
+  
+  const words = text.split(/\s+/);
+  const wordResults = resultToUse.wordLevelResults;
+  
+  return (
+    <span>
+      {words.map((word, index) => {
+        // Find matching word result (case-insensitive, remove punctuation)
+        const cleanWord = word.toLowerCase().replace(/[^\w]/g, '');
+        const matchingResult = wordResults.find((wr: any) => 
+          wr.word.toLowerCase() === cleanWord
+        );
+        
+        const color = matchingResult 
+          ? getWordColorFromPhonemes(matchingResult)
+          : '#374151'; // Default gray if no match
+        
+        return (
+          <span key={index} style={{ color }} className="font-bold">
+            {word}
+            {index < words.length - 1 && ' '}
+          </span>
+        );
+      })}
+    </span>
+  );
+};
+
 interface PracticeSpeakingCardProps {
   text: string;
   contentId?: number;
@@ -20,6 +74,7 @@ interface ProcessedPhrase {
   recordingUrl?: string | null;
   recordingBlob?: Blob;
   assessmentResult?: PronunciationAssessmentResult;
+  previousAssessmentResult?: PronunciationAssessmentResult; // For maintaining colors during retry
   status: "idle" | "recording" | "assessing" | "complete";
 }
 
@@ -51,7 +106,13 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
   // Start recording the phrase
   const startPhrasePractice = async () => {
     try {
-      setPhrase(prev => ({ ...prev, status: "recording" }));
+      // Preserve current assessment as previous for color coding during retry
+      setPhrase(prev => ({ 
+        ...prev, 
+        status: "recording",
+        // Preserve current assessment as previous for color coding during retry
+        previousAssessmentResult: prev.assessmentResult || prev.previousAssessmentResult
+      }));
       chunksRef.current = [];
 
       // Get microphone access
@@ -338,7 +399,12 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
   return (
     <Card className="h-full">
       <CardHeader className="text-center">
-        <CardTitle className="text-xl font-bold">{phrase.text}</CardTitle>
+        <CardTitle className="text-xl font-bold">
+          {((phrase.status === "complete" && phrase.assessmentResult) || phrase.previousAssessmentResult) ? 
+            renderColorCodedText(phrase.text, phrase.assessmentResult, phrase.previousAssessmentResult) :
+            phrase.text
+          }
+        </CardTitle>
       </CardHeader>
       
       <CardContent className="space-y-4">

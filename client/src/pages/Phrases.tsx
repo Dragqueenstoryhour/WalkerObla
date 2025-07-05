@@ -77,14 +77,17 @@ const getWordColorFromPhonemes = (wordResult: any): string => {
 };
 
 // Helper function to render phrase text with color-coded words based on assessment results
-const renderColorCodedPhraseText = (phraseText: string, assessmentResult: any): JSX.Element => {
-  if (!assessmentResult?.wordLevelResults) {
+const renderColorCodedPhraseText = (phraseText: string, assessmentResult: any, previousAssessmentResult?: any): JSX.Element => {
+  // Use current assessment result, or fall back to previous assessment result if available
+  const resultToUse = assessmentResult || previousAssessmentResult;
+  
+  if (!resultToUse?.wordLevelResults) {
     // No assessment data available, return default white text
     return <span className="text-white">{phraseText}</span>;
   }
 
   const words = phraseText.split(/\s+/);
-  const wordResults = assessmentResult.wordLevelResults;
+  const wordResults = resultToUse.wordLevelResults;
 
   return (
     <span>
@@ -127,6 +130,7 @@ interface ProcessedPhrase {
   recordingUrl?: string | null;
   recordingBlob?: Blob;
   assessmentResult?: PronunciationAssessmentResult;
+  previousAssessmentResult?: PronunciationAssessmentResult; // For maintaining colors during retry
   status: "idle" | "recording" | "assessing" | "complete";
 }
 
@@ -370,9 +374,15 @@ export default function Phrases() {
       setPhraseAssessmentResult(null);
 
       // Update the phrase status to recording
+      // Preserve current assessment as previous for color coding during retry
       setProcessedPhrases((phrases) =>
         phrases.map((p, idx) =>
-          idx === phraseIndex ? { ...p, status: "recording" } : p,
+          idx === phraseIndex ? { 
+            ...p, 
+            status: "recording",
+            // Preserve current assessment as previous for color coding during retry
+            previousAssessmentResult: p.assessmentResult || p.previousAssessmentResult
+          } : p,
         ),
       );
 
@@ -1320,8 +1330,8 @@ export default function Phrases() {
                     <Card className="w-72 shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
                         <CardHeader className="text-center px-3 py-4">
                           <CardTitle className={`${getTextSizeClass(phrase.text)} font-bold leading-relaxed px-2`} style={{ wordBreak: 'normal', overflowWrap: 'break-word', wordWrap: 'break-word' }}>
-                            {phrase.status === "complete" && phrase.assessmentResult ? 
-                              renderColorCodedPhraseText(phrase.text, phrase.assessmentResult) :
+                            {(phrase.status === "complete" && phrase.assessmentResult) || phrase.previousAssessmentResult ? 
+                              renderColorCodedPhraseText(phrase.text, phrase.assessmentResult, phrase.previousAssessmentResult) :
                               <span className="text-white">{phrase.text}</span>
                             }
                           </CardTitle>
