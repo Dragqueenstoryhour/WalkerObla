@@ -151,6 +151,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Activities endpoints for My Journey tab
+  app.get('/api/activities/words', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const words = await storage.getSavedWords(userId);
+      res.json(words);
+    } catch (error) {
+      console.error("Error fetching word activities:", error);
+      res.status(500).json({ message: "Failed to fetch word activities" });
+    }
+  });
+
+  app.get('/api/activities/phrases', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const phrases = await storage.getUserSavedPhrases(userId);
+      res.json(phrases);
+    } catch (error) {
+      console.error("Error fetching phrase activities:", error);
+      res.status(500).json({ message: "Failed to fetch phrase activities" });
+    }
+  });
+
+  app.get('/api/activities/readings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      // Get saved readings - these are phrases marked with source: "reader_content"
+      const readings = await storage.getUserSavedPhrases(userId);
+      const readingPhrases = readings.filter(p => p.source === 'reader_content');
+      res.json(readingPhrases);
+    } catch (error) {
+      console.error("Error fetching reading activities:", error);
+      res.status(500).json({ message: "Failed to fetch reading activities" });
+    }
+  });
+
+  // Activity recording endpoint
+  app.post('/api/activities/record', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const activityData = insertUserActivitySchema.parse({
+        ...req.body,
+        userId
+      });
+      
+      const activity = await storage.recordActivity(activityData);
+      res.status(201).json(activity);
+    } catch (error) {
+      console.error("Error recording activity:", error);
+      res.status(500).json({ message: "Failed to record activity" });
+    }
+  });
+
   // Record user activity
   app.post('/api/user/activity', isAuthenticated, async (req: any, res) => {
     try {

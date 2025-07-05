@@ -111,6 +111,7 @@ function AssignmentCarousel({ items, assignmentId }: { items: AssignmentItem[], 
   const [assignmentAssessmentResult, setAssignmentAssessmentResult] = useState<any>(null);
   const [currentItemIndex, setCurrentItemIndex] = useState(-1);
   const [slowPlaybackItems, setSlowPlaybackItems] = useState<Record<string, boolean>>({});
+  const [showAssignmentSummary, setShowAssignmentSummary] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -170,6 +171,29 @@ function AssignmentCarousel({ items, assignmentId }: { items: AssignmentItem[], 
     }));
     setProcessedItems(converted);
   }, [items]);
+
+  // Check if all assignment items are completed to show summary
+  useEffect(() => {
+    if (processedItems.length > 0) {
+      const completedCount = processedItems.filter(item => item.status === "complete").length;
+      if (completedCount === processedItems.length && !showAssignmentSummary) {
+        setTimeout(() => {
+          setShowAssignmentSummary(true);
+          // Add summary card to processed items
+          setProcessedItems(prev => [...prev, {
+            id: 'assignment-summary-card',
+            text: 'Assignment Complete!',
+            status: 'complete',
+            source: 'summary'
+          }]);
+          // Navigate to summary card
+          if (emblaApi) {
+            emblaApi.scrollTo(processedItems.length);
+          }
+        }, 1000);
+      }
+    }
+  }, [processedItems, showAssignmentSummary, emblaApi]);
 
   // Update carousel index when slide changes
   useEffect(() => {
@@ -411,24 +435,101 @@ function AssignmentCarousel({ items, assignmentId }: { items: AssignmentItem[], 
           <div className="embla__container flex">
             {processedItems.map((item, index) => (
               <div key={`${item.id}-${index}`} className="embla__slide flex-[0_0_100%] px-2">
-                <Card className="h-full shadow-lg border-0 card-content w-full max-w-full overflow-hidden" style={{ backgroundColor: '#1947e5' }}>
-                  <CardHeader className="text-center text-white pb-4">
-                    <CardTitle className="text-3xl font-bold mb-4 leading-tight px-4">{item.text}</CardTitle>
-                    
-                    {item.syllabication && (
-                      <div className="text-lg text-white/90 mb-4">
-                        {item.syllabication}
+                {item.id === 'assignment-summary-card' ? (
+                  // Assignment Summary Card
+                  <Card className="h-full shadow-lg border-0 card-content w-full max-w-full overflow-hidden" style={{ backgroundColor: '#1947e5' }}>
+                    <CardHeader className="text-center text-white pb-4 relative overflow-hidden">
+                      {/* Celebratory particles effect */}
+                      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                        <div className="absolute top-4 left-4 w-2 h-2 bg-yellow-300 rounded-full animate-pulse"></div>
+                        <div className="absolute top-8 right-6 w-1 h-1 bg-white rounded-full animate-bounce"></div>
+                        <div className="absolute top-12 left-1/3 w-1.5 h-1.5 bg-yellow-200 rounded-full animate-ping"></div>
+                        <div className="absolute top-16 right-1/4 w-1 h-1 bg-green-300 rounded-full animate-pulse"></div>
+                        <div className="absolute top-6 left-2/3 w-1.5 h-1.5 bg-pink-300 rounded-full animate-bounce"></div>
                       </div>
-                    )}
 
-                    {item.phonetic && (
-                      <div className="text-lg text-white/90 italic mb-4">
-                        /{item.phonetic}/
+                      <div className="relative z-10">
+                        <div className="text-5xl mb-4">🎉</div>
+                        <CardTitle className="text-3xl font-bold mb-4 leading-tight px-4">Assignment Complete!</CardTitle>
+                        <p className="text-lg text-white/90">Congratulations on finishing your assignment!</p>
                       </div>
-                    )}
-                  </CardHeader>
+                    </CardHeader>
 
-                  <CardContent className="text-center pb-6">
+                    <CardContent className="px-4 pb-4 text-white space-y-4 max-h-96 overflow-y-auto w-full">
+                      {/* Performance Summary */}
+                      <div className="grid grid-cols-2 gap-2 w-full">
+                        {(() => {
+                          const itemsWithScores = processedItems.filter(item => 
+                            item.assessmentResult && item.assessmentResult.pronunciationScore !== null && item.id !== 'assignment-summary-card'
+                          );
+
+                          if (itemsWithScores.length === 0) {
+                            return (
+                              <div className="col-span-2 text-center p-2 bg-white rounded-lg">
+                                <div className="text-sm text-gray-700">No scores available yet</div>
+                                <div className="text-xs text-gray-500">Practice the assignment items to see your results</div>
+                              </div>
+                            );
+                          }
+
+                          const avgScore = Math.round(
+                            itemsWithScores.reduce((sum, item) => sum + (item.assessmentResult?.pronunciationScore || 0), 0) / itemsWithScores.length
+                          );
+
+                          return (
+                            <>
+                              <div className="bg-white rounded-lg p-2 text-center">
+                                <div className="text-2xl font-bold text-purple-600">{avgScore}%</div>
+                                <div className="text-xs text-gray-600">Average Score</div>
+                              </div>
+                              <div className="bg-white rounded-lg p-2 text-center">
+                                <div className="text-2xl font-bold text-green-600">{itemsWithScores.length}</div>
+                                <div className="text-xs text-gray-600">Items Completed</div>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+
+                      {/* Restart Button */}
+                      <div className="flex justify-center mt-6">
+                        <Button
+                          onClick={() => {
+                            setShowAssignmentSummary(false);
+                            setProcessedItems(prev => prev.filter(item => item.id !== 'assignment-summary-card'));
+                            setCurrentCarouselIndex(0);
+                            if (emblaApi) {
+                              emblaApi.scrollTo(0);
+                            }
+                          }}
+                          className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg"
+                        >
+                          <RotateCw className="h-6 w-6 mr-2" />
+                          Practice Again
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  // Regular Assignment Item Card
+                  <Card className="h-full shadow-lg border-0 card-content w-full max-w-full overflow-hidden" style={{ backgroundColor: '#1947e5' }}>
+                    <CardHeader className="text-center text-white pb-4">
+                      <CardTitle className="text-3xl font-bold mb-4 leading-tight px-4">{item.text}</CardTitle>
+                      
+                      {item.syllabication && (
+                        <div className="text-lg text-white/90 mb-4">
+                          {item.syllabication}
+                        </div>
+                      )}
+
+                      {item.phonetic && (
+                        <div className="text-lg text-white/90 italic mb-4">
+                          /{item.phonetic}/
+                        </div>
+                      )}
+                    </CardHeader>
+
+                    <CardContent className="text-center pb-6">
                     {/* Recording Button */}
                     <div className="mb-6">
                       {item.status === "recording" ? (
@@ -492,19 +593,20 @@ function AssignmentCarousel({ items, assignmentId }: { items: AssignmentItem[], 
                       </div>
                     </div>
 
-                    {/* Assessment Results */}
-                    {item.status === "complete" && item.assessmentResult && (
-                      <div className="bg-white/20 rounded-lg p-4 mt-4">
-                        <div className="text-white font-semibold mb-2">Assessment Results:</div>
-                        <div className="text-sm text-white/90 space-y-1">
-                          <div>Pronunciation: {Math.round(item.assessmentResult.pronunciationScore)}%</div>
-                          <div>Accuracy: {Math.round(item.assessmentResult.accuracyScore)}%</div>
-                          <div>Fluency: {Math.round(item.assessmentResult.fluencyScore)}%</div>
+                      {/* Assessment Results */}
+                      {item.status === "complete" && item.assessmentResult && (
+                        <div className="bg-white/20 rounded-lg p-4 mt-4">
+                          <div className="text-white font-semibold mb-2">Assessment Results:</div>
+                          <div className="text-sm text-white/90 space-y-1">
+                            <div>Pronunciation: {Math.round(item.assessmentResult.pronunciationScore)}%</div>
+                            <div>Accuracy: {Math.round(item.assessmentResult.accuracyScore)}%</div>
+                            <div>Fluency: {Math.round(item.assessmentResult.fluencyScore)}%</div>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             ))}
           </div>
@@ -706,14 +808,38 @@ function AssignmentsTab() {
 
       {/* Assignment Items Carousel */}
       {selectedAssignment && assignmentItems.length > 0 && (
-        <div className="mt-8">
-          <h3 className="text-xl font-bold text-purple-800 mb-4">
-            Practice: {selectedAssignment.title}
-          </h3>
-          <AssignmentCarousel 
-            items={assignmentItems} 
-            assignmentId={selectedAssignment.id}
-          />
+        <div className="mt-8 space-y-8">
+          <div>
+            <h3 className="text-xl font-bold text-purple-800 mb-4">
+              Practice: {selectedAssignment.title}
+            </h3>
+            <AssignmentCarousel 
+              items={assignmentItems} 
+              assignmentId={selectedAssignment.id}
+            />
+          </div>
+          
+          {/* Individual Words Practice Carousel */}
+          <div className="space-y-4">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold mb-2 text-purple-800">Practice Individual Words</h3>
+              <p className="text-gray-600">Practice each word from your assignment individually</p>
+            </div>
+            <PracticeWordsCarousel
+              items={assignmentItems.map(item => ({
+                id: `assignment-word-${item.id}`,
+                text: item.content,
+                syllabication: item.syllabication,
+                phonetic: item.phonetic,
+                difficulty: (item.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
+                source: "assignment",
+                status: "idle" as const
+              }))}
+              title="Assignment Words Practice"
+              color="#9333ea"
+              emptyMessage="No words in this assignment"
+            />
+          </div>
         </div>
       )}
     </div>
