@@ -155,19 +155,22 @@ const getSyllableColor = (accuracyScore: number): string => {
 };
 
 // Helper function to map syllables from assessment results to phonetic breakdown display
-const mapSyllablesToDisplay = (phoneticBreakdown: string, syllables: any[]): Array<{text: string, color: string}> => {
+const mapSyllablesToDisplay = (phoneticBreakdown: string, syllables: any[], overallScore?: number): Array<{text: string, color: string}> => {
+  const displaySyllables = phoneticBreakdown.split(/\s*[·•-]\s*/).map(s => s.trim());
+  
   if (!syllables || syllables.length === 0) {
-    // No syllable data available, return default styling
-    return phoneticBreakdown.split(/\s*[·•-]\s*/).map(syllable => ({
-      text: syllable.trim(),
-      color: '#ffffff' // Default white color
+    // No syllable data available - use overall score for all segments
+    const fallbackColor = overallScore ? getSyllableColor(overallScore) : '#ffffff';
+    return displaySyllables.map(syllable => ({
+      text: syllable,
+      color: fallbackColor
     }));
   }
 
-  const displaySyllables = phoneticBreakdown.split(/\s*[·•-]\s*/);
+  // Create a smart mapping system that ensures 100% coverage
   const resultSyllables = displaySyllables.map((displaySyllable, index) => {
-    // Try to match with assessment syllables
-    const matchingSyllable = syllables.find(s => 
+    // Try direct matching first
+    let matchingSyllable = syllables.find(s => 
       s.syllable && s.grapheme &&
       (s.syllable.toLowerCase().includes(displaySyllable.toLowerCase()) ||
       s.grapheme.toLowerCase().includes(displaySyllable.toLowerCase()) ||
@@ -175,15 +178,36 @@ const mapSyllablesToDisplay = (phoneticBreakdown: string, syllables: any[]): Arr
       displaySyllable.toLowerCase().includes(s.grapheme.toLowerCase()))
     );
 
+    // If no direct match, use positional mapping (map by index)
+    if (!matchingSyllable && index < syllables.length) {
+      matchingSyllable = syllables[index];
+    }
+
+    // If still no match, use the closest syllable or overall word score
+    if (!matchingSyllable) {
+      if (syllables.length > 0) {
+        // Use the last available syllable score
+        matchingSyllable = syllables[syllables.length - 1];
+      } else if (overallScore) {
+        // Fallback to overall word score
+        return {
+          text: displaySyllable,
+          color: getSyllableColor(overallScore)
+        };
+      }
+    }
+
     if (matchingSyllable) {
       return {
-        text: displaySyllable.trim(),
+        text: displaySyllable,
         color: getSyllableColor(matchingSyllable.accuracyScore)
       };
     } else {
+      // Final fallback - use overall score or reasonable default
+      const fallbackColor = overallScore ? getSyllableColor(overallScore) : getSyllableColor(75); // Default to good score
       return {
-        text: displaySyllable.trim(),
-        color: '#ffffff' // Default white if no match found
+        text: displaySyllable,
+        color: fallbackColor
       };
     }
   });
@@ -2626,14 +2650,14 @@ export default function Words() {
                                       {word.status === "complete" && word.assessmentResult?.wordLevelResults?.[0] && 
                                        (word.assessmentResult.wordLevelResults[0] as any).syllables ? (
                                         // Show color-coded syllables based on assessment results
-                                        mapSyllablesToDisplay(word.phoneticBreakdown, (word.assessmentResult.wordLevelResults[0] as any).syllables).map((syllable, index) => (
+                                        mapSyllablesToDisplay(word.phoneticBreakdown, (word.assessmentResult.wordLevelResults[0] as any).syllables, word.assessmentResult.pronunciationScore).map((syllable, index) => (
                                           <span 
                                             key={index}
                                             style={{ color: syllable.color }}
                                             className="font-semibold"
                                           >
                                             {syllable.text}
-                                            {index < mapSyllablesToDisplay(word.phoneticBreakdown || '', (word.assessmentResult?.wordLevelResults?.[0] as any)?.syllables || []).length - 1 && ' · '}
+                                            {index < mapSyllablesToDisplay(word.phoneticBreakdown || '', (word.assessmentResult?.wordLevelResults?.[0] as any)?.syllables || [], word.assessmentResult?.pronunciationScore).length - 1 && ' · '}
                                           </span>
                                         ))
                                       ) : (
