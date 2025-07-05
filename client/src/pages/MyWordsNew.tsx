@@ -19,6 +19,123 @@ import { MostRecentActivities } from '@/components/MostRecentActivities';
 import { CalendarDays, Users } from 'lucide-react';
 import { SummaryCard } from '@/components/SummaryCard';
 
+// Helper function to get syllable color based on accuracy score
+const getSyllableColor = (accuracyScore: number): string => {
+  const threshold = 70; // Define accuracy threshold
+  if (accuracyScore >= threshold) {
+    return '#2a9d8f'; // Green for correct pronunciation
+  } else {
+    return '#e76f51'; // Red for incorrect pronunciation
+  }
+};
+
+// Helper function to map syllables from assessment results to phonetic breakdown display
+const mapSyllablesToDisplay = (phoneticBreakdown: string, syllables: any[], overallScore?: number): Array<{text: string, color: string}> => {
+  const displaySyllables = phoneticBreakdown.split(/\s*[·•-]\s*/).map(s => s.trim());
+  
+  if (!syllables || syllables.length === 0) {
+    // No syllable data available - use overall score for all segments
+    const fallbackColor = overallScore ? getSyllableColor(overallScore) : '#ffffff';
+    return displaySyllables.map(syllable => ({
+      text: syllable,
+      color: fallbackColor
+    }));
+  }
+
+  // Create a smart mapping system that ensures 100% coverage
+  const resultSyllables = displaySyllables.map((displaySyllable, index) => {
+    // Try direct matching first
+    let matchingSyllable = syllables.find(s => 
+      s.syllable && s.grapheme &&
+      (s.syllable.toLowerCase().includes(displaySyllable.toLowerCase()) ||
+      s.grapheme.toLowerCase().includes(displaySyllable.toLowerCase()) ||
+      displaySyllable.toLowerCase().includes(s.syllable.toLowerCase()) ||
+      displaySyllable.toLowerCase().includes(s.grapheme.toLowerCase()))
+    );
+
+    // If no direct match, use positional mapping (map by index)
+    if (!matchingSyllable && index < syllables.length) {
+      matchingSyllable = syllables[index];
+    }
+
+    // If still no match, use the closest syllable or overall word score
+    if (!matchingSyllable) {
+      if (syllables.length > 0) {
+        // Use the last available syllable score
+        matchingSyllable = syllables[syllables.length - 1];
+      } else if (overallScore) {
+        // Fallback to overall word score
+        return {
+          text: displaySyllable,
+          color: getSyllableColor(overallScore)
+        };
+      }
+    }
+
+    if (matchingSyllable) {
+      return {
+        text: displaySyllable,
+        color: getSyllableColor(matchingSyllable.accuracyScore)
+      };
+    } else {
+      // Final fallback - use overall score or reasonable default
+      const fallbackColor = overallScore ? getSyllableColor(overallScore) : getSyllableColor(75); // Default to good score
+      return {
+        text: displaySyllable,
+        color: fallbackColor
+      };
+    }
+  });
+
+  return resultSyllables;
+};
+
+// Helper function to determine word color from phonemes for phrase text coloring
+const getWordColorFromPhonemes = (wordResult: any): string => {
+  if (!wordResult.phonemes || wordResult.phonemes.length === 0) {
+    return wordResult.accuracyScore >= 70 ? '#2a9d8f' : '#e76f51';
+  }
+  
+  const avgScore = wordResult.phonemes.reduce((sum: number, phoneme: any) => 
+    sum + (phoneme.accuracyScore || 0), 0) / wordResult.phonemes.length;
+  
+  return avgScore >= 70 ? '#2a9d8f' : '#e76f51';
+};
+
+// Helper function to render color-coded phrase text
+const renderColorCodedPhraseText = (phraseText: string, assessmentResult: any): JSX.Element => {
+  if (!assessmentResult?.wordLevelResults) {
+    // No assessment data available, return default white text
+    return <span className="text-white">{phraseText}</span>;
+  }
+
+  const words = phraseText.split(/\s+/);
+  const wordResults = assessmentResult.wordLevelResults;
+
+  return (
+    <span>
+      {words.map((word, index) => {
+        // Find matching word result (case-insensitive, remove punctuation)
+        const cleanWord = word.toLowerCase().replace(/[^\w]/g, '');
+        const matchingResult = wordResults.find((wr: any) => 
+          wr.word.toLowerCase() === cleanWord
+        );
+
+        const color = matchingResult 
+          ? getWordColorFromPhonemes(matchingResult)
+          : '#ffffff'; // Default white if no match
+
+        return (
+          <span key={index} style={{ color }} className="font-semibold">
+            {word}
+            {index < words.length - 1 && ' '}
+          </span>
+        );
+      })}
+    </span>
+  );
+};
+
 interface SavedPhrase {
   id: number;
   phrase: string;
@@ -1170,6 +1287,41 @@ function PracticeWordsCarousel({
                         {word.phonetic}
                       </div>
                     )}
+
+                    {/* Phonetic Breakdown with Color Coding */}
+                    {word.assessmentResult?.wordLevelResults && word.assessmentResult.wordLevelResults.length > 0 && (
+                      <div className="mb-4">
+                        <div className="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
+                          <p className="text-sm text-white/80 mb-2">Phonetic Breakdown:</p>
+                          <div className="text-lg font-bold">
+                            {(() => {
+                              const wordResult = word.assessmentResult.wordLevelResults[0];
+                              if (word.phonetic && wordResult.syllables) {
+                                const coloredSyllables = mapSyllablesToDisplay(
+                                  word.phonetic, 
+                                  wordResult.syllables, 
+                                  wordResult.accuracyScore
+                                );
+                                return (
+                                  <>
+                                    {coloredSyllables.map((syllable, idx) => (
+                                      <span key={idx} style={{ color: syllable.color }}>
+                                        {syllable.text}
+                                        {idx < coloredSyllables.length - 1 && ' · '}
+                                      </span>
+                                    ))}
+                                  </>
+                                );
+                              } else if (word.phonetic) {
+                                // Fallback with white text if no syllable data
+                                return <span className="text-white">{word.phonetic}</span>;
+                              }
+                              return <span className="text-white">{word.text}</span>;
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </CardHeader>
 
                   <CardContent className="text-center pb-6">
@@ -1614,7 +1766,9 @@ function PracticePhrasesCarousel({
               <div key={`${phrase.id}-${index}`} className="embla__slide flex-[0_0_100%] px-2">
                 <Card className="h-full shadow-lg border-0 card-content w-full max-w-full overflow-hidden" style={{ backgroundColor: '#1947e5' }}>
                   <CardHeader className="text-center text-white pb-4">
-                    <CardTitle className="text-3xl font-bold mb-4 leading-tight px-4">{phrase.text}</CardTitle>
+                    <CardTitle className="text-3xl font-bold mb-4 leading-tight px-4">
+                      {phrase.assessmentResult ? renderColorCodedPhraseText(phrase.text, phrase.assessmentResult) : phrase.text}
+                    </CardTitle>
                     
                     {phrase.phonetic && (
                       <div className="text-lg text-white/90 italic mb-4">
@@ -1780,6 +1934,12 @@ export default function MyWordsNew() {
     enabled: isAuthenticated,
   });
 
+  // Fetch saved readings separately
+  const { data: savedReadings = [] } = useQuery<any[]>({
+    queryKey: ['/api/user/saved-readings'],
+    enabled: isAuthenticated,
+  });
+
   // Convert saved data to ProcessedItem format
   useEffect(() => {
     if (savedWords.length > 0) {
@@ -1798,7 +1958,9 @@ export default function MyWordsNew() {
 
   useEffect(() => {
     if (savedPhrases.length > 0) {
-      const processedPhrases: ProcessedItem[] = savedPhrases.map((phrase: SavedPhrase) => ({
+      // Filter out items that have source 'words' to ensure only actual phrases are shown
+      const actualPhrases = savedPhrases.filter((phrase: SavedPhrase) => phrase.source !== 'words');
+      const processedPhrases: ProcessedItem[] = actualPhrases.map((phrase: SavedPhrase) => ({
         id: `phrase-${phrase.id}`,
         text: phrase.phrase,
         syllabication: phrase.syllabication,
@@ -1812,8 +1974,8 @@ export default function MyWordsNew() {
   }, [savedPhrases]);
 
   useEffect(() => {
-    if (readingActivities.length > 0) {
-      const processedReadings: ProcessedItem[] = readingActivities.map((reading: any) => ({
+    if (savedReadings.length > 0) {
+      const processedReadings: ProcessedItem[] = savedReadings.map((reading: any) => ({
         id: `reading-${reading.id}`,
         text: reading.phrase, // The content is stored in the phrase field
         syllabication: reading.syllabication,
@@ -1826,7 +1988,7 @@ export default function MyWordsNew() {
     } else {
       setShuffledReadings([]);
     }
-  }, [readingActivities]);
+  }, [savedReadings]);
 
   if (!isAuthenticated) {
     return (

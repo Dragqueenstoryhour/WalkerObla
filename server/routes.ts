@@ -8,7 +8,9 @@ import { transcribeAudio, generateReadingContent, processVoiceCommand, generateT
 import { sendContactForm } from "./email";
 import multer from "multer";
 import { z } from "zod";
-import { insertUserSavedPhraseSchema, insertPracticeGroupSchema, insertUserActivitySchema, insertAssignmentSchema, insertAssignmentItemSchema, insertAssignmentResultSchema } from "@shared/schema";
+import { insertUserSavedPhraseSchema, insertPracticeGroupSchema, insertUserActivitySchema, insertAssignmentSchema, insertAssignmentItemSchema, insertAssignmentResultSchema, userActivity } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, desc, isNotNull } from "drizzle-orm";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -155,8 +157,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/activities/words', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const words = await storage.getSavedWords(userId);
-      res.json(words);
+      
+      // Get actual word practice activities with scores
+      const wordActivities = await db
+        .select()
+        .from(userActivity)
+        .where(
+          and(
+            eq(userActivity.userId, userId),
+            eq(userActivity.activityType, 'word_practice'),
+            isNotNull(userActivity.score)
+          )
+        )
+        .orderBy(desc(userActivity.createdAt))
+        .limit(50); // Limit to recent 50 activities
+      
+      res.json(wordActivities);
     } catch (error) {
       console.error("Error fetching word activities:", error);
       res.status(500).json({ message: "Failed to fetch word activities" });
@@ -166,8 +182,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/activities/phrases', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const phrases = await storage.getUserSavedPhrases(userId);
-      res.json(phrases);
+      
+      // Get actual phrase practice activities with scores
+      const phraseActivities = await db
+        .select()
+        .from(userActivity)
+        .where(
+          and(
+            eq(userActivity.userId, userId),
+            eq(userActivity.activityType, 'phrase_practice'),
+            isNotNull(userActivity.score)
+          )
+        )
+        .orderBy(desc(userActivity.createdAt))
+        .limit(50); // Limit to recent 50 activities
+      
+      res.json(phraseActivities);
     } catch (error) {
       console.error("Error fetching phrase activities:", error);
       res.status(500).json({ message: "Failed to fetch phrase activities" });
@@ -177,10 +207,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/activities/readings', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      // Get saved readings - these are phrases marked with source: "reader_content"
-      const readings = await storage.getUserSavedPhrases(userId);
-      const readingPhrases = readings.filter(p => p.source === 'reader_content');
-      res.json(readingPhrases);
+      
+      // Get actual reading session activities with scores
+      const readingActivities = await db
+        .select()
+        .from(userActivity)
+        .where(
+          and(
+            eq(userActivity.userId, userId),
+            eq(userActivity.activityType, 'reading_session'),
+            isNotNull(userActivity.score)
+          )
+        )
+        .orderBy(desc(userActivity.createdAt))
+        .limit(50); // Limit to recent 50 activities
+      
+      res.json(readingActivities);
     } catch (error) {
       console.error("Error fetching reading activities:", error);
       res.status(500).json({ message: "Failed to fetch reading activities" });
@@ -248,37 +290,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User saved phrases (My Words) endpoints - now includes both phrases and words
+  // User saved phrases (My Words) endpoints - returns only actual phrases
   app.get('/api/user/saved-phrases', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       
-      // Get both saved phrases and saved words
+      // Get only saved phrases (not words)
       const phrases = await storage.getUserSavedPhrases(userId);
-      const words = await storage.getSavedWords(userId);
       
-      // Convert saved words to phrase format for unified display
-      const convertedWords = words.map(word => ({
-        id: `word_${word.id}`,
-        userId: word.userId,
-        phrase: word.word,
-        syllabication: word.syllabication,
-        phonetic: word.pronunciation,
-        difficulty: word.difficultyLevel ? word.difficultyLevel.toString() : null,
-        assessmentResults: null,
-        source: 'words',
-        sourceId: null,
-        createdAt: word.createdAt
-      }));
-      
-      // Combine and sort by creation date
-      const combinedItems = [...phrases, ...convertedWords]
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      
-      res.json(combinedItems);
+      res.json(phrases);
     } catch (error) {
       console.error("Error fetching saved phrases:", error);
       res.status(500).json({ message: "Failed to fetch saved phrases" });
+    }
+  });
+
+  // Get saved reading content separately
+  app.get('/api/user/saved-readings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Get activities with type reading_session that have content saved
+      const readingActivities = await db
+        .select()
+        .from(userActivity)
+        .where(
+          and(
+            eq(userActivity.userId, userId),
+            eq(userActivity.activityType, 'reading_session'),
+            isNotNull(userActivity.itemPracticed)
+          )
+        )
+        .orderBy(desc(userActivity.createdAt));
+      
+      // Transform to match expected format
+      const readings = readingActivities.map((activity: any) => ({
+        id: activity.id,
+        phrase: activity.itemPracticed, // The reading content
+        phonetic: activity.difficulty || 'Reading Content', // Use as title
+        difficulty: activity.difficulty,
+        source: 'readings',
+        createdAt: activity.createdAt
+      }));
+      
+      res.json(readings);
+    } catch (error) {
+      console.error("Error fetching saved readings:", error);
+      res.status(500).json({ message: "Failed to fetch saved readings" });
     }
   });
 
