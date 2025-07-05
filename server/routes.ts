@@ -8,7 +8,7 @@ import { transcribeAudio, generateReadingContent, processVoiceCommand, generateT
 import { sendContactForm } from "./email";
 import multer from "multer";
 import { z } from "zod";
-import { insertUserSavedPhraseSchema, insertPracticeGroupSchema, insertUserActivitySchema } from "@shared/schema";
+import { insertUserSavedPhraseSchema, insertPracticeGroupSchema, insertUserActivitySchema, insertAssignmentSchema, insertAssignmentItemSchema, insertAssignmentResultSchema } from "@shared/schema";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -916,6 +916,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating words with sound:", error);
       res.status(500).json({ error: "Failed to generate words with sound" });
+    }
+  });
+
+  // Assignment routes
+  app.get('/api/assignments', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const assignments = await storage.getUserAssignments(userId);
+      
+      // Get progress for each assignment
+      const assignmentsWithProgress = await Promise.all(
+        assignments.map(async (assignment) => {
+          const progress = await storage.getAssignmentProgress(assignment.id);
+          return {
+            ...assignment,
+            progress
+          };
+        })
+      );
+      
+      res.json(assignmentsWithProgress);
+    } catch (error) {
+      console.error("Error fetching assignments:", error);
+      res.status(500).json({ error: "Failed to fetch assignments" });
+    }
+  });
+
+  app.get('/api/assignments/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const assignmentId = parseInt(req.params.id);
+      const assignment = await storage.getAssignment(assignmentId);
+      
+      if (!assignment) {
+        return res.status(404).json({ error: "Assignment not found" });
+      }
+      
+      // Check if user owns this assignment
+      const userId = req.user.claims.sub;
+      if (assignment.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      const items = await storage.getAssignmentItems(assignmentId);
+      const progress = await storage.getAssignmentProgress(assignmentId);
+      
+      res.json({
+        ...assignment,
+        items,
+        progress
+      });
+    } catch (error) {
+      console.error("Error fetching assignment:", error);
+      res.status(500).json({ error: "Failed to fetch assignment" });
+    }
+  });
+
+  app.post('/api/assignments', isAuthenticated, async (req: any, res) => {
+    try {
+      const assignmentData = insertAssignmentSchema.parse(req.body);
+      const assignment = await storage.createAssignment(assignmentData);
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error("Error creating assignment:", error);
+      res.status(500).json({ error: "Failed to create assignment" });
+    }
+  });
+
+  app.post('/api/assignments/:id/items', isAuthenticated, async (req: any, res) => {
+    try {
+      const assignmentId = parseInt(req.params.id);
+      const itemData = insertAssignmentItemSchema.parse({
+        ...req.body,
+        assignmentId
+      });
+      const item = await storage.createAssignmentItem(itemData);
+      res.status(201).json(item);
+    } catch (error) {
+      console.error("Error creating assignment item:", error);
+      res.status(500).json({ error: "Failed to create assignment item" });
+    }
+  });
+
+  app.patch('/api/assignments/items/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const updates = req.body;
+      const updatedItem = await storage.updateAssignmentItem(itemId, updates);
+      res.json(updatedItem);
+    } catch (error) {
+      console.error("Error updating assignment item:", error);
+      res.status(500).json({ error: "Failed to update assignment item" });
+    }
+  });
+
+  app.post('/api/assignments/:id/results', isAuthenticated, async (req: any, res) => {
+    try {
+      const assignmentId = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      
+      const resultData = insertAssignmentResultSchema.parse({
+        ...req.body,
+        assignmentId,
+        userId
+      });
+      
+      const result = await storage.createAssignmentResult(resultData);
+      
+      // Update the assignment item with the latest score
+      if (req.body.itemId && req.body.pronunciationScore !== undefined) {
+        const itemUpdates: any = {
+          lastScore: req.body.pronunciationScore,
+          attemptCount: req.body.attemptCount || 1,
+          lastAttemptAt: new Date()
+        };
+        
+        // Update best score if this is better
+        const item = await storage.getAssignmentItems(assignmentId);
+        const currentItem = item.find(i => i.id === req.body.itemId);
+        if (!currentItem?.bestScore || req.body.pronunciationScore > currentItem.bestScore) {
+          itemUpdates.bestScore = req.body.pronunciationScore;
+        }
+        
+        // Mark as completed if score is good enough (e.g., > 70)
+        if (req.body.pronunciationScore > 70) {
+          itemUpdates.isCompleted = true;
+        }
+        
+        await storage.updateAssignmentItem(req.body.itemId, itemUpdates);
+      }
+      
+      res.status(201).json(result);
+    } catch (error) {
+      console.error("Error creating assignment result:", error);
+      res.status(500).json({ error: "Failed to create assignment result" });
     }
   });
 

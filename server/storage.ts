@@ -14,6 +14,9 @@ import {
   practiceGroupPhrases,
   userActivity,
   userStats,
+  assignments,
+  assignmentItems,
+  assignmentResults,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -45,6 +48,12 @@ import {
   type InsertUserActivity,
   type UserStats,
   type InsertUserStats,
+  type Assignment,
+  type InsertAssignment,
+  type AssignmentItem,
+  type InsertAssignmentItem,
+  type AssignmentResult,
+  type InsertAssignmentResult,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc, and, or, sql, count, avg } from "drizzle-orm";
@@ -133,6 +142,28 @@ export interface IStorage {
   getPracticeGroupPhrases(groupId: number): Promise<PracticeGroupPhrase[]>;
   addPhraseToPracticeGroup(groupPhrase: InsertPracticeGroupPhrase): Promise<PracticeGroupPhrase>;
   removePhrasesFromPracticeGroup(groupId: number, phraseIds: number[]): Promise<void>;
+  
+  // Assignment operations
+  getUserAssignments(userId: string): Promise<Assignment[]>;
+  getAssignment(id: number): Promise<Assignment | undefined>;
+  createAssignment(assignment: InsertAssignment): Promise<Assignment>;
+  updateAssignment(id: number, updates: Partial<Assignment>): Promise<Assignment>;
+  deleteAssignment(id: number): Promise<void>;
+  
+  // Assignment item operations
+  getAssignmentItems(assignmentId: number): Promise<AssignmentItem[]>;
+  createAssignmentItem(item: InsertAssignmentItem): Promise<AssignmentItem>;
+  updateAssignmentItem(id: number, updates: Partial<AssignmentItem>): Promise<AssignmentItem>;
+  deleteAssignmentItem(id: number): Promise<void>;
+  
+  // Assignment result operations
+  getAssignmentResults(assignmentId: number): Promise<AssignmentResult[]>;
+  createAssignmentResult(result: InsertAssignmentResult): Promise<AssignmentResult>;
+  getAssignmentProgress(assignmentId: number): Promise<{
+    totalItems: number;
+    completedItems: number;
+    averageScore: number;
+  }>;
   
   // Health check for deployment readiness
   healthCheck(): Promise<void>;
@@ -623,6 +654,113 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userActivity.userId, userId));
     
     return result[0]?.count || 0;
+  }
+
+  // Assignment operations
+  async getUserAssignments(userId: string): Promise<Assignment[]> {
+    return db
+      .select()
+      .from(assignments)
+      .where(eq(assignments.userId, userId))
+      .orderBy(desc(assignments.createdAt));
+  }
+
+  async getAssignment(id: number): Promise<Assignment | undefined> {
+    const [assignment] = await db
+      .select()
+      .from(assignments)
+      .where(eq(assignments.id, id));
+    return assignment;
+  }
+
+  async createAssignment(assignment: InsertAssignment): Promise<Assignment> {
+    const [created] = await db
+      .insert(assignments)
+      .values(assignment)
+      .returning();
+    return created;
+  }
+
+  async updateAssignment(id: number, updates: Partial<Assignment>): Promise<Assignment> {
+    const [updated] = await db
+      .update(assignments)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(assignments.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteAssignment(id: number): Promise<void> {
+    await db.delete(assignments).where(eq(assignments.id, id));
+  }
+
+  // Assignment item operations
+  async getAssignmentItems(assignmentId: number): Promise<AssignmentItem[]> {
+    return db
+      .select()
+      .from(assignmentItems)
+      .where(eq(assignmentItems.assignmentId, assignmentId))
+      .orderBy(asc(assignmentItems.createdAt));
+  }
+
+  async createAssignmentItem(item: InsertAssignmentItem): Promise<AssignmentItem> {
+    const [created] = await db
+      .insert(assignmentItems)
+      .values(item)
+      .returning();
+    return created;
+  }
+
+  async updateAssignmentItem(id: number, updates: Partial<AssignmentItem>): Promise<AssignmentItem> {
+    const [updated] = await db
+      .update(assignmentItems)
+      .set(updates)
+      .where(eq(assignmentItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteAssignmentItem(id: number): Promise<void> {
+    await db.delete(assignmentItems).where(eq(assignmentItems.id, id));
+  }
+
+  // Assignment result operations
+  async getAssignmentResults(assignmentId: number): Promise<AssignmentResult[]> {
+    return db
+      .select()
+      .from(assignmentResults)
+      .where(eq(assignmentResults.assignmentId, assignmentId))
+      .orderBy(desc(assignmentResults.practiceDate));
+  }
+
+  async createAssignmentResult(result: InsertAssignmentResult): Promise<AssignmentResult> {
+    const [created] = await db
+      .insert(assignmentResults)
+      .values(result)
+      .returning();
+    return created;
+  }
+
+  async getAssignmentProgress(assignmentId: number): Promise<{
+    totalItems: number;
+    completedItems: number;
+    averageScore: number;
+  }> {
+    const items = await this.getAssignmentItems(assignmentId);
+    const totalItems = items.length;
+    const completedItems = items.filter(item => item.isCompleted).length;
+    
+    // Calculate average score from best scores of completed items
+    const completedItemsWithScores = items.filter(item => item.isCompleted && item.bestScore !== null);
+    const averageScore = completedItemsWithScores.length > 0
+      ? completedItemsWithScores.reduce((sum, item) => sum + (item.bestScore || 0), 0) / completedItemsWithScores.length
+      : 0;
+
+    return {
+      totalItems,
+      completedItems,
+      averageScore: Math.round(averageScore)
+    };
   }
 
   // Health check for deployment readiness

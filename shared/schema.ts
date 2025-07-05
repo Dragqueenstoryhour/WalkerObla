@@ -356,3 +356,83 @@ export const insertUserStatsSchema = createInsertSchema(userStats).omit({
 
 export type InsertUserStats = z.infer<typeof insertUserStatsSchema>;
 export type UserStats = typeof userStats.$inferSelect;
+
+// Assignments table for therapist-assigned homework
+export const assignments = pgTable("assignments", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(), // Student receiving the assignment
+  therapistId: varchar("therapist_id").notNull(), // Therapist who created the assignment
+  therapistName: text("therapist_name").notNull(), // Therapist display name
+  title: text("title").notNull(), // Assignment title
+  description: text("description"), // Optional description/instructions
+  dueDate: timestamp("due_date"), // Optional due date
+  isCompleted: boolean("is_completed").notNull().default(false),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertAssignmentSchema = createInsertSchema(assignments).omit({
+  id: true,
+  isCompleted: true,
+  completedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAssignment = z.infer<typeof insertAssignmentSchema>;
+export type Assignment = typeof assignments.$inferSelect;
+
+// Assignment items (individual words/phrases within an assignment)
+export const assignmentItems = pgTable("assignment_items", {
+  id: serial("id").primaryKey(),
+  assignmentId: integer("assignment_id").notNull(),
+  itemType: text("item_type").notNull(), // 'word' | 'phrase'
+  content: text("content").notNull(), // The actual word or phrase
+  syllabication: text("syllabication"), // For words - syllable breakdown
+  phonetic: text("phonetic"), // Phonetic guide
+  definition: text("definition"), // Optional definition
+  difficulty: text("difficulty"), // Difficulty level
+  isCompleted: boolean("is_completed").notNull().default(false),
+  lastScore: real("last_score"), // Most recent pronunciation score (0-100)
+  bestScore: real("best_score"), // Best pronunciation score achieved
+  attemptCount: integer("attempt_count").notNull().default(0),
+  lastAttemptAt: timestamp("last_attempt_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertAssignmentItemSchema = createInsertSchema(assignmentItems).omit({
+  id: true,
+  isCompleted: true,
+  lastScore: true,
+  bestScore: true,
+  attemptCount: true,
+  lastAttemptAt: true,
+  createdAt: true,
+});
+
+export type InsertAssignmentItem = z.infer<typeof insertAssignmentItemSchema>;
+export type AssignmentItem = typeof assignmentItems.$inferSelect;
+
+// Assignment results for detailed tracking and therapist feedback
+export const assignmentResults = pgTable("assignment_results", {
+  id: serial("id").primaryKey(),
+  assignmentId: integer("assignment_id").notNull(),
+  itemId: integer("item_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  pronunciationScore: real("pronunciation_score"), // Overall pronunciation score
+  accuracyScore: real("accuracy_score"), // Accuracy score
+  fluencyScore: real("fluency_score"), // Fluency score
+  completenessScore: real("completeness_score"), // Completeness score
+  detailedResults: jsonb("detailed_results"), // Full assessment results from Azure
+  audioUrl: text("audio_url"), // Optional: link to recorded audio
+  practiceDate: timestamp("practice_date").notNull().defaultNow(),
+});
+
+export const insertAssignmentResultSchema = createInsertSchema(assignmentResults).omit({
+  id: true,
+  practiceDate: true,
+});
+
+export type InsertAssignmentResult = z.infer<typeof insertAssignmentResultSchema>;
+export type AssignmentResult = typeof assignmentResults.$inferSelect;
