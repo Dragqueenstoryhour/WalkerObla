@@ -187,6 +187,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Save reading content for user
+  app.post('/api/readings/save', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { title, content, difficulty, source, sourceId } = req.body;
+      
+      if (!title || !content) {
+        return res.status(400).json({ error: 'Title and content are required' });
+      }
+
+      // Save as a phrase with reader_content source to appear in readings
+      const savedReading = await storage.createUserSavedPhrase({
+        userId,
+        phrase: content,
+        phonetic: title, // Store title in phonetic field for display
+        difficulty: difficulty || 'intermediate',
+        source: 'reader_content',
+        sourceId: sourceId
+      });
+      
+      res.json(savedReading);
+    } catch (error) {
+      console.error('Error saving reading:', error);
+      res.status(500).json({ error: 'Failed to save reading' });
+    }
+  });
+
   // Activity recording endpoint
   app.post('/api/activities/record', isAuthenticated, async (req: any, res) => {
     try {

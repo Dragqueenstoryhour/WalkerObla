@@ -668,14 +668,14 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
         return;
       }
 
-      const response = await fetch("/api/phrases/save", {
+      const response = await fetch("/api/readings/save", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          phrase: phrase.text,
-          phonetic: null,
+          title: currentContent.title || "Reading Practice",
+          content: phrase.text,
           difficulty: "intermediate",
           source: "reader_content",
           sourceId: currentContent.id ? currentContent.id.toString() : null,
@@ -688,7 +688,8 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
 
       setIsSaved(true);
       
-      // Invalidate the saved phrases query to refresh My Journey
+      // Invalidate both readings and phrases queries to refresh My Journey
+      queryClient.invalidateQueries({ queryKey: ['/api/activities/readings'] });
       queryClient.invalidateQueries({ queryKey: ['/api/user/saved-phrases'] });
     } catch (error) {
       console.error('Error saving reading:', error);
