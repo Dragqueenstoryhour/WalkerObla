@@ -1053,6 +1053,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint for therapists to get real-time assignment progress for all their patients
+  app.get('/api/therapist/assignments', isAuthenticated, async (req: any, res) => {
+    try {
+      const therapistId = req.user.claims.sub;
+      const assignments = await storage.getTherapistAssignments(therapistId);
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching therapist assignments:", error);
+      res.status(500).json({ error: "Failed to fetch therapist assignments" });
+    }
+  });
+
+  // Endpoint to get detailed results for a specific assignment (for therapists)
+  app.get('/api/assignments/:id/results', isAuthenticated, async (req: any, res) => {
+    try {
+      const assignmentId = parseInt(req.params.id);
+      const results = await storage.getAssignmentResults(assignmentId);
+      res.json(results);
+    } catch (error) {
+      console.error("Error fetching assignment results:", error);
+      res.status(500).json({ error: "Failed to fetch assignment results" });
+    }
+  });
+
+  // Endpoint to get assignment progress summary (for real-time monitoring)
+  app.get('/api/assignments/:id/progress', isAuthenticated, async (req: any, res) => {
+    try {
+      const assignmentId = parseInt(req.params.id);
+      const progress = await storage.getAssignmentProgress(assignmentId);
+      res.json(progress);
+    } catch (error) {
+      console.error("Error fetching assignment progress:", error);
+      res.status(500).json({ error: "Failed to fetch assignment progress" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

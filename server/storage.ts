@@ -145,6 +145,7 @@ export interface IStorage {
   
   // Assignment operations
   getUserAssignments(userId: string): Promise<Assignment[]>;
+  getTherapistAssignments(therapistId: string): Promise<Assignment[]>;
   getAssignment(id: number): Promise<Assignment | undefined>;
   createAssignment(assignment: InsertAssignment): Promise<Assignment>;
   updateAssignment(id: number, updates: Partial<Assignment>): Promise<Assignment>;
@@ -662,6 +663,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(assignments)
       .where(eq(assignments.userId, userId))
+      .orderBy(desc(assignments.createdAt));
+  }
+
+  async getTherapistAssignments(therapistId: string): Promise<Assignment[]> {
+    return db
+      .select()
+      .from(assignments)
+      .where(eq(assignments.therapistId, therapistId))
       .orderBy(desc(assignments.createdAt));
   }
 

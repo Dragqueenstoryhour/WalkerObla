@@ -458,6 +458,22 @@ export default function MyWordsNew() {
   const [shuffledPhrases, setShuffledPhrases] = useState<ProcessedItem[]>([]);
   const [shuffledReadings, setShuffledReadings] = useState<ProcessedItem[]>([]);
 
+  // Fetch saved words, phrases, and practice groups
+  const { data: savedWords = [] } = useQuery<any[]>({
+    queryKey: ['/api/saved-words'],
+    enabled: isAuthenticated,
+  });
+
+  const { data: savedPhrases = [] } = useQuery<SavedPhrase[]>({
+    queryKey: ['/api/user/saved-phrases'],
+    enabled: isAuthenticated,
+  });
+
+  const { data: practiceGroups = [] } = useQuery<any[]>({
+    queryKey: ['/api/user/practice-groups'],
+    enabled: isAuthenticated,
+  });
+
   // Fetch user stats and activities
   const { data: wordActivities = [] } = useQuery<Activity[]>({
     queryKey: ['/api/activities/words'],
@@ -473,6 +489,54 @@ export default function MyWordsNew() {
     queryKey: ['/api/activities/readings'],
     enabled: isAuthenticated,
   });
+
+  // Convert saved data to ProcessedItem format
+  useEffect(() => {
+    if (savedWords.length > 0) {
+      const processedWords: ProcessedItem[] = savedWords.map((word: any) => ({
+        id: `word-${word.word}`,
+        text: word.word,
+        syllabication: word.syllabication,
+        phonetic: word.phonetic || undefined,
+        difficulty: word.difficulty as "beginner" | "intermediate" | "advanced" | undefined,
+        status: "idle",
+        source: "words"
+      }));
+      setShuffledWords(processedWords);
+    }
+  }, [savedWords]);
+
+  useEffect(() => {
+    if (savedPhrases.length > 0) {
+      const processedPhrases: ProcessedItem[] = savedPhrases.map((phrase: SavedPhrase) => ({
+        id: `phrase-${phrase.id}`,
+        text: phrase.phrase,
+        syllabication: phrase.syllabication,
+        phonetic: phrase.phonetic || undefined,
+        difficulty: phrase.difficulty as "beginner" | "intermediate" | "advanced" | undefined,
+        status: "idle",
+        source: "phrases"
+      }));
+      setShuffledPhrases(processedPhrases);
+    }
+  }, [savedPhrases]);
+
+  useEffect(() => {
+    if (practiceGroups.length > 0) {
+      const processedReadings: ProcessedItem[] = practiceGroups.flatMap((group: any) => 
+        group.phrases?.map((phrase: any) => ({
+          id: `reading-${phrase.id}`,
+          text: phrase.phrase,
+          syllabication: phrase.syllabication,
+          phonetic: phrase.phonetic || undefined,
+          difficulty: phrase.difficulty as "beginner" | "intermediate" | "advanced" | undefined,
+          status: "idle",
+          source: "readings"
+        })) || []
+      );
+      setShuffledReadings(processedReadings);
+    }
+  }, [practiceGroups]);
 
   if (!isAuthenticated) {
     return (
