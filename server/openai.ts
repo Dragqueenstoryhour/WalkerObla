@@ -855,11 +855,15 @@ Return only the syllabicated word in lowercase, nothing else.`;
  */
 export async function generatePhoneticBreakdown(word: string): Promise<string> {
   try {
-    const prompt = `Respond with only this word broken into intuitive syllables: ${word}`;
+    const prompt = `Break this word into phonetic sounds that show how it is actually pronounced, separated by dots: ${word}`;
 
     const response = await openai.chat.completions.create({
       model: ADVANCED_MODEL, // Use gpt-4o for better phonetic accuracy
       messages: [
+        {
+          role: "system",
+          content: "You are a phonetic expert. Break words into phonetic sounds that show how they are actually pronounced, not traditional syllables. Use dots (·) to separate phonetic segments. Focus on pronunciation sounds, not spelling. Example: elephant = EL · uh · fuhnt, beautiful = BYOO · tuh · fuhl"
+        },
         {
           role: "user",
           content: prompt
@@ -878,14 +882,22 @@ export async function generatePhoneticBreakdown(word: string): Promise<string> {
         .replace(/["""''`]/g, '') // Remove quotes
         .replace(/^\s*[\-\→\>]*\s*/, '') // Remove leading arrows or dashes
         .replace(/\s*[\-\→\<]*\s*$/, '') // Remove trailing arrows or dashes
+        .replace(/Word:\s*/i, '') // Remove "Word:" prefix if present
+        .replace(/becomes\s*/i, '') // Remove "becomes" if present
         .trim();
       
-      // If multiple words are present, take only the one that looks like syllabication
-      if (cleanResult.includes(' ')) {
-        const words = cleanResult.split(/\s+/);
-        // Find the word that contains hyphens or matches the original word
-        const syllabicatedWord = words.find(w => w.includes('-') || w.toLowerCase() === word.toLowerCase());
-        cleanResult = syllabicatedWord || words[0];
+      // If the result contains dots (phonetic), use it directly
+      if (cleanResult.includes('·') || cleanResult.includes('•')) {
+        // Look for the actual phonetic breakdown with dots
+        const phoneticMatch = cleanResult.match(/[A-Za-z]+\s*[·•]\s*[A-Za-z·•\s]+/);
+        if (phoneticMatch) {
+          cleanResult = phoneticMatch[0];
+        }
+        // Ensure we use dots (·) consistently
+        cleanResult = cleanResult.replace(/[•]/g, '·');
+      } else {
+        // If no dots in response, convert hyphens to dots for display consistency
+        cleanResult = cleanResult.replace(/[-]/g, '·');
       }
       
       return cleanResult.trim() || word.toLowerCase();
@@ -894,8 +906,8 @@ export async function generatePhoneticBreakdown(word: string): Promise<string> {
     }
   } catch (error) {
     console.error(`Error generating phonetic breakdown for "${word}":`, error);
-    // Fallback to basic syllabication
-    return createBasicSyllabication(word);
+    // Fallback to basic syllabication with dots
+    return createBasicSyllabication(word).replace(/-/g, '·');
   }
 }
 

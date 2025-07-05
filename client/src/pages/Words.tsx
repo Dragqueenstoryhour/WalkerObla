@@ -158,29 +158,31 @@ const getSyllableColor = (accuracyScore: number): string => {
 const mapSyllablesToDisplay = (phoneticBreakdown: string, syllables: any[]): Array<{text: string, color: string}> => {
   if (!syllables || syllables.length === 0) {
     // No syllable data available, return default styling
-    return phoneticBreakdown.split('-').map(syllable => ({
-      text: syllable,
+    return phoneticBreakdown.split(/\s*[·•-]\s*/).map(syllable => ({
+      text: syllable.trim(),
       color: '#ffffff' // Default white color
     }));
   }
 
-  const displaySyllables = phoneticBreakdown.split('-');
+  const displaySyllables = phoneticBreakdown.split(/\s*[·•-]\s*/);
   const resultSyllables = displaySyllables.map((displaySyllable, index) => {
     // Try to match with assessment syllables
     const matchingSyllable = syllables.find(s => 
       s.syllable && s.grapheme &&
       (s.syllable.toLowerCase().includes(displaySyllable.toLowerCase()) ||
-      s.grapheme.toLowerCase().includes(displaySyllable.toLowerCase()))
+      s.grapheme.toLowerCase().includes(displaySyllable.toLowerCase()) ||
+      displaySyllable.toLowerCase().includes(s.syllable.toLowerCase()) ||
+      displaySyllable.toLowerCase().includes(s.grapheme.toLowerCase()))
     );
 
     if (matchingSyllable) {
       return {
-        text: displaySyllable,
+        text: displaySyllable.trim(),
         color: getSyllableColor(matchingSyllable.accuracyScore)
       };
     } else {
       return {
-        text: displaySyllable,
+        text: displaySyllable.trim(),
         color: '#ffffff' // Default white if no match found
       };
     }
@@ -2631,7 +2633,7 @@ export default function Words() {
                                             className="font-semibold"
                                           >
                                             {syllable.text}
-                                            {index < mapSyllablesToDisplay(word.phoneticBreakdown || '', (word.assessmentResult?.wordLevelResults?.[0] as any)?.syllables || []).length - 1 && '-'}
+                                            {index < mapSyllablesToDisplay(word.phoneticBreakdown || '', (word.assessmentResult?.wordLevelResults?.[0] as any)?.syllables || []).length - 1 && ' · '}
                                           </span>
                                         ))
                                       ) : (
