@@ -851,6 +851,55 @@ Return only the syllabicated word in lowercase, nothing else.`;
 }
 
 /**
+ * Generate phonetic breakdown for a word using OpenAI with the exact specified prompt
+ */
+export async function generatePhoneticBreakdown(word: string): Promise<string> {
+  try {
+    const prompt = `Respond with only this word broken into intuitive syllables: ${word}`;
+
+    const response = await openai.chat.completions.create({
+      model: ADVANCED_MODEL, // Use gpt-4o for better phonetic accuracy
+      messages: [
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      temperature: 0.1,
+      max_tokens: 50
+    });
+
+    const result = response.choices[0].message.content?.trim();
+    
+    if (result && result.length > 0) {
+      // Clean up the response to handle various OpenAI formatting issues
+      let cleanResult = result
+        .split(/[\n\r]+/)[0] // Take only first line
+        .replace(/["""''`]/g, '') // Remove quotes
+        .replace(/^\s*[\-\→\>]*\s*/, '') // Remove leading arrows or dashes
+        .replace(/\s*[\-\→\<]*\s*$/, '') // Remove trailing arrows or dashes
+        .trim();
+      
+      // If multiple words are present, take only the one that looks like syllabication
+      if (cleanResult.includes(' ')) {
+        const words = cleanResult.split(/\s+/);
+        // Find the word that contains hyphens or matches the original word
+        const syllabicatedWord = words.find(w => w.includes('-') || w.toLowerCase() === word.toLowerCase());
+        cleanResult = syllabicatedWord || words[0];
+      }
+      
+      return cleanResult.trim() || word.toLowerCase();
+    } else {
+      throw new Error("Empty response from OpenAI");
+    }
+  } catch (error) {
+    console.error(`Error generating phonetic breakdown for "${word}":`, error);
+    // Fallback to basic syllabication
+    return createBasicSyllabication(word);
+  }
+}
+
+/**
  * Create basic syllabication for a word using simple rules
  */
 function createBasicSyllabication(word: string): string {

@@ -115,6 +115,7 @@ interface ProcessedWord {
   id: string;
   text: string;
   syllabication?: string;
+  phoneticBreakdown?: string;
   phonetic?: string;
   difficulty?: "beginner" | "intermediate" | "advanced";
   recordingUrl?: string | null;
@@ -153,17 +154,17 @@ const getSyllableColor = (accuracyScore: number): string => {
   }
 };
 
-// Helper function to map syllables from assessment results to syllabication display
-const mapSyllablesToDisplay = (syllabication: string, syllables: any[]): Array<{text: string, color: string}> => {
+// Helper function to map syllables from assessment results to phonetic breakdown display
+const mapSyllablesToDisplay = (phoneticBreakdown: string, syllables: any[]): Array<{text: string, color: string}> => {
   if (!syllables || syllables.length === 0) {
     // No syllable data available, return default styling
-    return syllabication.split('-').map(syllable => ({
+    return phoneticBreakdown.split('-').map(syllable => ({
       text: syllable,
       color: '#ffffff' // Default white color
     }));
   }
 
-  const displaySyllables = syllabication.split('-');
+  const displaySyllables = phoneticBreakdown.split('-');
   const resultSyllables = displaySyllables.map((displaySyllable, index) => {
     // Try to match with assessment syllables
     const matchingSyllable = syllables.find(s => 
@@ -802,7 +803,39 @@ export default function Words() {
         })
       );
 
-      setProcessedWords(newWords);
+      // Fetch phonetic breakdown for all words
+      try {
+        const words = newWords.map(word => word.text);
+        const phoneticResponse = await fetch('/api/pronunciation/phonetic-breakdown', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ words }),
+        });
+
+        if (phoneticResponse.ok) {
+          const phoneticData = await phoneticResponse.json();
+          
+          // Update words with phonetic breakdown
+          const wordsWithPhonetics = newWords.map(word => {
+            const phoneticResult = phoneticData.results?.find((result: any) => result.word === word.text);
+            return {
+              ...word,
+              phoneticBreakdown: phoneticResult?.phoneticBreakdown || word.text.toLowerCase()
+            };
+          });
+
+          setProcessedWords(wordsWithPhonetics);
+        } else {
+          // If phonetic breakdown fails, just use the words without it
+          setProcessedWords(newWords);
+        }
+      } catch (phoneticError) {
+        console.error('Error fetching phonetic breakdown:', phoneticError);
+        // If phonetic breakdown fails, just use the words without it
+        setProcessedWords(newWords);
+      }
       setCurrentWordIndex(0);
       setCurrentCarouselIndex(0);
       if (emblaApi) {
@@ -1210,7 +1243,40 @@ export default function Words() {
         }
       );
 
-      setProcessedWords(newWords);
+      // Fetch phonetic breakdown for all words
+      try {
+        const words = newWords.map(word => word.text);
+        const phoneticResponse = await fetch('/api/pronunciation/phonetic-breakdown', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ words }),
+        });
+
+        if (phoneticResponse.ok) {
+          const phoneticData = await phoneticResponse.json();
+          
+          // Update words with phonetic breakdown
+          const wordsWithPhonetics = newWords.map(word => {
+            const phoneticResult = phoneticData.results?.find((result: any) => result.word === word.text);
+            return {
+              ...word,
+              phoneticBreakdown: phoneticResult?.phoneticBreakdown || word.text.toLowerCase()
+            };
+          });
+
+          setProcessedWords(wordsWithPhonetics);
+        } else {
+          // If phonetic breakdown fails, just use the words without it
+          setProcessedWords(newWords);
+        }
+      } catch (phoneticError) {
+        console.error('Error fetching phonetic breakdown:', phoneticError);
+        // If phonetic breakdown fails, just use the words without it
+        setProcessedWords(newWords);
+      }
+
       setCurrentWordIndex(0);
       setCurrentCarouselIndex(0);
       if (emblaApi) {
@@ -1943,7 +2009,7 @@ export default function Words() {
         },
         body: JSON.stringify({
           word: word.text,
-          syllabication: word.syllabication,
+          syllabication: word.phoneticBreakdown || word.syllabication,
           difficulty: word.difficulty || "beginner",
           source: "words"
         }),
@@ -2512,8 +2578,8 @@ export default function Words() {
                                                 <div key={i} className="flex items-center justify-between p-2 bg-red-50 rounded border border-red-200">
                                                   <div className="flex items-center gap-1 flex-1 min-w-0">
                                                     <span className="text-gray-800 text-xs font-medium truncate">{w.text}</span>
-                                                    {w.syllabication && (
-                                                      <span className="text-gray-600 text-xs truncate">({w.syllabication})</span>
+                                                    {w.phoneticBreakdown && (
+                                                      <span className="text-gray-600 text-xs truncate">({w.phoneticBreakdown})</span>
                                                     )}
                                                   </div>
                                                   <div className="flex items-center gap-2 flex-shrink-0">
@@ -2553,24 +2619,24 @@ export default function Words() {
                                 <Card className="h-full shadow-lg border-0 card-content" style={{ backgroundColor: '#1947e5' }}>
                                   <CardHeader className="text-center">
                                     <CardTitle className="text-3xl font-bold text-white">{word.text}</CardTitle>
-                                  {word.syllabication && (
+                                  {word.phoneticBreakdown && (
                                     <div className="text-lg italic mt-2">
                                       {word.status === "complete" && word.assessmentResult?.wordLevelResults?.[0] && 
                                        (word.assessmentResult.wordLevelResults[0] as any).syllables ? (
                                         // Show color-coded syllables based on assessment results
-                                        mapSyllablesToDisplay(word.syllabication, (word.assessmentResult.wordLevelResults[0] as any).syllables).map((syllable, index) => (
+                                        mapSyllablesToDisplay(word.phoneticBreakdown, (word.assessmentResult.wordLevelResults[0] as any).syllables).map((syllable, index) => (
                                           <span 
                                             key={index}
                                             style={{ color: syllable.color }}
                                             className="font-semibold"
                                           >
                                             {syllable.text}
-                                            {index < mapSyllablesToDisplay(word.syllabication || '', (word.assessmentResult?.wordLevelResults?.[0] as any)?.syllables || []).length - 1 && '-'}
+                                            {index < mapSyllablesToDisplay(word.phoneticBreakdown || '', (word.assessmentResult?.wordLevelResults?.[0] as any)?.syllables || []).length - 1 && '-'}
                                           </span>
                                         ))
                                       ) : (
                                         // Default display when no assessment data is available
-                                        <span className="text-white/80">{word.syllabication}</span>
+                                        <span className="text-white/80">{word.phoneticBreakdown}</span>
                                       )}
                                     </div>
                                   )}

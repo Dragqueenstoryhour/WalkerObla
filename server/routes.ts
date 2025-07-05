@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { assessPronunciation, synthesizeSpeech, synthesizeSpeechFromSSML, getWordPronunciation } from "./azure";
 import { generateSpeechWithVisemes } from "./azureViseme";
-import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases, generateSampleContent, generateSpeechResponse, generatePronunciationFeedback, generateWordsWithSound, generateSyllabication } from "./openai";
+import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases, generateSampleContent, generateSpeechResponse, generatePronunciationFeedback, generateWordsWithSound, generateSyllabication, generatePhoneticBreakdown } from "./openai";
 import { sendContactForm } from "./email";
 import multer from "multer";
 import { z } from "zod";
@@ -542,6 +542,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Syllabication generation error:', error);
       res.status(500).json({ 
         error: 'Syllabication generation failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Word phonetic breakdown endpoint - generates intuitive phonetic syllables using OpenAI
+  app.post('/api/pronunciation/phonetic-breakdown', async (req, res) => {
+    try {
+      const { words } = req.body;
+      
+      if (!words || !Array.isArray(words)) {
+        return res.status(400).json({ error: 'Words array is required' });
+      }
+
+      // Generate phonetic breakdown for each word
+      const results = await Promise.all(
+        words.map(async (word) => {
+          try {
+            const phoneticBreakdown = await generatePhoneticBreakdown(word);
+            return {
+              word: word,
+              phoneticBreakdown: phoneticBreakdown
+            };
+          } catch (error) {
+            console.error(`Error generating phonetic breakdown for "${word}":`, error);
+            // Fallback to the word itself
+            return {
+              word: word,
+              phoneticBreakdown: word.toLowerCase()
+            };
+          }
+        })
+      );
+      
+      res.json({ results });
+    } catch (error) {
+      console.error('Phonetic breakdown generation error:', error);
+      res.status(500).json({ 
+        error: 'Phonetic breakdown generation failed',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
