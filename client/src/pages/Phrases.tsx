@@ -244,10 +244,10 @@ export default function Phrases() {
 
   // All topics combined for pagination
   const allTopics = [
-    "Words that start with..", "Words that contain..", "Words that end with..", "Common Phrases", "Food & Dining", "Health & Medical", 
-    "Shopping", "Work & Business", "Family & Relationships", "Medical Phrases", "Travel Phrases", "Everyday Conversation",
-    "Business Phrases", "Hobbies & Interests", "Weather & Seasons", "Transportation", 
-    "Technology", "Education", "Sports & Recreation", "Emergency Situations",
+    "Words that start with..", "Words that contain..", "Words that end with..", "Common Phrases", "Food & Dining", "Travel", 
+    "Shopping", "Work & Business", "Family & Relationships", "Technology", "Sports", "Everyday Conversation",
+    "Health", "History", "Weather & Seasons", "Transportation", 
+    "Technology", "Education", "Vacation", "Emergency Situations",
     "Banking & Finance", "Home & Garden", "Entertainment", "Directions & Navigation"
   ];
 
