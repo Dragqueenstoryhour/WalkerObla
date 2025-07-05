@@ -8,7 +8,7 @@ import { generateReadingContent } from '@/lib/openai';
 import { useToast } from '@/hooks/use-toast';
 import { RotateCw, Users } from 'lucide-react';
 // import oblaLogoPath from '@assets/e0dfb3c8-508c-4b30-994b-f471210dcd7c_1749383232529.jpg'; // Original logo
-import whiskGifPath from '@/../public/attached_assets/Whisk_gif_dq0ywe4ywq.gif'; // New logo path
+const whiskGifPath = '/Whisk_gif_dq0ywe4ywq.gif'; // New logo path
 
 interface DifficultySelectionDialogProps {
   open: boolean;
