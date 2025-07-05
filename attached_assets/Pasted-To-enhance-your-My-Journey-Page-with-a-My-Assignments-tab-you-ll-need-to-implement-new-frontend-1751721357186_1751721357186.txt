@@ -1,0 +1,44 @@
+To enhance your "My Journey Page" with a "My Assignments" tab, you'll need to implement new frontend components, develop backend APIs for assignment management, and consider future features for a therapist portal.
+
+Here's a breakdown of the optimal steps:
+
+Frontend - My Journey Page (MyWordsNew.tsx) Modifications
+Implement Tabs Component: Introduce Tabs, TabsList, TabsTrigger, and TabsContent components from @/components/ui/tabs (as seen in Words (13).tsx) into your MyWordsNew.tsx file.
+
+Create "My Assignments" Tab Trigger: Add a new TabsTrigger for "My Assignments" alongside your existing tabs (e.g., "My Saved Words," "My Saved Phrases"). This will allow users to navigate to the new section.
+
+Design Assignment List UI: Within the dedicated "My Assignments" TabsContent, implement a responsive layout, such as a grid or list, to display individual homework assignments. Each assignment should be represented by a Card component, similar to the topic cards in Words (13).tsx or saved items in MyWordsNew.tsx. Each Card should feature:
+
+Assignment Title: Display the assignment name in the format "[Therapist name] homework - [Date Assigned, e.g., 7/5/2025]", ensuring the newest assignments appear at the top.
+
+Progress Bar: Incorporate the Progress component from @/components/ui/progress (found in Words (13).tsx) to visually indicate the completion percentage of the assignment. This percentage should reflect how many word/phrase cards within that assignment the user has recorded to achieve 100% completion.
+
+Click Handler: Make each assignment card clickable. Upon clicking, the detailed word/phrase carousel for that specific homework assignment will populate in a component below.
+
+Integrate Practice Carousel: Beneath the list of assignment cards, include an instance of your existing PracticeCarousel component. This carousel will dynamically load and display the word or phrase cards from the homework assignment that the user has selected.
+
+Data Fetching: Utilize useQuery from @tanstack/react-query to:
+
+Fetch the list of all assignments for the currently logged-in user from a new backend endpoint (e.g., /api/user/assignments).
+
+When an assignment card is clicked, fetch the specific word/phrase items for that assignment from another new backend endpoint (e.g., /api/user/assignment/{assignmentId}/items).
+
+Progress Calculation Logic: Implement frontend logic to calculate and display the completionPercentage for each assignment based on the completion status of its individual items, which will be received from the backend.
+
+Update Practice Carousel Data Flow: Adapt the PracticeCarousel component to receive ProcessedItem data from the fetched assignments. Ensure that when a user records a word/phrase within an assigned carousel, the completion status is updated and sent back to the backend.
+
+Backend API Development
+Database Schema Design: Create new database tables to manage assignments:
+
+Assignment Table: Includes fields like id (Primary Key), therapistId (Foreign Key to Therapist/User table), userId (Foreign Key to User table), title, createdAt, dueDate (Optional), and status (e.g., 'assigned', 'in_progress', 'completed').
+
+AssignmentItem Table: This will be a junction table linking Assignment to Word or Phrase items. Fields should include assignmentItemId (Primary Key), assignmentId (Foreign Key), wordId (Foreign Key to Word table, nullable), phraseId (Foreign Key to Phrase table, nullable), isCompleted (boolean, default false), attemptCount (integer, default 0), lastAttemptScore (integer, nullable), and lastAttemptDate (datetime, nullable).
+
+Assignment Creation Endpoint (POST /api/therapist/assign-homework): Develop an API endpoint that allows designated therapist users to create new homework assignments. This endpoint will receive details such as therapistId, userId, title, and an array of items (containing word/phrase IDs and their types), then create corresponding records in the Assignment and AssignmentItem tables.
+
+User Assignments Retrieval Endpoint (GET /api/user/assignments): Create an API endpoint that retrieves all assignments for a specified user. The response should include each assignment's title, createdAt, dueDate, status, and a calculated progressPercentage, with assignments sorted by their creation date (newest first).
+
+Assignment Items Retrieval Endpoint (GET /api/user/assignment/{assignmentId}/items): Implement an API that fetches the detailed list of words or phrases (in a ProcessedItem format) for a given assignmentId. This should also include their current completion status and any available assessment results.
+
+Assignment Item Completion Endpoint (POST /api/user/assignment/complete-item): Develop an API endpoint to update the status of individual items within an assignment. This will be called after a user records a word/phrase and it's assessed, updating fields like isCompleted, attemptCount, lastAttemptScore, and lastAttemptDate for the specific AssignmentItem.
+
