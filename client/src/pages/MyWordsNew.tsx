@@ -1,19 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import useEmblaCarousel from 'embla-carousel-react';
+import useAudioRecording from '@/hooks/useAudioRecording';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { ChevronLeft, ChevronRight, Volume2, Shuffle, BookOpen, MicIcon, StopCircleIcon, Ear, Snail, RotateCw, BookmarkIcon, Check, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Volume2, Shuffle, BookOpen, MicIcon, StopCircleIcon, Ear, Snail, RotateCw, BookmarkIcon, Check, X, Play, Pause, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { CombinedLineChart } from '@/components/CombinedLineChart'; // Import the chart component
 import { MostRecentActivities } from '@/components/MostRecentActivities';
 import { CalendarDays, Users } from 'lucide-react';
+import { SummaryCard } from '@/components/SummaryCard';
 
 interface SavedPhrase {
   id: number;
@@ -98,13 +102,60 @@ interface UserActivityStatsResponse {
   readingStats: { total: number; avgScore: number; recent: Activity[] };
 }
 
-// AssignmentCarousel Component - similar to PracticeCarousel but specialized for assignments
+// Enhanced AssignmentCarousel Component - matching Phrases.tsx functionality with full recording and assessment features
 function AssignmentCarousel({ items, assignmentId }: { items: AssignmentItem[], assignmentId: number }) {
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [processedItems, setProcessedItems] = useState<ProcessedItem[]>([]);
-  const [currentlyPracticing, setCurrentlyPracticing] = useState<number | null>(null);
+  const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
+  const [currentlyPracticing, setCurrentlyPracticing] = useState<string | null>(null);
+  const [isProcessingRecording, setIsProcessingRecording] = useState(false);
+  const [assignmentAssessmentResult, setAssignmentAssessmentResult] = useState<any>(null);
+  const [currentItemIndex, setCurrentItemIndex] = useState(-1);
+  const [slowPlaybackItems, setSlowPlaybackItems] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const currentItemIndexRef = useRef<number>(-1);
+
+  // Embla carousel setup
+  const [emblaRef, emblaApi] = useEmblaCarousel({ 
+    loop: false,
+    align: 'center',
+    containScroll: 'trimSnaps',
+    slidesToScroll: 1,
+    skipSnaps: false,
+    inViewThreshold: 0.7
+  });
+
+  // Use audio recording hook
+  const {
+    isRecording,
+    recordingDuration,
+    audioUrl,
+    audioBlob,
+    startRecording,
+    stopRecording,
+    cancelRecording,
+  } = useAudioRecording({
+    onRecordingComplete: (blob) => {
+      const currentIndex = currentItemIndexRef.current;
+      if (currentIndex >= 0 && currentIndex < processedItems.length) {
+        processAssignmentRecording(blob, currentIndex);
+      } else {
+        console.warn("Invalid assignment item index when recording completed:", currentIndex);
+        setIsProcessingRecording(false);
+      }
+    },
+    onError: (error) => {
+      console.error("Recording error:", error);
+      toast({
+        title: "Recording Error",
+        description: "Could not access microphone. Please check your browser permissions.",
+        variant: "destructive",
+      });
+      setCurrentlyPracticing(null);
+      setIsProcessingRecording(false);
+    },
+  });
 
   // Convert assignment items to processed items format
   useEffect(() => {
@@ -120,53 +171,210 @@ function AssignmentCarousel({ items, assignmentId }: { items: AssignmentItem[], 
     setProcessedItems(converted);
   }, [items]);
 
-  const recordAssignmentResultMutation = useMutation({
-    mutationFn: async (resultData: any) => {
-      const response = await fetch(`/api/assignments/${assignmentId}/results`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(resultData),
+  // Update carousel index when slide changes
+  useEffect(() => {
+    if (emblaApi) {
+      emblaApi.on('select', () => {
+        setCurrentCarouselIndex(emblaApi.selectedScrollSnap());
       });
-      if (!response.ok) throw new Error('Failed to record assignment result');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/assignments'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/assignments', assignmentId] });
-    },
-  });
+    }
+  }, [emblaApi]);
 
-  const handlePracticeComplete = async (index: number, assessmentResult: any) => {
-    const item = items[index];
-    
-    if (!item || !assessmentResult) return;
+  // Carousel navigation functions
+  const goToNext = () => {
+    if (emblaApi && currentCarouselIndex < processedItems.length - 1) {
+      emblaApi.scrollNext();
+    }
+  };
+
+  const goToPrevious = () => {
+    if (emblaApi && currentCarouselIndex > 0) {
+      emblaApi.scrollPrev();
+    }
+  };
+
+  // Start recording for assignment item practice
+  const startAssignmentPractice = async (itemIndex: number) => {
+    if (itemIndex < 0 || itemIndex >= processedItems.length) return;
 
     try {
-      // Record the assignment result
-      await recordAssignmentResultMutation.mutateAsync({
-        itemId: item.id,
-        pronunciationScore: assessmentResult.pronunciationScore,
-        accuracyScore: assessmentResult.accuracyScore,
-        fluencyScore: assessmentResult.fluencyScore,
-        completenessScore: assessmentResult.completenessScore,
-        detailedResults: assessmentResult,
-      });
+      const item = processedItems[itemIndex];
+      setCurrentlyPracticing(item.id);
+      setCurrentItemIndex(itemIndex);
+      currentItemIndexRef.current = itemIndex;
+      setAssignmentAssessmentResult(null);
 
-      // Update the processed item status
-      setProcessedItems(prev => prev.map((p, i) => 
-        i === index ? { ...p, status: "complete", assessmentResult } : p
-      ));
+      setProcessedItems((items) =>
+        items.map((it, idx) =>
+          idx === itemIndex ? { ...it, status: "recording" } : it,
+        ),
+      );
+
+      await startRecording();
 
       toast({
-        title: "Practice Complete!",
-        description: `Score: ${Math.round(assessmentResult.pronunciationScore)}%`,
+        title: "Recording Started",
+        description: `Recording: "${item.text}"`,
+      });
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      toast({
+        title: "Microphone Error",
+        description: "Could not access the microphone. Please check permissions.",
+        variant: "destructive",
+      });
+      setCurrentlyPracticing(null);
+    }
+  };
+
+  // Stop recording for assignment practice
+  const stopAssignmentPractice = async () => {
+    try {
+      await stopRecording();
+      setIsProcessingRecording(true);
+    } catch (error) {
+      console.error("Error stopping recording:", error);
+      toast({
+        title: "Recording Error",
+        description: "Failed to stop recording properly.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Process assignment recording
+  const processAssignmentRecording = async (blob: Blob, itemIndex: number) => {
+    if (itemIndex < 0 || itemIndex >= processedItems.length) {
+      console.error("Invalid assignment item index for processing:", itemIndex);
+      setIsProcessingRecording(false);
+      return;
+    }
+
+    const item = processedItems[itemIndex];
+    if (!item) {
+      console.error("Assignment item not found at index:", itemIndex);
+      setIsProcessingRecording(false);
+      return;
+    }
+
+    setProcessedItems((items) =>
+      items.map((it, idx) =>
+        idx === itemIndex ? { ...it, status: "assessing" } : it,
+      ),
+    );
+
+    try {
+      const formData = new FormData();
+      formData.append("audio", blob, "recording.webm");
+      formData.append("referenceText", item.text);
+
+      const response = await fetch("/api/pronunciation/assess", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setAssignmentAssessmentResult(result);
+
+      // Record the assignment result
+      try {
+        const assignmentResponse = await fetch(`/api/assignments/${assignmentId}/results`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            itemId: items[itemIndex].id,
+            pronunciationScore: result.pronunciationScore,
+            accuracyScore: result.accuracyScore,
+            fluencyScore: result.fluencyScore,
+            completenessScore: result.completenessScore,
+            detailedResults: result,
+          }),
+        });
+
+        if (assignmentResponse.ok) {
+          queryClient.invalidateQueries({ queryKey: ['/api/assignments'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/assignments', assignmentId] });
+        }
+      } catch (err) {
+        console.error('Failed to record assignment result:', err);
+      }
+
+      setProcessedItems((items) =>
+        items.map((it, idx) =>
+          idx === itemIndex
+            ? {
+                ...it,
+                status: "complete",
+                assessmentResult: result,
+                recordingBlob: blob
+              }
+            : it,
+        ),
+      );
+
+      toast({
+        title: "Assessment Complete!",
+        description: `Pronunciation Score: ${Math.round(result.pronunciationScore)}%`,
+        duration: 3000,
       });
 
     } catch (error) {
-      console.error("Error recording assignment result:", error);
+      console.error("Error processing assignment recording:", error);
       toast({
-        title: "Error",
-        description: "Failed to save practice result",
+        title: "Assessment Error",
+        description: "Failed to assess pronunciation. Please try again.",
+        variant: "destructive",
+      });
+
+      setProcessedItems((items) =>
+        items.map((it, idx) =>
+          idx === itemIndex ? { ...it, status: "idle" } : it,
+        ),
+      );
+    }
+
+    setCurrentlyPracticing(null);
+    setIsProcessingRecording(false);
+  };
+
+  // Play assignment item audio
+  const playAssignmentAudio = async (item: ProcessedItem, slow: boolean = false) => {
+    try {
+      const response = await fetch("/api/speech/synthesize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: item.text,
+          voice: "default",
+          speed: slow ? 0.7 : 1.0,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate speech");
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      if (audioRef.current) {
+        audioRef.current.src = audioUrl;
+        await audioRef.current.play();
+      }
+
+      toast({
+        title: slow ? "Playing Slowly" : "Playing Item",
+        description: item.text,
+      });
+    } catch (error) {
+      console.error("Error playing assignment audio:", error);
+      toast({
+        title: "Audio Error",
+        description: "Could not play audio",
         variant: "destructive",
       });
     }
@@ -177,91 +385,162 @@ function AssignmentCarousel({ items, assignmentId }: { items: AssignmentItem[], 
   }
 
   return (
-    <Card className="shadow-lg border-0" style={{ backgroundColor: '#ffffff' }}>
-      <CardContent className="p-6">
-        <div className="text-center mb-6">
-          <h3 className="text-xl font-bold text-purple-800 mb-2">
-            Assignment Practice
-          </h3>
-          <div className="flex justify-center items-center gap-2">
-            <span className="text-sm text-gray-600">
-              {currentIndex + 1} of {processedItems.length}
-            </span>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="text-center">
+        <h3 className="text-2xl font-bold mb-2 text-purple-800">Assignment Practice</h3>
+      </div>
+
+      {/* Progress indicator */}
+      <div className="bg-white rounded-lg p-4 shadow-lg border-0 max-w-xl mx-auto">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-[#264653]">Practice Progress</span>
+          <span className="text-sm text-[#264653]">
+            {currentCarouselIndex + 1} of {processedItems.length}
+          </span>
+        </div>
+        <Progress
+          value={((currentCarouselIndex + 1) / processedItems.length) * 100}
+          className="h-3 bg-[#f9fafb] [&_div]:bg-[#1537cc]"
+        />
+      </div>
+
+      {/* Carousel */}
+      <div className="flex justify-center">
+        <div className="embla w-full max-w-lg" ref={emblaRef}>
+          <div className="embla__container flex">
+            {processedItems.map((item, index) => (
+              <div key={`${item.id}-${index}`} className="embla__slide flex-[0_0_100%] px-2">
+                <Card className="h-full shadow-lg border-0 card-content w-full max-w-full overflow-hidden" style={{ backgroundColor: '#1947e5' }}>
+                  <CardHeader className="text-center text-white pb-4">
+                    <CardTitle className="text-3xl font-bold mb-4 leading-tight px-4">{item.text}</CardTitle>
+                    
+                    {item.syllabication && (
+                      <div className="text-lg text-white/90 mb-4">
+                        {item.syllabication}
+                      </div>
+                    )}
+
+                    {item.phonetic && (
+                      <div className="text-lg text-white/90 italic mb-4">
+                        /{item.phonetic}/
+                      </div>
+                    )}
+                  </CardHeader>
+
+                  <CardContent className="text-center pb-6">
+                    {/* Recording Button */}
+                    <div className="mb-6">
+                      {item.status === "recording" ? (
+                        <Button
+                          size="lg"
+                          onClick={stopAssignmentPractice}
+                          className="bg-red-500 hover:bg-red-600 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg"
+                        >
+                          <StopCircleIcon className="h-6 w-6 mr-2" />
+                          Stop Recording
+                        </Button>
+                      ) : item.status === "assessing" ? (
+                        <Button
+                          size="lg"
+                          disabled
+                          className="bg-yellow-500 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg"
+                        >
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-2"></div>
+                          Assessing...
+                        </Button>
+                      ) : (
+                        <Button
+                          size="lg"
+                          onClick={() => startAssignmentPractice(index)}
+                          disabled={currentlyPracticing !== null}
+                          className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg"
+                        >
+                          <MicIcon className="h-6 w-6 mr-2" />
+                          Start Recording
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Control Buttons */}
+                    <div className="flex flex-wrap justify-center gap-3 mb-4">
+                      {/* Hear Button */}
+                      <Button
+                        onClick={() => playAssignmentAudio(item, false)}
+                        className="bg-orange-400 hover:bg-orange-500 text-white px-6 py-2 rounded-full shadow-md"
+                      >
+                        <Ear className="h-5 w-5 mr-2" />
+                        Hear
+                      </Button>
+
+                      {/* Slow Speed Toggle */}
+                      <div className="flex items-center bg-white/20 rounded-full px-3 py-2">
+                        <Snail className="h-5 w-5 mr-2 text-white" />
+                        <Switch
+                          checked={slowPlaybackItems[item.id] || false}
+                          onCheckedChange={(checked) => {
+                            setSlowPlaybackItems(prev => ({
+                              ...prev,
+                              [item.id]: checked
+                            }));
+                            if (checked) {
+                              playAssignmentAudio(item, true);
+                            }
+                          }}
+                          className="data-[state=checked]:bg-green-600"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Assessment Results */}
+                    {item.status === "complete" && item.assessmentResult && (
+                      <div className="bg-white/20 rounded-lg p-4 mt-4">
+                        <div className="text-white font-semibold mb-2">Assessment Results:</div>
+                        <div className="text-sm text-white/90 space-y-1">
+                          <div>Pronunciation: {Math.round(item.assessmentResult.pronunciationScore)}%</div>
+                          <div>Accuracy: {Math.round(item.assessmentResult.accuracyScore)}%</div>
+                          <div>Fluency: {Math.round(item.assessmentResult.fluencyScore)}%</div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            ))}
           </div>
         </div>
+      </div>
 
-        {/* Current Item Display */}
-        <div className="text-center mb-6">
-          <div className="text-4xl font-bold text-purple-800 mb-4">
-            {processedItems[currentIndex]?.text}
-          </div>
-          
-          {processedItems[currentIndex]?.syllabication && (
-            <div className="text-lg text-gray-600 mb-2">
-              {processedItems[currentIndex].syllabication}
-            </div>
-          )}
-
-          {processedItems[currentIndex]?.phonetic && (
-            <div className="text-sm text-gray-500 mb-4">
-              /{processedItems[currentIndex].phonetic}/
-            </div>
-          )}
-
-          {/* Practice Button */}
-          <Button
-            size="lg"
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0"
-            onClick={() => setCurrentlyPracticing(currentIndex)}
-            disabled={currentlyPracticing === currentIndex}
-          >
-            {currentlyPracticing === currentIndex ? (
-              <>
-                <MicIcon className="h-5 w-5 mr-2 animate-pulse" />
-                Practicing...
-              </>
-            ) : (
-              <>
-                <MicIcon className="h-5 w-5 mr-2" />
-                Practice
-              </>
-            )}
-          </Button>
-
-          {/* Status Indicator */}
-          {processedItems[currentIndex]?.status === "complete" && (
-            <div className="mt-4 flex items-center justify-center gap-2 text-green-600">
-              <Check className="h-5 w-5" />
-              <span className="font-semibold">Completed!</span>
-            </div>
-          )}
+      {/* Navigation controls */}
+      <div className="flex justify-between items-center max-w-xl mx-auto">
+        <Button
+          onClick={goToPrevious}
+          disabled={currentCarouselIndex === 0}
+          variant="outline"
+          size="sm"
+        >
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          Previous
+        </Button>
+        
+        <div className="text-sm text-gray-600">
+          {currentCarouselIndex + 1} of {processedItems.length}
         </div>
+        
+        <Button
+          onClick={goToNext}
+          disabled={currentCarouselIndex >= processedItems.length - 1}
+          variant="outline"
+          size="sm"
+        >
+          Next
+          <ChevronRight className="h-4 w-4 ml-1" />
+        </Button>
+      </div>
 
-        {/* Navigation */}
-        {processedItems.length > 1 && (
-          <div className="flex justify-center gap-4 mt-4">
-            <Button
-              onClick={() => setCurrentIndex(prev => Math.max(prev - 1, 0))}
-              variant="outline"
-              disabled={currentIndex === 0}
-              className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Previous
-            </Button>
-            <Button
-              onClick={() => setCurrentIndex(prev => Math.min(prev + 1, processedItems.length - 1))}
-              variant="outline"
-              disabled={currentIndex === processedItems.length - 1}
-              className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0"
-            >
-              Next
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      {/* Hidden audio element for playback */}
+      <audio ref={audioRef} className="hidden" />
+    </div>
   );
 }
 
@@ -269,6 +548,7 @@ function AssignmentCarousel({ items, assignmentId }: { items: AssignmentItem[], 
 function AssignmentsTab() {
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [assignmentItems, setAssignmentItems] = useState<AssignmentItem[]>([]);
+  const [currentAssignmentIndex, setCurrentAssignmentIndex] = useState(0);
   const { toast } = useToast();
 
   // Fetch user assignments
@@ -324,6 +604,51 @@ function AssignmentsTab() {
 
   return (
     <div className="space-y-6">
+      {/* Navigation for multiple assignments */}
+      {assignments.length > 1 && (
+        <div className="bg-white rounded-lg p-4 shadow-lg border-0 max-w-xl mx-auto">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-[#264653]">Assignments</span>
+            <span className="text-sm text-[#264653]">
+              {currentAssignmentIndex + 1} of {assignments.length}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <Button
+              onClick={() => {
+                const newIndex = Math.max(currentAssignmentIndex - 1, 0);
+                setCurrentAssignmentIndex(newIndex);
+                setSelectedAssignment(assignments[newIndex]);
+              }}
+              disabled={currentAssignmentIndex === 0}
+              variant="outline"
+              size="sm"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            
+            <div className="text-sm text-gray-600">
+              {assignments[currentAssignmentIndex]?.title || 'Assignment'}
+            </div>
+            
+            <Button
+              onClick={() => {
+                const newIndex = Math.min(currentAssignmentIndex + 1, assignments.length - 1);
+                setCurrentAssignmentIndex(newIndex);
+                setSelectedAssignment(assignments[newIndex]);
+              }}
+              disabled={currentAssignmentIndex >= assignments.length - 1}
+              variant="outline"
+              size="sm"
+            >
+              Next
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Assignment Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {assignments.map((assignment: Assignment) => (
@@ -336,7 +661,7 @@ function AssignmentsTab() {
           >
             <CardHeader className="pb-2">
               <CardTitle className="text-lg text-purple-800">
-                {assignment.therapistName} homework - {formatDate(assignment.createdAt)}
+                Homework assignment - {formatDate(assignment.createdAt)}
               </CardTitle>
               <CardDescription className="text-sm">
                 {assignment.title}
@@ -395,26 +720,283 @@ function AssignmentsTab() {
   );
 }
 
-// Practice Carousel Component (minimal implementation)
-function PracticeCarousel({
+// Enhanced Practice Words Carousel Component - matching Words.tsx functionality
+function PracticeWordsCarousel({
   items,
-  currentIndex,
-  onNext,
-  onPrevious,
-  onShuffle,
   title,
   color,
   emptyMessage,
 }: {
   items: ProcessedItem[];
-  currentIndex: number;
-  onNext: () => void;
-  onPrevious: () => void;
-  onShuffle: () => void;
   title: string;
   color: string;
   emptyMessage: string;
 }) {
+  const [processedWords, setProcessedWords] = useState<ProcessedItem[]>([]);
+  const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
+  const [currentlyPracticing, setCurrentlyPracticing] = useState<string | null>(null);
+  const [isProcessingRecording, setIsProcessingRecording] = useState(false);
+  const [wordAssessmentResult, setWordAssessmentResult] = useState<any>(null);
+  const [currentWordIndex, setCurrentWordIndex] = useState(-1);
+  const [slowPlaybackWords, setSlowPlaybackWords] = useState<Record<string, boolean>>({});
+  const [showSummary, setShowSummary] = useState(false);
+  const { toast } = useToast();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const currentWordIndexRef = useRef<number>(-1);
+
+  // Embla carousel setup
+  const [emblaRef, emblaApi] = useEmblaCarousel({ 
+    loop: false,
+    align: 'center',
+    containScroll: 'trimSnaps',
+    slidesToScroll: 1,
+    skipSnaps: false,
+    inViewThreshold: 0.7
+  });
+
+  // Use audio recording hook
+  const {
+    isRecording,
+    recordingDuration,
+    audioUrl,
+    audioBlob,
+    startRecording,
+    stopRecording,
+    cancelRecording,
+  } = useAudioRecording({
+    onRecordingComplete: (blob) => {
+      const currentIndex = currentWordIndexRef.current;
+      if (currentIndex >= 0 && currentIndex < processedWords.length) {
+        processWordRecording(blob, currentIndex);
+      } else {
+        console.warn("Invalid word index when recording completed:", currentIndex);
+        setIsProcessingRecording(false);
+      }
+    },
+    onError: (error) => {
+      console.error("Recording error:", error);
+      toast({
+        title: "Recording Error",
+        description: "Could not access microphone. Please check your browser permissions.",
+        variant: "destructive",
+      });
+      setCurrentlyPracticing(null);
+      setIsProcessingRecording(false);
+    },
+  });
+
+  // Initialize processed words from items
+  useEffect(() => {
+    if (items.length > 0) {
+      setProcessedWords(items);
+    }
+  }, [items]);
+
+  // Update carousel index when slide changes
+  useEffect(() => {
+    if (emblaApi) {
+      emblaApi.on('select', () => {
+        setCurrentCarouselIndex(emblaApi.selectedScrollSnap());
+      });
+    }
+  }, [emblaApi]);
+
+  // Carousel navigation functions
+  const goToNext = () => {
+    if (emblaApi && currentCarouselIndex < processedWords.length - 1) {
+      emblaApi.scrollNext();
+    }
+  };
+
+  const goToPrevious = () => {
+    if (emblaApi && currentCarouselIndex > 0) {
+      emblaApi.scrollPrev();
+    }
+  };
+
+  // Start recording for word practice
+  const startWordPractice = async (wordIndex: number) => {
+    if (wordIndex < 0 || wordIndex >= processedWords.length) return;
+
+    try {
+      const word = processedWords[wordIndex];
+      setCurrentlyPracticing(word.id);
+      setCurrentWordIndex(wordIndex);
+      currentWordIndexRef.current = wordIndex;
+      setWordAssessmentResult(null);
+
+      setProcessedWords((words) =>
+        words.map((w, idx) =>
+          idx === wordIndex ? { ...w, status: "recording" } : w,
+        ),
+      );
+
+      await startRecording();
+
+      toast({
+        title: "Recording Started",
+        description: `Recording word: "${word.text}"`,
+      });
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      toast({
+        title: "Microphone Error",
+        description: "Could not access the microphone. Please check permissions.",
+        variant: "destructive",
+      });
+      setCurrentlyPracticing(null);
+    }
+  };
+
+  // Stop recording for word practice
+  const stopWordPractice = async () => {
+    try {
+      await stopRecording();
+      setIsProcessingRecording(true);
+    } catch (error) {
+      console.error("Error stopping recording:", error);
+      toast({
+        title: "Recording Error",
+        description: "Failed to stop recording properly.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Process word recording
+  const processWordRecording = async (blob: Blob, wordIndex: number) => {
+    if (wordIndex < 0 || wordIndex >= processedWords.length) {
+      console.error("Invalid word index for processing:", wordIndex);
+      setIsProcessingRecording(false);
+      return;
+    }
+
+    const word = processedWords[wordIndex];
+    if (!word) {
+      console.error("Word not found at index:", wordIndex);
+      setIsProcessingRecording(false);
+      return;
+    }
+
+    setProcessedWords((words) =>
+      words.map((w, idx) =>
+        idx === wordIndex ? { ...w, status: "assessing" } : w,
+      ),
+    );
+
+    try {
+      const formData = new FormData();
+      formData.append("audio", blob, "recording.webm");
+      formData.append("referenceText", word.text);
+
+      const response = await fetch("/api/pronunciation/assess", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setWordAssessmentResult(result);
+
+      // Record activity
+      try {
+        await fetch('/api/activities/record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            activityType: 'word_practice',
+            itemPracticed: word.text,
+            score: result.pronunciationScore,
+            accuracy: result.accuracyScore,
+            fluency: result.fluencyScore,
+            completeness: result.completenessScore,
+            difficulty: word.difficulty || null
+          })
+        });
+      } catch (err) {
+        console.error('Failed to record activity:', err);
+      }
+
+      setProcessedWords((words) =>
+        words.map((w, idx) =>
+          idx === wordIndex
+            ? {
+                ...w,
+                status: "complete",
+                assessmentResult: result,
+                recordingBlob: blob
+              }
+            : w,
+        ),
+      );
+
+      toast({
+        title: "Assessment Complete!",
+        description: `Pronunciation Score: ${Math.round(result.pronunciationScore)}%`,
+        duration: 3000,
+      });
+
+    } catch (error) {
+      console.error("Error processing word recording:", error);
+      toast({
+        title: "Assessment Error",
+        description: "Failed to assess pronunciation. Please try again.",
+        variant: "destructive",
+      });
+
+      setProcessedWords((words) =>
+        words.map((w, idx) =>
+          idx === wordIndex ? { ...w, status: "idle" } : w,
+        ),
+      );
+    }
+
+    setCurrentlyPracticing(null);
+    setIsProcessingRecording(false);
+  };
+
+  // Play word audio
+  const playWordAudio = async (word: ProcessedItem, slow: boolean = false) => {
+    try {
+      const response = await fetch("/api/speech/synthesize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: word.text,
+          voice: "default",
+          speed: slow ? 0.7 : 1.0,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate speech");
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      if (audioRef.current) {
+        audioRef.current.src = audioUrl;
+        await audioRef.current.play();
+      }
+
+      toast({
+        title: slow ? "Playing Slowly" : "Playing Word",
+        description: word.text,
+      });
+    } catch (error) {
+      console.error("Error playing word audio:", error);
+      toast({
+        title: "Audio Error",
+        description: "Could not play word audio",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (items.length === 0) {
     return (
       <Card className="mb-6">
@@ -427,25 +1009,607 @@ function PracticeCarousel({
   }
 
   return (
-    <Card className="mb-6">
-      <CardContent className="p-6">
-        <h3 className="text-lg font-bold mb-4" style={{ color }}>{title}</h3>
-        <div className="text-center">
-          <div className="text-2xl font-bold mb-4">{items[currentIndex]?.text}</div>
-          <div className="flex justify-center gap-4">
-            <Button onClick={onPrevious} disabled={currentIndex === 0}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="flex items-center px-4">
-              {currentIndex + 1} of {items.length}
-            </span>
-            <Button onClick={onNext} disabled={currentIndex === items.length - 1}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="text-center">
+        <h3 className="text-2xl font-bold mb-2" style={{ color }}>{title}</h3>
+      </div>
+
+      {/* Progress indicator */}
+      <div className="bg-white rounded-lg p-4 shadow-lg border-0 max-w-xl mx-auto">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-[#264653]">Practice Progress</span>
+          <span className="text-sm text-[#264653]">
+            {currentCarouselIndex + 1} of {processedWords.length}
+          </span>
+        </div>
+        <Progress
+          value={((currentCarouselIndex + 1) / processedWords.length) * 100}
+          className="h-3 bg-[#f9fafb] [&_div]:bg-[#1537cc]"
+        />
+      </div>
+
+      {/* Carousel */}
+      <div className="flex justify-center">
+        <div className="embla w-full max-w-lg" ref={emblaRef}>
+          <div className="embla__container flex">
+            {processedWords.map((word, index) => (
+              <div key={`${word.id}-${index}`} className="embla__slide flex-[0_0_100%] px-2">
+                <Card className="h-full shadow-lg border-0 card-content w-full max-w-full overflow-hidden" style={{ backgroundColor: '#1947e5' }}>
+                  <CardHeader className="text-center text-white pb-4">
+                    <CardTitle className="text-4xl font-bold mb-4">{word.text}</CardTitle>
+                    
+                    {word.phonetic && (
+                      <div className="text-lg text-white/90 italic mb-4">
+                        {word.phonetic}
+                      </div>
+                    )}
+                  </CardHeader>
+
+                  <CardContent className="text-center pb-6">
+                    {/* Recording Button */}
+                    <div className="mb-6">
+                      {word.status === "recording" ? (
+                        <Button
+                          size="lg"
+                          onClick={stopWordPractice}
+                          className="bg-red-500 hover:bg-red-600 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg"
+                        >
+                          <StopCircleIcon className="h-6 w-6 mr-2" />
+                          Stop Recording
+                        </Button>
+                      ) : word.status === "assessing" ? (
+                        <Button
+                          size="lg"
+                          disabled
+                          className="bg-yellow-500 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg"
+                        >
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-2"></div>
+                          Assessing...
+                        </Button>
+                      ) : (
+                        <Button
+                          size="lg"
+                          onClick={() => startWordPractice(index)}
+                          disabled={currentlyPracticing !== null}
+                          className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg"
+                        >
+                          <MicIcon className="h-6 w-6 mr-2" />
+                          Start Recording
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Control Buttons */}
+                    <div className="flex flex-wrap justify-center gap-3 mb-4">
+                      {/* Hear Button */}
+                      <Button
+                        onClick={() => playWordAudio(word, false)}
+                        className="bg-orange-400 hover:bg-orange-500 text-white px-6 py-2 rounded-full shadow-md"
+                      >
+                        <Ear className="h-5 w-5 mr-2" />
+                        Hear
+                      </Button>
+
+                      {/* Slow Speed Toggle */}
+                      <div className="flex items-center bg-white/20 rounded-full px-3 py-2">
+                        <Snail className="h-5 w-5 mr-2 text-white" />
+                        <Switch
+                          checked={slowPlaybackWords[word.id] || false}
+                          onCheckedChange={(checked) => {
+                            setSlowPlaybackWords(prev => ({
+                              ...prev,
+                              [word.id]: checked
+                            }));
+                            if (checked) {
+                              playWordAudio(word, true);
+                            }
+                          }}
+                          className="data-[state=checked]:bg-green-600"
+                        />
+                      </div>
+
+                      {/* See Button */}
+                      <Button
+                        onClick={() => playWordAudio(word, slowPlaybackWords[word.id] || false)}
+                        className="bg-yellow-400 hover:bg-yellow-500 text-white px-6 py-2 rounded-full shadow-md"
+                      >
+                        <Eye className="h-5 w-5 mr-2" />
+                        See
+                      </Button>
+                    </div>
+
+                    {/* Assessment Results */}
+                    {word.status === "complete" && word.assessmentResult && (
+                      <div className="bg-white/20 rounded-lg p-4 mt-4">
+                        <div className="text-white font-semibold mb-2">Assessment Results:</div>
+                        <div className="text-sm text-white/90 space-y-1">
+                          <div>Pronunciation: {Math.round(word.assessmentResult.pronunciationScore)}%</div>
+                          <div>Accuracy: {Math.round(word.assessmentResult.accuracyScore)}%</div>
+                          <div>Fluency: {Math.round(word.assessmentResult.fluencyScore)}%</div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            ))}
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Navigation controls */}
+      <div className="flex justify-between items-center max-w-xl mx-auto">
+        <Button
+          onClick={goToPrevious}
+          disabled={currentCarouselIndex === 0}
+          variant="outline"
+          size="sm"
+        >
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          Previous
+        </Button>
+        
+        <div className="text-sm text-gray-600">
+          {currentCarouselIndex + 1} of {processedWords.length}
+        </div>
+        
+        <Button
+          onClick={goToNext}
+          disabled={currentCarouselIndex >= processedWords.length - 1}
+          variant="outline"
+          size="sm"
+        >
+          Next
+          <ChevronRight className="h-4 w-4 ml-1" />
+        </Button>
+      </div>
+
+      {/* Hidden audio element for playback */}
+      <audio ref={audioRef} className="hidden" />
+    </div>
+  );
+}
+
+// Enhanced Practice Phrases Carousel Component - matching Phrases.tsx functionality
+function PracticePhrasesCarousel({
+  items,
+  title,
+  color,
+  emptyMessage,
+}: {
+  items: ProcessedItem[];
+  title: string;
+  color: string;
+  emptyMessage: string;
+}) {
+  const [processedPhrases, setProcessedPhrases] = useState<ProcessedItem[]>([]);
+  const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
+  const [currentlyPracticing, setCurrentlyPracticing] = useState<string | null>(null);
+  const [isProcessingRecording, setIsProcessingRecording] = useState(false);
+  const [phraseAssessmentResult, setPhraseAssessmentResult] = useState<any>(null);
+  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(-1);
+  const [slowPlaybackPhrases, setSlowPlaybackPhrases] = useState<Record<string, boolean>>({});
+  const [showSummary, setShowSummary] = useState(false);
+  const { toast } = useToast();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const currentPhraseIndexRef = useRef<number>(-1);
+
+  // Embla carousel setup
+  const [emblaRef, emblaApi] = useEmblaCarousel({ 
+    loop: false,
+    align: 'center',
+    containScroll: 'trimSnaps',
+    slidesToScroll: 1,
+    skipSnaps: false,
+    inViewThreshold: 0.7
+  });
+
+  // Use audio recording hook
+  const {
+    isRecording,
+    recordingDuration,
+    audioUrl,
+    audioBlob,
+    startRecording,
+    stopRecording,
+    cancelRecording,
+  } = useAudioRecording({
+    onRecordingComplete: (blob) => {
+      const currentIndex = currentPhraseIndexRef.current;
+      if (currentIndex >= 0 && currentIndex < processedPhrases.length) {
+        processPhraseRecording(blob, currentIndex);
+      } else {
+        console.warn("Invalid phrase index when recording completed:", currentIndex);
+        setIsProcessingRecording(false);
+      }
+    },
+    onError: (error) => {
+      console.error("Recording error:", error);
+      toast({
+        title: "Recording Error",
+        description: "Could not access microphone. Please check your browser permissions.",
+        variant: "destructive",
+      });
+      setCurrentlyPracticing(null);
+      setIsProcessingRecording(false);
+    },
+  });
+
+  // Initialize processed phrases from items
+  useEffect(() => {
+    if (items.length > 0) {
+      setProcessedPhrases(items);
+    }
+  }, [items]);
+
+  // Update carousel index when slide changes
+  useEffect(() => {
+    if (emblaApi) {
+      emblaApi.on('select', () => {
+        setCurrentCarouselIndex(emblaApi.selectedScrollSnap());
+      });
+    }
+  }, [emblaApi]);
+
+  // Carousel navigation functions
+  const goToNext = () => {
+    if (emblaApi && currentCarouselIndex < processedPhrases.length - 1) {
+      emblaApi.scrollNext();
+    }
+  };
+
+  const goToPrevious = () => {
+    if (emblaApi && currentCarouselIndex > 0) {
+      emblaApi.scrollPrev();
+    }
+  };
+
+  // Start recording for phrase practice
+  const startPhrasePractice = async (phraseIndex: number) => {
+    if (phraseIndex < 0 || phraseIndex >= processedPhrases.length) return;
+
+    try {
+      const phrase = processedPhrases[phraseIndex];
+      setCurrentlyPracticing(phrase.id);
+      setCurrentPhraseIndex(phraseIndex);
+      currentPhraseIndexRef.current = phraseIndex;
+      setPhraseAssessmentResult(null);
+
+      setProcessedPhrases((phrases) =>
+        phrases.map((p, idx) =>
+          idx === phraseIndex ? { ...p, status: "recording" } : p,
+        ),
+      );
+
+      await startRecording();
+
+      toast({
+        title: "Recording Started",
+        description: `Recording phrase: "${phrase.text}"`,
+      });
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      toast({
+        title: "Microphone Error",
+        description: "Could not access the microphone. Please check permissions.",
+        variant: "destructive",
+      });
+      setCurrentlyPracticing(null);
+    }
+  };
+
+  // Stop recording for phrase practice
+  const stopPhrasePractice = async () => {
+    try {
+      await stopRecording();
+      setIsProcessingRecording(true);
+    } catch (error) {
+      console.error("Error stopping recording:", error);
+      toast({
+        title: "Recording Error",
+        description: "Failed to stop recording properly.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Process phrase recording
+  const processPhraseRecording = async (blob: Blob, phraseIndex: number) => {
+    if (phraseIndex < 0 || phraseIndex >= processedPhrases.length) {
+      console.error("Invalid phrase index for processing:", phraseIndex);
+      setIsProcessingRecording(false);
+      return;
+    }
+
+    const phrase = processedPhrases[phraseIndex];
+    if (!phrase) {
+      console.error("Phrase not found at index:", phraseIndex);
+      setIsProcessingRecording(false);
+      return;
+    }
+
+    setProcessedPhrases((phrases) =>
+      phrases.map((p, idx) =>
+        idx === phraseIndex ? { ...p, status: "assessing" } : p,
+      ),
+    );
+
+    try {
+      const formData = new FormData();
+      formData.append("audio", blob, "recording.webm");
+      formData.append("referenceText", phrase.text);
+
+      const response = await fetch("/api/pronunciation/assess", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setPhraseAssessmentResult(result);
+
+      // Record activity
+      try {
+        await fetch('/api/activities/record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            activityType: 'phrase_practice',
+            itemPracticed: phrase.text,
+            score: result.pronunciationScore,
+            accuracy: result.accuracyScore,
+            fluency: result.fluencyScore,
+            completeness: result.completenessScore,
+            difficulty: phrase.difficulty || null
+          })
+        });
+      } catch (err) {
+        console.error('Failed to record activity:', err);
+      }
+
+      setProcessedPhrases((phrases) =>
+        phrases.map((p, idx) =>
+          idx === phraseIndex
+            ? {
+                ...p,
+                status: "complete",
+                assessmentResult: result,
+                recordingBlob: blob
+              }
+            : p,
+        ),
+      );
+
+      toast({
+        title: "Assessment Complete!",
+        description: `Pronunciation Score: ${Math.round(result.pronunciationScore)}%`,
+        duration: 3000,
+      });
+
+    } catch (error) {
+      console.error("Error processing phrase recording:", error);
+      toast({
+        title: "Assessment Error",
+        description: "Failed to assess pronunciation. Please try again.",
+        variant: "destructive",
+      });
+
+      setProcessedPhrases((phrases) =>
+        phrases.map((p, idx) =>
+          idx === phraseIndex ? { ...p, status: "idle" } : p,
+        ),
+      );
+    }
+
+    setCurrentlyPracticing(null);
+    setIsProcessingRecording(false);
+  };
+
+  // Play phrase audio
+  const playPhraseAudio = async (phrase: ProcessedItem, slow: boolean = false) => {
+    try {
+      const response = await fetch("/api/speech/synthesize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: phrase.text,
+          voice: "default",
+          speed: slow ? 0.7 : 1.0,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate speech");
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      if (audioRef.current) {
+        audioRef.current.src = audioUrl;
+        await audioRef.current.play();
+      }
+
+      toast({
+        title: slow ? "Playing Slowly" : "Playing Phrase",
+        description: phrase.text,
+      });
+    } catch (error) {
+      console.error("Error playing phrase audio:", error);
+      toast({
+        title: "Audio Error",
+        description: "Could not play phrase audio",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (items.length === 0) {
+    return (
+      <Card className="mb-6">
+        <CardContent className="p-6 text-center">
+          <h3 className="text-lg font-bold mb-4" style={{ color }}>{title}</h3>
+          <p className="text-gray-500">{emptyMessage}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="text-center">
+        <h3 className="text-2xl font-bold mb-2" style={{ color }}>{title}</h3>
+      </div>
+
+      {/* Progress indicator */}
+      <div className="bg-white rounded-lg p-4 shadow-lg border-0 max-w-xl mx-auto">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-[#264653]">Practice Progress</span>
+          <span className="text-sm text-[#264653]">
+            {currentCarouselIndex + 1} of {processedPhrases.length}
+          </span>
+        </div>
+        <Progress
+          value={((currentCarouselIndex + 1) / processedPhrases.length) * 100}
+          className="h-3 bg-[#f9fafb] [&_div]:bg-[#1537cc]"
+        />
+      </div>
+
+      {/* Carousel */}
+      <div className="flex justify-center">
+        <div className="embla w-full max-w-lg" ref={emblaRef}>
+          <div className="embla__container flex">
+            {processedPhrases.map((phrase, index) => (
+              <div key={`${phrase.id}-${index}`} className="embla__slide flex-[0_0_100%] px-2">
+                <Card className="h-full shadow-lg border-0 card-content w-full max-w-full overflow-hidden" style={{ backgroundColor: '#1947e5' }}>
+                  <CardHeader className="text-center text-white pb-4">
+                    <CardTitle className="text-3xl font-bold mb-4 leading-tight px-4">{phrase.text}</CardTitle>
+                    
+                    {phrase.phonetic && (
+                      <div className="text-lg text-white/90 italic mb-4">
+                        {phrase.phonetic}
+                      </div>
+                    )}
+                  </CardHeader>
+
+                  <CardContent className="text-center pb-6">
+                    {/* Recording Button */}
+                    <div className="mb-6">
+                      {phrase.status === "recording" ? (
+                        <Button
+                          size="lg"
+                          onClick={stopPhrasePractice}
+                          className="bg-red-500 hover:bg-red-600 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg"
+                        >
+                          <StopCircleIcon className="h-6 w-6 mr-2" />
+                          Stop Recording
+                        </Button>
+                      ) : phrase.status === "assessing" ? (
+                        <Button
+                          size="lg"
+                          disabled
+                          className="bg-yellow-500 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg"
+                        >
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-2"></div>
+                          Assessing...
+                        </Button>
+                      ) : (
+                        <Button
+                          size="lg"
+                          onClick={() => startPhrasePractice(index)}
+                          disabled={currentlyPracticing !== null}
+                          className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg"
+                        >
+                          <MicIcon className="h-6 w-6 mr-2" />
+                          Start Recording
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Control Buttons */}
+                    <div className="flex flex-wrap justify-center gap-3 mb-4">
+                      {/* Hear Button */}
+                      <Button
+                        onClick={() => playPhraseAudio(phrase, false)}
+                        className="bg-orange-400 hover:bg-orange-500 text-white px-6 py-2 rounded-full shadow-md"
+                      >
+                        <Ear className="h-5 w-5 mr-2" />
+                        Hear
+                      </Button>
+
+                      {/* Slow Speed Toggle */}
+                      <div className="flex items-center bg-white/20 rounded-full px-3 py-2">
+                        <Snail className="h-5 w-5 mr-2 text-white" />
+                        <Switch
+                          checked={slowPlaybackPhrases[phrase.id] || false}
+                          onCheckedChange={(checked) => {
+                            setSlowPlaybackPhrases(prev => ({
+                              ...prev,
+                              [phrase.id]: checked
+                            }));
+                            if (checked) {
+                              playPhraseAudio(phrase, true);
+                            }
+                          }}
+                          className="data-[state=checked]:bg-green-600"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Assessment Results */}
+                    {phrase.status === "complete" && phrase.assessmentResult && (
+                      <div className="bg-white/20 rounded-lg p-4 mt-4">
+                        <div className="text-white font-semibold mb-2">Assessment Results:</div>
+                        <div className="text-sm text-white/90 space-y-1">
+                          <div>Pronunciation: {Math.round(phrase.assessmentResult.pronunciationScore)}%</div>
+                          <div>Accuracy: {Math.round(phrase.assessmentResult.accuracyScore)}%</div>
+                          <div>Fluency: {Math.round(phrase.assessmentResult.fluencyScore)}%</div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation controls */}
+      <div className="flex justify-between items-center max-w-xl mx-auto">
+        <Button
+          onClick={goToPrevious}
+          disabled={currentCarouselIndex === 0}
+          variant="outline"
+          size="sm"
+        >
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          Previous
+        </Button>
+        
+        <div className="text-sm text-gray-600">
+          {currentCarouselIndex + 1} of {processedPhrases.length}
+        </div>
+        
+        <Button
+          onClick={goToNext}
+          disabled={currentCarouselIndex >= processedPhrases.length - 1}
+          variant="outline"
+          size="sm"
+        >
+          Next
+          <ChevronRight className="h-4 w-4 ml-1" />
+        </Button>
+      </div>
+
+      {/* Hidden audio element for playback */}
+      <audio ref={audioRef} className="hidden" />
+    </div>
   );
 }
 
@@ -570,48 +1734,24 @@ export default function MyWordsNew() {
 
           <TabsContent value="journey" className="space-y-6">
             {/* Practice Words Carousel */}
-            <PracticeCarousel
+            <PracticeWordsCarousel
               items={shuffledWords}
-              currentIndex={currentWordIndex}
-              onNext={() => setCurrentWordIndex(prev => Math.min(prev + 1, shuffledWords.length - 1))}
-              onPrevious={() => setCurrentWordIndex(prev => Math.max(prev - 1, 0))}
-              onShuffle={() => {
-                const shuffled = [...shuffledWords].sort(() => Math.random() - 0.5);
-                setShuffledWords(shuffled);
-                setCurrentWordIndex(0);
-              }}
               title="Practice Words"
               color="#1947e5"
               emptyMessage="No saved words yet"
             />
 
             {/* Practice Phrases Carousel */}
-            <PracticeCarousel
+            <PracticePhrasesCarousel
               items={shuffledPhrases}
-              currentIndex={currentPhraseIndex}
-              onNext={() => setCurrentPhraseIndex(prev => Math.min(prev + 1, shuffledPhrases.length - 1))}
-              onPrevious={() => setCurrentPhraseIndex(prev => Math.max(prev - 1, 0))}
-              onShuffle={() => {
-                const shuffled = [...shuffledPhrases].sort(() => Math.random() - 0.5);
-                setShuffledPhrases(shuffled);
-                setCurrentPhraseIndex(0);
-              }}
               title="Practice Phrases"
               color="#1947e5"
               emptyMessage="No saved phrases yet"
             />
 
             {/* Practice Readings Carousel */}
-            <PracticeCarousel
+            <PracticePhrasesCarousel
               items={shuffledReadings}
-              currentIndex={currentReadingIndex}
-              onNext={() => setCurrentReadingIndex(prev => Math.min(prev + 1, shuffledReadings.length - 1))}
-              onPrevious={() => setCurrentReadingIndex(prev => Math.max(prev - 1, 0))}
-              onShuffle={() => {
-                const shuffled = [...shuffledReadings].sort(() => Math.random() - 0.5);
-                setShuffledReadings(shuffled);
-                setCurrentReadingIndex(0);
-              }}
               title="Practice Readings"
               color="#1947e5"
               emptyMessage="No saved readings yet"
