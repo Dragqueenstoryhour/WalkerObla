@@ -2216,7 +2216,7 @@ export default function Words() {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-[#1537cc] mb-2">Speech Practice - Words</h1>
+              <h1 className="text-3xl font-bold text-[#1537cc] mb-2">Practice Words</h1>
               <p className="text-muted-foreground">
                 Generate and practice words to improve your speech clarity and pronunciation
               </p>

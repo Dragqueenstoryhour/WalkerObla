@@ -1000,7 +1000,7 @@ export default function Phrases() {
       {/* Header */}
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-[#1537cc]">Speech Practice - Phrases</h2>
+          <h2 className="text-3xl font-bold text-[#1537cc]">Phrases Practice</h2>
           <p className="text-muted-foreground">
             Generate and practice phrases to improve your speech fluency and pronunciation
           </p>
