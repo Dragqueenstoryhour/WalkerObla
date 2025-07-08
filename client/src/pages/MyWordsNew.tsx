@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import useEmblaCarousel from 'embla-carousel-react';
@@ -1917,9 +1917,6 @@ export default function MyWordsNew() {
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
   const [currentReadingIndex, setCurrentReadingIndex] = useState(0);
-  const [shuffledWords, setShuffledWords] = useState<ProcessedItem[]>([]);
-  const [shuffledPhrases, setShuffledPhrases] = useState<ProcessedItem[]>([]);
-  const [shuffledReadings, setShuffledReadings] = useState<ProcessedItem[]>([]);
 
   // Fetch saved words, phrases, and practice groups
   const { data: savedWords = [] } = useQuery<any[]>({
@@ -1959,10 +1956,10 @@ export default function MyWordsNew() {
     enabled: isAuthenticated,
   });
 
-  // Convert saved data to ProcessedItem format
-  useEffect(() => {
+  // Convert saved data to ProcessedItem format using useMemo to prevent infinite loops
+  const processedWords = useMemo(() => {
     if (savedWords.length > 0) {
-      const processedWords: ProcessedItem[] = savedWords.map((word: any) => ({
+      return savedWords.map((word: any) => ({
         id: `word-${word.word}`,
         text: word.word,
         syllabication: word.syllabication,
@@ -1971,17 +1968,15 @@ export default function MyWordsNew() {
         status: "idle",
         source: "words"
       }));
-      setShuffledWords(processedWords);
-    } else {
-      setShuffledWords([]);
     }
+    return [];
   }, [savedWords]);
 
-  useEffect(() => {
+  const processedPhrases = useMemo(() => {
     if (savedPhrases.length > 0) {
       // Filter out items that have source 'words' to ensure only actual phrases are shown
       const actualPhrases = savedPhrases.filter((phrase: SavedPhrase) => phrase.source !== 'words');
-      const processedPhrases: ProcessedItem[] = actualPhrases.map((phrase: SavedPhrase) => ({
+      return actualPhrases.map((phrase: SavedPhrase) => ({
         id: `phrase-${phrase.id}`,
         text: phrase.phrase,
         syllabication: phrase.syllabication,
@@ -1990,15 +1985,13 @@ export default function MyWordsNew() {
         status: "idle",
         source: "phrases"
       }));
-      setShuffledPhrases(processedPhrases);
-    } else {
-      setShuffledPhrases([]);
     }
+    return [];
   }, [savedPhrases]);
 
-  useEffect(() => {
+  const processedReadings = useMemo(() => {
     if (savedReadings.length > 0) {
-      const processedReadings: ProcessedItem[] = savedReadings.map((reading: any) => ({
+      return savedReadings.map((reading: any) => ({
         id: `reading-${reading.id}`,
         text: reading.phrase, // The content is stored in the phrase field
         syllabication: reading.syllabication,
@@ -2007,11 +2000,14 @@ export default function MyWordsNew() {
         status: "idle",
         source: "readings"
       }));
-      setShuffledReadings(processedReadings);
-    } else {
-      setShuffledReadings([]);
     }
+    return [];
   }, [savedReadings]);
+
+  // Use processed data directly instead of setting state
+  const shuffledWords = processedWords;
+  const shuffledPhrases = processedPhrases;
+  const shuffledReadings = processedReadings;
 
   if (!isAuthenticated) {
     return (
