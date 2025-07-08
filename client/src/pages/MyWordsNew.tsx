@@ -289,40 +289,27 @@ function AssignmentCarousel({ items, assignmentId }: { items: AssignmentItem[], 
     setProcessedItems(converted);
   }, [items]);
 
-  // Check if all assignment items are completed to show summary
-  useEffect(() => {
-    if (processedItems.length > 0) {
+  // Check if all assignment items are completed to show summary (simplified to prevent infinite loop)
+  const checkAssignmentCompletion = () => {
+    if (processedItems.length > 0 && !showAssignmentSummary) {
       const completedCount = processedItems.filter(item => item.status === "complete" && item.source !== "summary").length;
       const nonSummaryItems = processedItems.filter(item => item.source !== "summary");
+      const hasSummaryCard = processedItems.some(item => item.source === "summary");
       
-      if (completedCount === nonSummaryItems.length && !showAssignmentSummary && nonSummaryItems.length > 0) {
-        setTimeout(() => {
-          setShowAssignmentSummary(true);
-          // Add summary card to processed items only if not already added
-          const hasSummaryCard = processedItems.some(item => item.source === "summary");
-          if (!hasSummaryCard) {
-            setProcessedItems(prev => [...prev, {
-              id: 'assignment-summary-card',
-              text: 'Assignment Complete!',
-              status: 'complete',
-              source: 'summary'
-            }]);
-          }
-          // Navigate to summary card
-          if (emblaApi) {
-            emblaApi.scrollTo(processedItems.length);
-          }
-        }, 1000);
+      if (completedCount === nonSummaryItems.length && nonSummaryItems.length > 0 && !hasSummaryCard && completedCount > 0) {
+        setShowAssignmentSummary(true);
       }
     }
-  }, [processedItems, showAssignmentSummary, emblaApi]);
+  };
 
   // Update carousel index when slide changes
   useEffect(() => {
     if (emblaApi) {
-      emblaApi.on('select', () => {
+      const onSelect = () => {
         setCurrentCarouselIndex(emblaApi.selectedScrollSnap());
-      });
+      };
+      emblaApi.on('select', onSelect);
+      return () => emblaApi.off('select', onSelect);
     }
   }, [emblaApi]);
 
@@ -1043,9 +1030,11 @@ function PracticeWordsCarousel({
   // Update carousel index when slide changes
   useEffect(() => {
     if (emblaApi) {
-      emblaApi.on('select', () => {
+      const onSelect = () => {
         setCurrentCarouselIndex(emblaApi.selectedScrollSnap());
-      });
+      };
+      emblaApi.on('select', onSelect);
+      return () => emblaApi.off('select', onSelect);
     }
   }, [emblaApi]);
 
@@ -1407,14 +1396,7 @@ function PracticeWordsCarousel({
                         />
                       </div>
 
-                      {/* See Button */}
-                      <Button
-                        onClick={() => playWordAudio(word, slowPlaybackWords[word.id] || false)}
-                        className="bg-yellow-400 hover:bg-yellow-500 text-white px-6 py-2 rounded-full shadow-md"
-                      >
-                        <Eye className="h-5 w-5 mr-2" />
-                        See
-                      </Button>
+
                     </div>
 
                     {/* Assessment Results */}
@@ -1544,9 +1526,11 @@ function PracticePhrasesCarousel({
   // Update carousel index when slide changes
   useEffect(() => {
     if (emblaApi) {
-      emblaApi.on('select', () => {
+      const onSelect = () => {
         setCurrentCarouselIndex(emblaApi.selectedScrollSnap());
-      });
+      };
+      emblaApi.on('select', onSelect);
+      return () => emblaApi.off('select', onSelect);
     }
   }, [emblaApi]);
 
@@ -1988,6 +1972,8 @@ export default function MyWordsNew() {
         source: "words"
       }));
       setShuffledWords(processedWords);
+    } else {
+      setShuffledWords([]);
     }
   }, [savedWords]);
 
@@ -2005,6 +1991,8 @@ export default function MyWordsNew() {
         source: "phrases"
       }));
       setShuffledPhrases(processedPhrases);
+    } else {
+      setShuffledPhrases([]);
     }
   }, [savedPhrases]);
 
