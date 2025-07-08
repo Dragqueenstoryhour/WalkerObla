@@ -1211,6 +1211,193 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ THERAPIST PORTAL API ENDPOINTS ============
+
+  // Get therapist's assigned clients
+  app.get('/api/therapist/clients', isAuthenticated, async (req: any, res) => {
+    try {
+      const therapistId = req.user.claims.sub;
+      const user = await storage.getUser(therapistId);
+      
+      if (!user || user.role !== 'therapist') {
+        return res.status(403).json({ error: 'Access denied. Therapist role required.' });
+      }
+      
+      const clients = await storage.getTherapistClients(therapistId);
+      res.json(clients);
+    } catch (error) {
+      console.error("Error fetching therapist clients:", error);
+      res.status(500).json({ error: "Failed to fetch clients" });
+    }
+  });
+
+  // Add new client to therapist's roster by email
+  app.post('/api/therapist/clients', isAuthenticated, async (req: any, res) => {
+    try {
+      const therapistId = req.user.claims.sub;
+      const { clientEmail, notes } = req.body;
+      
+      const user = await storage.getUser(therapistId);
+      if (!user || user.role !== 'therapist') {
+        return res.status(403).json({ error: 'Access denied. Therapist role required.' });
+      }
+      
+      // Find client by email
+      const clients = await storage.getClientsByEmail(therapistId, [clientEmail]);
+      if (clients.length === 0) {
+        return res.status(404).json({ error: 'Client not found with that email address' });
+      }
+      
+      const client = clients[0];
+      
+      // Check if relationship already exists
+      const existingClients = await storage.getTherapistClients(therapistId);
+      const existingRelationship = existingClients.find(rel => rel.clientId === client.id);
+      
+      if (existingRelationship) {
+        return res.status(400).json({ error: 'Client is already assigned to you' });
+      }
+      
+      const relationship = await storage.addTherapistClient({
+        therapistId,
+        clientId: client.id,
+        isActive: true,
+        notes: notes || null
+      });
+      
+      res.status(201).json(relationship);
+    } catch (error) {
+      console.error("Error adding therapist client:", error);
+      res.status(500).json({ error: "Failed to add client" });
+    }
+  });
+
+  // Remove client from therapist's roster
+  app.delete('/api/therapist/clients/:clientId', isAuthenticated, async (req: any, res) => {
+    try {
+      const therapistId = req.user.claims.sub;
+      const { clientId } = req.params;
+      
+      const user = await storage.getUser(therapistId);
+      if (!user || user.role !== 'therapist') {
+        return res.status(403).json({ error: 'Access denied. Therapist role required.' });
+      }
+      
+      await storage.removeTherapistClient(therapistId, clientId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing therapist client:", error);
+      res.status(500).json({ error: "Failed to remove client" });
+    }
+  });
+
+  // Get therapist's content library
+  app.get('/api/therapist/library', isAuthenticated, async (req: any, res) => {
+    try {
+      const therapistId = req.user.claims.sub;
+      const user = await storage.getUser(therapistId);
+      
+      if (!user || user.role !== 'therapist') {
+        return res.status(403).json({ error: 'Access denied. Therapist role required.' });
+      }
+      
+      const library = await storage.getContentLibrary(therapistId);
+      res.json(library);
+    } catch (error) {
+      console.error("Error fetching content library:", error);
+      res.status(500).json({ error: "Failed to fetch content library" });
+    }
+  });
+
+  // Get public content library
+  app.get('/api/therapist/library/public', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'therapist') {
+        return res.status(403).json({ error: 'Access denied. Therapist role required.' });
+      }
+      
+      const publicLibrary = await storage.getPublicContentLibrary();
+      res.json(publicLibrary);
+    } catch (error) {
+      console.error("Error fetching public content library:", error);
+      res.status(500).json({ error: "Failed to fetch public content library" });
+    }
+  });
+
+  // Create new content library item
+  app.post('/api/therapist/library', isAuthenticated, async (req: any, res) => {
+    try {
+      const therapistId = req.user.claims.sub;
+      const user = await storage.getUser(therapistId);
+      
+      if (!user || user.role !== 'therapist') {
+        return res.status(403).json({ error: 'Access denied. Therapist role required.' });
+      }
+      
+      const contentData = {
+        ...req.body,
+        createdBy: therapistId
+      };
+      
+      const content = await storage.createContentLibraryItem(contentData);
+      res.status(201).json(content);
+    } catch (error) {
+      console.error("Error creating content library item:", error);
+      res.status(500).json({ error: "Failed to create content library item" });
+    }
+  });
+
+  // Generate words with sound endpoint for therapists
+  app.post('/api/therapist/generate-words', isAuthenticated, async (req: any, res) => {
+    try {
+      const therapistId = req.user.claims.sub;
+      const user = await storage.getUser(therapistId);
+      
+      if (!user || user.role !== 'therapist') {
+        return res.status(403).json({ error: 'Access denied. Therapist role required.' });
+      }
+      
+      const { sound, difficulty, count } = req.body;
+      
+      if (!sound) {
+        return res.status(400).json({ error: 'Sound parameter is required' });
+      }
+      
+      const words = await generateWordsWithSound(sound, count || 8, difficulty || "4");
+      res.json({ words });
+    } catch (error) {
+      console.error("Error generating words with sound:", error);
+      res.status(500).json({ error: "Failed to generate words" });
+    }
+  });
+
+  // Generate topic-based words/phrases for therapists
+  app.post('/api/therapist/generate-topic', isAuthenticated, async (req: any, res) => {
+    try {
+      const therapistId = req.user.claims.sub;
+      const user = await storage.getUser(therapistId);
+      
+      if (!user || user.role !== 'therapist') {
+        return res.status(403).json({ error: 'Access denied. Therapist role required.' });
+      }
+      
+      const { topic, difficulty, type } = req.body;
+      
+      if (!topic) {
+        return res.status(400).json({ error: 'Topic parameter is required' });
+      }
+      
+      const items = await generateTopicPhrases(topic, difficulty || "4", type || "words");
+      res.json({ items });
+    } catch (error) {
+      console.error("Error generating topic content:", error);
+      res.status(500).json({ error: "Failed to generate content" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

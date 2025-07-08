@@ -45,8 +45,23 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
       navigate('/my-account');
     };
 
+    const handleTherapistPortal = () => {
+      navigate('/therapist');
+    };
+
     return (
       <div className="flex items-center gap-2">
+        {/* Show Therapist Portal button for therapists */}
+        {userData.role === 'therapist' && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleTherapistPortal}
+            className="bg-purple-600 hover:bg-purple-700 text-white border-none"
+          >
+            Therapist Portal
+          </Button>
+        )}
         <div className="relative">
           <Avatar 
             className="h-8 w-8 border-2 border-primary cursor-pointer hover:border-green-500 transition-colors"

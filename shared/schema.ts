@@ -21,6 +21,9 @@ export const users = pgTable("users", {
   lastName: text("last_name"),
   bio: text("bio"),
   profileImageUrl: text("profile_image_url"),
+  role: text("role").notNull().default("client"), // 'client', 'therapist', 'admin'
+  licenseNumber: text("license_number"), // For therapists - professional license number
+  specializations: jsonb("specializations"), // Array of specialization areas for therapists
   level: integer("level").notNull().default(1),
   xp: integer("xp").notNull().default(0),
   totalExercisesCompleted: integer("total_exercises_completed").notNull().default(0),
@@ -436,3 +439,50 @@ export const insertAssignmentResultSchema = createInsertSchema(assignmentResults
 
 export type InsertAssignmentResult = z.infer<typeof insertAssignmentResultSchema>;
 export type AssignmentResult = typeof assignmentResults.$inferSelect;
+
+// Therapist-Client relationships
+export const therapistClients = pgTable("therapist_clients", {
+  id: serial("id").primaryKey(),
+  therapistId: varchar("therapist_id").notNull(), // The therapist's user ID
+  clientId: varchar("client_id").notNull(), // The client's user ID
+  assignedDate: timestamp("assigned_date").notNull().defaultNow(),
+  isActive: boolean("is_active").notNull().default(true),
+  notes: text("notes"), // Optional notes about the client-therapist relationship
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertTherapistClientSchema = createInsertSchema(therapistClients).omit({
+  id: true,
+  assignedDate: true,
+  createdAt: true,
+});
+
+export type InsertTherapistClient = z.infer<typeof insertTherapistClientSchema>;
+export type TherapistClient = typeof therapistClients.$inferSelect;
+
+// Content Library for Therapists
+export const contentLibrary = pgTable("content_library", {
+  id: serial("id").primaryKey(),
+  createdBy: varchar("created_by").notNull(), // Therapist who created this content
+  title: text("title").notNull(),
+  description: text("description"),
+  contentType: text("content_type").notNull(), // 'words', 'phrases', 'custom'
+  items: jsonb("items").notNull(), // Array of words/phrases with metadata
+  difficulty: text("difficulty").notNull().default("beginner"),
+  category: text("category"), // e.g., "Articulation", "Fluency", "Voice"
+  tags: jsonb("tags"), // Array of search tags
+  isPublic: boolean("is_public").notNull().default(false), // Can other therapists use this?
+  usageCount: integer("usage_count").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertContentLibrarySchema = createInsertSchema(contentLibrary).omit({
+  id: true,
+  usageCount: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertContentLibrary = z.infer<typeof insertContentLibrarySchema>;
+export type ContentLibrary = typeof contentLibrary.$inferSelect;

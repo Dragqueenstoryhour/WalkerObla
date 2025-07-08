@@ -17,6 +17,8 @@ import {
   assignments,
   assignmentItems,
   assignmentResults,
+  therapistClients,
+  contentLibrary,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -54,6 +56,10 @@ import {
   type InsertAssignmentItem,
   type AssignmentResult,
   type InsertAssignmentResult,
+  type TherapistClient,
+  type InsertTherapistClient,
+  type ContentLibrary,
+  type InsertContentLibrary,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc, and, or, sql, count, avg, ne } from "drizzle-orm";
@@ -132,8 +138,8 @@ export interface IStorage {
   deleteUserSavedPhrase(id: number): Promise<void>;
 
   // User saved readings operations
-  getUserSavedReadings(userId: string): Promise<ReadingContent[]>;
-  createUserSavedReading(content: InsertReadingContent): Promise<ReadingContent>;
+  getUserSavedReadings(userId: string): Promise<UserSavedPhrase[]>;
+  createUserSavedReading(content: InsertUserSavedPhrase): Promise<UserSavedPhrase>;
   
   // Practice group operations
   getPracticeGroups(userId: string): Promise<PracticeGroup[]>;
@@ -172,6 +178,20 @@ export interface IStorage {
     // User saved readings operations
     getUserSavedReadings(userId: string): Promise<UserSavedPhrase[]>;
     createUserSavedReading(content: InsertUserSavedPhrase): Promise<UserSavedPhrase>;
+    
+    // Therapist-client relationship operations
+    getTherapistClients(therapistId: string): Promise<(TherapistClient & { client: User })[]>;
+    addTherapistClient(relationship: InsertTherapistClient): Promise<TherapistClient>;
+    removeTherapistClient(therapistId: string, clientId: string): Promise<void>;
+    getClientsByEmail(therapistId: string, emails: string[]): Promise<User[]>;
+
+    // Content library operations for therapists
+    getContentLibrary(therapistId: string): Promise<ContentLibrary[]>;
+    getPublicContentLibrary(): Promise<ContentLibrary[]>;
+    createContentLibraryItem(content: InsertContentLibrary): Promise<ContentLibrary>;
+    updateContentLibraryItem(id: number, updates: Partial<ContentLibrary>): Promise<ContentLibrary>;
+    deleteContentLibraryItem(id: number): Promise<void>;
+    
     // Health check for deployment readiness
     healthCheck(): Promise<void>;
   } // Closing brace for IStorage interface
@@ -798,6 +818,106 @@ export class DatabaseStorage implements IStorage {
   async createUserSavedReading(content: InsertUserSavedPhrase): Promise<UserSavedPhrase> {
     const [newReading] = await db.insert(userSavedPhrases).values(content).returning();
     return newReading;
+  }
+
+  // Therapist-client relationship operations
+  async getTherapistClients(therapistId: string): Promise<(TherapistClient & { client: User })[]> {
+    const relationships = await db
+      .select({
+        id: therapistClients.id,
+        therapistId: therapistClients.therapistId,
+        clientId: therapistClients.clientId,
+        assignedDate: therapistClients.assignedDate,
+        isActive: therapistClients.isActive,
+        notes: therapistClients.notes,
+        createdAt: therapistClients.createdAt,
+        client: users
+      })
+      .from(therapistClients)
+      .innerJoin(users, eq(therapistClients.clientId, users.id))
+      .where(and(
+        eq(therapistClients.therapistId, therapistId),
+        eq(therapistClients.isActive, true)
+      ))
+      .orderBy(desc(therapistClients.assignedDate));
+    
+    return relationships;
+  }
+
+  async addTherapistClient(relationship: InsertTherapistClient): Promise<TherapistClient> {
+    const [newRelationship] = await db
+      .insert(therapistClients)
+      .values(relationship)
+      .returning();
+    return newRelationship;
+  }
+
+  async removeTherapistClient(therapistId: string, clientId: string): Promise<void> {
+    await db
+      .update(therapistClients)
+      .set({ isActive: false })
+      .where(and(
+        eq(therapistClients.therapistId, therapistId),
+        eq(therapistClients.clientId, clientId)
+      ));
+  }
+
+  async getClientsByEmail(therapistId: string, emails: string[]): Promise<User[]> {
+    if (emails.length === 0) return [];
+    
+    const clients = await db
+      .select()
+      .from(users)
+      .where(and(
+        sql`${users.email} = ANY(${emails})`,
+        eq(users.role, 'client')
+      ));
+    
+    return clients;
+  }
+
+  // Content library operations for therapists
+  async getContentLibrary(therapistId: string): Promise<ContentLibrary[]> {
+    const content = await db
+      .select()
+      .from(contentLibrary)
+      .where(eq(contentLibrary.createdBy, therapistId))
+      .orderBy(desc(contentLibrary.updatedAt));
+    
+    return content;
+  }
+
+  async getPublicContentLibrary(): Promise<ContentLibrary[]> {
+    const content = await db
+      .select()
+      .from(contentLibrary)
+      .where(eq(contentLibrary.isPublic, true))
+      .orderBy(desc(contentLibrary.usageCount), desc(contentLibrary.updatedAt));
+    
+    return content;
+  }
+
+  async createContentLibraryItem(content: InsertContentLibrary): Promise<ContentLibrary> {
+    const [newContent] = await db
+      .insert(contentLibrary)
+      .values(content)
+      .returning();
+    return newContent;
+  }
+
+  async updateContentLibraryItem(id: number, updates: Partial<ContentLibrary>): Promise<ContentLibrary> {
+    const [updatedContent] = await db
+      .update(contentLibrary)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(contentLibrary.id, id))
+      .returning();
+    return updatedContent;
+  }
+
+  async deleteContentLibraryItem(id: number): Promise<void> {
+    await db
+      .delete(contentLibrary)
+      .where(eq(contentLibrary.id, id));
   }
 
   // Health check for deployment readiness
