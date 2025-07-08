@@ -4,8 +4,8 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { assessPronunciation, synthesizeSpeech, synthesizeSpeechFromSSML, getWordPronunciation } from "./azure";
 import { generateSpeechWithVisemes } from "./azureViseme";
-import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases, generateSampleContent, generateSpeechResponse, generatePronunciationFeedback, generateWordsWithSound, generateSyllabication, generatePhoneticBreakdown } from "./openai";
-import { sendContactForm } from "./email";
+import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases, generateSampleContent, generateSpeechResponse, generatePronunciationFeedback, generateWordsWithSound, generateSyllabication, generatePhoneticBreakdown, generatePronunciationInsights, generateAssignmentTemplate } from "./openai";
+import { sendContactForm, sendAssignmentNotification } from "./email";
 import multer from "multer";
 import { z } from "zod";
 import { insertUserSavedPhraseSchema, insertPracticeGroupSchema, insertUserActivitySchema, insertAssignmentSchema, insertAssignmentItemSchema, insertAssignmentResultSchema, userActivity } from "@shared/schema";
@@ -1098,6 +1098,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const assignmentData = insertAssignmentSchema.parse(req.body);
       const assignment = await storage.createAssignment(assignmentData);
+      
+      // Send email notification to client
+      try {
+        const client = await storage.getUser(assignmentData.userId);
+        const therapist = await storage.getUser(assignmentData.therapistId);
+        
+        if (client && client.email && therapist) {
+          const clientName = client.firstName && client.lastName 
+            ? `${client.firstName} ${client.lastName}` 
+            : client.username;
+          const therapistName = therapist.firstName && therapist.lastName 
+            ? `${therapist.firstName} ${therapist.lastName}` 
+            : therapist.username;
+          
+          const baseUrl = `${req.protocol}://${req.get('host')}`;
+          
+          await sendAssignmentNotification({
+            clientEmail: client.email,
+            clientName,
+            therapistName,
+            assignmentTitle: assignmentData.title,
+            assignmentDescription: assignmentData.description || undefined,
+            dueDate: assignmentData.dueDate || undefined,
+            assignmentId: assignment.id,
+            baseUrl
+          });
+        }
+      } catch (emailError) {
+        console.error('Failed to send assignment notification email:', emailError);
+        // Don't fail the assignment creation if email fails
+      }
+      
       res.status(201).json(assignment);
     } catch (error) {
       console.error("Error creating assignment:", error);
@@ -1184,6 +1216,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching therapist assignments:", error);
       res.status(500).json({ error: "Failed to fetch therapist assignments" });
+    }
+  });
+
+  // Pronunciation Insights for Report Card
+  app.post('/api/pronunciation/insights', isAuthenticated, async (req: any, res) => {
+    try {
+      const { correctWords, incorrectWords } = req.body;
+      const insights = await generatePronunciationInsights(correctWords || [], incorrectWords || []);
+      res.json(insights);
+    } catch (error) {
+      console.error("Error generating pronunciation insights:", error);
+      res.status(500).json({ error: "Failed to generate pronunciation insights" });
+    }
+  });
+
+  // Assignment Templates
+  app.post('/api/assignment-templates', isAuthenticated, async (req: any, res) => {
+    try {
+      const { title, description, targetSound, category } = req.body;
+      const words = await generateAssignmentTemplate(title, description, targetSound, category);
+      res.json({ words });
+    } catch (error) {
+      console.error("Error generating assignment template:", error);
+      res.status(500).json({ error: "Failed to generate assignment template" });
     }
   });
 

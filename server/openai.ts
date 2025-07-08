@@ -1289,3 +1289,84 @@ ${type === "words" ?
     return Array(8).fill(`Sample ${type === "words" ? "word" : "phrase"} for ${topic}`);
   }
 }
+
+export async function generatePronunciationInsights(correctWords: any[], incorrectWords: any[]): Promise<{
+  insights: string;
+  soundsToFocus: string[];
+  overallFeedback: string;
+}> {
+  try {
+    const prompt = `Analyze pronunciation performance data and provide insights for speech therapy.
+
+CORRECT WORDS (Score > 70%):
+${correctWords.map(w => `- ${w.word || w.text}: ${w.score}%`).join('\n')}
+
+WORDS NEEDING WORK (Score < 70%):
+${incorrectWords.map(w => `- ${w.word || w.text}: ${w.score}%`).join('\n')}
+
+Provide analysis in this JSON format:
+{
+  "insights": "Brief analysis of patterns in correct vs incorrect pronunciations",
+  "soundsToFocus": ["sound1", "sound2", "sound3"], 
+  "overallFeedback": "Encouraging feedback highlighting strengths and areas for improvement"
+}
+
+Focus on identifying specific sounds, letter combinations, or phonetic patterns that need practice based on the performance data.`;
+
+    const response = await openai.chat.completions.create({
+      model: MODEL,
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || '{}');
+    return {
+      insights: result.insights || "Great progress shown in the practice session!",
+      soundsToFocus: result.soundsToFocus || [],
+      overallFeedback: result.overallFeedback || "Keep practicing regularly to continue improving your pronunciation skills."
+    };
+  } catch (error) {
+    console.error('Error generating pronunciation insights:', error);
+    return {
+      insights: "Unable to generate detailed insights at this time.",
+      soundsToFocus: [],
+      overallFeedback: "Keep practicing regularly to improve your pronunciation skills."
+    };
+  }
+}
+
+export async function generateAssignmentTemplate(title: string, description: string, targetSound?: string, category?: string): Promise<any[]> {
+  try {
+    const soundPrompt = targetSound ? ` focusing on the "${targetSound}" sound` : '';
+    const categoryPrompt = category ? ` in the "${category}" category` : '';
+    
+    const prompt = `Create a speech therapy assignment template${soundPrompt}${categoryPrompt}.
+
+Title: ${title}
+Description: ${description}
+
+Generate 8-12 carefully selected words that are appropriate for speech therapy practice. Each word should include syllabication for pronunciation guidance.
+
+Return a JSON array with this format:
+{
+  "words": [
+    {"text": "word", "syllabication": "syl-la-bles"},
+    ...
+  ]
+}
+
+Make the words progressively challenging but appropriate for the specified focus area.`;
+
+    const response = await openai.chat.completions.create({
+      model: MODEL,
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || '{"words": []}');
+    return result.words || [];
+  } catch (error) {
+    console.error('Error generating assignment template:', error);
+    throw new Error('Failed to generate assignment template');
+  }
+}
