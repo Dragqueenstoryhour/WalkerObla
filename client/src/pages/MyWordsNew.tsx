@@ -1209,13 +1209,28 @@ function PracticeWordsCarousel({
   // Play word audio
   const playWordAudio = async (word: ProcessedItem, slow: boolean = false) => {
     try {
+      const textToSpeak = word.text;
+
+      // Construct the SSML string with Azure AI Speech native voice
+      let ssmlText = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">`;
+      ssmlText += `<voice name="en-US-AvaNeural">`;
+
+      if (slow) {
+        // Use SSML prosody rate to slow down - Azure uses "slow" or decimal values
+        ssmlText += `<prosody rate="0.6">`;
+        ssmlText += textToSpeak;
+        ssmlText += `</prosody>`;
+      } else {
+        ssmlText += textToSpeak;
+      }
+      ssmlText += `</voice>`;
+      ssmlText += `</speak>`;
+
       const response = await fetch("/api/speech/synthesize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: word.text,
-          voice: "default",
-          speed: slow ? 0.7 : 1.0,
+          ssml: ssmlText,
         }),
       });
 
@@ -1695,13 +1710,28 @@ function PracticePhrasesCarousel({
   // Play phrase audio
   const playPhraseAudio = async (phrase: ProcessedItem, slow: boolean = false) => {
     try {
+      const textToSpeak = phrase.text;
+
+      // Construct the SSML string with Azure AI Speech native voice
+      let ssmlText = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">`;
+      ssmlText += `<voice name="en-US-AvaNeural">`;
+
+      if (slow) {
+        // Use SSML prosody rate to slow down - Azure uses "slow" or decimal values
+        ssmlText += `<prosody rate="0.6">`;
+        ssmlText += textToSpeak;
+        ssmlText += `</prosody>`;
+      } else {
+        ssmlText += textToSpeak;
+      }
+      ssmlText += `</voice>`;
+      ssmlText += `</speak>`;
+
       const response = await fetch("/api/speech/synthesize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: phrase.text,
-          voice: "default",
-          speed: slow ? 0.7 : 1.0,
+          ssml: ssmlText,
         }),
       });
 
