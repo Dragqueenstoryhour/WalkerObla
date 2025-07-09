@@ -460,6 +460,32 @@ export const insertTherapistClientSchema = createInsertSchema(therapistClients).
 export type InsertTherapistClient = z.infer<typeof insertTherapistClientSchema>;
 export type TherapistClient = typeof therapistClients.$inferSelect;
 
+// Client invitations for pending invites
+export const clientInvitations = pgTable("client_invitations", {
+  id: serial("id").primaryKey(),
+  therapistId: varchar("therapist_id").notNull(), // The therapist sending the invitation
+  clientEmail: text("client_email").notNull(), // Email address of the invited client
+  invitationToken: text("invitation_token").notNull().unique(), // Unique token for the invitation
+  status: text("status").notNull().default("pending"), // 'pending', 'accepted', 'expired'
+  sentAt: timestamp("sent_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  acceptedAt: timestamp("accepted_at"),
+  notes: text("notes"), // Optional notes about the invitation
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertClientInvitationSchema = createInsertSchema(clientInvitations).omit({
+  id: true,
+  invitationToken: true,
+  status: true,
+  sentAt: true,
+  acceptedAt: true,
+  createdAt: true,
+});
+
+export type InsertClientInvitation = z.infer<typeof insertClientInvitationSchema>;
+export type ClientInvitation = typeof clientInvitations.$inferSelect;
+
 // Content Library for Therapists
 export const contentLibrary = pgTable("content_library", {
   id: serial("id").primaryKey(),

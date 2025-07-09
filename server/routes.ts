@@ -5,7 +5,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { assessPronunciation, synthesizeSpeech, synthesizeSpeechFromSSML, getWordPronunciation } from "./azure";
 import { generateSpeechWithVisemes } from "./azureViseme";
 import { transcribeAudio, generateReadingContent, processVoiceCommand, generateTopicPhrases, generateSampleContent, generateSpeechResponse, generatePronunciationFeedback, generateWordsWithSound, generateSyllabication, generatePhoneticBreakdown, generatePronunciationInsights, generateAssignmentTemplate } from "./openai";
-import { sendContactForm, sendAssignmentNotification } from "./email";
+import { sendContactForm, sendAssignmentNotification, sendClientInvitation } from "./email";
 import multer from "multer";
 import { z } from "zod";
 import { insertUserSavedPhraseSchema, insertPracticeGroupSchema, insertUserActivitySchema, insertAssignmentSchema, insertAssignmentItemSchema, insertAssignmentResultSchema, userActivity } from "@shared/schema";
@@ -1269,7 +1269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ THERAPIST PORTAL API ENDPOINTS ============
 
-  // Get therapist's assigned clients
+  // Get therapist's assigned clients and pending invitations
   app.get('/api/therapist/clients', isAuthenticated, async (req: any, res) => {
     try {
       const therapistId = req.user.claims.sub;
@@ -1280,7 +1280,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const clients = await storage.getTherapistClients(therapistId);
-      res.json(clients);
+      const pendingInvitations = await storage.getPendingInvitations(therapistId);
+      
+      res.json({
+        clients,
+        pendingInvitations
+      });
     } catch (error) {
       console.error("Error fetching therapist clients:", error);
       res.status(500).json({ error: "Failed to fetch clients" });
@@ -1298,30 +1303,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Access denied. Therapist role required.' });
       }
       
-      // Find client by email
-      const clients = await storage.getClientsByEmail(therapistId, [clientEmail]);
-      if (clients.length === 0) {
-        return res.status(404).json({ error: 'Client not found with that email address' });
+      // First, check if the client already exists as a registered user
+      const existingClients = await storage.getClientsByEmail(therapistId, [clientEmail]);
+      
+      if (existingClients.length > 0) {
+        // Client exists - add them directly
+        const client = existingClients[0];
+        
+        // Check if relationship already exists
+        const existingRelationships = await storage.getTherapistClients(therapistId);
+        const existingRelationship = existingRelationships.find(rel => rel.clientId === client.id);
+        
+        if (existingRelationship) {
+          return res.status(400).json({ error: 'Client is already assigned to you' });
+        }
+        
+        const relationship = await storage.addTherapistClient({
+          therapistId,
+          clientId: client.id,
+          isActive: true,
+          notes: notes || null
+        });
+        
+        res.status(201).json(relationship);
+      } else {
+        // Client doesn't exist - create an invitation
+        const invitation = await storage.createClientInvitation({
+          therapistId,
+          clientEmail,
+          notes: notes || null,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
+        });
+        
+        // Send invitation email
+        try {
+          const therapistName = user.firstName && user.lastName 
+            ? `${user.firstName} ${user.lastName}` 
+            : user.username;
+          const baseUrl = `${req.protocol}://${req.get('host')}`;
+          
+          await sendClientInvitation({
+            clientEmail,
+            therapistName,
+            invitationToken: invitation.invitationToken,
+            baseUrl
+          });
+          
+          console.log('✅ Client invitation email sent successfully');
+        } catch (emailError) {
+          console.error('❌ Failed to send invitation email:', emailError);
+          // Don't fail the invitation creation if email fails
+        }
+        
+        res.status(201).json({ 
+          type: 'invitation', 
+          invitation,
+          message: 'Invitation sent successfully' 
+        });
       }
-      
-      const client = clients[0];
-      
-      // Check if relationship already exists
-      const existingClients = await storage.getTherapistClients(therapistId);
-      const existingRelationship = existingClients.find(rel => rel.clientId === client.id);
-      
-      if (existingRelationship) {
-        return res.status(400).json({ error: 'Client is already assigned to you' });
-      }
-      
-      const relationship = await storage.addTherapistClient({
-        therapistId,
-        clientId: client.id,
-        isActive: true,
-        notes: notes || null
-      });
-      
-      res.status(201).json(relationship);
     } catch (error) {
       console.error("Error adding therapist client:", error);
       res.status(500).json({ error: "Failed to add client" });
@@ -1344,6 +1383,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error removing therapist client:", error);
       res.status(500).json({ error: "Failed to remove client" });
+    }
+  });
+
+  // Accept client invitation
+  app.post('/api/accept-invitation/:token', isAuthenticated, async (req: any, res) => {
+    try {
+      const { token } = req.params;
+      const userId = req.user.claims.sub;
+      
+      const invitation = await storage.getClientInvitationByToken(token);
+      if (!invitation) {
+        return res.status(404).json({ error: 'Invitation not found or expired' });
+      }
+      
+      if (invitation.status !== 'pending') {
+        return res.status(400).json({ error: 'Invitation has already been processed' });
+      }
+      
+      if (new Date() > new Date(invitation.expiresAt)) {
+        return res.status(400).json({ error: 'Invitation has expired' });
+      }
+      
+      // Update user's email to match invitation if needed
+      const user = await storage.getUser(userId);
+      if (user && user.email !== invitation.clientEmail) {
+        await storage.upsertUser({
+          ...user,
+          email: invitation.clientEmail
+        });
+      }
+      
+      // Create therapist-client relationship
+      await storage.addTherapistClient({
+        therapistId: invitation.therapistId,
+        clientId: userId,
+        isActive: true,
+        notes: invitation.notes
+      });
+      
+      // Update invitation status
+      await storage.updateClientInvitationStatus(invitation.id, 'accepted', new Date());
+      
+      res.json({ success: true, message: 'Invitation accepted successfully' });
+    } catch (error) {
+      console.error("Error accepting invitation:", error);
+      res.status(500).json({ error: "Failed to accept invitation" });
     }
   });
 

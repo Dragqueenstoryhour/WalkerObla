@@ -413,8 +413,11 @@ export default function TherapistPortal() {
   const [customTopic, setCustomTopic] = useState("");
 
   // Data queries
-  const { data: clients = [] } = useQuery({ queryKey: ['/api/therapist/clients'] });
+  const { data: clientsData = { clients: [], pendingInvitations: [] } } = useQuery({ queryKey: ['/api/therapist/clients'] });
   const { data: assignments = [] } = useQuery({ queryKey: ['/api/therapist/assignments'] });
+
+  const clients = clientsData.clients || [];
+  const pendingInvitations = clientsData.pendingInvitations || [];
 
   const filteredClients = clients.filter((client: User) =>
     client.username?.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
@@ -431,15 +434,19 @@ export default function TherapistPortal() {
   // Mutations
   const addClientMutation = useMutation({
     mutationFn: async (email: string) => {
-      const response = await apiRequest('/api/therapist/add-client', {
+      const response = await apiRequest('/api/therapist/clients', {
         method: 'POST',
         body: JSON.stringify({ clientEmail: email })
       });
       return response;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/therapist/clients'] });
-      toast({ title: "Client added successfully" });
+      if (data.type === 'invitation') {
+        toast({ title: "Invitation sent successfully!", description: "The client will receive an email to join your program." });
+      } else {
+        toast({ title: "Client added successfully!" });
+      }
     },
     onError: (error: any) => {
       toast({ title: "Error adding client", description: error.message, variant: "destructive" });
@@ -633,28 +640,65 @@ export default function TherapistPortal() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      {filteredClients.length === 0 ? (
-                        <p className="text-center text-gray-500 py-4">No clients found</p>
-                      ) : (
-                        filteredClients.map((client: User) => (
-                          <div
-                            key={client.id}
-                            className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                              selectedClient?.id === client.id
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                            onClick={() => setSelectedClient(client)}
-                          >
-                            <div className="font-medium">
-                              {client.firstName && client.lastName
-                                ? `${client.firstName} ${client.lastName}`
-                                : client.username}
+                    <div className="space-y-4">
+                      {/* Active Clients */}
+                      <div className="space-y-2">
+                        {filteredClients.length === 0 ? (
+                          <p className="text-center text-gray-500 py-4">No active clients</p>
+                        ) : (
+                          filteredClients.map((client: User) => (
+                            <div
+                              key={client.id}
+                              className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                                selectedClient?.id === client.id
+                                  ? 'border-blue-500 bg-blue-50'
+                                  : 'border-gray-200 hover:border-gray-300'
+                              }`}
+                              onClick={() => setSelectedClient(client)}
+                            >
+                              <div className="font-medium">
+                                {client.firstName && client.lastName
+                                  ? `${client.firstName} ${client.lastName}`
+                                  : client.username}
+                              </div>
+                              <div className="text-sm text-gray-600">{client.email}</div>
                             </div>
-                            <div className="text-sm text-gray-600">{client.email}</div>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Pending Invitations */}
+                      {pendingInvitations.length > 0 && (
+                        <>
+                          <Separator />
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-600 mb-2">
+                              Pending Invitations ({pendingInvitations.length})
+                            </h4>
+                            <div className="space-y-2">
+                              {pendingInvitations.map((invitation: any) => (
+                                <div
+                                  key={invitation.id}
+                                  className="p-3 rounded-lg border border-yellow-200 bg-yellow-50"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <div className="font-medium text-yellow-800">
+                                        {invitation.clientEmail}
+                                      </div>
+                                      <div className="text-sm text-yellow-600">
+                                        Invited {new Date(invitation.sentAt).toLocaleDateString()}
+                                      </div>
+                                    </div>
+                                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                                      Pending
+                                    </Badge>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        ))
+                        </>
                       )}
                     </div>
                   </CardContent>

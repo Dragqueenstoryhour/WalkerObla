@@ -18,6 +18,7 @@ import {
   assignmentItems,
   assignmentResults,
   therapistClients,
+  clientInvitations,
   contentLibrary,
   type User,
   type UpsertUser,
@@ -58,6 +59,8 @@ import {
   type InsertAssignmentResult,
   type TherapistClient,
   type InsertTherapistClient,
+  type ClientInvitation,
+  type InsertClientInvitation,
   type ContentLibrary,
   type InsertContentLibrary,
 } from "@shared/schema";
@@ -184,6 +187,13 @@ export interface IStorage {
     addTherapistClient(relationship: InsertTherapistClient): Promise<TherapistClient>;
     removeTherapistClient(therapistId: string, clientId: string): Promise<void>;
     getClientsByEmail(therapistId: string, emails: string[]): Promise<User[]>;
+    
+    // Client invitation operations
+    createClientInvitation(invitation: InsertClientInvitation): Promise<ClientInvitation>;
+    getClientInvitations(therapistId: string): Promise<ClientInvitation[]>;
+    getClientInvitationByToken(token: string): Promise<ClientInvitation | undefined>;
+    updateClientInvitationStatus(id: number, status: string, acceptedAt?: Date): Promise<ClientInvitation>;
+    getPendingInvitations(therapistId: string): Promise<ClientInvitation[]>;
 
     // Content library operations for therapists
     getContentLibrary(therapistId: string): Promise<ContentLibrary[]>;
@@ -874,6 +884,65 @@ export class DatabaseStorage implements IStorage {
       ));
     
     return clients;
+  }
+
+  // Client invitation operations
+  async createClientInvitation(invitation: InsertClientInvitation): Promise<ClientInvitation> {
+    const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // Expires in 7 days
+    
+    const [newInvitation] = await db
+      .insert(clientInvitations)
+      .values({
+        ...invitation,
+        invitationToken,
+        expiresAt
+      })
+      .returning();
+    return newInvitation;
+  }
+
+  async getClientInvitations(therapistId: string): Promise<ClientInvitation[]> {
+    const invitations = await db
+      .select()
+      .from(clientInvitations)
+      .where(eq(clientInvitations.therapistId, therapistId))
+      .orderBy(desc(clientInvitations.sentAt));
+    
+    return invitations;
+  }
+
+  async getClientInvitationByToken(token: string): Promise<ClientInvitation | undefined> {
+    const [invitation] = await db
+      .select()
+      .from(clientInvitations)
+      .where(eq(clientInvitations.invitationToken, token));
+    
+    return invitation;
+  }
+
+  async updateClientInvitationStatus(id: number, status: string, acceptedAt?: Date): Promise<ClientInvitation> {
+    const [updatedInvitation] = await db
+      .update(clientInvitations)
+      .set({ status, acceptedAt })
+      .where(eq(clientInvitations.id, id))
+      .returning();
+    
+    return updatedInvitation;
+  }
+
+  async getPendingInvitations(therapistId: string): Promise<ClientInvitation[]> {
+    const invitations = await db
+      .select()
+      .from(clientInvitations)
+      .where(and(
+        eq(clientInvitations.therapistId, therapistId),
+        eq(clientInvitations.status, 'pending')
+      ))
+      .orderBy(desc(clientInvitations.sentAt));
+    
+    return invitations;
   }
 
   // Content library operations for therapists

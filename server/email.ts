@@ -90,6 +90,89 @@ interface AssignmentNotificationData {
   baseUrl: string;
 }
 
+interface ClientInvitationData {
+  clientEmail: string;
+  therapistName: string;
+  invitationToken: string;
+  baseUrl: string;
+}
+
+export async function sendClientInvitation(data: ClientInvitationData): Promise<boolean> {
+  if (!process.env.MAILERSEND_API_TOKEN) {
+    console.error('MailerSend API token not configured');
+    return false;
+  }
+
+  return new Promise((resolve) => {
+    try {
+      const env = { 
+        ...process.env, 
+        MAILERSEND_API_TOKEN: process.env.MAILERSEND_API_TOKEN 
+      };
+      
+      const pythonProcess = spawn('python3', ['server/mailersend_service.py'], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: env
+      });
+
+      const emailData = {
+        type: 'client_invitation',
+        to_email: data.clientEmail,
+        subject: `Invitation to Join ${data.therapistName}'s Speech Therapy Program`,
+        therapist_name: data.therapistName,
+        invitation_link: `${data.baseUrl}/accept-invitation?token=${data.invitationToken}`,
+        assignments_link: `${data.baseUrl}/?tab=assignments`
+      };
+
+      pythonProcess.stdin.write(JSON.stringify(emailData));
+      pythonProcess.stdin.end();
+
+      let output = '';
+      let errorOutput = '';
+
+      pythonProcess.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+
+      pythonProcess.stderr.on('data', (data) => {
+        errorOutput += data.toString();
+      });
+
+      pythonProcess.on('close', (code) => {
+        if (code === 0) {
+          try {
+            const result = JSON.parse(output);
+            if (result.success) {
+              console.log('✅ Client invitation email sent successfully via MailerSend');
+              resolve(true);
+            } else {
+              console.error('❌ MailerSend error:', result.error);
+              resolve(false);
+            }
+          } catch (parseError) {
+            console.error('❌ Failed to parse MailerSend response:', parseError);
+            console.error('Raw output:', output);
+            resolve(false);
+          }
+        } else {
+          console.error('❌ Python script failed with code:', code);
+          console.error('Error output:', errorOutput);
+          resolve(false);
+        }
+      });
+
+      pythonProcess.on('error', (error) => {
+        console.error('❌ Failed to spawn Python process:', error);
+        resolve(false);
+      });
+
+    } catch (error) {
+      console.error('❌ MailerSend service error:', error);
+      resolve(false);
+    }
+  });
+}
+
 export async function sendAssignmentNotification(data: AssignmentNotificationData): Promise<boolean> {
   if (!process.env.MAILERSEND_API_TOKEN) {
     console.error('MailerSend API token not configured');
