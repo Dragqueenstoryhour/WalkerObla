@@ -77,7 +77,7 @@ export async function synthesizeSpeech(text: string, voice = 'default'): Promise
   try {
     console.log(`Requesting speech synthesis for: "${text}"`);
     
-    const response = await fetch('/api/speech/synthesize', {
+    const response = await fetch('/api/pronunciation/synthesize', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

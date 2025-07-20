@@ -22,7 +22,7 @@ export function SaveWordButton({ word, className, variant = "outline", size = "s
 
   // Check if word is already saved
   const { data: savedWords = [] } = useQuery({
-    queryKey: ['/api/saved-words'],
+    queryKey: ['/api/user/saved-words'],
     enabled: isAuthenticated,
   });
 
@@ -32,10 +32,10 @@ export function SaveWordButton({ word, className, variant = "outline", size = "s
   // Save word mutation
   const saveWordMutation = useMutation({
     mutationFn: async (wordData: { word: string; folderId?: string }) => {
-      return await apiRequest('/api/saved-words', 'POST', wordData);
+      return await apiRequest('/api/user/saved-words', 'POST', wordData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/saved-words'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/saved-words'] });
       queryClient.invalidateQueries({ queryKey: ['/api/user/saved-phrases'] });
     },
     onError: () => {
@@ -50,10 +50,10 @@ export function SaveWordButton({ word, className, variant = "outline", size = "s
   // Remove word mutation
   const removeWordMutation = useMutation({
     mutationFn: async (wordToRemove: string) => {
-      return await apiRequest(`/api/saved-words/${encodeURIComponent(wordToRemove)}`, 'DELETE');
+      return await apiRequest(`/api/user/saved-words/${encodeURIComponent(wordToRemove)}`, 'DELETE');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/saved-words'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/saved-words'] });
       queryClient.invalidateQueries({ queryKey: ['/api/user/saved-phrases'] });
     },
     onError: () => {

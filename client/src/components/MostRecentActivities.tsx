@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, Book, MessageSquare, BookOpen, Lightbulb, CheckCircle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useLocation } from 'wouter';
+import { getAuthHeaders } from '@/lib/supabaseClient';
 
 interface Activity {
   id: number;
@@ -36,7 +37,14 @@ interface MostRecentActivitiesProps {
 }
 
 interface PronunciationFeedback {
-  suggestions: string[];
+  totalActivities: number;
+  averageScore: number;
+  averageAccuracy: number;
+  averageFluency: number;
+  improvement: string;
+  strengths: string[];
+  areasForImprovement: string[];
+  suggestions?: string[];
   practicePrompt?: {
     question: string;
     problemSound: string;
@@ -95,10 +103,12 @@ export function MostRecentActivities({ className }: MostRecentActivitiesProps) {
   const [, setLocation] = useLocation();
   const limit = 10;
 
-  const { data: recentActivities, isLoading, error } = useQuery<RecentActivitiesResponse>({
+  const { data: recentActivitiesResponse, isLoading, error } = useQuery<{success: boolean, data: RecentActivitiesResponse}>({
     queryKey: ['/api/user/recent-activities', currentPage, limit],
     queryFn: async () => {
+      const authHeaders = await getAuthHeaders();
       const response = await fetch(`/api/user/recent-activities?page=${currentPage}&limit=${limit}`, {
+        headers: authHeaders,
         credentials: 'include'
       });
       if (!response.ok) {
@@ -108,10 +118,15 @@ export function MostRecentActivities({ className }: MostRecentActivitiesProps) {
     }
   });
 
-  const { data: feedback, isLoading: feedbackLoading } = useQuery<PronunciationFeedback>({
+  // Unwrap the data from the backend response
+  const recentActivities = recentActivitiesResponse?.data;
+
+  const { data: feedbackResponse, isLoading: feedbackLoading } = useQuery<{success: boolean, data: PronunciationFeedback}>({
     queryKey: ['/api/user/pronunciation-feedback'],
     queryFn: async () => {
+      const authHeaders = await getAuthHeaders();
       const response = await fetch('/api/user/pronunciation-feedback', {
+        headers: authHeaders,
         credentials: 'include'
       });
       if (!response.ok) {
@@ -121,6 +136,9 @@ export function MostRecentActivities({ className }: MostRecentActivitiesProps) {
     },
     enabled: !isLoading && (recentActivities?.activities?.length ?? 0) > 0
   });
+
+  // Unwrap the feedback data from the backend response
+  const feedback = feedbackResponse?.data;
 
   const handlePrevPage = () => {
     if (recentActivities?.hasPrevPage) {
@@ -195,14 +213,43 @@ export function MostRecentActivities({ className }: MostRecentActivitiesProps) {
               <h3 className="font-semibold text-blue-800">Feedback</h3>
             </div>
             
-            {/* Suggestions */}
-            <div className="space-y-2 mb-4">
-              {feedback.suggestions.map((suggestion, index) => (
-                <div key={index} className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
-                  <p className="text-sm text-gray-700">{suggestion}</p>
-                </div>
-              ))}
+            {/* Feedback Content */}
+            <div className="space-y-3 mb-4">
+              {/* Improvement Status */}
+              <div className="flex items-start gap-2">
+                <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                <p className="text-sm text-gray-700">{feedback.improvement}</p>
+              </div>
+              
+              {/* Strengths */}
+              {feedback.strengths && feedback.strengths.length > 0 && 
+                feedback.strengths.map((strength, index) => (
+                  <div key={`strength-${index}`} className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                    <p className="text-sm text-gray-700">✅ {strength}</p>
+                  </div>
+                ))
+              }
+              
+              {/* Areas for Improvement */}
+              {feedback.areasForImprovement && feedback.areasForImprovement.length > 0 && 
+                feedback.areasForImprovement.map((area, index) => (
+                  <div key={`improvement-${index}`} className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-yellow-400 rounded-full mt-2 flex-shrink-0"></div>
+                    <p className="text-sm text-gray-700">📈 {area}</p>
+                  </div>
+                ))
+              }
+              
+              {/* Additional suggestions if provided */}
+              {feedback.suggestions && feedback.suggestions.length > 0 && 
+                feedback.suggestions.map((suggestion, index) => (
+                  <div key={`suggestion-${index}`} className="flex items-start gap-2">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                    <p className="text-sm text-gray-700">{suggestion}</p>
+                  </div>
+                ))
+              }
             </div>
 
             {/* Practice Prompt */}
@@ -246,7 +293,7 @@ export function MostRecentActivities({ className }: MostRecentActivitiesProps) {
           </div>
         )}
 
-        {recentActivities?.activities.length === 0 ? (
+        {(recentActivities?.activities?.length ?? 0) === 0 ? (
           <p className="text-gray-500 text-center py-8">No activities yet. Start practicing to see your progress!</p>
         ) : (
           <>
@@ -260,7 +307,7 @@ export function MostRecentActivities({ className }: MostRecentActivitiesProps) {
 
             {/* Activity Rows */}
             <div className="space-y-2">
-              {recentActivities?.activities.map((activity) => (
+              {recentActivities?.activities?.map((activity) => (
                 <div key={activity.id} className="grid grid-cols-12 gap-2 items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                   <div className="col-span-3">
                     <Badge 

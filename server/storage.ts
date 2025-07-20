@@ -65,14 +65,10 @@ import {
   type InsertContentLibrary,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, asc, and, or, sql, count, avg, ne } from "drizzle-orm";
+import { eq, desc, asc, and, or, sql, count, avg, ne, inArray } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
-  // User operations for Replit Auth
-  getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
-  
   // User stats operations
   getUserStats(userId: string): Promise<UserStats | undefined>;
   updateUserStats(userId: string, stats: Partial<UserStats>): Promise<UserStats>;
@@ -207,41 +203,56 @@ export interface IStorage {
   } // Closing brace for IStorage interface
 
 export class DatabaseStorage implements IStorage {
-  // User operations for Replit Auth
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    try {
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      return user;
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      throw new Error("Failed to fetch user");
+    }
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values({
-        ...userData,
-        level: 1,
-        xp: 0,
-        totalExercisesCompleted: 0,
-        streakDays: 0,
-        lastActivityDate: null,
-        unlockedRewards: {},
-        stripeCustomerId: null,
-        stripeSubscriptionId: null,
-        subscriptionStatus: null,
-        subscriptionStartDate: null,
-        subscriptionEndDate: null,
-        trialEndDate: null,
-      })
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          email: userData.email,
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          profileImageUrl: userData.profileImageUrl,
-        },
-      })
-      .returning();
-    return user;
+    try {
+      const [user] = await db
+        .insert(users)
+        .values({
+          ...userData,
+          level: 1,
+          xp: 0,
+          totalExercisesCompleted: 0,
+          streakDays: 0,
+          lastActivityDate: null,
+          unlockedRewards: {},
+          stripeCustomerId: null,
+          stripeSubscriptionId: null,
+          subscriptionStatus: null,
+          subscriptionStartDate: null,
+          subscriptionEndDate: null,
+          trialEndDate: null,
+        })
+        .onConflictDoUpdate({
+          target: users.id,
+          set: {
+            email: userData.email,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            profileImageUrl: userData.profileImageUrl,
+          },
+        })
+        .returning();
+      
+      // If this is a new user with an email, transfer any email-based assignments
+      if (userData.email) {
+        await this.transferEmailAssignments(userData.email, userData.id);
+      }
+      
+      return user;
+    } catch (error) {
+      console.error("Error upserting user:", error);
+      throw new Error("Failed to upsert user");
+    }
   }
 
   // User stats operations
@@ -620,7 +631,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(practiceGroupPhrases.groupId, groupId),
-          sql`${practiceGroupPhrases.phraseId} = ANY(${phraseIds})`
+          inArray(practiceGroupPhrases.phraseId, phraseIds)
         )
       );
   }
@@ -699,10 +710,19 @@ export class DatabaseStorage implements IStorage {
 
   // Assignment operations
   async getUserAssignments(userId: string): Promise<Assignment[]> {
+    const user = await this.getUser(userId);
+    if (!user) return [];
+
+    // Get assignments either by userId OR by matching email address
     return db
       .select()
       .from(assignments)
-      .where(eq(assignments.userId, userId))
+      .where(
+        or(
+          eq(assignments.userId, userId),
+          user.email ? eq(assignments.clientEmail, user.email) : sql`false`
+        )
+      )
       .orderBy(desc(assignments.createdAt));
   }
 
@@ -810,6 +830,21 @@ export class DatabaseStorage implements IStorage {
       completedItems,
       averageScore: Math.round(averageScore)
     };
+  }
+
+  // Transfer email-based assignments to a newly registered user
+  async transferEmailAssignments(userEmail: string, userId: string): Promise<void> {
+    await db
+      .update(assignments)
+      .set({ 
+        userId: userId, 
+        clientEmail: null, // Clear email since user is now registered
+        updatedAt: new Date() 
+      })
+      .where(and(
+        eq(assignments.clientEmail, userEmail),
+        sql`${assignments.userId} IS NULL` // Only transfer assignments without a userId
+      ));
   }
 
   // User saved readings operations (stored as phrases with reader_content source)

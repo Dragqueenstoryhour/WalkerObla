@@ -62,7 +62,7 @@ router.get('/recent-activities', protect, catchAsync(async (req: any, res) => {
     .from(userActivity)
     .where(eq(userActivity.userId, userId));
   const totalCount = totalCountResult[0]?.count || 0;
-  
+
   return success(res, {
     activities: recentActivities,
     currentPage: page,

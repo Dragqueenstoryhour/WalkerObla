@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import React from "react";
 
 // Global error handling to prevent unhandled promise rejections
 window.addEventListener('unhandledrejection', (event) => {
@@ -24,5 +25,7 @@ window.addEventListener('error', (event) => {
 });
 
 createRoot(document.getElementById("root")!).render(
-  <App />
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
 );

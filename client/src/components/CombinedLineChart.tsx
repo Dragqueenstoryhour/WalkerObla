@@ -120,7 +120,12 @@ export function CombinedLineChart({ wordActivities, phraseActivities, readingAct
         startDate = new Date(now.setDate(now.getDate() - 89)); // Last 90 days including today
       }
 
-      const dailyDataMap = new Map<string, ActivityData>();
+      const dailyDataMap = new Map<string, {
+        date: string;
+        wordScores: number[];
+        phraseScores: number[];
+        readingScores: number[];
+      }>();
 
       // Aggregate data by day for words, phrases, and readings
       [wordActivities, phraseActivities, readingActivities].forEach((activities, index) => {
@@ -134,31 +139,34 @@ export function CombinedLineChart({ wordActivities, phraseActivities, readingAct
           let entry = dailyDataMap.get(dateString);
 
           if (!entry) {
-            entry = { date: dateString };
+            entry = { 
+              date: dateString,
+              wordScores: [],
+              phraseScores: [],
+              readingScores: []
+            };
             dailyDataMap.set(dateString, entry);
           }
 
-          // Sum scores and count for averaging
-          const type = ['wordScore', 'phraseScore', 'readingScore'][index] as keyof ActivityData;
-          if (entry[type] === undefined) {
-              entry[type] = 0;
-          }
-          entry[type]! += activity.score;
-          // Store count in a temporary property to calculate average later
-          const countKey = `${type}Count` as keyof ActivityData;
-          if (entry[countKey] === undefined) {
-              entry[countKey] = 0 as any; // Cast to any because it's a temp prop
-          }
-          entry[countKey] = (entry[countKey] as number) + 1;
+          // Add score to appropriate array
+          if (index === 0) entry.wordScores.push(activity.score);
+          else if (index === 1) entry.phraseScores.push(activity.score);
+          else if (index === 2) entry.readingScores.push(activity.score);
         });
       });
 
       // Convert to array and calculate averages
       data = Array.from(dailyDataMap.values()).map(entry => {
         const newEntry: ActivityData = { date: entry.date };
-        if (entry.wordScore !== undefined) newEntry.wordScore = (entry.wordScore! / (entry.wordScoreCount as number));
-        if (entry.phraseScore !== undefined) newEntry.phraseScore = (entry.phraseScore! / (entry.phraseScoreCount as number));
-        if (entry.readingScore !== undefined) newEntry.readingScore = (entry.readingScore! / (entry.readingScoreCount as number));
+        if (entry.wordScores.length > 0) {
+          newEntry.wordScore = entry.wordScores.reduce((sum, score) => sum + score, 0) / entry.wordScores.length;
+        }
+        if (entry.phraseScores.length > 0) {
+          newEntry.phraseScore = entry.phraseScores.reduce((sum, score) => sum + score, 0) / entry.phraseScores.length;
+        }
+        if (entry.readingScores.length > 0) {
+          newEntry.readingScore = entry.readingScores.reduce((sum, score) => sum + score, 0) / entry.readingScores.length;
+        }
         return newEntry;
       });
 
@@ -176,6 +184,12 @@ export function CombinedLineChart({ wordActivities, phraseActivities, readingAct
   };
 
   const { data, wordLinePath, phraseLinePath, readingLinePath, maxXValue } = processData();
+
+  // Check if there's any data to display
+  const hasData = wordActivities.some(a => a.score !== null) || 
+                  phraseActivities.some(a => a.score !== null) || 
+                  readingActivities.some(a => a.score !== null);
+
 
   // Determine the Y-axis label intervals
   const yAxisLabels = [100, 75, 50, 25, 0];
@@ -198,7 +212,20 @@ export function CombinedLineChart({ wordActivities, phraseActivities, readingAct
         </Select>
       </div>
 
-      <div className="relative h-64 w-full">
+      {!hasData ? (
+        <div className="relative h-64 w-full flex items-center justify-center">
+          <div className="text-center text-gray-500">
+            <div className="text-lg font-medium mb-2">No Performance Data Yet</div>
+            <div className="text-sm">Complete practice sessions with pronunciation assessment to see your progress chart.</div>
+            <div className="text-xs mt-2 text-gray-400">
+              {wordActivities.length + phraseActivities.length + readingActivities.length === 0 
+                ? "No practice activities found." 
+                : "Practice activities found, but none with completed assessments."}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="relative h-64 w-full">
         {/* Y-axis labels */}
         <div className="absolute inset-y-0 left-0 flex flex-col justify-between py-2 pr-4 text-gray-500 text-sm">
           {yAxisLabels.map(label => (
@@ -377,7 +404,8 @@ export function CombinedLineChart({ wordActivities, phraseActivities, readingAct
         </div>
         */}
 
-      </div>
+        </div>
+      )}
 
       {/* Legend */}
       <div className="flex justify-center gap-6 mt-4 text-sm">

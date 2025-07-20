@@ -508,7 +508,7 @@ export default function Phrases() {
     if (!phrase) return;
 
     try {
-      const response = await fetch("/api/saved-phrases", {
+      const response = await fetch("/api/user/saved-phrases", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

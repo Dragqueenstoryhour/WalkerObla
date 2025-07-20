@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { PronunciationAssessmentResult } from "@/lib/types";
 import { queryClient } from "@/lib/queryClient";
+import { getAuthHeaders } from "@/lib/supabaseClient";
 import {
   MicIcon,
   StopCircleIcon,
@@ -136,7 +137,7 @@ interface ProcessedPhrase {
 
 export default function Phrases() {
   const { toast } = useToast();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const params = useParams();
   const shareId = params.shareId;
   const { difficulty, setDifficulty, setCurrentMode } = useDifficulty();
@@ -276,10 +277,10 @@ export default function Phrases() {
 
   // Auto-load common phrases when the page opens
   useEffect(() => {
-    if (!shareId) {
+    if (isAuthenticated && !shareId) {
       handleGenerateTopicPhrases("Common Phrases");
     }
-  }, []);
+  }, [isAuthenticated, shareId]);
 
   // Generate topic-based phrases
   const handleGenerateTopicPhrases = async (topic: string, customDifficulty?: string) => {
@@ -315,7 +316,7 @@ export default function Phrases() {
 
       const result = await response.json();
 
-      const newPhrases: ProcessedPhrase[] = result.phrases.map(
+      const newPhrases: ProcessedPhrase[] = (result.data?.phrases || []).map(
         (text: string, index: number) => ({
           id: `phrase-${Date.now()}-topic-${index}`,
           text,
@@ -559,7 +560,7 @@ export default function Phrases() {
     ssmlText += `</speak>`;
 
     try {
-      const response = await fetch("/api/speech/synthesize", {
+      const response = await fetch("/api/pronunciation/synthesize", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -639,10 +640,12 @@ export default function Phrases() {
     if (!phrase || savedPhrases.has(phrase.text)) return;
 
     try {
-      const response = await fetch("/api/phrases/save", {
+      const authHeaders = await getAuthHeaders();
+      const response = await fetch("/api/user/saved-phrases", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...authHeaders,
         },
         body: JSON.stringify({
           phrase: phrase.text,
@@ -909,6 +912,10 @@ export default function Phrases() {
   };
 
   const currentLetterOptions = getLetterOptions();
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   // Handle topic-based practice prompt - generate new phrases
   const handleTopicPracticePrompt = async (suggestedTopic: string) => {

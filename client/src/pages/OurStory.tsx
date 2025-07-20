@@ -1,4 +1,4 @@
-import ourStoryImage from "@assets/ChatGPT Image Jun 15, 2025, 10_33_48 AM_1749998037507.png";
+
 
 export default function OurStory() {
   return (
@@ -46,14 +46,7 @@ export default function OurStory() {
               <p className="text-xl font-semibold">
                 Together, we’re reimagining what speech therapy can be — accessible, adaptive, and engaging.
               </p>
-              <div className="mt-8 flex justify-center">
-                <img
-                  src={ourStoryImage}
-                  alt="Our founders working together on Obla"
-                  className="max-w-full h-auto rounded-lg shadow-lg border-4 border-blue-600"
-                  style={{ maxHeight: '400px' }}
-                />
-              </div>
+              
             </div>
           </div>
         </div>

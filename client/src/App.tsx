@@ -7,7 +7,6 @@ import NotFound from "@/pages/not-found";
 import RecordingTest from "@/pages/RecordingTest";
 import Read from "@/pages/Read";
 import Subscription from "@/pages/Subscription";
-import Checkout from "@/pages/Checkout";
 import SubscriptionSuccess from "@/pages/SubscriptionSuccess";
 import AzureTest from "@/pages/AzureTest";
 
@@ -18,7 +17,9 @@ import Profile from "@/pages/Profile";
 import Animation from "@/pages/Animation";
 import AzureAnimation from "@/pages/AzureAnimation";
 import Viseme from "@/pages/Viseme";
-import TherapistPortal from "@/pages/TherapistPortal";
+import TherapistLogin from "@/pages/TherapistLogin";
+import TherapistPortalPage from "@/pages/TherapistPortalPage";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ReadingProvider } from "./contexts/ReadingContext";
 import { GameProvider } from "./contexts/GameContext";
@@ -228,7 +229,6 @@ function Router() {
         <Route path="/phrases" component={Phrases} />
         <Route path="/game" component={() => <GameProvider initialUsername="player1"><RecordingTest /></GameProvider>} />
         <Route path="/subscription" component={Subscription} />
-        <Route path="/checkout" component={Checkout} />
         <Route path="/subscription/success" component={SubscriptionSuccess} />
         <Route path="/azure-test" component={AzureTest} />
 
@@ -240,7 +240,12 @@ function Router() {
         <Route path="/animation" component={Animation} />
         <Route path="/azure-animation" component={AzureAnimation} />
         <Route path="/viseme" component={Viseme} />
-        <Route path="/therapist" component={TherapistPortal} />
+        <Route path="/therapist" component={TherapistLogin} />
+        <Route path="/therapist-portal">
+          <ProtectedRoute requiredRole="therapist">
+            <TherapistPortalPage />
+          </ProtectedRoute>
+        </Route>
         <Route component={NotFound} />
       </Switch>
     </>

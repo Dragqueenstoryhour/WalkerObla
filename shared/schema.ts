@@ -1,18 +1,8 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, varchar, index, real } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, varchar, index, uniqueIndex, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Session storage table for Replit Auth
-export const sessions = pgTable(
-  "sessions",
-  {
-    sid: varchar("sid").primaryKey(),
-    sess: jsonb("sess").notNull(),
-    expire: timestamp("expire").notNull(),
-  },
-  (table) => [index("IDX_session_expire").on(table.expire)],
-);
-
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().notNull(), // Changed to varchar for Replit Auth user IDs
   username: text("username").notNull().unique(),
@@ -38,6 +28,12 @@ export const users = pgTable("users", {
   subscriptionEndDate: timestamp("subscription_end_date"),
   trialEndDate: timestamp("trial_end_date"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    usersEmailIdx: uniqueIndex("users_email_idx").on(table.email),
+    usersRoleIdx: index("users_role_idx").on(table.role),
+    usersUsernameIdx: uniqueIndex("users_username_idx").on(table.username),
+  };
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -61,6 +57,9 @@ export type UpsertUser = {
   lastName?: string | null;
   bio?: string | null;
   profileImageUrl?: string | null;
+  role?: string;
+  licenseNumber?: string | null;
+  specializations?: any; // jsonb type
 };
 
 // User profiles with avatar customization
@@ -72,6 +71,10 @@ export const userProfiles = pgTable("user_profiles", {
   selectedRewards: jsonb("selected_rewards"), // Currently selected cosmetic items
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    userProfilesUserIdIdx: uniqueIndex("user_profiles_user_id_idx").on(table.userId),
+  };
 });
 
 export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({
@@ -93,6 +96,12 @@ export const readingContent = pgTable("reading_content", {
   readingTime: integer("reading_time").notNull(), // in seconds
   difficulty: text("difficulty").notNull().default("easy"),
   createdAt: timestamp("created_at", { mode: 'string' }).notNull().defaultNow(),
+}, (table) => {
+  return {
+    readingContentSourceIdx: index("reading_content_source_idx").on(table.source),
+    readingContentDifficultyIdx: index("reading_content_difficulty_idx").on(table.difficulty),
+    readingContentCreatedAtIdx: index("reading_content_created_at_idx").on(table.createdAt),
+  };
 });
 
 export const insertReadingContentSchema = createInsertSchema(readingContent).omit({
@@ -112,6 +121,10 @@ export const wordFolders = pgTable("word_folders", {
   color: text("color").default("#3b82f6"), // Default blue color
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    wordFoldersUserIdIdx: index("word_folders_user_id_idx").on(table.userId),
+  };
 });
 
 export const insertWordFolderSchema = createInsertSchema(wordFolders).omit({
@@ -138,6 +151,12 @@ export const savedWords = pgTable("saved_words", {
   masteryLevel: integer("mastery_level").default(0), // 0-100 scale
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    savedWordsUserIdIdx: index("saved_words_user_id_idx").on(table.userId),
+    savedWordsWordIdx: index("saved_words_word_idx").on(table.word),
+    savedWordsFolderIdIdx: index("saved_words_folder_id_idx").on(table.folderId),
+  };
 });
 
 export const insertSavedWordSchema = createInsertSchema(savedWords).omit({
@@ -161,6 +180,12 @@ export const readingSession = pgTable("reading_session", {
   recordingUrl: text("recording_url"),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    readingSessionUserIdIdx: index("reading_session_user_id_idx").on(table.userId),
+    readingSessionContentIdIdx: index("reading_session_content_id_idx").on(table.contentId),
+    readingSessionCompletedAtIdx: index("reading_session_completed_at_idx").on(table.completedAt),
+  };
 });
 
 export const insertReadingSessionSchema = createInsertSchema(readingSession).omit({
@@ -182,6 +207,11 @@ export const gameLevels = pgTable("game_levels", {
   unlockableRewards: jsonb("unlockable_rewards"),
   difficulty: text("difficulty").notNull().default("easy"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    gameLevelsLevelNumberIdx: uniqueIndex("game_levels_level_number_idx").on(table.levelNumber),
+    gameLevelsDifficultyIdx: index("game_levels_difficulty_idx").on(table.difficulty),
+  };
 });
 
 export const insertGameLevelSchema = createInsertSchema(gameLevels).omit({
@@ -202,6 +232,12 @@ export const exercises = pgTable("exercises", {
   xpReward: integer("xp_reward").notNull().default(10),
   order: integer("order").notNull(), // Order within level
   createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    exercisesLevelIdIdx: index("exercises_level_id_idx").on(table.levelId),
+    exercisesTypeIdx: index("exercises_type_idx").on(table.type),
+    exercisesDifficultyIdx: index("exercises_difficulty_idx").on(table.difficulty),
+  };
 });
 
 export const insertExerciseSchema = createInsertSchema(exercises).omit({
@@ -222,6 +258,12 @@ export const userExercises = pgTable("user_exercises", {
   attemptCount: integer("attempt_count").notNull().default(0),
   lastAttemptAt: timestamp("last_attempt_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    userExercisesUserIdIdx: index("user_exercises_user_id_idx").on(table.userId),
+    userExercisesExerciseIdIdx: index("user_exercises_exercise_id_idx").on(table.exerciseId),
+    userExercisesCompletedIdx: index("user_exercises_completed_idx").on(table.completed),
+  };
 });
 
 export const insertUserExerciseSchema = createInsertSchema(userExercises).omit({
@@ -240,6 +282,11 @@ export const sharedPhraseCollections = pgTable("shared_phrase_collections", {
   name: text("name"),
   phrases: jsonb("phrases").notNull(), // Array of phrases with their properties
   createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    sharedPhraseCollectionsShareIdIdx: uniqueIndex("shared_phrase_collections_share_id_idx").on(table.shareId),
+    sharedPhraseCollectionsUserIdIdx: index("shared_phrase_collections_user_id_idx").on(table.userId),
+  };
 });
 
 export const insertSharedPhraseCollectionSchema = createInsertSchema(sharedPhraseCollections).omit({
@@ -261,6 +308,12 @@ export const userSavedPhrases = pgTable("user_saved_phrases", {
   source: text("source"), // Where this phrase came from (e.g., "shared", "manual", "generated")
   sourceId: text("source_id"), // Optional ID reference to source (e.g., shareId if from shared)
   createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    userSavedPhrasesUserIdIdx: index("user_saved_phrases_user_id_idx").on(table.userId),
+    userSavedPhrasesSourceIdx: index("user_saved_phrases_source_idx").on(table.source),
+    userSavedPhrasesPhraseIdx: index("user_saved_phrases_phrase_idx").on(table.phrase),
+  };
 });
 
 export const insertUserSavedPhraseSchema = createInsertSchema(userSavedPhrases).omit({
@@ -281,6 +334,11 @@ export const practiceGroups = pgTable("practice_groups", {
   isShared: boolean("is_shared").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    practiceGroupsUserIdIdx: index("practice_groups_user_id_idx").on(table.userId),
+    practiceGroupsShareIdIdx: uniqueIndex("practice_groups_share_id_idx").on(table.shareId),
+  };
 });
 
 export const insertPracticeGroupSchema = createInsertSchema(practiceGroups).omit({
@@ -300,6 +358,11 @@ export const practiceGroupPhrases = pgTable("practice_group_phrases", {
   groupId: integer("group_id").notNull(),
   phraseId: integer("phrase_id").notNull(),
   addedAt: timestamp("added_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    practiceGroupPhrasesGroupIdIdx: index("practice_group_phrases_group_id_idx").on(table.groupId),
+    practiceGroupPhrasesPhraseIdIdx: index("practice_group_phrases_phrase_id_idx").on(table.phraseId),
+  };
 });
 
 export const insertPracticeGroupPhraseSchema = createInsertSchema(practiceGroupPhrases).omit({
@@ -325,6 +388,13 @@ export const userActivity = pgTable("user_activity", {
   source: text("source"), // Where the practice came from (e.g., "my-words", "topic-practice", "shared")
   metadata: jsonb("metadata"), // Additional context like topic, group name, etc.
   createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    userActivityUserIdIdx: index("user_activity_user_id_idx").on(table.userId),
+    userActivityActivityTypeIdx: index("user_activity_activity_type_idx").on(table.activityType),
+    userActivityCreatedAtIdx: index("user_activity_created_at_idx").on(table.createdAt),
+    userActivityCompositeIdx: index("user_activity_composite_idx").on(table.userId, table.activityType, table.createdAt),
+  };
 });
 
 export const insertUserActivitySchema = createInsertSchema(userActivity).omit({
@@ -350,6 +420,10 @@ export const userStats = pgTable("user_stats", {
   longestStreak: integer("longest_streak").notNull().default(0),
   lastPracticeDate: timestamp("last_practice_date"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    userStatsUserIdIdx: uniqueIndex("user_stats_user_id_idx").on(table.userId),
+  };
 });
 
 export const insertUserStatsSchema = createInsertSchema(userStats).omit({
@@ -363,16 +437,26 @@ export type UserStats = typeof userStats.$inferSelect;
 // Assignments table for therapist-assigned homework
 export const assignments = pgTable("assignments", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull(), // Student receiving the assignment
+  userId: varchar("user_id"), // Student receiving the assignment (nullable for email-based assignments)
+  clientEmail: varchar("client_email"), // Email address for assignments to non-registered users
   therapistId: varchar("therapist_id").notNull(), // Therapist who created the assignment
   therapistName: text("therapist_name").notNull(), // Therapist display name
   title: text("title").notNull(), // Assignment title
   description: text("description"), // Optional description/instructions
   dueDate: timestamp("due_date"), // Optional due date
+  invitationId: integer("invitation_id"), // Link to client invitation if created for email
   isCompleted: boolean("is_completed").notNull().default(false),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    assignmentsUserIdIdx: index("assignments_user_id_idx").on(table.userId),
+    assignmentsClientEmailIdx: index("assignments_client_email_idx").on(table.clientEmail),
+    assignmentsTherapistIdIdx: index("assignments_therapist_id_idx").on(table.therapistId),
+    assignmentsDueDateIdx: index("assignments_due_date_idx").on(table.dueDate),
+    assignmentsInvitationIdIdx: index("assignments_invitation_id_idx").on(table.invitationId),
+  };
 });
 
 export const insertAssignmentSchema = createInsertSchema(assignments).omit({
@@ -402,6 +486,12 @@ export const assignmentItems = pgTable("assignment_items", {
   attemptCount: integer("attempt_count").notNull().default(0),
   lastAttemptAt: timestamp("last_attempt_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    assignmentItemsAssignmentIdIdx: index("assignment_items_assignment_id_idx").on(table.assignmentId),
+    assignmentItemsIsCompletedIdx: index("assignment_items_is_completed_idx").on(table.isCompleted),
+    assignmentItemsLastScoreIdx: index("assignment_items_last_score_idx").on(table.lastScore),
+  };
 });
 
 export const insertAssignmentItemSchema = createInsertSchema(assignmentItems).omit({
@@ -430,6 +520,13 @@ export const assignmentResults = pgTable("assignment_results", {
   detailedResults: jsonb("detailed_results"), // Full assessment results from Azure
   audioUrl: text("audio_url"), // Optional: link to recorded audio
   practiceDate: timestamp("practice_date").notNull().defaultNow(),
+}, (table) => {
+  return {
+    assignmentResultsAssignmentIdIdx: index("assignment_results_assignment_id_idx").on(table.assignmentId),
+    assignmentResultsItemIdIdx: index("assignment_results_item_id_idx").on(table.itemId),
+    assignmentResultsUserIdIdx: index("assignment_results_user_id_idx").on(table.userId),
+    assignmentResultsPracticeDateIdx: index("assignment_results_practice_date_idx").on(table.practiceDate),
+  };
 });
 
 export const insertAssignmentResultSchema = createInsertSchema(assignmentResults).omit({
@@ -449,6 +546,12 @@ export const therapistClients = pgTable("therapist_clients", {
   isActive: boolean("is_active").notNull().default(true),
   notes: text("notes"), // Optional notes about the client-therapist relationship
   createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    therapistClientsTherapistIdIdx: index("therapist_clients_therapist_id_idx").on(table.therapistId),
+    therapistClientsClientIdIdx: index("therapist_clients_client_id_idx").on(table.clientId),
+    therapistClientsCompositeIdx: index("therapist_clients_composite_idx").on(table.therapistId, table.clientId),
+  };
 });
 
 export const insertTherapistClientSchema = createInsertSchema(therapistClients).omit({
@@ -472,6 +575,13 @@ export const clientInvitations = pgTable("client_invitations", {
   acceptedAt: timestamp("accepted_at"),
   notes: text("notes"), // Optional notes about the invitation
   createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    clientInvitationsTherapistIdIdx: index("client_invitations_therapist_id_idx").on(table.therapistId),
+    clientInvitationsClientEmailIdx: index("client_invitations_client_email_idx").on(table.clientEmail),
+    clientInvitationsInvitationTokenIdx: uniqueIndex("client_invitations_invitation_token_idx").on(table.invitationToken),
+    clientInvitationsStatusIdx: index("client_invitations_status_idx").on(table.status),
+  };
 });
 
 export const insertClientInvitationSchema = createInsertSchema(clientInvitations).omit({
@@ -501,6 +611,14 @@ export const contentLibrary = pgTable("content_library", {
   usageCount: integer("usage_count").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    contentLibraryCreatedByIdx: index("content_library_created_by_idx").on(table.createdBy),
+    contentLibraryContentTypeIdx: index("content_library_content_type_idx").on(table.contentType),
+    contentLibraryDifficultyIdx: index("content_library_difficulty_idx").on(table.difficulty),
+    contentLibraryCategoryIdx: index("content_library_category_idx").on(table.category),
+    contentLibraryIsPublicIdx: index("content_library_is_public_idx").on(table.isPublic),
+  };
 });
 
 export const insertContentLibrarySchema = createInsertSchema(contentLibrary).omit({

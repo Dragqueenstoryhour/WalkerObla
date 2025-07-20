@@ -1,8 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Get Supabase URL and anon key from environment variables
-const SUPABASE_URL = import.meta.env.VITE_REACT_APP_SUPABASE_URL || import.meta.env.REACT_APP_SUPABASE_URL || 'https://hehogfyncmkakwxrgocj.supabase.co';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_REACT_APP_SUPABASE_ANON_KEY || import.meta.env.REACT_APP_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlaG9nZnluY21rYWt3eHJnb2NqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY5Njg2NDksImV4cCI6MjA2MjU0NDY0OX0.yR5n4YzA4sbr4GQejD_yT4mnPU6_Zwhs9twDvOu60Jk';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_REACT_APP_SUPABASE_URL || import.meta.env.REACT_APP_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_REACT_APP_SUPABASE_ANON_KEY || import.meta.env.REACT_APP_SUPABASE_ANON_KEY;
+
+// Validate that we have the required environment variables
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.error('Missing Supabase environment variables:', {
+    SUPABASE_URL: !!SUPABASE_URL,
+    SUPABASE_ANON_KEY: !!SUPABASE_ANON_KEY
+  });
+  throw new Error('Missing required Supabase environment variables. Please check your .env file.');
+}
 
 // Create Supabase client with proper config for browser usage
 export const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -69,6 +78,7 @@ export async function getAuthToken(): Promise<string | null> {
 export async function getAuthHeaders(): Promise<HeadersInit> {
   try {
     const token = await getAuthToken();
+    console.log('getAuthHeaders: Token available:', !!token);
     return token 
       ? { Authorization: `Bearer ${token}` }
       : {};

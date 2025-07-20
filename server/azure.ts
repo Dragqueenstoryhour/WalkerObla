@@ -1,8 +1,9 @@
 import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 import fs from "fs";
-import { execSync } from "child_process";
+import { execSync, spawn } from "child_process";
 import { join } from "path";
 import ffmpegPath from "ffmpeg-static";
+import { ElevenLabsClient } from "elevenlabs";
 
 // Define the PronunciationAssessmentResult interface
 interface PronunciationAssessmentResult {
@@ -17,13 +18,13 @@ interface PronunciationAssessmentResult {
     errorType?: string;         // None, Omission, Insertion, Mispronunciation, UnexpectedBreak, MissingBreak, Monotone
     offset?: number;            // Start time offset in milliseconds
     duration?: number;          // Duration in milliseconds
-    phonemes?: Array<{          // Phoneme-level details
+    phonemes?: Array<{
       phoneme: string;          // IPA phoneme
       score: number;            // Phoneme accuracy score
       offset?: number;          // Start time offset in milliseconds
       duration?: number;        // Duration in milliseconds
     }>;
-    syllables?: Array<{         // Syllable-level details
+    syllables?: Array<{
       syllable: string;         // Syllable text
       grapheme: string;         // Written form of syllable
       accuracyScore: number;    // Syllable accuracy score
@@ -36,8 +37,16 @@ interface PronunciationAssessmentResult {
 }
 
 // Azure Speech Service configuration
-const speechKey = process.env.SPEECH_KEY || "dummy-key-for-development";
-const speechRegion = process.env.SPEECH_REGION || "eastus";
+const speechKey = process.env.SPEECH_KEY;
+const speechRegion = process.env.SPEECH_REGION;
+
+console.log(`
+--- Azure/ElevenLabs Configuration Check ---`);
+console.log(`SPEECH_KEY status: ${speechKey ? 'Present (starts with ' + speechKey.substring(0, 5) + ')' : 'Missing'}`);
+console.log(`SPEECH_REGION status: ${speechRegion ? 'Present: ' + speechRegion : 'Missing'}`);
+console.log(`ELEVENLABS_API_KEY status: ${process.env.ELEVENLABS_API_KEY ? 'Present (starts with ' + process.env.ELEVENLABS_API_KEY.substring(0, 5) + ')' : 'Missing'}`);
+console.log(`-------------------------------------------
+`);
 
 // Check if Azure key is properly configured
 const isAzureConfigured = speechKey !== "dummy-key-for-development";
@@ -88,20 +97,38 @@ async function convertAudioToWav(audioBuffer: Buffer, tempDir: string = "/tmp", 
     
     // Convert audio format using ffmpeg with optimized settings for Azure pronunciation assessment
     // Configure for 16kHz, mono, 16-bit PCM format with audio normalization
-    const ffmpegCommand = `"${ffmpegPath}" -i "${inputPath}" \
-      -ac 1 \
-      -ar 16000 \
-      -acodec pcm_s16le \
-      -af "highpass=f=200,lowpass=f=4000,loudnorm=I=-16:TP=-1.5:LRA=11" \
-      -f wav \
-      -y \
-      "${outputPath}"`;
-    
+    const ffmpegArgs = [
+      '-i', inputPath,
+      '-ac', '1',
+      '-ar', '16000',
+      '-acodec', 'pcm_s16le',
+      '-af', 'highpass=f=200,lowpass=f=4000,loudnorm=I=-16:TP=-1.5:LRA=11',
+      '-f', 'wav',
+      '-y',
+      outputPath
+    ];
+
     console.log(`🔄 Running ffmpeg command to create 16kHz mono PCM WAV:`);
-    console.log(ffmpegCommand);
-    
-    // Execute ffmpeg command
-    const conversionOutput = execSync(ffmpegCommand, { encoding: 'utf8' });
+    console.log(ffmpegPath, ffmpegArgs.join(' '));
+
+    const ffmpegProcess = spawn(ffmpegPath, ffmpegArgs);
+
+    let ffmpegOutput = '';
+    ffmpegProcess.stderr.on('data', (data) => {
+      ffmpegOutput += data.toString();
+    });
+
+    await new Promise((resolve, reject) => {
+      ffmpegProcess.on('close', (code) => {
+        if (code === 0) {
+          resolve(undefined);
+        } else {
+          console.error(`ffmpeg process exited with code ${code}`);
+          console.error(ffmpegOutput);
+          reject(new Error(`ffmpeg process exited with code ${code}`));
+        }
+      });
+    });
     
     // Validate the output file
     if (fs.existsSync(outputPath)) {
@@ -379,165 +406,167 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
     console.log(`📊 Reference text contains ${wordCount} words`);
 
     return new Promise((resolve, reject) => {
-      try {
-        // Initialize speech configuration
-        const speechConfig = sdk.SpeechConfig.fromSubscription(speechKey, speechRegion);
-        speechConfig.speechRecognitionLanguage = "en-US";
-        
-        // Create pronunciation assessment configuration
-        const pronunciationAssessmentConfig = new sdk.PronunciationAssessmentConfig(
-          cleanedText,
-          sdk.PronunciationAssessmentGradingSystem.HundredMark,
-          sdk.PronunciationAssessmentGranularity.Phoneme,
-          true // enableMiscue
-        );
+      (async () => {
+        let recognizer;
+        try {
+          // Initialize speech configuration
+          const speechConfig = sdk.SpeechConfig.fromSubscription(speechKey!, speechRegion!);
+          speechConfig.setProperty(sdk.PropertyId.SpeechServiceConnection_RecoLanguage, "en-US");
+          speechConfig.speechRecognitionLanguage = "en-US";
+          
+          // Create pronunciation assessment configuration
+          const pronunciationAssessmentConfig = new sdk.PronunciationAssessmentConfig(
+            cleanedText,
+            sdk.PronunciationAssessmentGradingSystem.HundredMark,
+            sdk.PronunciationAssessmentGranularity.Phoneme,
+            true // enableMiscue
+          );
 
-        // Read WAV file data
-        const wavFileData = fs.readFileSync(wavFilePath!);
-        
-        // Create audio configuration from the WAV file buffer
-        const audioConfig = sdk.AudioConfig.fromWavFileInput(wavFileData);
-        
-        // Create speech recognizer
-        const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
-        
-        // Apply pronunciation assessment configuration
-        pronunciationAssessmentConfig.applyTo(recognizer);
-        
-        console.log(`📝 SESSION STARTED`);
-        
-        // Perform recognition
-        recognizer.recognizeOnceAsync(
-          (result) => {
-            console.log(`🛑 SESSION STOPPED`);
-            recognizer.close();
-            
-            // Clean up the temporary file
-            try {
-              if (wavFilePath && fs.existsSync(wavFilePath)) {
-                fs.unlinkSync(wavFilePath);
-              }
-            } catch (cleanupError) {
-              console.error("Error cleaning up temporary file:", cleanupError);
-            }
-            
-            try {
-              if (result.reason === sdk.ResultReason.RecognizedSpeech) {
-                console.log(`✅ RECOGNIZED: ${result.text}`);
-                
-                // Get pronunciation assessment result
-                const pronunciationResult = sdk.PronunciationAssessmentResult.fromResult(result);
-                
-                // Get detailed JSON response
-                const jsonResponse = result.properties.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult);
-                console.log("Raw JSON Response:", jsonResponse);
-                
-                let jsonResult: any = {};
-                try {
-                  jsonResult = JSON.parse(jsonResponse);
-                } catch (parseError) {
-                  console.warn("Could not parse JSON response:", parseError);
-                }
-                
-                // Extract word-level results with syllable and phoneme data
-                const wordLevelResults: any[] = [];
-                if (jsonResult.NBest && jsonResult.NBest[0] && jsonResult.NBest[0].Words) {
-                  jsonResult.NBest[0].Words.forEach((wordData: any) => {
-                    // Extract phoneme data
-                    const phonemes = wordData.Phonemes ? wordData.Phonemes.map((p: any) => ({
-                      phoneme: p.Phoneme,
-                      score: p.PronunciationAssessment?.AccuracyScore || 0,
-                      offset: p.Offset || 0,
-                      duration: p.Duration || 0
-                    })) : [];
-                    
-                    // Extract syllable data
-                    const syllables = wordData.Syllables ? wordData.Syllables.map((s: any) => ({
-                      syllable: s.Syllable,
-                      grapheme: s.Grapheme,
-                      accuracyScore: s.PronunciationAssessment?.AccuracyScore || 0,
-                      offset: s.Offset || 0,
-                      duration: s.Duration || 0
-                    })) : [];
-                    
-                    wordLevelResults.push({
-                      word: wordData.Word,
-                      accuracyScore: wordData.PronunciationAssessment?.AccuracyScore || 0,
-                      errorType: wordData.PronunciationAssessment?.ErrorType || "None",
-                      offset: wordData.Offset || 0,
-                      duration: wordData.Duration || 0,
-                      phonemes,
-                      syllables
+          // Read WAV file data
+          const wavFileData = await fs.promises.readFile(wavFilePath!);
+          
+          // Create audio configuration from the WAV file buffer
+          const audioConfig = sdk.AudioConfig.fromWavFileInput(wavFileData);
+          
+          // Create speech recognizer
+          recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
+          
+          // Apply pronunciation assessment configuration
+          pronunciationAssessmentConfig.applyTo(recognizer);
+          
+          console.log(`📝 SESSION STARTED`);
+          
+          // Perform recognition
+          recognizer.recognizeOnceAsync(
+            (result) => {
+              console.log(`🛑 SESSION STOPPED`);
+              
+              try {
+                if (result.reason === sdk.ResultReason.RecognizedSpeech) {
+                  console.log(`✅ RECOGNIZED: ${result.text}`);
+                  
+                  // Get pronunciation assessment result
+                  const pronunciationResult = sdk.PronunciationAssessmentResult.fromResult(result);
+                  
+                  // Get detailed JSON response
+                  const jsonResponse = result.properties.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult);
+                  console.log("Raw JSON Response:", jsonResponse);
+                  
+                  let jsonResult: any = {};
+                  try {
+                    jsonResult = JSON.parse(jsonResponse);
+                  } catch (parseError) {
+                    console.warn("Could not parse JSON response:", parseError);
+                  }
+                  
+                  // Extract word-level results with syllable and phoneme data
+                  const wordLevelResults: any[] = [];
+                  if (jsonResult.NBest && jsonResult.NBest[0] && jsonResult.NBest[0].Words) {
+                    jsonResult.NBest[0].Words.forEach((wordData: any) => {
+                      // Extract phoneme data
+                      const phonemes = wordData.Phonemes ? wordData.Phonemes.map((p: any) => ({
+                        phoneme: p.Phoneme,
+                        score: p.PronunciationAssessment?.AccuracyScore || 0,
+                        offset: p.Offset || 0,
+                        duration: p.Duration || 0
+                      })) : [];
+                      
+                      // Extract syllable data
+                      const syllables = wordData.Syllables ? wordData.Syllables.map((s: any) => ({
+                        syllable: s.Syllable,
+                        grapheme: s.Grapheme,
+                        accuracyScore: s.PronunciationAssessment?.AccuracyScore || 0,
+                        offset: s.Offset || 0,
+                        duration: s.Duration || 0
+                      })) : [];
+                      
+                      wordLevelResults.push({
+                        word: wordData.Word,
+                        accuracyScore: wordData.PronunciationAssessment?.AccuracyScore || 0,
+                        errorType: wordData.PronunciationAssessment?.ErrorType || "None",
+                        offset: wordData.Offset || 0,
+                        duration: wordData.Duration || 0,
+                        phonemes,
+                        syllables
+                      });
                     });
-                  });
-                }
-                
-                console.log(`🔍 Processing ${wordLevelResults.length} words from Azure response`);
-                
-                // Build final assessment result
-                const finalResult: PronunciationAssessmentResult = {
-                  pronunciationScore: pronunciationResult.pronunciationScore,
-                  fluencyScore: pronunciationResult.fluencyScore,
-                  completenessScore: pronunciationResult.completenessScore,
-                  accuracyScore: pronunciationResult.accuracyScore,
-                  prosodyScore: pronunciationResult.prosodyScore,
-                  wordLevelResults,
-                  sdkVersion: "production",
-                  rawJson: jsonResult
-                };
-                
-                console.log(`📊 Assessment results summary:`);
-                console.log(`  - Pronunciation Score: ${finalResult.pronunciationScore}`);
-                console.log(`  - Fluency Score: ${finalResult.fluencyScore}`);
-                console.log(`  - Completeness Score: ${finalResult.completenessScore}`);
-                console.log(`  - Accuracy Score: ${finalResult.accuracyScore}`);
-                console.log(`  - Prosody Score: ${finalResult.prosodyScore || 'N/A'}`);
-                console.log(`  - Words with timing data: ${wordLevelResults.length}/${wordCount}`);
-                
-                resolve(finalResult);
-                
-              } else if (result.reason === sdk.ResultReason.NoMatch) {
-                console.log(`⚠️ No speech could be recognized from audio`);
-                reject(new Error("No speech could be recognized from the audio"));
-              } else if (result.reason === sdk.ResultReason.Canceled) {
-                const cancellation = sdk.CancellationDetails.fromResult(result);
-                console.error(`🚫 Recognition canceled: ${cancellation.reason}`);
-                if (cancellation.reason === sdk.CancellationReason.Error) {
-                  console.error(`Error details: ${cancellation.errorDetails}`);
-                  reject(new Error(`Azure Speech recognition error: ${cancellation.errorDetails}`));
+                  }
+                  
+                  console.log(`🔍 Processing ${wordLevelResults.length} words from Azure response`);
+                  
+                  // Build final assessment result
+                  const finalResult: PronunciationAssessmentResult = {
+                    pronunciationScore: pronunciationResult.pronunciationScore,
+                    fluencyScore: pronunciationResult.fluencyScore,
+                    completenessScore: pronunciationResult.completenessScore,
+                    accuracyScore: pronunciationResult.accuracyScore,
+                    prosodyScore: pronunciationResult.prosodyScore,
+                    wordLevelResults,
+                    sdkVersion: "production",
+                    rawJson: jsonResult
+                  };
+                  
+                  console.log(`📊 Assessment results summary:`);
+                  console.log(`  - Pronunciation Score: ${finalResult.pronunciationScore}`);
+                  console.log(`  - Fluency Score: ${finalResult.fluencyScore}`);
+                  console.log(`  - Completeness Score: ${finalResult.completenessScore}`);
+                  console.log(`  - Accuracy Score: ${finalResult.accuracyScore}`);
+                  console.log(`  - Prosody Score: ${finalResult.prosodyScore || 'N/A'}`);
+                  console.log(`  - Words with timing data: ${wordLevelResults.length}/${wordCount}`);
+                  
+                  resolve(finalResult);
+                  
+                } else if (result.reason === sdk.ResultReason.NoMatch) {
+                  console.log(`⚠️ No speech could be recognized from audio`);
+                  
+                  // Still try to get pronunciation assessment data even if no speech was recognized
+                  const jsonResponse = result.properties.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult);
+                  if (jsonResponse) {
+                    console.log("Raw JSON Response (NoMatch):", jsonResponse);
+                    const jsonResult = JSON.parse(jsonResponse);
+                    
+                    // Return assessment indicating no clear speech was detected
+                    resolve({
+                      pronunciationScore: 20,
+                      fluencyScore: 20,
+                      completenessScore: 10,
+                      accuracyScore: 20,
+                      prosodyScore: 20,
+                      wordLevelResults: cleanedText.split(/\s+/).map(word => ({
+                        word: word,
+                        accuracyScore: 10,
+                        errorType: "Omission",
+                        offset: 0,
+                        duration: 1000,
+                        phonemes: []
+                      })),
+                      sdkVersion: "1.32.0 (TypeScript)",
+                      rawJson: jsonResult
+                    });
+                  } else {
+                    reject(new Error("No speech detected in audio"));
+                  }
                 } else {
-                  reject(new Error(`Recognition canceled: ${cancellation.reason}`));
+                  console.warn(`Recognition didn't complete successfully: ${result.reason}`);
+                  reject(new Error(`Speech recognition failed: ${result.reason}`));
                 }
-              } else {
-                reject(new Error(`Unexpected recognition result: ${result.reason}`));
+              } catch (processingError) {
+                console.error("Error processing recognition result:", processingError);
+                reject(processingError);
+              } finally {
+                recognizer?.close();
               }
-            } catch (processingError: any) {
-              console.error("Error processing recognition result:", processingError);
-              reject(new Error(`Failed to process recognition result: ${processingError?.message || "Unknown error"}`));
+            },
+            (error) => {
+              console.error("Error during speech recognition:", error);
+              reject(error);
             }
-          },
-          (error) => {
-            console.error("Error during speech recognition:", error);
-            recognizer.close();
-            
-            // Clean up the temporary file
-            try {
-              if (wavFilePath && fs.existsSync(wavFilePath)) {
-                fs.unlinkSync(wavFilePath);
-              }
-            } catch (cleanupError) {
-              console.error("Error cleaning up temporary file:", cleanupError);
-            }
-            
-            reject(error);
-          }
-        );
-      } catch (setupError: any) {
-        console.error("Error setting up Azure Speech recognition:", setupError);
-        reject(new Error(`Failed to set up Azure Speech recognition: ${setupError?.message || "Unknown error"}`));
-      }
+          );
+        } catch (err) {
+          reject(err);
+        }
+      })();
     });
-    
   } catch (conversionError: any) {
     console.error("Failed to convert audio for Azure:", conversionError);
     throw new Error(`Failed to convert audio for Azure Speech assessment: ${conversionError?.message || "Unknown error"}`);
@@ -546,8 +575,8 @@ export async function assessPronunciation(audioBuffer: Buffer, referenceText: st
     if (wavFilePath && fs.existsSync(wavFilePath)) {
       try {
         fs.unlinkSync(wavFilePath);
-      } catch (cleanupError) {
-        console.error("Error in final cleanup:", cleanupError);
+      } catch (e) {
+        // Ignore final cleanup errors
       }
     }
   }
@@ -603,7 +632,8 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
       console.log(`Using converted WAV file: ${wavFilePath}`);
       
       // Set up the speech config with our credentials
-      const speechConfig = sdk.SpeechConfig.fromSubscription(speechKey, speechRegion);
+            const speechConfig = sdk.SpeechConfig.fromSubscription(speechKey, speechRegion);
+      speechConfig.setProperty(sdk.PropertyId.SpeechServiceConnection_RecoLanguage, "en-US");
       
       // Important: Set the recognition language to English US
       speechConfig.speechRecognitionLanguage = "en-US";
@@ -623,7 +653,7 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
       speechConfig.setProperty("Speech.Context.Verification", "true");
       
       // Read the WAV file into a buffer
-      const wavFileData = fs.readFileSync(wavFilePath);
+      const wavFileData = await fs.promises.readFile(wavFilePath);
       
       // Create audio config from the WAV file buffer
       const audioConfig = sdk.AudioConfig.fromWavFileInput(wavFileData);
@@ -641,7 +671,7 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
       const cleanedText = referenceText
         .trim()
         .replace(/\s+/g, ' ')  // Normalize whitespace
-        .replace(/[^\w\s.,?!]/g, '') // Remove special characters that might cause issues
+        .replace(/[^\w\s.,?!'-]/g, '') // Remove special characters that might cause issues
         .slice(0, 1000);  // Limit length to avoid Azure limits
       
       console.log(`🔤 Cleaned reference text: "${cleanedText}" (${cleanedText.length} chars)`);
@@ -954,7 +984,8 @@ export async function assessPronunciationDebug(audioBuffer: Buffer, referenceTex
       console.error("Failed to convert audio for Azure:", conversionError);
       throw new Error(`Failed to convert audio for Azure Speech assessment: ${conversionError?.message || "Unknown error"}`);
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error("Error assessing pronunciation:", error);
     throw error;
   } finally {
@@ -1078,6 +1109,56 @@ function breakIntoSyllables(word: string): string {
 }
 
 /**
+ * Helper function to attempt ElevenLabs Speech synthesis
+ */
+async function tryElevenLabsSynthesis(text: string, speed: number, apiKey: string): Promise<Buffer | null> {
+  try {
+    console.log(`🔑 Attempting ElevenLabs TTS with key length: ${apiKey?.length || 0}`);
+    
+    const elevenlabs = new ElevenLabsClient({
+      apiKey: apiKey,
+    });
+
+    // Use a high-quality, general-purpose voice. "Rachel" is a good default.
+    // Adjust model and voice_id as needed for optimal results.
+    const modelId = "eleven_multilingual_v2"; 
+    // Optimal voice selection:
+    // "21m00Tcm4TlvDq8ikWAM" (Rachel) is a popular, clear female voice.
+    // "pNInz6obpgDQGXGNvgUa" (Adam) is a popular, clear male voice.
+    // You can find more voice IDs in your ElevenLabs dashboard or via their API.
+    const voiceId = "21m00Tcm4TlvDq8ikWAM"; // Rachel voice ID
+
+    console.log(`ElevenLabs: Using model "${modelId}" and voice ID "${voiceId}"`);
+
+    const audio = await elevenlabs.generate({
+      voice_id: voiceId,
+      text: text,
+      model_id: modelId,
+      voice_settings: {
+        stability: 0.75,
+        similarity_boost: 0.75,
+        style: 0.0,
+        use_speaker_boost: true
+      },
+      // ElevenLabs API doesn't have a direct 'speed' parameter like Azure's prosody rate.
+      // For now, we'll generate at normal speed and let the client handle 'slow' playback.
+    });
+
+    const audioBuffer = Buffer.from(await audio.arrayBuffer());
+    console.log(`✅ ElevenLabs TTS synthesis completed. Audio size: ${audioBuffer.length} bytes`);
+    
+    if (audioBuffer.length === 0) {
+      throw new Error("Received empty audio from ElevenLabs Speech Services");
+    }
+
+    return audioBuffer;
+  } catch (error: any) {
+    console.error(`❌ ElevenLabs TTS error: ${error.message || error}`);
+    throw new Error(`ElevenLabs TTS failed: ${error.message || error}`);
+  }
+}
+
+/**
  * Helper function to attempt Azure Speech synthesis
  */
 async function tryAzureSynthesis(text: string, speed: number, apiKey: string, region: string): Promise<Buffer | null> {
@@ -1086,18 +1167,21 @@ async function tryAzureSynthesis(text: string, speed: number, apiKey: string, re
     
     // Prepare SSML with speed control
     let ssmlContent: string;
+    const azureVoiceName = process.env.AZURE_TTS_VOICE_NAME || 'en-US-AvaNeural';
+    console.log(`Azure TTS: Using voice "${azureVoiceName}"`);
+
     if (speed !== 1.0) {
       // Convert speed factor to percentage - 0.6 becomes "60%" which is slower than normal
       const prosodyRate = `${Math.round(speed * 100)}%`;
       ssmlContent = `<speak version="1.0" xml:lang="en-US">
-        <voice xml:lang="en-US" xml:gender="Female" name="en-US-AvaNeural">
+        <voice xml:lang="en-US" xml:gender="Female" name="${azureVoiceName}">
           <prosody rate="${prosodyRate}">${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</prosody>
         </voice>
       </speak>`;
       console.log(`🐌 Using Azure SSML with prosody rate: ${prosodyRate} (${speed}x speed)`);
     } else {
       ssmlContent = `<speak version="1.0" xml:lang="en-US">
-        <voice xml:lang="en-US" xml:gender="Female" name="en-US-AvaNeural">${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</voice>
+        <voice xml:lang="en-US" xml:gender="Female" name="${process.env.AZURE_TTS_VOICE_NAME || 'en-US-AvaNeural'}">${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</voice>
       </speak>`;
     }
 
@@ -1115,7 +1199,8 @@ async function tryAzureSynthesis(text: string, speed: number, apiKey: string, re
     });
 
     if (!response.ok) {
-      throw new Error(`Azure API returned ${response.status}: ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`Azure API returned ${response.status}: ${response.statusText} - ${errorText}`);
     }
 
     const audioBuffer = Buffer.from(await response.arrayBuffer());
@@ -1126,9 +1211,9 @@ async function tryAzureSynthesis(text: string, speed: number, apiKey: string, re
     }
 
     return audioBuffer;
-  } catch (error) {
-    console.error(`Azure HTTP API error:`, error);
-    throw new Error(`Azure TTS HTTP API failed: ${error}`);
+  } catch (error: any) {
+    console.error(`❌ Azure HTTP API error: ${error.message || error}`);
+    throw new Error(`Azure TTS HTTP API failed: ${error.message || error}`);
   }
 }
 
@@ -1137,7 +1222,7 @@ async function tryAzureSynthesis(text: string, speed: number, apiKey: string, re
  */
 export async function synthesizeSpeechFromSSML(ssml: string): Promise<Buffer> {
   try {
-    const AZURE_SPEECH_KEY = process.env.AZURE_SPEECH_KEY;
+        const AZURE_SPEECH_KEY = process.env.SPEECH_KEY;
     const AZURE_SPEECH_REGION = process.env.AZURE_SPEECH_REGION || "eastus";
 
     if (!AZURE_SPEECH_KEY) {
@@ -1149,7 +1234,7 @@ export async function synthesizeSpeechFromSSML(ssml: string): Promise<Buffer> {
     
     // Create speech config
     const speechConfig = sdk.SpeechConfig.fromSubscription(AZURE_SPEECH_KEY, AZURE_SPEECH_REGION);
-    speechConfig.speechSynthesisVoiceName = "en-US-AvaNeural";
+    speechConfig.speechSynthesisVoiceName = process.env.AZURE_TTS_VOICE_NAME || "en-US-AvaNeural";
     speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio24Khz160KBitRateMonoMp3;
 
     return new Promise<Buffer>((resolve, reject) => {
@@ -1175,6 +1260,7 @@ export async function synthesizeSpeechFromSSML(ssml: string): Promise<Buffer> {
               const audioBuffer = Buffer.from(result.audioData);
               
               if (audioBuffer.length === 0) {
+                console.error("Azure SSML synthesis returned empty audio data.");
                 reject(new Error("Received empty audio from Azure Speech Services"));
                 return;
               }
@@ -1209,8 +1295,8 @@ export async function synthesizeSpeechFromSSML(ssml: string): Promise<Buffer> {
         }
       );
     });
-  } catch (error) {
-    console.error(`Azure SSML synthesis initialization failed:`, error);
+  } catch (error: any) {
+    console.error(`❌ Azure SSML synthesis initialization failed: ${error.message || error}`);
     // Fall back to HTTP API method
     throw error;
   }
@@ -1222,7 +1308,9 @@ export async function synthesizeSpeechFromSSML(ssml: string): Promise<Buffer> {
  */
 export async function synthesizeSpeech(text: string, voice = "default", speed = 1.0): Promise<Buffer> {
   try {
-    const AZURE_SPEECH_KEY = process.env.AZURE_SPEECH_KEY;
+    const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
+    console.log(`ElevenLabs API Key status: ${ELEVENLABS_API_KEY ? 'Present' : 'Missing'}`);
+    const AZURE_SPEECH_KEY = process.env.SPEECH_KEY;
     const AZURE_SPEECH_REGION = process.env.AZURE_SPEECH_REGION || "eastus";
 
     // Input validation
@@ -1233,7 +1321,20 @@ export async function synthesizeSpeech(text: string, voice = "default", speed = 
     const trimmedText = text.trim().slice(0, 1000);
     console.log(`🎤 Synthesizing speech for: "${trimmedText}" with speed: ${speed}x`);
 
-    // Try Azure Speech Services first if key is available
+    // Try ElevenLabs first if key is available
+    if (ELEVENLABS_API_KEY) {
+      try {
+        const elevenLabsResult = await tryElevenLabsSynthesis(trimmedText, speed, ELEVENLABS_API_KEY);
+        if (elevenLabsResult) {
+          return elevenLabsResult;
+        }
+      } catch (elevenLabsError: any) {
+        console.warn(`⚠️ ElevenLabs TTS failed, falling back: ${elevenLabsError?.message || elevenLabsError}`);
+        // Fall through to Azure/OpenAI fallback
+      }
+    }
+
+    // Try Azure Speech Services if key is available
     if (AZURE_SPEECH_KEY) {
       try {
         const azureResult = await tryAzureSynthesis(trimmedText, speed, AZURE_SPEECH_KEY, AZURE_SPEECH_REGION);
@@ -1241,7 +1342,7 @@ export async function synthesizeSpeech(text: string, voice = "default", speed = 
           return azureResult;
         }
       } catch (azureError: any) {
-        console.warn("Azure Speech Services failed, using OpenAI fallback:", azureError?.message || azureError);
+        console.warn(`⚠️ Azure Speech Services failed, using OpenAI fallback: ${azureError?.message || azureError}`);
         // Fall through to OpenAI fallback
       }
     } else {
@@ -1256,8 +1357,8 @@ export async function synthesizeSpeech(text: string, voice = "default", speed = 
     // Apply speed control for snail mode
     return await generateSpeechResponse(trimmedText, "alloy", speed);
 
-  } catch (error) {
-    console.error("Error in speech synthesis:", error);
+  } catch (error: any) {
+    console.error(`❌ Error in speech synthesis: ${error.message || error}`);
     throw error;
   }
 }

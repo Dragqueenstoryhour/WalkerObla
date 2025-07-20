@@ -162,7 +162,7 @@ export function SavedWordsWithFolders() {
       ssmlText += `</voice>`;
       ssmlText += `</speak>`;
 
-      const response = await fetch("/api/speech/synthesize", {
+      const response = await fetch("/api/pronunciation/synthesize", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

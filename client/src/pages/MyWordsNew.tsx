@@ -14,6 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ChevronLeft, ChevronRight, Volume2, Shuffle, BookOpen, MicIcon, StopCircleIcon, Ear, Snail, RotateCw, BookmarkIcon, Check, X, Play, Pause, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { getAuthHeaders } from '@/lib/supabaseClient';
 import { CombinedLineChart } from '@/components/CombinedLineChart'; // Import the chart component
 import { MostRecentActivities } from '@/components/MostRecentActivities';
 import { CalendarDays, Users } from 'lucide-react';
@@ -178,7 +179,8 @@ interface Activity {
 // Interfaces for assignments
 interface Assignment {
   id: number;
-  userId: string;
+  userId?: string | null; // Now optional for email-based assignments
+  clientEmail?: string | null; // New field for email-based assignments
   therapistId: string;
   therapistName: string;
   title: string;
@@ -415,9 +417,13 @@ function AssignmentCarousel({ items, assignmentId }: { items: AssignmentItem[], 
 
       // Record the assignment result
       try {
+        const authHeaders = await getAuthHeaders();
         const assignmentResponse = await fetch(`/api/assignments/${assignmentId}/results`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            ...authHeaders
+          },
           body: JSON.stringify({
             itemId: items[itemIndex].id,
             pronunciationScore: result.pronunciationScore,
@@ -477,7 +483,7 @@ function AssignmentCarousel({ items, assignmentId }: { items: AssignmentItem[], 
   // Play assignment item audio
   const playAssignmentAudio = async (item: ProcessedItem, slow: boolean = false) => {
     try {
-      const response = await fetch("/api/speech/synthesize", {
+      const response = await fetch("/api/pronunciation/synthesize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -763,19 +769,18 @@ function AssignmentsTab() {
   const { toast } = useToast();
 
   // Fetch user assignments
-  const { data: assignments = [], isLoading } = useQuery<Assignment[]>({
+  const { data: assignmentsResponse, isLoading } = useQuery({
     queryKey: ['/api/assignments'],
     enabled: true,
   });
+  const assignments = assignmentsResponse?.data || [];
 
   // Fetch assignment details when one is selected
-  const { data: assignmentDetails } = useQuery<{
-    items: AssignmentItem[];
-    progress: { totalItems: number; completedItems: number; averageScore: number };
-  }>({
+  const { data: assignmentDetailsResponse } = useQuery({
     queryKey: ['/api/assignments', selectedAssignment?.id],
     enabled: !!selectedAssignment,
   });
+  const assignmentDetails = assignmentDetailsResponse?.data;
 
   useEffect(() => {
     if (assignmentDetails?.items) {
@@ -1140,9 +1145,13 @@ function PracticeWordsCarousel({
 
       // Record activity
       try {
-        await fetch('/api/activities/record', {
+        const authHeaders = await getAuthHeaders();
+        await fetch('/api/user/activity', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            ...authHeaders
+          },
           body: JSON.stringify({
             activityType: 'word_practice',
             itemPracticed: word.text,
@@ -1215,7 +1224,7 @@ function PracticeWordsCarousel({
       ssmlText += `</voice>`;
       ssmlText += `</speak>`;
 
-      const response = await fetch("/api/speech/synthesize", {
+      const response = await fetch("/api/pronunciation/synthesize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1636,9 +1645,13 @@ function PracticePhrasesCarousel({
 
       // Record activity
       try {
-        await fetch('/api/activities/record', {
+        const authHeaders = await getAuthHeaders();
+        await fetch('/api/user/activity', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            ...authHeaders
+          },
           body: JSON.stringify({
             activityType: 'phrase_practice',
             itemPracticed: phrase.text,
@@ -1711,7 +1724,7 @@ function PracticePhrasesCarousel({
       ssmlText += `</voice>`;
       ssmlText += `</speak>`;
 
-      const response = await fetch("/api/speech/synthesize", {
+      const response = await fetch("/api/pronunciation/synthesize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1919,52 +1932,60 @@ export default function MyWordsNew() {
   const [currentReadingIndex, setCurrentReadingIndex] = useState(0);
 
   // Fetch saved words, phrases, and practice groups
-  const { data: savedWords = [] } = useQuery<any[]>({
-    queryKey: ['/api/saved-words'],
+  const { data: savedWordsResponse } = useQuery({
+    queryKey: ['/api/user/saved-words'],
     enabled: isAuthenticated,
   });
+  const savedWords = savedWordsResponse?.data || [];
 
-  const { data: savedPhrases = [] } = useQuery<SavedPhrase[]>({
+  const { data: savedPhrasesResponse } = useQuery({
     queryKey: ['/api/user/saved-phrases'],
     enabled: isAuthenticated,
   });
+  const savedPhrases = savedPhrasesResponse?.data || [];
 
-  const { data: practiceGroups = [] } = useQuery<any[]>({
+  const { data: practiceGroupsResponse } = useQuery({
     queryKey: ['/api/user/practice-groups'],
     enabled: isAuthenticated,
   });
+  const practiceGroups = practiceGroupsResponse?.data || [];
 
   // Fetch user stats and activities
-  const { data: wordActivities = [] } = useQuery<Activity[]>({
-    queryKey: ['/api/activities/words'],
+  const { data: wordActivitiesResponse } = useQuery({
+    queryKey: ['/api/user/activities/words'],
     enabled: isAuthenticated,
   });
+  const wordActivities = wordActivitiesResponse?.data || [];
 
-  const { data: phraseActivities = [] } = useQuery<Activity[]>({
-    queryKey: ['/api/activities/phrases'],
+  const { data: phraseActivitiesResponse } = useQuery({
+    queryKey: ['/api/user/activities/phrases'],
     enabled: isAuthenticated,
   });
+  const phraseActivities = phraseActivitiesResponse?.data || [];
 
-  const { data: readingActivities = [] } = useQuery<Activity[]>({
-    queryKey: ['/api/activities/readings'],
+  const { data: readingActivitiesResponse } = useQuery({
+    queryKey: ['/api/user/activities/readings'],
     enabled: isAuthenticated,
   });
+  const readingActivities = readingActivitiesResponse?.data || [];
+
 
   // Fetch saved readings separately
-  const { data: savedReadings = [] } = useQuery<any[]>({
+  const { data: savedReadingsResponse } = useQuery({
     queryKey: ['/api/user/saved-readings'],
     enabled: isAuthenticated,
   });
+  const savedReadings = savedReadingsResponse?.data || [];
 
   // Convert saved data to ProcessedItem format using useMemo to prevent infinite loops
   const processedWords = useMemo(() => {
     if (savedWords.length > 0) {
       return savedWords.map((word: any) => ({
-        id: `word-${word.word}`,
+        id: `word-${word.id}`,
         text: word.word,
         syllabication: word.syllabication,
-        phonetic: word.phonetic || undefined,
-        difficulty: word.difficulty as "beginner" | "intermediate" | "advanced" | undefined,
+        phonetic: word.pronunciation || undefined, // Note: savedWords uses 'pronunciation' field
+        difficulty: "intermediate" as "beginner" | "intermediate" | "advanced", // Default since savedWords doesn't have difficulty
         status: "idle",
         source: "words"
       }));

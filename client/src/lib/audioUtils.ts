@@ -3,6 +3,12 @@
  * Handles Safari, iOS, Chrome, and other browsers with proper fallbacks
  */
 
+// Constants for audio processing
+export const AZURE_OPTIMAL_SAMPLE_RATE = 16000; // Azure Speech Services optimal sample rate
+export const IOS_PREFERRED_SAMPLE_RATE = 44100; // iOS often prefers 44.1kHz
+export const AUDIO_PLAYBACK_TIMEOUT_MS = 10000; // 10 seconds
+export const BLOB_URL_CLEANUP_DELAY_MS = 600000; // 10 minutes
+
 export interface AudioRecordingOptions {
   preferredFormat?: string;
   sampleRate?: number;
@@ -53,7 +59,7 @@ export function detectAudioCapabilities() {
 export function getOptimalRecordingConstraints(): MediaTrackConstraints {
   const capabilities = detectAudioCapabilities();
   const constraints: MediaTrackConstraints = {
-    sampleRate: 16000, // Azure Speech Services optimal sample rate
+    sampleRate: AZURE_OPTIMAL_SAMPLE_RATE, 
     channelCount: 1,    // Mono
     echoCancellation: true,
     noiseSuppression: true,
@@ -65,7 +71,7 @@ export function getOptimalRecordingConstraints(): MediaTrackConstraints {
     // Safari/iOS might not support advanced constraints as well, so keep it simpler
     // Or might need specific settings for better compatibility.
     // For now, stick to basic good quality settings.
-    constraints.sampleRate = 44100; // iOS often prefers 44.1kHz
+    constraints.sampleRate = IOS_PREFERRED_SAMPLE_RATE; // iOS often prefers 44.1kHz
     constraints.channelCount = 1;
   }
 
@@ -118,9 +124,18 @@ export function createOptimalMediaRecorder(stream: MediaStream): MediaRecorder |
  * Especially useful for Safari/iOS which might record in unsupported formats like MP4/M4A
  * or for ensuring consistent WAV output for server processing.
  */
+let audioContext: AudioContext | null = null;
+
+function getAudioContext(): AudioContext {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+  return audioContext;
+}
+
 async function convertToWav(blob: Blob): Promise<Blob> {
   return new Promise((resolve, reject) => {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const currentAudioContext = getAudioContext();
     const fileReader = new FileReader();
 
     fileReader.onloadend = async () => {
@@ -128,16 +143,16 @@ async function convertToWav(blob: Blob): Promise<Blob> {
         if (!fileReader.result || typeof fileReader.result === 'string') {
           throw new Error("Failed to read audio blob as ArrayBuffer.");
         }
-        const audioBuffer = await audioContext.decodeAudioData(fileReader.result);
+        const audioBuffer = await currentAudioContext.decodeAudioData(fileReader.result);
 
         // Resample to 16kHz if not already
-        const desiredSampleRate = 16000;
+        const desiredSampleRate = AZURE_OPTIMAL_SAMPLE_RATE;
         let finalBuffer = audioBuffer;
         if (audioBuffer.sampleRate !== desiredSampleRate) {
           const numberOfChannels = audioBuffer.numberOfChannels;
           const oldSampleRate = audioBuffer.sampleRate;
           const length = audioBuffer.length * desiredSampleRate / oldSampleRate;
-          const newBuffer = audioContext.createBuffer(numberOfChannels, length, desiredSampleRate);
+          const newBuffer = currentAudioContext.createBuffer(numberOfChannels, length, desiredSampleRate);
 
           for (let i = 0; i < numberOfChannels; i++) {
             const oldChannelData = audioBuffer.getChannelData(i);
@@ -279,7 +294,7 @@ export function loadAudioForPlayback(audioElement: HTMLAudioElement, url: string
     setTimeout(() => {
       cleanup();
       reject(new Error('Audio playback timeout'));
-    }, 10000);
+    }, AUDIO_PLAYBACK_TIMEOUT_MS);
   });
 }
 
@@ -377,7 +392,7 @@ export function createAudioBlobUrl(blob: Blob): string {
   // Auto-cleanup after 10 minutes to prevent memory leaks
   setTimeout(() => {
     URL.revokeObjectURL(url);
-  }, 600000); // 10 minutes
+  }, BLOB_URL_CLEANUP_DELAY_MS); // 10 minutes
 
   console.log(`[AudioUtils] Created Blob URL: ${url}`);
   return url;

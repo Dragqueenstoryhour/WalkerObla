@@ -42,8 +42,8 @@ const Read = () => {
 
   // Set initial content when loaded
   useEffect(() => {
-    if (initialContent && !currentContent) {
-      const content = initialContent as any;
+    if (initialContent && initialContent.data && !currentContent) {
+      const content = initialContent.data as any;
       if (content && content.id && content.title && content.content) {
         setCurrentContent(content as ReadingContentType);
       }

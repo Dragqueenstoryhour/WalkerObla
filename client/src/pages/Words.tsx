@@ -28,6 +28,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { PronunciationAssessmentResult } from "@/lib/types";
+import { getAuthHeaders } from "@/lib/supabaseClient";
 import {
   MicIcon,
   StopCircleIcon,
@@ -549,7 +550,7 @@ export default function Words() {
 
   // 1. Robust Image Preloading and Readiness Check using counter-based system with Promise.all
   const preloadAllVisemeImages = React.useCallback(async (): Promise<{ [key: number]: HTMLImageElement }> => {
-    console.log("Preloading all viseme images for optimal performance...");
+    // console.log("Preloading all viseme images for optimal performance...");
     const allVisemeIds = Array.from({ length: 22 }, (_, i) => i); // Visemes 0-21
     let loadedCount = 0;
 
@@ -559,7 +560,7 @@ export default function Words() {
       return new Promise<HTMLImageElement>((resolve, reject) => {
         // Check if image is already loaded and cached with proper validation
         if (preloadedImages[id] && preloadedImages[id].complete && preloadedImages[id].naturalHeight > 0) {
-          console.log(`Viseme image ${id} already preloaded and cached`);
+          // console.log(`Viseme image ${id} already preloaded and cached`);
           loadedCount++;
           setLoadingProgress(prev => ({ ...prev, images: Math.round((loadedCount / allVisemeIds.length) * 100) }));
           resolve(preloadedImages[id]);
@@ -572,7 +573,7 @@ export default function Words() {
           loadedCount++;
           const progress = Math.round((loadedCount / allVisemeIds.length) * 100);
           setLoadingProgress(prev => ({ ...prev, images: progress }));
-          console.log(`Successfully preloaded viseme image ${id} (${progress}%)`);
+          // console.log(`Successfully preloaded viseme image ${id} (${progress}%)`);
           resolve(img);
         };
 
@@ -605,7 +606,7 @@ export default function Words() {
       });
 
       setLoadingProgress(prev => ({ ...prev, images: 100 }));
-      console.log("All viseme images preloaded successfully");
+      // console.log("All viseme images preloaded successfully");
       return imageMap;
     } catch (error) {
       console.error("Error preloading viseme images:", error);
@@ -621,13 +622,13 @@ export default function Words() {
   }, [preloadedImages]);
 
   // Preload all viseme images on component mount
-  useEffect(() => {
-    console.log("Preloading all viseme images for optimal performance...");
-    preloadAllVisemeImages().then((imageMap) => {
-      setPreloadedImages(imageMap);
-      console.log("All viseme images preloaded on component mount");
-    });
-  }, [preloadAllVisemeImages]);
+  // useEffect(() => {
+  //   console.log("Preloading all viseme images for optimal performance...");
+  //   preloadAllVisemeImages().then((imageMap) => {
+  //     setPreloadedImages(imageMap);
+  //     console.log("All viseme images preloaded on component mount");
+  //   });
+  // }, [preloadAllVisemeImages]);
 
   // Clear animation timeouts when component unmounts
   useEffect(() => {
@@ -671,7 +672,7 @@ export default function Words() {
       ssmlText += `</voice>`;
       ssmlText += `</speak>`;
 
-      const response = await fetch("/api/speech/synthesize", {
+      const response = await fetch("/api/pronunciation/synthesize", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -820,7 +821,7 @@ export default function Words() {
 
       const result = await response.json();
 
-      const newWords: ProcessedWord[] = result.phrases.map(
+            const newWords: ProcessedWord[] = (result.data?.phrases || result.phrases || []).map(
         (item: any, index: number) => ({
           id: `word-${Date.now()}-sound-${index}`,
           text: item.text,
@@ -1243,7 +1244,7 @@ export default function Words() {
 
       const result = await response.json();
 
-      const newWords: ProcessedWord[] = result.phrases.map(
+            const newWords: ProcessedWord[] = (result.data?.phrases || result.words || []).map(
         (item: any, index: number) => {
           // Handle both old format (string) and new format (object with text and syllabication)
           if (typeof item === 'string') {
@@ -1427,13 +1428,15 @@ export default function Words() {
       const result = await response.json();
       console.log("Received assessment results:", result);
 
+      const assessmentResult = result.data || result;
+
       // Validate the result has expected properties
-      if (typeof result.pronunciationScore !== "number") {
+      if (typeof assessmentResult.pronunciationScore !== "number") {
         throw new Error("Invalid assessment result format");
       }
 
       // Update with results
-      setWordAssessmentResult(result);
+      setWordAssessmentResult(assessmentResult);
 
       // Update in the words array
       setProcessedWords((words) =>
@@ -1442,7 +1445,7 @@ export default function Words() {
             ? {
                 ...w,
                 status: "complete",
-                assessmentResult: result,
+                assessmentResult: assessmentResult,
                 recordingBlob: audioBlob,
                 recordingUrl,
               }
@@ -1526,7 +1529,7 @@ export default function Words() {
     ssmlText += `</speak>`;
 
     try {
-      const response = await fetch("/api/speech/synthesize", {
+      const response = await fetch("/api/pronunciation/synthesize", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1611,7 +1614,7 @@ export default function Words() {
 
   // Preload images for specific viseme IDs with comprehensive error handling
   const preloadVisemeImages = async (visemeIds: number[]): Promise<void> => {
-    console.log("Preloading viseme images for IDs:", visemeIds);
+    // console.log("Preloading viseme images for IDs:", visemeIds);
     setImagesReady(false);
 
     // Always include viseme 0 (neutral position) for smooth transitions
@@ -1622,7 +1625,7 @@ export default function Words() {
       return new Promise<HTMLImageElement>((resolve, reject) => {
         // Check if image is already loaded and in cache
         if (preloadedImages[id] && preloadedImages[id].complete) {
-          console.log(`Viseme image ${id} already preloaded and cached`);
+          // console.log(`Viseme image ${id} already preloaded and cached`);
           resolve(preloadedImages[id]);
           return;
         }
@@ -1630,7 +1633,7 @@ export default function Words() {
         const img = new Image();
 
         img.onload = () => {
-          console.log(`Successfully preloaded viseme image ${id}`);
+          // console.log(`Successfully preloaded viseme image ${id}`);
           resolve(img);
         };
 
@@ -1664,7 +1667,7 @@ export default function Words() {
 
       setPreloadedImages(newPreloadedImages);
       setImagesReady(true);
-      console.log("All viseme images preloaded successfully");
+      // console.log("All viseme images preloaded successfully");
 
     } catch (error) {
       console.error("Error preloading viseme images:", error);
@@ -2028,10 +2031,12 @@ export default function Words() {
     if (!word || savedWords.has(word.text)) return;
 
     try {
-      const response = await fetch("/api/saved-words", {
+      const authHeaders = await getAuthHeaders();
+      const response = await fetch("/api/user/saved-words", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...authHeaders,
         },
         body: JSON.stringify({
           word: word.text,

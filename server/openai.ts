@@ -5,7 +5,7 @@ import fetch from 'node-fetch'; // eslint-disable-line @typescript-eslint/no-unu
 
 // Initialize OpenAI client
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "sk-dummy-key-for-development",
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 // Use cost-effective model for most tasks
@@ -261,18 +261,8 @@ function createDefaultContent(topic: string, rawContent: string): any {
   };
 }
 
-export async function generateReadingContent(topic: string, difficulty: DifficultyLevel): Promise<ReadingContent> {
-  try {
-    const difficultyInfo = DIFFICULTY_SCALE[difficulty];
-
-    if (!difficultyInfo) {
-      throw new Error(`Invalid difficulty level: ${difficulty}`);
-    }
-
-    // Ensure the difficulty is a string for consistency
-    const difficultyString = String(difficulty);
-
-    const systemPrompt = `You are an expert content creator for an English reading app designed to help learners improve their reading comprehension and vocabulary.
+function buildReadingContentPrompt(topic: string, difficultyInfo: any, difficultyString: string): string {
+  return `You are an expert content creator for an English reading app designed to help learners improve their reading comprehension and vocabulary.
     Your task is to generate engaging, informative, and grammatically correct reading content.
     The content must be tailored to the user's selected difficulty level, ensuring appropriate vocabulary, sentence structure, and overall complexity.
     For the current difficulty level "${difficultyInfo.name}" (level ${difficultyString}), here are the detailed guidelines:
@@ -293,12 +283,11 @@ export async function generateReadingContent(topic: string, difficulty: Difficul
     4. Presented as a single, coherent article or story based on the topic "${topic}".
 
   Your response MUST be a JSON object with the following structure:
-  \`\`\`json
   {
     "title": "Title of the Article",
     "content": "The main body of the reading article. Ensure it's a single string.",
-    "wordCount": 0, // Calculated word count of the 'content' field
-    "readingTime": 0, // Estimated reading time in seconds
+    "wordCount": 0,
+    "readingTime": 0,
     "vocabulary": [
       {
         "word": "word1",
@@ -316,7 +305,6 @@ export async function generateReadingContent(topic: string, difficulty: Difficul
     ],
     "summary": "A concise summary of the article."
   }
-  \`\`\`
 
   - The 'content' field should be a single string, representing the full article.
   - The 'vocabulary' array should contain 5-7 key words from the article relevant to the difficulty level, each with a clear definition and a sentence from the article itself as context.
@@ -328,61 +316,68 @@ export async function generateReadingContent(topic: string, difficulty: Difficul
   Strictly adhere to the specified difficulty level for the content, vocabulary, and sentence structure.
   Do NOT include any introductory or concluding remarks outside the JSON. Only return the JSON object.
   `;
+}
+
+async function callOpenAIForReadingContent(systemPrompt: string, topic: string, difficultyInfo: any): Promise<string | null | undefined> {
+  const completion = await openai.chat.completions.create({
+    model: "gpt-3.5-turbo", // Using a cheaper model to conserve tokens
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: `Generate a new reading article about "${topic}" for a "${difficultyInfo.name}" level.` }
+    ],
+    temperature: 0.7,
+    max_tokens: 1000, // Adjusted max_tokens to accommodate full JSON output
+    response_format: { type: "json_object" } // Ensure JSON format
+  });
+  return completion.choices[0].message.content;
+}
+
+function parseOpenAIReadingContentResponse(responseContent: string, topic: string): any {
+  let parsedContent;
+  try {
+    parsedContent = JSON.parse(responseContent || "{}");
+  } catch (error) {
+    console.error("Error parsing JSON from OpenAI:", error);
+    parsedContent = { title: topic, content: responseContent };
+  }
+
+  // Make sure we have all required fields, using createDefaultContent as a fallback if parse fails partially
+  if (!parsedContent.title || !parsedContent.content) {
+    console.warn("Parsed content missing required fields from OpenAI, attempting default structure.");
+    // This fallback creates a simplified structure, not the full desired JSON.
+    // It's mostly for graceful error handling if OpenAI doesn't return the full spec.
+    const defaultContent = createDefaultContent(topic, responseContent || "");
+    parsedContent = {
+      title: defaultContent.title,
+      content: defaultContent.content,
+      wordCount: defaultContent.content.split(/\s+/).filter(Boolean).length,
+      readingTime: defaultContent.content.split(/\s+/).filter(Boolean).length * 3,
+      vocabulary: [],
+      keyPhrases: [],
+      comprehensionQuestions: [],
+      summary: "Summary unavailable."
+    };
+  }
+  return parsedContent;
+}
+
+export async function generateReadingContent(topic: string, difficulty: DifficultyLevel): Promise<ReadingContent> {
+  try {
+    const difficultyInfo = DIFFICULTY_SCALE[difficulty];
+
+    if (!difficultyInfo) {
+      throw new Error(`Invalid difficulty level: ${difficulty}`);
+    }
+
+    const difficultyString = String(difficulty);
+    const systemPrompt = buildReadingContentPrompt(topic, difficultyInfo, difficultyString);
 
     console.log(`Using OpenAI to generate content about "${topic}" with difficulty "${difficulty}"`);
 
-    // Using OpenAI with max_tokens to strictly limit response size
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo", // Using a cheaper model to conserve tokens
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: `Generate a new reading article about "${topic}" for a "${difficultyInfo.name}" level.` }
-      ],
-      temperature: 0.7,
-      max_tokens: 1000, // Adjusted max_tokens to accommodate full JSON output
-      response_format: { type: "json_object" } // Ensure JSON format
-    });
-
-    const responseContent = completion.choices[0].message.content;
+    const responseContent = await callOpenAIForReadingContent(systemPrompt, topic, difficultyInfo);
     console.log("Raw response content:", responseContent);
 
-    let parsedContent;
-    try {
-      // Parse the JSON response
-      parsedContent = JSON.parse(responseContent || "{}");
-
-      // Make sure we have all required fields, using createDefaultContent as a fallback if parse fails partially
-      if (!parsedContent.title || !parsedContent.content) {
-        console.warn("Parsed content missing required fields from OpenAI, attempting default structure.");
-        // This fallback creates a simplified structure, not the full desired JSON.
-        // It's mostly for graceful error handling if OpenAI doesn't return the full spec.
-        const defaultContent = createDefaultContent(topic, responseContent || "");
-        parsedContent = {
-          title: defaultContent.title,
-          content: defaultContent.content,
-          wordCount: defaultContent.content.split(/\s+/).filter(Boolean).length,
-          readingTime: defaultContent.content.split(/\s+/).filter(Boolean).length * 3,
-          vocabulary: [],
-          keyPhrases: [],
-          comprehensionQuestions: [],
-          summary: "Summary unavailable."
-        };
-      }
-    } catch (err) {
-      console.error("Error processing API response JSON:", err);
-      // Create a default content as fallback for complete parsing failure
-      const defaultContent = createDefaultContent(topic, responseContent || "Content unavailable");
-      parsedContent = {
-        title: defaultContent.title,
-        content: defaultContent.content,
-        wordCount: defaultContent.content.split(/\s+/).filter(Boolean).length,
-        readingTime: defaultContent.content.split(/\s+/).filter(Boolean).length * 3,
-        vocabulary: [],
-        keyPhrases: [],
-        comprehensionQuestions: [],
-        summary: "Summary unavailable."
-      };
-    }
+    const parsedContent = parseOpenAIReadingContentResponse(responseContent || "", topic);
 
     // Calculate word count
     const calculatedWordCount = parsedContent.content.split(/\s+/).filter(Boolean).length;

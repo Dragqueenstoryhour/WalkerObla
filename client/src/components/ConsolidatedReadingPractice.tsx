@@ -10,6 +10,7 @@ import { useDifficulty, mapDifficultyToServer, DifficultyLevel } from '@/context
 import useEnhancedVoice from '@/hooks/useEnhancedVoice';
 import { PronunciationAssessmentResult } from '@/lib/types';
 import { queryClient } from '@/lib/queryClient';
+import { getAuthHeaders } from '@/lib/supabaseClient';
 
 // Helper function to get word color based on phoneme accuracy scores
 const getWordColorFromPhonemes = (wordResult: any): string => {
@@ -529,7 +530,7 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
     ssmlText += `</speak>`;
 
     try {
-      const response = await fetch("/api/speech/synthesize", {
+      const response = await fetch("/api/pronunciation/synthesize", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -668,10 +669,12 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
         return;
       }
 
-      const response = await fetch("/api/readings/save", {
+      const authHeaders = await getAuthHeaders();
+      const response = await fetch("/api/user/saved-readings", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...authHeaders,
         },
         body: JSON.stringify({
           title: currentContent.title || "Reading Practice",
@@ -697,37 +700,38 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
   };
 
   useEffect(() => {
-    if (readingContentRef.current && currentContent) {
-      try {
-        let contentStr = typeof currentContent.content === 'string'
-          ? currentContent.content
-          : JSON.stringify(currentContent.content);
-
-        contentStr = contentStr.replace(/\(\[?[\w\.]+\]?\(https?:\/\/[^\)]*\)\)/g, '');
-        contentStr = contentStr.replace(/\*\*([\w\s]+)\*\*/g, (match, topic) => {
-          return `In ${topic.toLowerCase()},`;
-        });
-
-        const paragraphs = contentStr.split('\n\n');
-
-        readingContentRef.current.innerHTML = paragraphs
-          .map(paragraph => {
-            const sentences = paragraph.split('. ');
-            const formattedSentences = sentences
-              .map(sentence => `<span>${sentence}</span>`)
-              .join('. ');
-
-            return `<p>${formattedSentences}</p>`;
-          })
-          .join('');
-      } catch (error) {
-        console.error('Error formatting content:', error);
-        if (typeof currentContent.content === 'string') {
-          readingContentRef.current.innerHTML = `<p>${currentContent.content}</p>`;
-        } else {
-          readingContentRef.current.innerHTML = '<p>Unable to display content. Please try generating a new article.</p>';
-        }
+    if (!readingContentRef.current || !currentContent || !currentContent.content) {
+      // If any of these are missing, we cannot process or display content.
+      // Set a default message or return early.
+      if (readingContentRef.current) {
+        readingContentRef.current.innerHTML = '<p>Unable to display content. Please try generating a new article.</p>';
       }
+      return;
+    }
+    
+    try {
+      let contentStr = String(currentContent.content); // Explicitly cast to string
+      // Apply transformations
+      contentStr = contentStr.replace(/\(\[?[\w\.]+\]?\(https?:\/\/[^\)]*\)\)/g, '');
+      contentStr = contentStr.replace(/\*\*([\w\s]+)\*\*/g, (match, topic) => {
+        return `In ${topic.toLowerCase()},`;
+      });
+      
+      // Update the DOM with the processed content
+      const paragraphs = contentStr.split('\n\n');
+      readingContentRef.current.innerHTML = paragraphs
+        .map(paragraph => {
+          const sentences = paragraph.split('. ');
+          const formattedSentences = sentences
+            .map(sentence => `<span>${sentence}</span>`)
+            .join('. ');
+          return `<p>${formattedSentences}</p>`;
+        })
+        .join('');
+    } catch (error) {
+      console.error('Error formatting content:', error);
+      // Fallback for error display
+      readingContentRef.current.innerHTML = '<p>Unable to display content. Please try generating a new article.</p>';
     }
   }, [currentContent]);
 

@@ -1,0 +1,34 @@
+
+> rest-express@1.0.0 dev
+> node -r dotenv/config --experimental-specifier-resolution=node --import tsx server/index.ts
+
+Supabase URL from env: https://zupjtzgadjonkmyajrxu.supabase.co
+Supabase Anon Key from env (first few chars): eyJhbGciOi...
+
+--- Azure/ElevenLabs Configuration Check ---
+SPEECH_KEY status: Present (starts with 03OFN)
+SPEECH_REGION status: Present: eastus
+ELEVENLABS_API_KEY status: Present (starts with sk_2d)
+-------------------------------------------
+
+✅ Azure Speech Services configured successfully with region: eastus
+node:events:496
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3001
+    at Server.setupListenHandle [as _listen2] (node:net:1937:16)
+    at listenInCluster (node:net:1994:12)
+    at Server.listen (node:net:2099:7)
+    at <anonymous> (/Users/lowendickloucks/Documents/v7.9Obla/server/index.ts:118:10)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1973:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3001
+}
+
+Node.js v22.14.0

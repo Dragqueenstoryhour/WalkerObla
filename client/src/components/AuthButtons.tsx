@@ -4,6 +4,23 @@ import { Button } from "@/components/ui/button";
 import { LogOut, LogIn } from 'lucide-react'; 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useLocation } from 'wouter';
+import { cn } from '@/lib/utils';
+import { LoginDialog } from './modals/LoginDialog';
+import { SignupDialog } from './modals/SignupDialog';
+
+interface User {
+  id: string;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  profileImageUrl?: string;
+  role?: 'therapist' | 'user' | string;
+  email?: string;
+  user_metadata?: {
+    name?: string;
+    [key: string]: any;
+  };
+}
 
 interface AuthButtonsProps {
   className?: string;
@@ -28,6 +45,18 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
   
   const [, navigate] = useLocation();
   const [showTooltip, setShowTooltip] = useState(false);
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [showSignupDialog, setShowSignupDialog] = useState(false);
+
+  const handleLoginClick = () => {
+    setShowSignupDialog(false);
+    setShowLoginDialog(true);
+  };
+
+  const handleSignupClick = () => {
+    setShowLoginDialog(false);
+    setShowSignupDialog(true);
+  };
 
   if (isLoading) {
     return (
@@ -39,7 +68,7 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
   }
 
   if (isAuthenticated && user) {
-    const userData = user as any;
+    const userData = user as User;
 
     const handleAvatarClick = () => {
       navigate('/my-account');
@@ -83,17 +112,17 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
         {showText && (
           <div className="hidden md:flex flex-col">
             <span className="text-sm font-medium leading-none">
-              {userData.username || `${userData.firstName} ${userData.lastName}` || 'User'}
+              {userData.user_metadata?.name || userData.email || 'User'}
             </span>
             <span className="text-xs text-muted-foreground leading-none mt-1">
-              Logged In
+              {userData.email}
             </span>
           </div>
         )}
         <Button
           variant="outline"
           size="sm"
-          className={`${className} border-primary text-primary hover:bg-primary hover:text-primary-foreground`}
+          className={cn(className, "border-primary text-primary hover:bg-primary hover:text-primary-foreground")}
           onClick={logout}
         >
           <LogOut className="h-4 w-4 mr-1" />
@@ -104,14 +133,18 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
   }
 
   return (
-    <Button
-      variant={variant}
-      size={size}
-      className={`${className} bg-primary hover:bg-primary/90 text-primary-foreground`}
-      onClick={login}
-    >
-      <LogIn className="h-4 w-4 mr-1" />
-      {showText && <span>Sign In</span>}
-    </Button>
+    <>
+      <Button
+        variant={variant}
+        size={size}
+        className={cn(className, "bg-primary hover:bg-primary/90 text-primary-foreground")}
+        onClick={handleLoginClick}
+      >
+        <LogIn className="h-4 w-4 mr-1" />
+        {showText && <span>Sign In</span>}
+      </Button>
+      <LoginDialog isOpen={showLoginDialog} onClose={() => setShowLoginDialog(false)} onSignupClick={handleSignupClick} />
+      <SignupDialog isOpen={showSignupDialog} onClose={() => setShowSignupDialog(false)} onLoginClick={handleLoginClick} />
+    </>
   );
 };

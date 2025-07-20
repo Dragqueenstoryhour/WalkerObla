@@ -1,0 +1,15 @@
+
+> rest-express@1.0.0 dev
+> node -r dotenv/config --experimental-specifier-resolution=node --import tsx server/index.ts
+
+Supabase URL from env: https://zupjtzgadjonkmyajrxu.supabase.co
+Supabase Anon Key from env (first few chars): eyJhbGciOi...
+
+--- Azure/ElevenLabs Configuration Check ---
+SPEECH_KEY status: Present (starts with 03OFN)
+SPEECH_REGION status: Present: eastus
+ELEVENLABS_API_KEY status: Present (starts with sk_2d)
+-------------------------------------------
+
+✅ Azure Speech Services configured successfully with region: eastus
+5:39:20 PM [express] serving on port 3001

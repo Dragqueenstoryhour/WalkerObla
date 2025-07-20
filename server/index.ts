@@ -1,8 +1,22 @@
+import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import { validationErrorMiddleware } from './utils/errorHandlers';
+import compression from 'compression';
 import { setupVite, serveStatic, log } from "./vite";
+import authRoutes from './routes/authRoutes';
+import { supabase } from './supabaseClient';
+import cors from 'cors';
 
 const app = express();
+
+app.use(cors({
+  origin: 'http://localhost:3001', // Allow only your frontend origin
+  credentials: true, // Allow cookies and authorization headers
+  allowedHeaders: ['Content-Type', 'Authorization'], // Explicitly allow Authorization header
+}));
+
+app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -25,8 +39,9 @@ app.use((req, res, next) => {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
 
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
+      const MAX_LOG_LENGTH = 120;
+      if (logLine.length > MAX_LOG_LENGTH) {
+        logLine = logLine.slice(0, MAX_LOG_LENGTH - 1) + "…";
       }
 
       log(logLine);
@@ -45,8 +60,24 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.use('/api/auth', authRoutes);
+
+app.get('/test-supabase-auth', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('users').select('id').limit(1);
+    if (error) {
+      throw error;
+    }
+    res.send({ message: 'Supabase connection successful!', data });
+  } catch (error: any) {
+    res.status(500).send({ message: 'Supabase connection failed.', error: error.message });
+  }
+});
+
 (async () => {
   const server = await registerRoutes(app);
+
+  app.use(validationErrorMiddleware);
 
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -63,14 +94,10 @@ app.get('/health', (req, res) => {
     });
 
     // Send appropriate error response
-    if (status >= 500) {
-      res.status(status).json({ 
-        message: process.env.NODE_ENV === 'development' ? message : "Internal Server Error",
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      res.status(status).json({ message });
-    }
+    res.status(status).json({ 
+      message: "Internal Server Error",
+      timestamp: new Date().toISOString()
+    });
     
     // Never throw errors in production to prevent crashes
   });
@@ -87,12 +114,8 @@ app.get('/health', (req, res) => {
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  const port = 3001;
+  server.listen(port, () => {
     log(`serving on port ${port}`);
   });
 })();
