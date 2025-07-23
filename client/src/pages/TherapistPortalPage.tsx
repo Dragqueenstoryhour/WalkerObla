@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator 
 } from "@/components/ui/dropdown-menu";
-import { Plus, Users, FileText, BookOpen, Search, Calendar, UserMinus, ChevronDown, ChevronUp, Trash2, TrendingUp, Award, AlertCircle, CheckCircle, X, BarChart3, Target, Edit3, Save, XCircle, MoreVertical, Send } from "lucide-react";
+import { Plus, Users, FileText, BookOpen, Search, Calendar, UserMinus, ChevronDown, ChevronUp, Trash2, TrendingUp, Award, AlertCircle, CheckCircle, X, BarChart3, Edit3, Save, XCircle, MoreVertical, Send } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -231,7 +231,7 @@ function ReportCard({ assignmentId, onClose }: ReportCardProps) {
   const { data: results = [] } = useQuery({
     queryKey: ['/api/assignments', assignmentId, 'results'],
     enabled: !!assignmentId
-  });
+  }) as { data: any[] };
 
   const [insights, setInsights] = useState<any>(null);
 
@@ -304,7 +304,7 @@ function ReportCard({ assignmentId, onClose }: ReportCardProps) {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Target className="h-5 w-5" />
+                    <BarChart3 className="h-5 w-5" />
                     AI Analysis & Recommendations
                   </CardTitle>
                 </CardHeader>
@@ -429,11 +429,15 @@ export default function TherapistPortal() {
   const [selectedDifficulty, setSelectedDifficulty] = useState("4");
   const [selectedTemplate, setSelectedTemplate] = useState<AssignmentTemplate | null>(null);
   const [generatedWords, setGeneratedWords] = useState<Array<{ text: string; syllabication: string }>>([]);
+  const [wordSuggestions, setWordSuggestions] = useState<Array<{ text: string; syllabication: string }>>([]);
   const [customTopic, setCustomTopic] = useState("");
+  const [contentGenerationMode, setContentGenerationMode] = useState("templates");
+  const [soundPosition, setSoundPosition] = useState("starts-with");
+  const [selectedSound, setSelectedSound] = useState("");
 
   // Data queries
-  const { data: clientsData = { clients: [], pendingInvitations: [] } } = useQuery({ queryKey: ['/api/therapist/clients'] });
-  const { data: assignments = [] } = useQuery({ queryKey: ['/api/therapist/assignments'] });
+  const { data: clientsData = { clients: [], pendingInvitations: [] } } = useQuery({ queryKey: ['/api/therapist/clients'] }) as { data: { clients: any[], pendingInvitations: any[] } };
+  const { data: assignments = [] } = useQuery({ queryKey: ['/api/therapist/assignments'] }) as { data: any[] };
   const { data: contentLibrary = [], isLoading: isContentLibraryLoading } = useQuery({ queryKey: ['/api/therapist/library'] });
 
   const clients = clientsData.clients || [];
@@ -763,10 +767,14 @@ export default function TherapistPortal() {
     setSelectedDifficulty("4");
     setSelectedTemplate(null);
     setGeneratedWords([]);
+    setWordSuggestions([]);
     setCustomTopic("");
     setAssignmentMode("existing");
     setClientEmail("");
     setShowAssignmentForm(false);
+    setContentGenerationMode("templates");
+    setSoundPosition("starts-with");
+    setSelectedSound("");
   };
 
   const handleStartEdit = (assignment: Assignment) => {
@@ -791,6 +799,79 @@ export default function TherapistPortal() {
     }
   };
 
+  const handleGenerateSoundWords = async () => {
+    if (!selectedSound || !soundPosition) return;
+    
+    try {
+      const response = await fetch('/api/therapist/generate-words', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.access_token}`,
+        },
+        body: JSON.stringify({
+          soundPattern: selectedSound,
+          position: soundPosition,
+          difficulty: selectedDifficulty,
+          count: 20
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate words');
+      }
+
+      const data = await response.json();
+      setWordSuggestions(data.words || []);
+      
+      toast({
+        title: "Words Generated!",
+        description: `Found ${data.words?.length || 0} words that ${soundPosition.replace('-', ' ')} "${selectedSound}"`,
+      });
+    } catch (error) {
+      console.error('Error generating sound words:', error);
+      toast({
+        title: "Generation Failed",
+        description: "Could not generate words for the selected sound pattern.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent, word: any) => {
+    e.dataTransfer.setData('text/plain', JSON.stringify(word));
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const wordData = e.dataTransfer.getData('text/plain');
+    try {
+      const word = JSON.parse(wordData);
+      addWordToAssignment(word);
+    } catch (error) {
+      console.error('Error parsing dropped word:', error);
+    }
+  };
+
+  const addWordToAssignment = (word: any) => {
+    if (!generatedWords.find(w => w.text === word.text)) {
+      setGeneratedWords(prev => [...prev, word]);
+      setWordSuggestions(prev => prev.filter(w => w.text !== word.text));
+    }
+  };
+
+  const removeWordFromAssignment = (index: number) => {
+    const removedWord = generatedWords[index];
+    setGeneratedWords(prev => prev.filter((_, i) => i !== index));
+    if (wordSuggestions.length > 0) {
+      setWordSuggestions(prev => [...prev, removedWord]);
+    }
+  };
+
   if (!user || user.role !== 'therapist') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -811,12 +892,28 @@ export default function TherapistPortal() {
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Therapist Portal</h1>
-          <p className="text-gray-600">Manage your patients and create personalized speech therapy assignments</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+                Therapist Portal
+              </h1>
+              <p className="text-gray-600">Manage your patients and create personalized speech therapy assignments</p>
+            </div>
+            <div className="hidden md:flex items-center space-x-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">{clients.length}</div>
+                <div className="text-sm text-gray-600">Active Patients</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">{assignments.length}</div>
+                <div className="text-sm text-gray-600">Total Assignments</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-2 bg-gray-100 p-1 rounded-lg">
             <TabsTrigger value="clients" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               My Patients
@@ -1254,66 +1351,213 @@ export default function TherapistPortal() {
                     {/* Content Generation */}
                     <Separator />
                     
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold">Assignment Content</h3>
+                    <div className="space-y-6">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <FileText className="h-5 w-5 text-blue-600" />
+                        Assignment Content
+                      </h3>
                       
-                      {/* Template Selection */}
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Choose from Templates</label>
-                        <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
-                          {savedTemplates.map((template) => (
-                            <Button
-                              key={template.id}
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleUseTemplate(template)}
-                              className="justify-start"
+                      {/* Content Generation Tabs */}
+                      <Tabs value={contentGenerationMode} onValueChange={setContentGenerationMode} className="w-full">
+                        <TabsList className="grid w-full grid-cols-3">
+                          <TabsTrigger value="templates">Templates</TabsTrigger>
+                          <TabsTrigger value="sounds">Sound Patterns</TabsTrigger>
+                          <TabsTrigger value="topics">Custom Topics</TabsTrigger>
+                        </TabsList>
+                        
+                        <TabsContent value="templates" className="space-y-4">
+                          <div>
+                            <label className="text-sm font-medium mb-2 block">Choose from Templates</label>
+                            <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                              {savedTemplates.map((template) => (
+                                <Button
+                                  key={template.id}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleUseTemplate(template)}
+                                  className="justify-start"
+                                >
+                                  <FileText className="h-4 w-4 mr-2" />
+                                  {template.title}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        </TabsContent>
+                        
+                        <TabsContent value="sounds" className="space-y-4">
+                          <div className="space-y-4">
+                            <div>
+                              <label className="text-sm font-medium mb-2 block">Sound Position</label>
+                              <div className="flex gap-2">
+                                {['starts-with', 'contains', 'ends-with'].map((position) => (
+                                  <Button
+                                    key={position}
+                                    variant={soundPosition === position ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setSoundPosition(position)}
+                                    className="capitalize"
+                                  >
+                                    {position.replace('-', ' ')}
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <label className="text-sm font-medium mb-2 block">Select Sound</label>
+                              <div className="space-y-3">
+                                <div>
+                                  <div className="text-xs text-gray-600 mb-1">Consonant Sounds</div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {['s', 'r', 'l', 'th', 'sh', 'ch', 'f', 'v', 'k', 'g', 'p', 'b', 't', 'd', 'm', 'n'].map((sound) => (
+                                      <Button
+                                        key={sound}
+                                        variant={selectedSound === sound ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={() => setSelectedSound(sound)}
+                                        className="min-w-[40px] h-8"
+                                      >
+                                        {sound}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                </div>
+                                
+                                <div>
+                                  <div className="text-xs text-gray-600 mb-1">Vowel Sounds</div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {['a', 'e', 'i', 'o', 'u', 'ay', 'ee', 'igh', 'ow', 'oo'].map((sound) => (
+                                      <Button
+                                        key={sound}
+                                        variant={selectedSound === sound ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={() => setSelectedSound(sound)}
+                                        className="min-w-[40px] h-8"
+                                      >
+                                        {sound}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <Button 
+                              onClick={handleGenerateSoundWords}
+                              disabled={generateContentMutation.isPending || !selectedSound || !soundPosition}
+                              className="w-full"
                             >
-                              <FileText className="h-4 w-4 mr-2" />
-                              {template.title}
+                              {generateContentMutation.isPending ? "Generating..." : `Generate words that ${soundPosition.replace('-', ' ')} "${selectedSound}"`}
                             </Button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="text-center text-gray-500">or</div>
-
-                      {/* Custom Content Generation */}
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Enter topic (e.g., 'Animals', 'Food', 'Family')"
-                          value={customTopic}
-                          onChange={(e) => setCustomTopic(e.target.value)}
-                        />
-                        <Button 
-                          onClick={handleGenerateContent}
-                          disabled={generateContentMutation.isPending || !customTopic.trim()}
-                        >
-                          {generateContentMutation.isPending ? "Generating..." : "Generate"}
-                        </Button>
-                      </div>
+                          </div>
+                        </TabsContent>
+                        
+                        <TabsContent value="topics" className="space-y-4">
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Enter topic (e.g., 'Animals', 'Food', 'Family')"
+                              value={customTopic}
+                              onChange={(e) => setCustomTopic(e.target.value)}
+                            />
+                            <Button 
+                              onClick={handleGenerateContent}
+                              disabled={generateContentMutation.isPending || !customTopic.trim()}
+                            >
+                              {generateContentMutation.isPending ? "Generating..." : "Generate"}
+                            </Button>
+                          </div>
+                        </TabsContent>
+                      </Tabs>
                     </div>
 
-                    {/* Generated Words */}
-                    {generatedWords.length > 0 && (
-                      <div>
-                        <div className="flex items-center justify-between mb-3">
-                          <label className="text-sm font-medium">Assignment Words ({generatedWords.length})</label>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleSaveAsTemplate}
-                          >
-                            Save as Template
-                          </Button>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded p-3">
-                          {generatedWords.map((word, index) => (
-                            <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                              <span className="font-medium">{word.text}</span>
-                              <span className="text-sm text-gray-600">{word.syllabication}</span>
+                    {/* Word Suggestions and Assignment Builder */}
+                    {(wordSuggestions.length > 0 || generatedWords.length > 0) && (
+                      <div className="grid grid-cols-2 gap-6">
+                        {/* Word Suggestions */}
+                        {wordSuggestions.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                              <label className="text-sm font-medium">Word Suggestions ({wordSuggestions.length})</label>
                             </div>
-                          ))}
+                            <div className="max-h-60 overflow-y-auto border rounded-lg p-3 bg-blue-50">
+                              <div className="grid gap-2">
+                                {wordSuggestions.map((word, index) => (
+                                  <div
+                                    key={index}
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, word)}
+                                    className="flex items-center justify-between p-2 bg-white rounded border cursor-move hover:shadow-md transition-shadow"
+                                  >
+                                    <span className="font-medium">{word.text}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-gray-600">{word.syllabication}</span>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => addWordToAssignment(word)}
+                                        className="h-6 w-6 p-0"
+                                      >
+                                        <Plus className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Assignment Words */}
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                              <label className="text-sm font-medium">Assignment Words ({generatedWords.length})</label>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleSaveAsTemplate}
+                              disabled={generatedWords.length === 0}
+                            >
+                              Save as Template
+                            </Button>
+                          </div>
+                          <div
+                            className="min-h-60 max-h-60 overflow-y-auto border-2 border-dashed border-green-300 rounded-lg p-3 bg-green-50"
+                            onDragOver={handleDragOver}
+                            onDrop={handleDrop}
+                          >
+                            {generatedWords.length === 0 ? (
+                              <div className="flex items-center justify-center h-full text-gray-500">
+                                <div className="text-center">
+                                  <Plus className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                                  <p className="text-sm">Drag words here or use the + button</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="grid gap-2">
+                                {generatedWords.map((word, index) => (
+                                  <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
+                                    <span className="font-medium">{word.text}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-gray-600">{word.syllabication}</span>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => removeWordFromAssignment(index)}
+                                        className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}
