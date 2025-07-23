@@ -971,7 +971,8 @@ export async function generateWordsWithSound(
   count: number = 8
 ): Promise<any[]> {
   try {
-    const difficultyInfo = DIFFICULTY_SCALE[difficulty];
+    const safeDifficulty = difficulty in DIFFICULTY_SCALE ? difficulty : "4";
+    const difficultyInfo = DIFFICULTY_SCALE[safeDifficulty];
     const prompt = `Generate exactly ${count} English words that physically contain the letter "${targetSound}" in their spelling.
 
 CRITICAL REQUIREMENTS:
@@ -1024,17 +1025,14 @@ Respond with valid JSON in this exact format:
     // If we don't have enough verified words, add fallback words
     if (verifiedWords.length < count) {
       const fallbackWords = getFallbackWordsWithSound(targetSound, count - verifiedWords.length);
-      return [...verifiedWords, ...fallbackWords].slice(0, count);
+      return { phrases: [...verifiedWords, ...fallbackWords].slice(0, count) };
     }
 
-    return verifiedWords.slice(0, count).map((word: any) => ({
-      text: word.text || "",
-      syllabication: word.syllabication || word.text || ""
-    }));
+    return { phrases: verifiedWords.slice(0, count).map((word: any) => ({ text: word.text || "", syllabication: word.syllabication || word.text || "" })) };
 
   } catch (error) {
     console.error("Error generating words with sound:", error);
-    return getFallbackWordsWithSound(targetSound, count);
+    return { phrases: getFallbackWordsWithSound(targetSound, count) };
   }
 }
 

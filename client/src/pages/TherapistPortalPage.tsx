@@ -5,7 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, FileText, BookOpen, Search, Calendar, UserMinus, ChevronDown, ChevronUp, Trash2, TrendingUp, Award, AlertCircle, CheckCircle, X, BarChart3, Target } from "lucide-react";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator 
+} from "@/components/ui/dropdown-menu";
+import { Plus, Users, FileText, BookOpen, Search, Calendar, UserMinus, ChevronDown, ChevronUp, Trash2, TrendingUp, Award, AlertCircle, CheckCircle, X, BarChart3, Target, Edit3, Save, XCircle, MoreVertical, Send } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -13,8 +20,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { Assignment, User } from "@shared/schema";
+import ContentLibraryPage from "./ContentLibraryPage";
+import AssignAssignmentModal from "@/components/modals/AssignAssignmentModal";
 
 interface AssignmentTemplate {
   id: string;
@@ -405,6 +414,14 @@ export default function TherapistPortal() {
   const [savedTemplates, setSavedTemplates] = useState<AssignmentTemplate[]>(PREDEFINED_TEMPLATES);
   const [assignmentMode, setAssignmentMode] = useState<"existing" | "email">("existing");
   const [clientEmail, setClientEmail] = useState("");
+  const [editingAssignment, setEditingAssignment] = useState<number | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [showAddClientModal, setShowAddClientModal] = useState(false);
+  const [newClientEmail, setNewClientEmail] = useState("");
+  const [newClientFirstName, setNewClientFirstName] = useState("");
+  const [newClientLastName, setNewClientLastName] = useState("");
+  const [showAssignAssignmentModal, setShowAssignAssignmentModal] = useState(false);
 
   // Assignment form state
   const [assignmentTitle, setAssignmentTitle] = useState("");
@@ -417,6 +434,7 @@ export default function TherapistPortal() {
   // Data queries
   const { data: clientsData = { clients: [], pendingInvitations: [] } } = useQuery({ queryKey: ['/api/therapist/clients'] });
   const { data: assignments = [] } = useQuery({ queryKey: ['/api/therapist/assignments'] });
+  const { data: contentLibrary = [], isLoading: isContentLibraryLoading } = useQuery({ queryKey: ['/api/therapist/library'] });
 
   const clients = clientsData.clients || [];
   const pendingInvitations = clientsData.pendingInvitations || [];
@@ -435,23 +453,91 @@ export default function TherapistPortal() {
 
   // Mutations
   const addClientMutation = useMutation({
-    mutationFn: async (email: string) => {
+    mutationFn: async ({ email, firstName, lastName }: { email: string; firstName: string; lastName: string }) => {
       const response = await apiRequest('/api/therapist/clients', {
         method: 'POST',
-        body: JSON.stringify({ clientEmail: email })
+        body: JSON.stringify({ 
+          clientEmail: email,
+          firstName: firstName.trim(),
+          lastName: lastName.trim()
+        })
       });
       return response;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/therapist/clients'] });
-      if (data.type === 'invitation') {
-        toast({ title: "Invitation sent successfully!", description: "The client will receive an email to join your program." });
-      } else {
-        toast({ title: "Client added successfully!" });
-      }
+    onMutate: async ({ email, firstName, lastName }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['/api/therapist/clients'] });
+      
+      // Snapshot the previous value
+      const previousData = queryClient.getQueryData(['/api/therapist/clients']);
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData(['/api/therapist/clients'], (old: any) => {
+        if (!old) return old;
+        
+        // Create a temporary client entry
+        const tempClient = {
+          id: `temp-${Date.now()}`,
+          email: email,
+          firstName: firstName || null,
+          lastName: lastName || null,
+          username: `${email.split('@')[0]}_temp`,
+          isTemporary: true // Flag to identify temporary entries
+        };
+        
+        return {
+          ...old,
+          clients: [...(old.clients || []), tempClient]
+        };
+      });
+      
+      // Return a context object with the snapshotted value
+      return { previousData };
     },
-    onError: (error: any) => {
-      toast({ title: "Error adding client", description: error.message, variant: "destructive" });
+    onSuccess: (data, variables) => {
+      // Update the cache with the new client data
+      queryClient.setQueryData(['/api/therapist/clients'], (old: any) => {
+        if (!old) return old;
+        
+        // Remove temporary optimistic updates and add real client
+        const filteredClients = old.clients?.filter((client: any) => !client.isTemporary) || [];
+        const filteredPending = old.pendingInvitations?.filter((inv: any) => !inv.isTemporary) || [];
+        
+        // Handle both response formats consistently
+        const newClient = data.client || data;
+        
+        // Ensure the new client has all required fields
+        if (!newClient || !newClient.id) {
+          console.error('❌ Invalid client data received:', data);
+          return old;
+        }
+        
+        console.log('🔄 Adding client to cache:', newClient);
+        
+        return {
+          ...old,
+          clients: [...filteredClients, newClient],
+          pendingInvitations: filteredPending
+        };
+      });
+      
+      // Force immediate refetch to ensure data consistency
+      queryClient.invalidateQueries({ queryKey: ['/api/therapist/clients'] });
+      
+      handleCloseAddClientModal();
+      
+      // Show success toast
+      toast({ 
+        title: "Patient added successfully!",
+        description: data.message || "The patient is now available for assignments."
+      });
+    },
+    onError: (error: any, variables, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousData) {
+        queryClient.setQueryData(['/api/therapist/clients'], context.previousData);
+      }
+      toast({ title: "Error adding patient", description: error.message, variant: "destructive" });
     }
   });
 
@@ -517,11 +603,76 @@ export default function TherapistPortal() {
     }
   });
 
-  // Event handlers
-  const handleAddClient = (email: string) => {
-    if (email) {
-      addClientMutation.mutate(email);
+  const updateAssignmentMutation = useMutation({
+    mutationFn: async ({ assignmentId, title, description }: { assignmentId: number; title: string; description: string }) => {
+      const response = await apiRequest(`/api/assignments/${assignmentId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ title, description })
+      });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/therapist/assignments'] });
+      toast({ title: "Assignment updated successfully!" });
+      setEditingAssignment(null);
+      setEditTitle("");
+      setEditDescription("");
+    },
+    onError: (error: any) => {
+      toast({ title: "Error updating assignment", description: error.message, variant: "destructive" });
     }
+  });
+
+  const sendAssignmentMutation = useMutation({
+    mutationFn: async (data: {
+      assignmentId: number;
+      clientIds: string[];
+      dueDate?: string;
+      therapistNotes?: string;
+    }) => {
+      const response = await apiRequest('/api/therapist/assignments/send', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+      return response;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/therapist/assignments'] });
+      toast({ 
+        title: "Assignments sent successfully!", 
+        description: `Assignment sent to ${data.emailsSent || 0} patient(s)`
+      });
+      setShowAssignAssignmentModal(false);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error sending assignments", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    }
+  });
+
+  // Event handlers
+  const handleAddClient = () => {
+    setShowAddClientModal(true);
+  };
+
+  const handleSubmitAddClient = () => {
+    if (newClientEmail.trim() && newClientFirstName.trim() && newClientLastName.trim()) {
+      addClientMutation.mutate({
+        email: newClientEmail.trim(),
+        firstName: newClientFirstName.trim(),
+        lastName: newClientLastName.trim()
+      });
+    }
+  };
+
+  const handleCloseAddClientModal = () => {
+    setShowAddClientModal(false);
+    setNewClientEmail("");
+    setNewClientFirstName("");
+    setNewClientLastName("");
   };
 
   const handleGenerateContent = () => {
@@ -618,6 +769,28 @@ export default function TherapistPortal() {
     setShowAssignmentForm(false);
   };
 
+  const handleStartEdit = (assignment: Assignment) => {
+    setEditingAssignment(assignment.id);
+    setEditTitle(assignment.title);
+    setEditDescription(assignment.description || "");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingAssignment(null);
+    setEditTitle("");
+    setEditDescription("");
+  };
+
+  const handleSaveEdit = () => {
+    if (editingAssignment && editTitle.trim()) {
+      updateAssignmentMutation.mutate({
+        assignmentId: editingAssignment,
+        title: editTitle.trim(),
+        description: editDescription.trim()
+      });
+    }
+  };
+
   if (!user || user.role !== 'therapist') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -639,14 +812,14 @@ export default function TherapistPortal() {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Therapist Portal</h1>
-          <p className="text-gray-600">Manage your clients and create personalized speech therapy assignments</p>
+          <p className="text-gray-600">Manage your patients and create personalized speech therapy assignments</p>
         </div>
 
         <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="clients" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
-              My Clients
+              My Patients
             </TabsTrigger>
             <TabsTrigger value="library" className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
@@ -656,26 +829,34 @@ export default function TherapistPortal() {
 
           <TabsContent value="clients" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Client List */}
+              {/* Patient List */}
               <div className="lg:col-span-1">
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
-                      <span>Client List ({filteredClients.length})</span>
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          const email = prompt("Enter client's email address:");
-                          if (email) handleAddClient(email);
-                        }}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                      <span>Patient List ({filteredClients.length})</span>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setShowAssignAssignmentModal(true)}
+                          disabled={clients.length === 0 || !Array.isArray(contentLibrary) || contentLibrary.length === 0 || isContentLibraryLoading}
+                          title="Send Assignment to Patients"
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={handleAddClient}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </CardTitle>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Input
-                        placeholder="Search clients..."
+                        placeholder="Search patients..."
                         value={clientSearchTerm}
                         onChange={(e) => setClientSearchTerm(e.target.value)}
                         className="pl-10"
@@ -687,24 +868,63 @@ export default function TherapistPortal() {
                       {/* Active Clients */}
                       <div className="space-y-2">
                         {filteredClients.length === 0 ? (
-                          <p className="text-center text-gray-500 py-4">No active clients</p>
+                          <p className="text-center text-gray-500 py-4">No active patients</p>
                         ) : (
                           filteredClients.map((client: User) => (
                             <div
                               key={client.id}
-                              className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                              className={`p-3 rounded-lg border transition-colors ${
                                 selectedClient?.id === client.id
                                   ? 'border-blue-500 bg-blue-50'
                                   : 'border-gray-200 hover:border-gray-300'
                               }`}
-                              onClick={() => setSelectedClient(client)}
                             >
-                              <div className="font-medium">
-                                {client.firstName && client.lastName
-                                  ? `${client.firstName} ${client.lastName}`
-                                  : client.username}
+                              <div className="flex items-center justify-between">
+                                <div 
+                                  className="flex-1 cursor-pointer"
+                                  onClick={() => setSelectedClient(client)}
+                                >
+                                  <div className="font-medium">
+                                    {client.firstName && client.lastName
+                                      ? `${client.firstName} ${client.lastName}`
+                                      : client.username}
+                                  </div>
+                                  <div className="text-sm text-gray-600">{client.email}</div>
+                                </div>
+                                
+                                {/* Three dots menu */}
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => {
+                                      setSelectedClient(client);
+                                      setSelectedTab('assignments');
+                                    }}>
+                                      <FileText className="mr-2 h-4 w-4" />
+                                      Create Assignment
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setSelectedClient(client)}>
+                                      <BarChart3 className="mr-2 h-4 w-4" />
+                                      View Progress
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem 
+                                      className="text-red-600"
+                                      onClick={() => {
+                                        // TODO: Add remove patient functionality
+                                        console.log('Remove patient:', client.id);
+                                      }}
+                                    >
+                                      <UserMinus className="mr-2 h-4 w-4" />
+                                      Remove Patient
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
-                              <div className="text-sm text-gray-600">{client.email}</div>
                             </div>
                           ))
                         )}
@@ -714,27 +934,48 @@ export default function TherapistPortal() {
                       {pendingInvitations.length > 0 && (
                         <>
                           <Separator />
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-600 mb-2">
+                          <div id="pending-invitations-section" className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                            <h4 className="text-lg font-semibold text-yellow-700 dark:text-yellow-400 mb-3 flex items-center gap-2">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
                               Pending Invitations ({pendingInvitations.length})
                             </h4>
                             <div className="space-y-2">
                               {pendingInvitations.map((invitation: any) => (
                                 <div
                                   key={invitation.id}
-                                  className="p-3 rounded-lg border border-yellow-200 bg-yellow-50"
+                                  className={`p-3 rounded-lg border ${invitation.isTemporary 
+                                    ? 'border-blue-200 bg-blue-50 animate-pulse' 
+                                    : 'border-yellow-200 bg-yellow-50'
+                                  }`}
                                 >
                                   <div className="flex items-center justify-between">
                                     <div>
-                                      <div className="font-medium text-yellow-800">
+                                      <div className={`font-medium ${invitation.isTemporary 
+                                        ? 'text-blue-800' 
+                                        : 'text-yellow-800'
+                                      }`}>
                                         {invitation.clientEmail}
                                       </div>
-                                      <div className="text-sm text-yellow-600">
-                                        Invited {new Date(invitation.sentAt).toLocaleDateString()}
+                                      <div className={`text-sm ${invitation.isTemporary 
+                                        ? 'text-blue-600' 
+                                        : 'text-yellow-600'
+                                      }`}>
+                                        {invitation.isTemporary 
+                                          ? 'Sending invitation...' 
+                                          : `Invited ${new Date(invitation.sentAt).toLocaleDateString()}`
+                                        }
                                       </div>
                                     </div>
-                                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                                      Pending
+                                    <Badge 
+                                      variant="secondary" 
+                                      className={invitation.isTemporary 
+                                        ? 'bg-blue-100 text-blue-800' 
+                                        : 'bg-yellow-100 text-yellow-800'
+                                      }
+                                    >
+                                      {invitation.isTemporary ? 'Sending...' : 'Pending'}
                                     </Badge>
                                   </div>
                                 </div>
@@ -748,11 +989,11 @@ export default function TherapistPortal() {
                 </Card>
               </div>
 
-              {/* Client Details & Assignments */}
+              {/* Patient Details & Assignments */}
               <div className="lg:col-span-2">
                 {selectedClient ? (
                   <div className="space-y-6">
-                    {/* Client Info */}
+                    {/* Patient Info */}
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center justify-between">
@@ -791,34 +1032,96 @@ export default function TherapistPortal() {
                           <div className="text-center py-8">
                             <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                             <p className="text-gray-600">No assignments yet</p>
-                            <p className="text-sm text-gray-500">Create the first assignment for this client</p>
+                            <p className="text-sm text-gray-500">Create the first assignment for this patient</p>
                           </div>
                         ) : (
                           <div className="space-y-3">
                             {clientAssignments.map((assignment: Assignment) => (
                               <div
                                 key={assignment.id}
-                                className="flex items-center justify-between p-4 border rounded-lg hover:border-gray-300 cursor-pointer"
-                                onClick={() => setShowReportCard(assignment.id)}
+                                className="p-4 border rounded-lg hover:border-gray-300"
                               >
-                                <div className="flex-1">
-                                  <h4 className="font-medium">{assignment.title}</h4>
-                                  <p className="text-sm text-gray-600">{assignment.description}</p>
-                                  <div className="flex items-center gap-4 mt-2">
-                                    <Badge variant="outline">
-                                      Assignment
-                                    </Badge>
-                                    <span className="text-xs text-gray-500">
-                                      Created {new Date(assignment.createdAt).toLocaleDateString()}
-                                    </span>
+                                {editingAssignment === assignment.id ? (
+                                  // Edit mode
+                                  <div className="space-y-3">
+                                    <div>
+                                      <label className="text-sm font-medium text-gray-700">Title</label>
+                                      <Input
+                                        value={editTitle}
+                                        onChange={(e) => setEditTitle(e.target.value)}
+                                        placeholder="Assignment title"
+                                        className="mt-1"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="text-sm font-medium text-gray-700">Description</label>
+                                      <Textarea
+                                        value={editDescription}
+                                        onChange={(e) => setEditDescription(e.target.value)}
+                                        placeholder="Assignment description"
+                                        rows={2}
+                                        className="mt-1"
+                                      />
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        size="sm"
+                                        onClick={handleSaveEdit}
+                                        disabled={updateAssignmentMutation.isPending || !editTitle.trim()}
+                                      >
+                                        <Save className="h-4 w-4 mr-1" />
+                                        {updateAssignmentMutation.isPending ? "Saving..." : "Save"}
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={handleCancelEdit}
+                                        disabled={updateAssignmentMutation.isPending}
+                                      >
+                                        <XCircle className="h-4 w-4 mr-1" />
+                                        Cancel
+                                      </Button>
+                                    </div>
                                   </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Badge variant={assignment.isCompleted ? "default" : "secondary"}>
-                                    {assignment.isCompleted ? "Completed" : "In Progress"}
-                                  </Badge>
-                                  <BarChart3 className="h-4 w-4 text-gray-400" />
-                                </div>
+                                ) : (
+                                  // View mode
+                                  <div className="flex items-center justify-between">
+                                    <div 
+                                      className="flex-1 cursor-pointer"
+                                      onClick={() => setShowReportCard(assignment.id)}
+                                    >
+                                      <h4 className="font-medium">{assignment.title}</h4>
+                                      <p className="text-sm text-gray-600">{assignment.description}</p>
+                                      <div className="flex items-center gap-4 mt-2">
+                                        <Badge variant="outline">
+                                          Assignment
+                                        </Badge>
+                                        <span className="text-xs text-gray-500">
+                                          Created {new Date(assignment.createdAt).toLocaleDateString()}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleStartEdit(assignment);
+                                        }}
+                                      >
+                                        <Edit3 className="h-4 w-4" />
+                                      </Button>
+                                      <Badge variant={assignment.isCompleted ? "default" : "secondary"}>
+                                        {assignment.isCompleted ? "Completed" : "In Progress"}
+                                      </Badge>
+                                      <BarChart3 
+                                        className="h-4 w-4 text-gray-400 cursor-pointer" 
+                                        onClick={() => setShowReportCard(assignment.id)}
+                                      />
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -831,7 +1134,7 @@ export default function TherapistPortal() {
                     <CardContent className="flex items-center justify-center h-64">
                       <div className="text-center">
                         <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600">Select a client to view their assignments</p>
+                        <p className="text-gray-600">Select a patient to view their assignments</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -1048,42 +1351,99 @@ export default function TherapistPortal() {
           </TabsContent>
 
           <TabsContent value="library">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5" />
-                  Assignment Templates Library
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {savedTemplates.map((template) => (
-                    <Card key={template.id} className="border-2 hover:border-blue-300 transition-colors">
-                      <CardHeader>
-                        <CardTitle className="text-lg">{template.title}</CardTitle>
-                        <p className="text-sm text-gray-600">{template.description}</p>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          {template.category && (
-                            <Badge variant="outline">{template.category}</Badge>
-                          )}
-                          {template.targetSound && (
-                            <Badge variant="secondary">Sound: {template.targetSound}</Badge>
-                          )}
-                          <p className="text-sm text-gray-600">{template.words.length} words</p>
-                          <div className="text-xs text-gray-500">
-                            Created: {new Date(template.createdAt).toLocaleDateString()}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <ContentLibraryPage />
           </TabsContent>
         </Tabs>
+
+        {/* Add Patient Modal */}
+        {showAddClientModal && (
+          <Dialog open={showAddClientModal} onOpenChange={handleCloseAddClientModal}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-600" />
+                  Add New Patient
+                </DialogTitle>
+                <DialogDescription>
+                  Fill in the details below to send an email invitation to your new patient.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">First Name</label>
+                  <Input
+                    value={newClientFirstName}
+                    onChange={(e) => setNewClientFirstName(e.target.value)}
+                    placeholder="Enter patient's first name"
+                    className="w-full"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Last Name</label>
+                  <Input
+                    value={newClientLastName}
+                    onChange={(e) => setNewClientLastName(e.target.value)}
+                    placeholder="Enter patient's last name"
+                    className="w-full"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Email Address</label>
+                  <Input
+                    type="email"
+                    value={newClientEmail}
+                    onChange={(e) => setNewClientEmail(e.target.value)}
+                    placeholder="Enter patient's email address"
+                    className="w-full"
+                  />
+                </div>
+                
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <p className="text-sm text-blue-700">
+                    <AlertCircle className="h-4 w-4 inline mr-1" />
+                    Your patient will receive a beautifully formatted invitation email with instructions to join the platform.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button 
+                  variant="outline" 
+                  onClick={handleCloseAddClientModal}
+                  disabled={addClientMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleSubmitAddClient}
+                  disabled={
+                    addClientMutation.isPending || 
+                    !newClientEmail.trim() || 
+                    !newClientFirstName.trim() || 
+                    !newClientLastName.trim()
+                  }
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {addClientMutation.isPending ? "Sending..." : "Send Invitation"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Assign Assignment Modal */}
+        <AssignAssignmentModal
+          isOpen={showAssignAssignmentModal}
+          onClose={() => setShowAssignAssignmentModal(false)}
+          clients={clients}
+          contentLibrary={Array.isArray(contentLibrary) ? contentLibrary : []}
+          onSendAssignment={sendAssignmentMutation.mutate}
+          isLoading={sendAssignmentMutation.isPending}
+          isContentLoading={isContentLibraryLoading}
+        />
       </div>
     </div>
   );

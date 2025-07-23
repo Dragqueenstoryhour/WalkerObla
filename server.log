@@ -1,0 +1,659 @@
+
+> rest-express@1.0.0 dev
+> node -r dotenv/config --experimental-specifier-resolution=node --import tsx server/index.ts
+
+Supabase URL from env: https://zupjtzgadjonkmyajrxu.supabase.co
+Supabase Anon Key from env (first few chars): eyJhbGciOi...
+
+--- Azure/ElevenLabs Configuration Check ---
+SPEECH_KEY status: Present (starts with 03OFN)
+SPEECH_REGION status: Present: eastus
+ELEVENLABS_API_KEY status: Present (starts with sk_2d)
+-------------------------------------------
+
+✅ Azure Speech Services configured successfully with region: eastus
+9:17:45 PM [express] serving on port 3001
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+9:17:48 PM [express] GET /api/therapist/invitation/pzie03q36ps0iegah5fr8 200 in 1091ms :: {"success":true,"data":{"therapistName":"Walker Lo…
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+9:17:48 PM [express] GET /api/auth/user 304 in 1299ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_1…
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+9:19:16 PM [express] GET /api/auth/user 304 in 3039ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_1…
+9:19:17 PM [express] GET /api/therapist/clients 304 in 468ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":4,"therapis…
+9:19:17 PM [express] GET /api/therapist/assignments 304 in 591ms :: {"success":true,"data":[]}
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+9:21:53 PM [express] GET /api/auth/user 304 in 1007ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_1…
+9:21:53 PM [express] GET /api/therapist/assignments 304 in 274ms :: {"success":true,"data":[]}
+9:21:54 PM [express] GET /api/therapist/clients 304 in 793ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":4,"therapis…
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+12:13:07 PM [express] GET /api/auth/user 304 in 2739ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_1…
+12:13:08 PM [express] GET /api/therapist/clients 304 in 431ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":4,"therapis…
+12:13:08 PM [express] GET /api/therapist/assignments 304 in 554ms :: {"success":true,"data":[]}
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+2:30:55 PM [express] GET /api/auth/user 304 in 2749ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_1…
+2:30:55 PM [express] GET /api/therapist/clients 304 in 417ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":4,"therapis…
+2:30:55 PM [express] GET /api/therapist/assignments 304 in 551ms :: {"success":true,"data":[]}
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+3:11:54 PM [express] GET /api/auth/user 304 in 1090ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_1…
+3:11:55 PM [express] GET /api/therapist/clients 304 in 456ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":4,"therapis…
+3:11:55 PM [express] GET /api/therapist/assignments 304 in 599ms :: {"success":true,"data":[]}
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+5:36:14 PM [express] GET /api/auth/user 304 in 1390ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_1…
+5:36:14 PM [express] GET /api/therapist/assignments 304 in 184ms :: {"success":true,"data":[]}
+5:36:15 PM [express] GET /api/therapist/clients 304 in 700ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":4,"therapis…
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:10:08 PM [express] GET /api/auth/user 304 in 1325ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_1…
+7:10:09 PM [express] GET /api/therapist/clients 304 in 825ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":4,"therapis…
+7:10:09 PM [express] GET /api/therapist/assignments 304 in 1014ms :: {"success":true,"data":[]}
+Generated 8 verified words containing "s": [
+  { text: 'whisper', syllabication: 'whis-per' },
+  { text: 'disguise', syllabication: 'dis-guise' },
+  { text: 'passenger', syllabication: 'pas-sen-ger' },
+  { text: 'fascinate', syllabication: 'fas-ci-nate' },
+  { text: 'obsidian', syllabication: 'ob-sid-i-an' },
+  { text: 'tense', syllabication: 'tense' },
+  { text: 'crisp', syllabication: 'crisp' },
+  { text: 'mossy', syllabication: 'moss-y' }
+]
+7:10:16 PM [express] POST /api/content/generate-suggested-words 200 in 2005ms :: {"success":true,"data":{"phrases":[{"text":"whisper","sylla…
+7:10:16 PM [express] POST /api/content/generate-suggested-words 200 in 1996ms :: {"success":true,"data":{"phrases":[{"text":"whisper","sylla…
+7:10:26 PM [express] POST /api/content/generate-suggested-words 200 in 0ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:10:26 PM [express] POST /api/content/generate-suggested-words 200 in 1ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:10:30 PM [express] GET /api/auth/user 304 in 548ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_17…
+7:10:30 PM [express] GET /api/therapist/clients 304 in 393ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":4,"therapis…
+7:10:30 PM [express] GET /api/therapist/assignments 304 in 577ms :: {"success":true,"data":[]}
+7:10:33 PM [express] POST /api/content/generate-suggested-words 200 in 1ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:10:33 PM [express] POST /api/content/generate-suggested-words 200 in 1ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:10:47 PM [express] GET /api/auth/user 304 in 542ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_17…
+7:10:47 PM [express] GET /api/therapist/clients 304 in 379ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":4,"therapis…
+7:10:48 PM [express] GET /api/therapist/assignments 304 in 510ms :: {"success":true,"data":[]}
+7:15:00 PM [vite] hmr update /src/pages/ContentLibraryPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:15:14 PM [vite] hmr update /src/pages/ContentLibraryPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+❌ MailerSend error: MailerSend API error: Unauthenticated.
+❌ MAILERSEND_API_TOKEN appears to be invalid or expired
+❌ Please check your MailerSend API token in the dashboard
+✅ Client invitation email sent successfully
+7:15:46 PM [express] POST /api/therapist/clients 201 in 2338ms :: {"success":true,"data":{"type":"invitation","invitation":{"id":5,"therapis…
+7:15:46 PM [express] GET /api/therapist/clients 200 in 404ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":5,"therapis…
+7:16:07 PM [vite] hmr update /src/pages/ContentLibraryPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+7:16:15 PM [express] GET /api/therapist/invitation/pzie03q36ps0iegah5fr8 304 in 408ms :: {"success":true,"data":{"therapistName":"Walker Low…
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:16:15 PM [express] GET /api/auth/user 304 in 540ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_17…
+Auth error: AuthApiError: invalid JWT: unable to parse or verify signature, token is malformed: token contains an invalid number of segments
+    at handleError (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:102:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async _handleRequest (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:195:5)
+    at async _request (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:157:16)
+    at async SupabaseAuthClient._getUser (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/GoTrueClient.ts:1406:16)
+    at async SupabaseAuthClient.getUser (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/GoTrueClient.ts:1391:14)
+    at async protect (/Users/lowendickloucks/Documents/v7.9Obla/server/supabaseAuth.ts:57:39) {
+  __isAuthError: true,
+  status: 403,
+  code: 'bad_jwt'
+}
+7:16:23 PM [express] POST /api/accept-invitation/accept/pzie03q36ps0iegah5fr8 401 in 463ms :: {"error":"Invalid or expired token"}
+7:16:32 PM [express] GET /api/auth/user 401 in 1ms :: {"error":"Unauthorized: No valid Bearer token provided."}
+Auth error: AuthApiError: invalid JWT: unable to parse or verify signature, token is malformed: token contains an invalid number of segments
+    at handleError (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:102:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async _handleRequest (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:195:5)
+    at async _request (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:157:16)
+    at async SupabaseAuthClient._getUser (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/GoTrueClient.ts:1406:16)
+    at async SupabaseAuthClient.getUser (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/GoTrueClient.ts:1391:14)
+    at async protect (/Users/lowendickloucks/Documents/v7.9Obla/server/supabaseAuth.ts:57:39) {
+  __isAuthError: true,
+  status: 403,
+  code: 'bad_jwt'
+}
+7:16:32 PM [express] POST /api/therapist/library 401 in 165ms :: {"error":"Invalid or expired token"}
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:17:09 PM [express] GET /api/auth/user 304 in 572ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_17…
+7:17:09 PM [express] GET /api/therapist/clients 304 in 398ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":5,"therapis…
+7:17:09 PM [express] GET /api/therapist/assignments 304 in 517ms :: {"success":true,"data":[]}
+Auth error: AuthApiError: invalid JWT: unable to parse or verify signature, token is malformed: token contains an invalid number of segments
+    at handleError (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:102:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async _handleRequest (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:195:5)
+    at async _request (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:157:16)
+    at async SupabaseAuthClient._getUser (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/GoTrueClient.ts:1406:16)
+    at async SupabaseAuthClient.getUser (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/GoTrueClient.ts:1391:14)
+    at async protect (/Users/lowendickloucks/Documents/v7.9Obla/server/supabaseAuth.ts:57:39) {
+  __isAuthError: true,
+  status: 403,
+  code: 'bad_jwt'
+}
+7:17:47 PM [express] GET /api/therapist/library 401 in 502ms :: {"error":"Invalid or expired token"}
+Auth error: AuthApiError: invalid JWT: unable to parse or verify signature, token is malformed: token contains an invalid number of segments
+    at handleError (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:102:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async _handleRequest (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:195:5)
+    at async _request (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:157:16)
+    at async SupabaseAuthClient._getUser (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/GoTrueClient.ts:1406:16)
+    at async SupabaseAuthClient.getUser (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/GoTrueClient.ts:1391:14)
+    at async protect (/Users/lowendickloucks/Documents/v7.9Obla/server/supabaseAuth.ts:57:39) {
+  __isAuthError: true,
+  status: 403,
+  code: 'bad_jwt'
+}
+7:17:47 PM [express] GET /api/therapist/library 401 in 174ms :: {"error":"Invalid or expired token"}
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:17:49 PM [express] GET /api/auth/user 304 in 489ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_17…
+7:17:50 PM [express] GET /api/therapist/clients 304 in 382ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":5,"therapis…
+7:17:50 PM [express] GET /api/therapist/assignments 304 in 566ms :: {"success":true,"data":[]}
+Auth error: AuthApiError: invalid JWT: unable to parse or verify signature, token is malformed: token contains an invalid number of segments
+    at handleError (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:102:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async _handleRequest (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:195:5)
+    at async _request (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:157:16)
+    at async SupabaseAuthClient._getUser (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/GoTrueClient.ts:1406:16)
+    at async SupabaseAuthClient.getUser (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/GoTrueClient.ts:1391:14)
+    at async protect (/Users/lowendickloucks/Documents/v7.9Obla/server/supabaseAuth.ts:57:39) {
+  __isAuthError: true,
+  status: 403,
+  code: 'bad_jwt'
+}
+7:17:51 PM [express] GET /api/therapist/library 401 in 133ms :: {"error":"Invalid or expired token"}
+Auth error: AuthApiError: invalid JWT: unable to parse or verify signature, token is malformed: token contains an invalid number of segments
+    at handleError (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:102:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async _handleRequest (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:195:5)
+    at async _request (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:157:16)
+    at async SupabaseAuthClient._getUser (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/GoTrueClient.ts:1406:16)
+    at async SupabaseAuthClient.getUser (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/GoTrueClient.ts:1391:14)
+    at async protect (/Users/lowendickloucks/Documents/v7.9Obla/server/supabaseAuth.ts:57:39) {
+  __isAuthError: true,
+  status: 403,
+  code: 'bad_jwt'
+}
+7:17:51 PM [express] GET /api/therapist/library 401 in 138ms :: {"error":"Invalid or expired token"}
+7:20:36 PM [vite] hmr update /src/pages/ContentLibraryPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+Auth error: AuthApiError: invalid JWT: unable to parse or verify signature, token is malformed: token contains an invalid number of segments
+    at handleError (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:102:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async _handleRequest (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:195:5)
+    at async _request (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/lib/fetch.ts:157:16)
+    at async SupabaseAuthClient._getUser (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/GoTrueClient.ts:1406:16)
+    at async SupabaseAuthClient.getUser (/Users/lowendickloucks/Documents/v7.9Obla/node_modules/@supabase/auth-js/src/GoTrueClient.ts:1391:14)
+    at async protect (/Users/lowendickloucks/Documents/v7.9Obla/server/supabaseAuth.ts:57:39) {
+  __isAuthError: true,
+  status: 403,
+  code: 'bad_jwt'
+}
+7:20:37 PM [express] GET /api/therapist/library 401 in 232ms :: {"error":"Invalid or expired token"}
+7:20:44 PM [vite] hmr update /src/pages/ContentLibraryPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:20:47 PM [express] GET /api/therapist/library 200 in 3049ms :: {"success":true,"data":[]}
+7:20:54 PM [vite] hmr update /src/pages/ContentLibraryPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:20:55 PM [express] GET /api/therapist/library 304 in 865ms :: {"success":true,"data":[]}
+7:21:07 PM [vite] hmr update /src/pages/ContentLibraryPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:21:16 PM [vite] hmr update /src/pages/ContentLibraryPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:21:27 PM [express] GET /api/auth/user 304 in 490ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_17…
+7:21:27 PM [express] GET /api/therapist/clients 304 in 406ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":5,"therapis…
+7:21:28 PM [express] GET /api/therapist/assignments 304 in 576ms :: {"success":true,"data":[]}
+7:21:30 PM [vite] hmr update /src/pages/ContentLibraryPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+❌ MailerSend error: MailerSend API error: Unauthenticated.
+❌ MAILERSEND_API_TOKEN appears to be invalid or expired
+❌ Please check your MailerSend API token in the dashboard
+✅ Client invitation email sent successfully
+7:21:42 PM [express] POST /api/therapist/clients 201 in 1225ms :: {"success":true,"data":{"type":"invitation","invitation":{"id":6,"therapis…
+7:21:42 PM [express] GET /api/therapist/clients 200 in 379ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":6,"therapis…
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:21:59 PM [express] GET /api/auth/user 304 in 521ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_17…
+7:21:59 PM [express] GET /api/therapist/clients 304 in 381ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":6,"therapis…
+7:21:59 PM [express] GET /api/therapist/assignments 304 in 526ms :: {"success":true,"data":[]}
+7:22:00 PM [express] GET /api/therapist/library 304 in 308ms :: {"success":true,"data":[]}
+7:22:00 PM [express] GET /api/therapist/library 304 in 320ms :: {"success":true,"data":[]}
+7:22:02 PM [express] POST /api/content/generate-suggested-words 200 in 1ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:22:02 PM [express] POST /api/content/generate-suggested-words 200 in 0ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:22:21 PM [express] GET /api/auth/user 304 in 590ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_17…
+7:22:21 PM [express] GET /api/therapist/assignments 304 in 196ms :: {"success":true,"data":[]}
+7:22:22 PM [express] GET /api/therapist/clients 304 in 613ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":6,"therapis…
+7:22:23 PM [express] GET /api/therapist/library 304 in 313ms :: {"success":true,"data":[]}
+7:22:23 PM [express] GET /api/therapist/library 304 in 299ms :: {"success":true,"data":[]}
+7:22:24 PM [express] POST /api/content/generate-suggested-words 200 in 1ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:22:24 PM [express] POST /api/content/generate-suggested-words 200 in 1ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:22:32 PM [express] POST /api/content/generate-suggested-words 200 in 1ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:22:32 PM [express] POST /api/content/generate-suggested-words 200 in 0ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:23:23 PM [vite] hmr update /src/pages/ContentLibraryPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:23:24 PM [express] GET /api/therapist/library 304 in 543ms :: {"success":true,"data":[]}
+7:23:30 PM [vite] hmr update /src/pages/ContentLibraryPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:23:31 PM [express] GET /api/therapist/library 304 in 731ms :: {"success":true,"data":[]}
+7:23:51 PM [express] POST /api/content/generate-suggested-words 200 in 0ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:23:51 PM [express] POST /api/content/generate-suggested-words 200 in 1ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:25:34 PM [express] GET /api/auth/user 304 in 3169ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_1…
+7:25:34 PM [express] GET /api/therapist/clients 304 in 380ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":6,"therapis…
+7:25:36 PM [express] GET /api/therapist/library 304 in 308ms :: {"success":true,"data":[]}
+7:25:36 PM [express] GET /api/therapist/library 304 in 305ms :: {"success":true,"data":[]}
+7:25:36 PM [express] GET /api/therapist/assignments 304 in 2578ms :: {"success":true,"data":[]}
+7:25:37 PM [express] POST /api/content/generate-suggested-words 200 in 1ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:25:37 PM [express] POST /api/content/generate-suggested-words 200 in 1ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:25:41 PM [express] POST /api/therapist/library 201 in 774ms :: {"success":true,"data":{"id":1,"createdBy":"1d0c930e-309a-499a-84c7-37111b3…
+7:25:42 PM [express] GET /api/therapist/library 200 in 280ms :: {"success":true,"data":[{"id":1,"createdBy":"1d0c930e-309a-499a-84c7-37111b3…
+7:25:51 PM [vite] hmr update /src/components/modals/AssignmentCustomizationModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:25:51 PM [vite] warning: Duplicate key "transform" in object literal
+24 |      color: '#374151',
+25 |      minHeight: '40px',
+26 |      transform: isNew ? 'scale(0)' : CSS.Transform.toString(transform),
+   |      ^
+27 |      animation: isNew ? 'growIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none'
+28 |    };
+
+  Plugin: vite:esbuild
+  File: /Users/lowendickloucks/Documents/v7.9Obla/client/src/components/modals/AssignmentCustomizationModal.tsx
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:25:52 PM [express] GET /api/auth/user 304 in 549ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_17…
+7:25:52 PM [express] GET /api/therapist/assignments 304 in 223ms :: {"success":true,"data":[]}
+7:25:53 PM [express] GET /api/therapist/clients 304 in 828ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":6,"therapis…
+7:25:54 PM [express] GET /api/therapist/library 304 in 535ms :: {"success":true,"data":[{"id":1,"createdBy":"1d0c930e-309a-499a-84c7-37111b3…
+7:25:54 PM [express] GET /api/therapist/library 304 in 513ms :: {"success":true,"data":[{"id":1,"createdBy":"1d0c930e-309a-499a-84c7-37111b3…
+7:25:58 PM [express] POST /api/content/generate-suggested-words 200 in 1ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:25:58 PM [express] POST /api/content/generate-suggested-words 200 in 1ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:26:00 PM [vite] hmr update /src/components/modals/AssignmentCustomizationModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:26:00 PM [vite] warning: Duplicate key "transform" in object literal
+24 |      color: '#374151',
+25 |      minHeight: '40px',
+26 |      transform: isNew ? 'scale(0)' : CSS.Transform.toString(transform),
+   |      ^
+27 |      animation: isNew ? 'growIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none'
+28 |    };
+
+  Plugin: vite:esbuild
+  File: /Users/lowendickloucks/Documents/v7.9Obla/client/src/components/modals/AssignmentCustomizationModal.tsx
+7:26:00 PM [express] POST /api/content/generate-suggested-words 200 in 1ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:26:00 PM [express] POST /api/content/generate-suggested-words 200 in 0ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:26:13 PM [vite] hmr update /src/components/modals/AssignmentCustomizationModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:26:13 PM [express] POST /api/content/generate-suggested-words 200 in 0ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:26:27 PM [vite] hmr update /src/components/modals/AssignmentCustomizationModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:26:27 PM [express] POST /api/content/generate-suggested-words 200 in 0ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:26:35 PM [express] PUT /api/therapist/library/1 200 in 7ms
+7:26:37 PM [express] POST /api/content/generate-suggested-words 200 in 1ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:26:37 PM [express] POST /api/content/generate-suggested-words 200 in 1ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:26:47 PM [vite] hmr update /src/components/modals/AssignmentCustomizationModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:26:56 PM [vite] hmr update /src/components/modals/AssignmentCustomizationModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:27:04 PM [vite] hmr update /src/components/modals/AssignmentCustomizationModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:27:14 PM [vite] hmr update /src/components/modals/AssignmentCustomizationModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:27:53 PM [express] GET /api/auth/user 304 in 3238ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_1…
+7:27:53 PM [express] GET /api/therapist/clients 304 in 359ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":6,"therapis…
+7:27:53 PM [express] GET /api/therapist/assignments 304 in 617ms :: {"success":true,"data":[]}
+7:27:54 PM [express] GET /api/therapist/library 304 in 261ms :: {"success":true,"data":[{"id":1,"createdBy":"1d0c930e-309a-499a-84c7-37111b3…
+7:27:55 PM [express] GET /api/therapist/library 304 in 268ms :: {"success":true,"data":[{"id":1,"createdBy":"1d0c930e-309a-499a-84c7-37111b3…
+7:27:57 PM [express] POST /api/content/generate-suggested-words 200 in 1ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:27:57 PM [express] POST /api/content/generate-suggested-words 200 in 1ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:31:31 PM [vite] hmr update /src/components/modals/AssignmentCustomizationModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:31:32 PM [express] GET /api/auth/user 304 in 993ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_17…
+7:31:32 PM [express] GET /api/therapist/clients 304 in 366ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":6,"therapis…
+7:31:33 PM [express] GET /api/therapist/assignments 304 in 473ms :: {"success":true,"data":[]}
+7:31:34 PM [express] GET /api/therapist/library 304 in 264ms :: {"success":true,"data":[{"id":1,"createdBy":"1d0c930e-309a-499a-84c7-37111b3…
+7:31:34 PM [express] GET /api/therapist/library 304 in 249ms :: {"success":true,"data":[{"id":1,"createdBy":"1d0c930e-309a-499a-84c7-37111b3…
+7:31:37 PM [express] POST /api/content/generate-suggested-words 200 in 1ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:31:37 PM [express] POST /api/content/generate-suggested-words 200 in 1ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:31:40 PM [express] POST /api/content/generate-suggested-words 200 in 0ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:31:40 PM [express] POST /api/content/generate-suggested-words 200 in 0ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:31:43 PM [vite] hmr update /src/components/modals/AssignmentCustomizationModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:31:43 PM [express] POST /api/content/generate-suggested-words 200 in 1ms :: {"success":true,"data":{"phrases":[{"text":"whisper","syllabic…
+7:32:23 PM [vite] hmr update /src/components/modals/AssignmentCustomizationModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:32:31 PM [vite] hmr update /src/components/modals/AssignmentCustomizationModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+❌ MailerSend error: MailerSend API error: Unauthenticated.
+❌ MAILERSEND_API_TOKEN appears to be invalid or expired
+❌ Please check your MailerSend API token in the dashboard
+✅ Client invitation email sent successfully
+7:33:16 PM [express] POST /api/therapist/clients 201 in 3902ms :: {"success":true,"data":{"type":"invitation","invitation":{"id":7,"therapis…
+7:33:17 PM [express] GET /api/therapist/clients 200 in 433ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":7,"therapis…
+7:33:56 PM [vite] hmr update /src/components/modals/AssignmentCustomizationModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:34:18 PM [vite] hmr update /src/pages/ContentLibraryPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:39:05 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:39:07 PM [express] GET /api/auth/user 304 in 1383ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_1…
+7:39:10 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:39:34 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:39:34 PM [vite] ✨ new dependencies optimized: @radix-ui/react-dropdown-menu
+7:39:34 PM [vite] ✨ optimized dependencies changed. reloading
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:39:37 PM [express] GET /api/auth/user 304 in 579ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_17…
+7:39:37 PM [express] GET /api/therapist/clients 304 in 369ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":7,"therapis…
+7:39:37 PM [express] GET /api/therapist/assignments 304 in 545ms :: {"success":true,"data":[]}
+7:45:14 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:45:16 PM [express] GET /api/auth/user 304 in 1167ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_1…
+7:45:20 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:45:26 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:45:27 PM [express] GET /api/therapist/library 304 in 601ms :: {"success":true,"data":[{"id":1,"createdBy":"1d0c930e-309a-499a-84c7-37111b3…
+7:45:38 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:45:46 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:45:52 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:45:53 PM [vite] ✨ new dependencies optimized: @radix-ui/react-scroll-area, @radix-ui/react-checkbox, react-day-picker, @radix-ui/react-popover
+7:45:53 PM [vite] ✨ optimized dependencies changed. reloading
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:45:56 PM [express] GET /api/auth/user 304 in 525ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_17…
+7:45:58 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:46:00 PM [express] GET /api/therapist/clients 304 in 687ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":7,"therapis…
+7:46:00 PM [express] GET /api/therapist/assignments 304 in 1039ms :: {"success":true,"data":[]}
+7:46:00 PM [express] GET /api/therapist/library 304 in 1196ms :: {"success":true,"data":[{"id":1,"createdBy":"1d0c930e-309a-499a-84c7-37111b…
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:50:05 PM [express] GET /api/auth/user 304 in 1273ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_1…
+7:50:06 PM [express] GET /api/therapist/library 304 in 309ms :: {"success":true,"data":[{"id":1,"createdBy":"1d0c930e-309a-499a-84c7-37111b3…
+7:50:06 PM [express] GET /api/therapist/assignments 304 in 543ms :: {"success":true,"data":[]}
+7:50:06 PM [express] GET /api/therapist/clients 304 in 706ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":7,"therapis…
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:50:33 PM [express] GET /api/auth/user 304 in 921ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_17…
+7:50:34 PM [express] GET /api/therapist/assignments 304 in 190ms :: {"success":true,"data":[]}
+7:50:34 PM [express] GET /api/therapist/library 304 in 540ms :: {"success":true,"data":[{"id":1,"createdBy":"1d0c930e-309a-499a-84c7-37111b3…
+7:50:34 PM [express] GET /api/therapist/clients 304 in 678ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":7,"therapis…
+7:52:38 PM [vite] hmr update /src/components/modals/AssignAssignmentModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:52:46 PM [vite] hmr update /src/components/modals/AssignAssignmentModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:52:51 PM [vite] hmr update /src/components/modals/AssignAssignmentModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:52:59 PM [vite] hmr update /src/components/modals/AssignAssignmentModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:53:11 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:53:19 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:53:25 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:53:33 PM [vite] hmr update /src/components/modals/AssignAssignmentModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:53:40 PM [vite] hmr update /src/components/modals/AssignAssignmentModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+7:53:47 PM [vite] hmr update /src/components/modals/AssignAssignmentModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:55:07 PM [express] GET /api/auth/user 304 in 1680ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_1…
+7:55:07 PM [express] GET /api/therapist/clients 304 in 464ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":7,"therapis…
+7:55:07 PM [express] GET /api/therapist/assignments 304 in 577ms :: {"success":true,"data":[]}
+7:55:07 PM [express] GET /api/therapist/library 304 in 669ms :: {"success":true,"data":[{"id":1,"createdBy":"1d0c930e-309a-499a-84c7-37111b3…
+7:55:11 PM [express] GET /api/therapist/library 304 in 426ms :: {"success":true,"data":[{"id":1,"createdBy":"1d0c930e-309a-499a-84c7-37111b3…
+7:55:12 PM [express] GET /api/therapist/library 304 in 335ms :: {"success":true,"data":[{"id":1,"createdBy":"1d0c930e-309a-499a-84c7-37111b3…
+❌ MailerSend error: MailerSend API error: Unauthenticated.
+❌ MAILERSEND_API_TOKEN appears to be invalid or expired
+❌ Please check your MailerSend API token in the dashboard
+✅ Client invitation email sent successfully
+7:55:33 PM [express] POST /api/therapist/clients 201 in 2323ms :: {"success":true,"data":{"type":"invitation","invitation":{"id":8,"therapis…
+7:55:34 PM [express] GET /api/therapist/clients 200 in 770ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":8,"therapis…
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+7:56:06 PM [express] GET /api/auth/user 304 in 474ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_17…
+7:56:07 PM [express] GET /api/therapist/library 304 in 291ms :: {"success":true,"data":[{"id":1,"createdBy":"1d0c930e-309a-499a-84c7-37111b3…
+7:56:07 PM [express] GET /api/therapist/assignments 304 in 536ms :: {"success":true,"data":[]}
+7:56:07 PM [express] GET /api/therapist/clients 304 in 643ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":8,"therapis…
+❌ MailerSend error: MailerSend API error: Unauthenticated.
+❌ MAILERSEND_API_TOKEN appears to be invalid or expired
+❌ Please check your MailerSend API token in the dashboard
+✅ Client invitation email sent successfully
+7:57:11 PM [express] POST /api/therapist/clients 201 in 1620ms :: {"success":true,"data":{"type":"invitation","invitation":{"id":9,"therapis…
+7:57:11 PM [express] GET /api/therapist/clients 200 in 332ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":9,"therapis…
+8:01:13 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+8:01:18 PM [express] GET /api/auth/user 304 in 4317ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_1…
+8:01:18 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+8:01:25 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+8:01:30 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+8:01:36 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+8:01:42 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+8:01:51 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+8:01:58 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+8:02:07 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+8:02:13 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+8:02:21 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+8:02:31 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+8:02:38 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+8:02:43 PM [vite] hmr update /src/components/modals/AssignAssignmentModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+8:02:50 PM [vite] hmr update /src/components/modals/AssignAssignmentModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+8:02:57 PM [vite] hmr update /src/components/modals/AssignAssignmentModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+8:03:04 PM [vite] hmr update /src/components/modals/AssignAssignmentModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+8:03:12 PM [vite] hmr update /src/components/modals/AssignAssignmentModal.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+8:03:21 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+8:03:28 PM [vite] hmr update /src/pages/TherapistPortalPage.tsx, /src/index.css?v=n4zR3zdkPF88TRTTCfDZk
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+8:06:40 PM [express] GET /api/auth/user 304 in 1179ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_1…
+8:06:41 PM [express] GET /api/therapist/clients 304 in 468ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":9,"therapis…
+8:06:41 PM [express] GET /api/therapist/assignments 304 in 588ms :: {"success":true,"data":[]}
+8:06:41 PM [express] GET /api/therapist/library 304 in 700ms :: {"success":true,"data":[{"id":1,"createdBy":"1d0c930e-309a-499a-84c7-37111b3…
+❌ MailerSend error: MailerSend API error: Unauthenticated.
+❌ MAILERSEND_API_TOKEN appears to be invalid or expired
+❌ Please check your MailerSend API token in the dashboard
+✅ Client invitation email sent successfully
+8:06:58 PM [express] POST /api/therapist/clients 201 in 1525ms :: {"success":true,"data":{"type":"invitation","invitation":{"id":10,"therapi…
+8:06:58 PM [express] GET /api/therapist/clients 200 in 386ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":10,"therapi…
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+8:07:01 PM [express] GET /api/auth/user 304 in 369ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_17…
+8:07:02 PM [express] GET /api/therapist/clients 304 in 929ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":10,"therapi…
+8:07:02 PM [express] GET /api/therapist/assignments 304 in 1119ms :: {"success":true,"data":[]}
+8:07:02 PM [express] GET /api/therapist/library 304 in 1205ms :: {"success":true,"data":[{"id":1,"createdBy":"1d0c930e-309a-499a-84c7-37111b…
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+8:08:24 PM [express] GET /api/auth/user 304 in 513ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_17…
+8:08:24 PM [express] GET /api/therapist/clients 304 in 392ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":10,"therapi…
+8:08:24 PM [express] GET /api/therapist/assignments 304 in 486ms :: {"success":true,"data":[]}
+8:08:24 PM [express] GET /api/therapist/library 304 in 584ms :: {"success":true,"data":[{"id":1,"createdBy":"1d0c930e-309a-499a-84c7-37111b3…
+Attempting to verify token for user auth...
+USER ENDPOINT: Supabase user authenticated: walkereloucks+1@gmail.com
+USER ENDPOINT: Found custom user with role: therapist
+USER ENDPOINT: Returning existing user: {
+  id: '1d0c930e-309a-499a-84c7-37111b35026e',
+  email: 'walkereloucks+1@gmail.com',
+  role: 'therapist'
+}
+8:09:05 PM [express] GET /api/auth/user 304 in 525ms :: {"user":{"id":"1d0c930e-309a-499a-84c7-37111b35026e","username":"walker_lowendick_17…
+8:09:05 PM [express] GET /api/therapist/clients 304 in 374ms :: {"success":true,"data":{"clients":[],"pendingInvitations":[{"id":10,"therapi…
+8:09:05 PM [express] GET /api/therapist/assignments 304 in 504ms :: {"success":true,"data":[]}
+8:09:05 PM [express] GET /api/therapist/library 304 in 730ms :: {"success":true,"data":[{"id":1,"createdBy":"1d0c930e-309a-499a-84c7-37111b3…

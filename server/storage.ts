@@ -174,6 +174,15 @@ export interface IStorage {
       completedItems: number;
       averageScore: number;
     }>;
+    sendAssignmentToClients(data: {
+      sourceAssignmentId: number;
+      clientIds: string[];
+      therapistId: string;
+      therapistName: string;
+      dueDate?: string;
+      therapistNotes?: string;
+    }): Promise<{ assignments: Assignment[]; items: AssignmentItem[] }>;
+    
     // User saved readings operations
     getUserSavedReadings(userId: string): Promise<UserSavedPhrase[]>;
     createUserSavedReading(content: InsertUserSavedPhrase): Promise<UserSavedPhrase>;
@@ -194,6 +203,7 @@ export interface IStorage {
     // Content library operations for therapists
     getContentLibrary(therapistId: string): Promise<ContentLibrary[]>;
     getPublicContentLibrary(): Promise<ContentLibrary[]>;
+    getContentLibraryItem(id: number): Promise<ContentLibrary | undefined>;
     createContentLibraryItem(content: InsertContentLibrary): Promise<ContentLibrary>;
     updateContentLibraryItem(id: number, updates: Partial<ContentLibrary>): Promise<ContentLibrary>;
     deleteContentLibraryItem(id: number): Promise<void>;
@@ -210,6 +220,55 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error fetching user:", error);
       throw new Error("Failed to fetch user");
+    }
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    try {
+      const [user] = await db.select().from(users).where(eq(users.email, email));
+      return user;
+    } catch (error) {
+      console.error("Error fetching user by email:", error);
+      throw new Error("Failed to fetch user by email");
+    }
+  }
+
+  async getTherapistClient(therapistId: string, clientId: string): Promise<TherapistClient | undefined> {
+    try {
+      // Get ANY relationship (active or inactive) between this therapist and client
+      const [relationship] = await db
+        .select()
+        .from(therapistClients)
+        .where(and(
+          eq(therapistClients.therapistId, therapistId),
+          eq(therapistClients.clientId, clientId)
+        ));
+      return relationship;
+    } catch (error) {
+      console.error("Error fetching therapist-client relationship:", error);
+      throw new Error("Failed to fetch therapist-client relationship");
+    }
+  }
+
+  async updateTherapistClientStatus(therapistId: string, clientId: string, isActive: boolean): Promise<TherapistClient> {
+    try {
+      const [relationship] = await db
+        .update(therapistClients)
+        .set({ isActive })
+        .where(and(
+          eq(therapistClients.therapistId, therapistId),
+          eq(therapistClients.clientId, clientId)
+        ))
+        .returning();
+      
+      if (!relationship) {
+        throw new Error("Therapist-client relationship not found");
+      }
+      
+      return relationship;
+    } catch (error) {
+      console.error("Error updating therapist-client relationship status:", error);
+      throw new Error("Failed to update therapist-client relationship status");
     }
   }
 
@@ -249,9 +308,22 @@ export class DatabaseStorage implements IStorage {
       }
       
       return user;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error upserting user:", error);
-      throw new Error("Failed to upsert user");
+      console.error("User data:", userData);
+      
+      // Check if it's a unique constraint violation
+      if (error.code === '23505') {
+        if (error.constraint === 'users_email_idx') {
+          throw new Error(`User with email ${userData.email} already exists`);
+        }
+        if (error.constraint === 'users_username_idx') {
+          throw new Error(`Username ${userData.username} already exists`);
+        }
+        throw new Error(`Unique constraint violation: ${error.constraint}`);
+      }
+      
+      throw new Error(`Failed to upsert user: ${error.message}`);
     }
   }
 
@@ -847,6 +919,61 @@ export class DatabaseStorage implements IStorage {
       ));
   }
 
+  // Send existing assignment to multiple clients
+  async sendAssignmentToClients(data: {
+    sourceAssignmentId: number;
+    clientIds: string[];
+    therapistId: string;
+    therapistName: string;
+    dueDate?: string;
+    therapistNotes?: string;
+  }): Promise<{ assignments: Assignment[]; items: AssignmentItem[] }> {
+    // Get the source assignment and its items
+    const sourceAssignment = await this.getAssignment(data.sourceAssignmentId);
+    if (!sourceAssignment) {
+      throw new Error('Source assignment not found');
+    }
+
+    const sourceItems = await this.getAssignmentItems(data.sourceAssignmentId);
+
+    const createdAssignments: Assignment[] = [];
+    const createdItems: AssignmentItem[] = [];
+
+    // Create a new assignment for each client
+    for (const clientId of data.clientIds) {
+      // Create assignment
+      const newAssignment = await this.createAssignment({
+        userId: clientId,
+        therapistId: data.therapistId,
+        therapistName: data.therapistName,
+        title: sourceAssignment.title,
+        description: data.therapistNotes 
+          ? `${sourceAssignment.description || ''}\n\nNotes from your therapist: ${data.therapistNotes}`.trim()
+          : sourceAssignment.description,
+        dueDate: data.dueDate ? new Date(data.dueDate) : null
+      });
+
+      createdAssignments.push(newAssignment);
+
+      // Create assignment items
+      for (const sourceItem of sourceItems) {
+        const newItem = await this.createAssignmentItem({
+          assignmentId: newAssignment.id,
+          itemType: sourceItem.itemType,
+          content: sourceItem.content,
+          syllabication: sourceItem.syllabication,
+          phonetic: sourceItem.phonetic,
+          definition: sourceItem.definition,
+          difficulty: sourceItem.difficulty
+        });
+
+        createdItems.push(newItem);
+      }
+    }
+
+    return { assignments: createdAssignments, items: createdItems };
+  }
+
   // User saved readings operations (stored as phrases with reader_content source)
   async getUserSavedReadings(userId: string): Promise<UserSavedPhrase[]> {
     const readings = await db
@@ -867,7 +994,10 @@ export class DatabaseStorage implements IStorage {
 
   // Therapist-client relationship operations
   async getTherapistClients(therapistId: string): Promise<(TherapistClient & { client: User })[]> {
-    const relationships = await db
+    console.log(`🔍 getTherapistClients called for therapist: ${therapistId}`);
+    
+    // First, let's see ALL relationships for this therapist (including inactive)
+    const allRelationships = await db
       .select({
         id: therapistClients.id,
         therapistId: therapistClients.therapistId,
@@ -876,17 +1006,56 @@ export class DatabaseStorage implements IStorage {
         isActive: therapistClients.isActive,
         notes: therapistClients.notes,
         createdAt: therapistClients.createdAt,
-        client: users
+        client: {
+          id: users.id,
+          username: users.username,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          bio: users.bio,
+          profileImageUrl: users.profileImageUrl,
+          role: users.role,
+          licenseNumber: users.licenseNumber,
+          specializations: users.specializations,
+          level: users.level,
+          xp: users.xp,
+          totalExercisesCompleted: users.totalExercisesCompleted,
+          streakDays: users.streakDays,
+          lastActivityDate: users.lastActivityDate,
+          unlockedRewards: users.unlockedRewards,
+          stripeCustomerId: users.stripeCustomerId,
+          stripeSubscriptionId: users.stripeSubscriptionId,
+          subscriptionStatus: users.subscriptionStatus,
+          subscriptionStartDate: users.subscriptionStartDate,
+          subscriptionEndDate: users.subscriptionEndDate,
+          trialEndDate: users.trialEndDate,
+          createdAt: users.createdAt
+        }
       })
       .from(therapistClients)
       .innerJoin(users, eq(therapistClients.clientId, users.id))
-      .where(and(
-        eq(therapistClients.therapistId, therapistId),
-        eq(therapistClients.isActive, true)
-      ))
+      .where(eq(therapistClients.therapistId, therapistId))
       .orderBy(desc(therapistClients.assignedDate));
     
-    return relationships;
+    console.log(`🔍 ALL relationships for therapist ${therapistId}:`, allRelationships.map(r => ({
+      relationshipId: r.id,
+      clientId: r.clientId,
+      clientEmail: r.client.email,
+      isActive: r.isActive,
+      assignedDate: r.assignedDate
+    })));
+    
+    // Now filter for active only
+    const activeRelationships = allRelationships.filter(r => r.isActive);
+    
+    console.log(`🔍 ACTIVE relationships for therapist ${therapistId}:`, activeRelationships.map(r => ({
+      relationshipId: r.id,
+      clientId: r.clientId,
+      clientEmail: r.client.email,
+      isActive: r.isActive
+    })));
+    
+    return activeRelationships;
   }
 
   async addTherapistClient(relationship: InsertTherapistClient): Promise<TherapistClient> {
@@ -914,7 +1083,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(users)
       .where(and(
-        sql`${users.email} = ANY(${emails})`,
+        inArray(users.email, emails),
         eq(users.role, 'client')
       ));
     
@@ -997,6 +1166,15 @@ export class DatabaseStorage implements IStorage {
       .from(contentLibrary)
       .where(eq(contentLibrary.isPublic, true))
       .orderBy(desc(contentLibrary.usageCount), desc(contentLibrary.updatedAt));
+    
+    return content;
+  }
+
+  async getContentLibraryItem(id: number): Promise<ContentLibrary | undefined> {
+    const [content] = await db
+      .select()
+      .from(contentLibrary)
+      .where(eq(contentLibrary.id, id));
     
     return content;
   }

@@ -67,6 +67,18 @@ Message: {message}"""
         # Send email
         result = mailer.send(mail_body)
         
+        # Check if result indicates an error
+        if isinstance(result, str):
+            # Handle HTTP error responses
+            if result.startswith(('400', '401', '403', '404', '422', '429', '500')):
+                error_code = result.split('\n')[0]
+                try:
+                    error_details = json.loads(result.split('\n', 1)[1])
+                    error_msg = error_details.get('message', f'HTTP {error_code} error')
+                except:
+                    error_msg = f'HTTP {error_code} error'
+                return {"success": False, "error": f"MailerSend API error: {error_msg}"}
+        
         return {"success": True, "result": result}
         
     except Exception as e:
@@ -195,6 +207,80 @@ This invitation will expire in 7 days.
         # Send email
         result = mailer.send(mail_body)
         
+        # Check if result indicates an error
+        if isinstance(result, str):
+            # Handle HTTP error responses
+            if result.startswith(('400', '401', '403', '404', '422', '429', '500')):
+                error_code = result.split('\n')[0]
+                try:
+                    error_details = json.loads(result.split('\n', 1)[1])
+                    error_msg = error_details.get('message', f'HTTP {error_code} error')
+                except:
+                    error_msg = f'HTTP {error_code} error'
+                return {"success": False, "error": f"MailerSend API error: {error_msg}"}
+        
+        return {"success": True, "result": result}
+        
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+def send_custom_email(to_email, subject, html_content):
+    """Send custom HTML email using MailerSend"""
+    try:
+        # Get API token from environment
+        api_token = os.getenv('MAILERSEND_API_TOKEN')
+        if not api_token:
+            raise Exception("MAILERSEND_API_TOKEN environment variable not set")
+        
+        # Initialize MailerSend client
+        mailer = emails.NewEmail(api_token)
+        
+        # Create email message structure
+        mail_body = {}
+        
+        # Set from address (using verified domain)
+        mail_from = {
+            "name": "Obla Speech Therapy",
+            "email": "noreply@obla.me"
+        }
+        mailer.set_mail_from(mail_from, mail_body)
+        
+        # Set to address
+        mail_to = [
+            {
+                "name": "Client",
+                "email": to_email
+            }
+        ]
+        mailer.set_mail_to(mail_to, mail_body)
+        
+        # Set subject
+        mailer.set_subject(subject, mail_body)
+        
+        # Set HTML content (the beautiful template from TypeScript)
+        mailer.set_html_content(html_content, mail_body)
+        
+        # Set plain text content (extract text from HTML)
+        import re
+        text_content = re.sub('<[^<]+?>', '', html_content).strip()
+        text_content = re.sub(r'\s+', ' ', text_content)  # Clean up whitespace
+        mailer.set_plaintext_content(text_content, mail_body)
+        
+        # Send email
+        result = mailer.send(mail_body)
+        
+        # Check if result indicates an error
+        if isinstance(result, str):
+            # Handle HTTP error responses
+            if result.startswith(('400', '401', '403', '404', '422', '429', '500')):
+                error_code = result.split('\n')[0]
+                try:
+                    error_details = json.loads(result.split('\n', 1)[1])
+                    error_msg = error_details.get('message', f'HTTP {error_code} error')
+                except:
+                    error_msg = f'HTTP {error_code} error'
+                return {"success": False, "error": f"MailerSend API error: {error_msg}"}
+        
         return {"success": True, "result": result}
         
     except Exception as e:
@@ -209,13 +295,20 @@ if __name__ == "__main__":
         email_type = input_data.get('type', 'contact')
         
         if email_type == 'client_invitation':
-            # Client invitation email
-            to_email = input_data.get('to_email', '')
+            # Client invitation email - handle both old and new format
+            to_email = input_data.get('to', input_data.get('to_email', ''))
             therapist_name = input_data.get('therapist_name', '')
             invitation_link = input_data.get('invitation_link', '')
             assignments_link = input_data.get('assignments_link', '')
+            html_content = input_data.get('html', '')
+            email_subject = input_data.get('subject', f"Invitation to Join {therapist_name}'s Speech Therapy Program")
             
-            result = send_client_invitation(to_email, therapist_name, invitation_link, assignments_link)
+            if html_content:
+                # Use the new beautiful HTML template from TypeScript
+                result = send_custom_email(to_email, email_subject, html_content)
+            else:
+                # Fallback to old template
+                result = send_client_invitation(to_email, therapist_name, invitation_link, assignments_link)
         else:
             # Contact form email (default)
             name = input_data.get('name', '')

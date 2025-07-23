@@ -6,332 +6,237 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Obla is a speech therapy and pronunciation practice platform that combines AI-powered speech assessment with gamification elements. The application serves both individual users and therapists, offering personalized practice sessions, progress tracking, and therapeutic assignment management.
 
-## General Guidance for Claude
+## Core Directives for Claude Code
 
-**Your primary directive is to be efficient and effective.**
-* **For high-level understanding, context gathering, and broad code analysis (especially involving multiple files or directories), you MUST use the Gemini CLI.** This leverages Gemini's massive context window and cost-effective tokens for the heavy lifting of reading and summarizing large codebases.
-* **For detailed logic, planning, and specific code modifications, use your own reasoning capabilities.** Once Gemini provides the necessary context, you can then apply your intelligence to solve the problem, suggest changes, or generate code.
-* Always refer to the Gemini CLI instructions below when planning your initial analysis steps.
+### 1. Efficiency Strategy (CRITICAL)
+**Use Gemini CLI for broad analysis, your intelligence for targeted work:**
+
+- **ALWAYS use `gemini -p` first** for:
+  - Initial project understanding
+  - Multi-file/directory analysis
+  - Architecture comprehension
+  - Cross-layer debugging
+  - Feature implementation planning
+
+- **Use your reasoning** for:
+  - Specific code generation
+  - Detailed implementation logic
+  - Targeted bug fixes
+  - Code optimization
+
+### 2. Common Workflow Pattern
+```bash
+# Step 1: Broad analysis with Gemini
+gemini -p "@client/src/contexts/ @server/routes/ Explain the authentication flow"
+
+# Step 2: Target your work based on Gemini's findings
+# Then generate specific code or fixes
+```
+
+### 3. File System Navigation
+**Current Working Directory Context:**
+- Root contains: `client/`, `server/`, `shared/`, `migrations/`, `api/`
+- Use relative paths: `@client/src/pages/` not `@./client/src/pages/`
+- Prefer directory inclusion over individual files
 
 ---
 
-## Development Commands
+## Quick Reference Commands
 
-### Core Development
+### Development
 ```bash
 npm run dev          # Start development server (client + server)
-npm run build        # Build for production (client + server)
-npm run start        # Start production server
+npm run build        # Build for production
 npm run check        # TypeScript type checking
-Database Management
-Bash
-
-npm run db:push      # Push schema changes to database
-Testing
-Bash
-
+npm run db:push      # Push schema changes
 npm test             # Run all tests
-npm run test:client  # Run client-side tests (React Testing Library)
-npm run test:server  # Run server-side tests (Node.js)
-Architecture Overview
-Monorepo Structure
-client/: React frontend with TypeScript, Vite, Tailwind CSS
+```
 
-server/: Express.js backend with TypeScript
+### Gemini CLI Examples
+```bash
+# Project overview
+gemini -p "@./ --all_files Summarize the Obla project architecture"
 
-shared/: Shared TypeScript schemas and types (Drizzle ORM + Zod)
+# Authentication flow
+gemini -p "@client/src/contexts/AuthContext.tsx @server/routes/authRoutes.ts @server/supabaseAuth.ts Trace the complete auth flow"
 
-migrations/: Database migration files
+# Speech processing pipeline  
+gemini -p "@server/azure.ts @client/src/hooks/useRecording.ts @server/routes/pronunciationRoutes.ts How does speech assessment work end-to-end?"
 
-api/: Additional services (NVIDIA Audio2Face animation server)
+# Database operations
+gemini -p "@shared/schema.ts @server/storage.ts @client/src/lib/ Explain data persistence patterns"
+```
 
-Key Technologies
-Frontend: React 18, Vite, Tailwind CSS, Radix UI, TanStack Query
+---
 
-Backend: Express.js, PostgreSQL, Drizzle ORM
+## Architecture Quick Facts
 
-Authentication: Supabase Auth (Google OAuth)
+### Tech Stack
+- **Frontend:** React 18 + Vite + Tailwind + Radix UI + TanStack Query
+- **Backend:** Express.js + PostgreSQL + Drizzle ORM  
+- **Auth:** Supabase (Google OAuth)
+- **Speech:** Azure Cognitive Services + ElevenLabs + OpenAI
 
-Speech Processing: Azure Cognitive Services, ElevenLabs, OpenAI
-
-Routing: Wouter (lightweight React router)
-
-Backend Architecture
-Route Structure
-Routes are modular and located in server/routes/:
-
-pronunciationRoutes.ts - Speech assessment, TTS synthesis (/api/pronunciation/*)
-
-authRoutes.ts - Authentication and user management (/api/auth/*)
-
-therapistRoutes.ts - Therapist-specific features (/api/therapist/*)
-
-assignmentRoutes.ts - Assignment management (/api/assignments/*)
-
-contentRoutes.ts - Content library management (/api/content/*)
-
-userRoutes.ts - User data and statistics (/api/user/*)
-
-voiceRoutes.ts - Voice synthesis (/api/voice/*)
-
-visemeRoutes.ts - Facial animation data (/api/visemes/*)
-
-Key Services
-server/azure.ts: Azure Cognitive Services integration (speech assessment, TTS)
-
-server/openai.ts: OpenAI API integration (content generation)
-
-server/azureViseme.ts: Azure Speech SDK for viseme generation
-
-server/supabaseAuth.ts: Authentication middleware
-
-server/storage.ts: Activity tracking and database operations
-
-Frontend Architecture
-Core Structure
-client/src/pages/: Main application routes (Words, Phrases, Reading, TherapistPortal)
-
-client/src/components/: Reusable UI components including shadcn/ui
-
-client/src/contexts/: Global state management (Auth, Settings, Game, Reading, Difficulty)
-
-client/src/hooks/: Custom React hooks (audio recording, authentication, voice processing)
-
-client/src/lib/: Utility functions, API clients, type definitions
-
-Important Path Aliases
+### Key Path Aliases
+```typescript
 @/ → client/src/
-
 @shared/ → shared/
-
 @assets/ → client/src/assets/
+```
 
-Database Schema
-Database schema is defined in shared/schema.ts using Drizzle ORM:
+### Route Structure
+```
+/api/pronunciation/* - Speech assessment, TTS
+/api/auth/*         - Authentication  
+/api/therapist/*    - Therapist features
+/api/assignments/*  - Assignment management
+/api/content/*      - Content library
+/api/user/*         - User data
+/api/voice/*        - Voice synthesis
+/api/visemes/*      - Facial animation
+```
 
-Core Tables
-users: Authentication, roles (client/therapist/admin), subscription, gamification data
+### Database Schema (shared/schema.ts)
+- `users` - Auth, roles, gamification
+- `saved_words/phrases` - User practice content
+- `user_activities` - Detailed progress tracking
+- `assignments` - Therapist homework system
+- `content_library` - Reusable practice materials
+- `therapist_clients` - Client relationships
 
-saved_words: User's saved practice words with folders
+---
 
-saved_phrases: User's saved practice phrases with folders
+## Critical Implementation Details
 
-user_activities: Comprehensive activity tracking with detailed metrics
+### TTS Pipeline (IMPORTANT)
+**Endpoint:** `/api/pronunciation/synthesize` (NOT `/api/speech/synthesize`)
+**Fallback order:** ElevenLabs → Azure → OpenAI
 
-assignments: Therapist-assigned homework with progress tracking
+### Speech Assessment
+- Uses Azure Cognitive Services
+- Multi-dimensional scoring (pronunciation, accuracy, fluency, completeness)
+- Word-level phonetic analysis
+- Real-time processing
 
-assignment_items: Individual items within assignments
-
-content_library: Therapist-created reusable practice materials
-
-therapist_clients: Therapist-client relationships and invitations
-
-Key Features
-Role-based access control (client/therapist/admin)
-
-Comprehensive activity tracking with detailed pronunciation metrics
-
-Flexible content organization with folders and categories
-
-Assignment workflow with progress monitoring
-
-Speech Processing Pipeline
-Text-to-Speech (TTS)
-The TTS system has multiple fallback providers:
-
-ElevenLabs (primary, if API key available)
-
-Azure Speech Services (fallback)
-
-OpenAI TTS (final fallback)
-
-Important: All TTS endpoints use /api/pronunciation/synthesize, not /api/speech/synthesize
-
-Speech Assessment
-Uses Azure Cognitive Services for:
-
-Real-time pronunciation scoring
-
-Multi-dimensional feedback (pronunciation, accuracy, fluency, completeness)
-
-Word-level analysis with phonetic breakdown
-
-Syllabication support
-
-Audio Processing
-MediaRecorder API for audio capture
-
-Real-time processing with Azure Speech Services
-
-Viseme generation for facial animation
-
-Speed control for playback
-
-Key Application Features
-Gamification System
-Level progression with XP rewards
-
-Avatar customization with unlockable cosmetics
-
-Streak tracking and achievement badges
-
-Interactive island map for level navigation
-
-Therapist Portal
-Client management with invitation system
-
-Assignment creation and progress monitoring
-
-Content library with AI-powered generation
-
-Analytics dashboard for client performance
-
-Reading Practice
-Text-to-speech with pronunciation assessment
-
-Adaptive difficulty based on performance
-
-Progress tracking with detailed statistics
-
-Testing Configuration
-Client Testing (Jest + React Testing Library)
-Configuration: jest.config.client.cjs
-
-Environment: jsdom
-
-Setup: jest.setup.client.cjs
-
-Server Testing (Jest + Node.js)
-Configuration: jest.config.server.cjs
-
-Environment: node
-
-Setup: jest.setup.server.cjs
-
-Environment Variables
-Key environment variables needed:
-
-AZURE_SPEECH_KEY - Azure Cognitive Services
-
-AZURE_SPEECH_REGION - Azure region
-
-OPENAI_API_KEY - OpenAI API access
-
-ELEVENLABS_API_KEY - ElevenLabs TTS
-
-SUPABASE_URL - Supabase project URL
-
-SUPABASE_ANON_KEY - Supabase anonymous key
-
-DATABASE_URL - PostgreSQL connection string
-
-STRIPE_SECRET_KEY - Stripe payments
-
-Common Development Patterns
-API Client Pattern
-Frontend uses consistent fetch patterns with error handling:
-
-TypeScript
-
-const response = await fetch('/api/pronunciation/synthesize', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ ssml: ssmlText })
-});
-Error Handling
-Server uses catchAsync wrapper for consistent error handling:
-
-TypeScript
-
+### Error Handling Pattern
+```typescript
+// Server routes use catchAsync wrapper
 router.post('/endpoint', catchAsync(async (req, res) => {
   // Implementation
 }));
-Database Operations
-Uses Drizzle ORM with shared schema:
 
-TypeScript
-
-import { db } from './db';
-import { users } from '@shared/schema';
-State Management
-Uses React Context + TanStack Query for server state:
-
-TypeScript
-
-const { data, isLoading } = useQuery({
-  queryKey: ['user-data'],
-  queryFn: fetchUserData
+// Frontend uses consistent fetch with error handling
+const response = await fetch('/api/endpoint', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(data)
 });
-Important Notes
-Audio Processing
-All audio processing happens through Azure Cognitive Services
+```
 
-MediaRecorder API is used for client-side recording
+### State Management
+- React Context + TanStack Query
+- Server state caching with query keys
+- Role-based access control via middleware
 
-Audio files are processed as blobs and sent to backend endpoints
+---
 
-Authentication
-Uses Supabase Auth with Google OAuth
+## Environment Variables Checklist
+```bash
+AZURE_SPEECH_KEY=         # Azure Cognitive Services
+AZURE_SPEECH_REGION=      # Azure region
+OPENAI_API_KEY=          # OpenAI access
+ELEVENLABS_API_KEY=      # ElevenLabs TTS
+SUPABASE_URL=            # Supabase project
+SUPABASE_ANON_KEY=       # Supabase anonymous key
+DATABASE_URL=            # PostgreSQL connection
+STRIPE_SECRET_KEY=       # Payments
+```
 
-JWT tokens are validated on backend routes
+---
 
-Role-based access control is implemented via middleware
+## Testing Configuration
 
-Content Generation
-OpenAI integration for AI-generated practice content
+### Client Tests
+- Config: `jest.config.client.cjs`
+- Environment: jsdom  
+- Setup: `jest.setup.client.cjs`
+- Command: `npm run test:client`
 
-Memoization is used to cache generated content
+### Server Tests
+- Config: `jest.config.server.cjs`
+- Environment: node
+- Setup: `jest.setup.server.cjs`
+- Command: `npm run test:server`
 
-Therapists can create and manage content libraries
+---
 
-Docker Support
-Multi-stage builds with GPU support for NVIDIA services
+## Gemini Integration Strategy
 
-Docker Compose for development environment
+### When to Use Gemini CLI
+✅ **USE GEMINI FOR:**
+- Understanding file relationships across directories
+- Tracing data flows through multiple layers
+- Analyzing architectural patterns
+- Debugging cross-component issues
+- Planning complex feature implementations
 
-Health checks for readiness and liveness
+### Effective Gemini Prompts
+```bash
+# Good: Broad context with specific question
+gemini -p "@client/src/ @server/routes/ How does user authentication work from login button to protected route?"
 
-Performance Considerations
-TanStack Query for efficient data fetching and caching
+# Better: Include schema for data flow questions  
+gemini -p "@client/src/pages/Reading.tsx @shared/schema.ts @server/routes/ Trace how reading progress is saved and retrieved"
 
-Memoization for expensive operations
+# Best: Full context for complex debugging
+gemini -p "@client/src/contexts/ @server/ @shared/ Identify why pronunciation scores might not be persisting correctly"
+```
 
-Optimized bundle splitting with Vite
+### After Gemini Analysis
+1. **Synthesize** Gemini's findings into actionable insights
+2. **Plan** your specific implementation approach  
+3. **Generate** targeted code based on the comprehensive context
+4. **Validate** against the architectural patterns Gemini identified
 
-Comprehensive error boundaries and fallbacks
+---
 
-Leveraging Gemini CLI for Codebase Analysis (PRIORITY)
-Whenever you need to analyze large parts of the codebase, understand architectural patterns, or verify implementations across multiple files/directories, you MUST use the gemini CLI. This is crucial for efficiency and cost-effectiveness due to Gemini's extensive context window and cheaper tokens.
+## Performance & Best Practices
 
-Your general workflow should be:
+### Frontend Patterns
+- TanStack Query for server state
+- Memoization for expensive operations
+- Error boundaries for resilience
+- Optimized bundle splitting with Vite
 
-High-Level Task from User.
+### Backend Patterns
+- Drizzle ORM with shared schemas
+- CatchAsync wrapper for error handling
+- Role-based middleware
+- Comprehensive activity tracking
 
-Determine if broad code analysis is needed. If so, construct a gemini -p command.
+### Audio Processing
+- MediaRecorder API for capture
+- Azure SDK for real-time processing  
+- Blob handling for audio data
+- Viseme generation for animation
 
-Execute gemini -p (or instruct the user to do so if you can't directly execute).
+---
 
-Analyze Gemini's output.
+## Troubleshooting Common Issues
 
-Formulate a plan or generate targeted code based on the comprehensive context provided by Gemini.
+### Authentication Problems
+```bash
+gemini -p "@client/src/contexts/AuthContext.tsx @server/supabaseAuth.ts @client/src/lib/supabaseClient.ts Debug authentication token flow"
+```
 
-How to Use Gemini CLI:
-Use the @ syntax to include files and directories in your Gemini prompts. Paths should be relative to your current working directory. For project-wide analysis, prefer including directories or using --all_files.
+### Speech Processing Issues  
+```bash
+gemini -p "@server/azure.ts @client/src/hooks/useRecording.ts @server/routes/pronunciationRoutes.ts Analyze speech assessment pipeline for errors"
+```
 
-Examples of when to use gemini -p:
-Initial Project Understanding: gemini -p "@./ Summarize the overall architecture and main dependencies of this Obla project."
+### Database Connection Problems
+```bash
+gemini -p "@server/db.ts @shared/schema.ts @server/storage.ts Check database configuration and connection patterns"
+```
 
-Deep Dive into Specific Areas: gemini -p "@client/src/contexts/AuthContext.tsx @client/src/hooks/useAuth.ts @server/routes/authRoutes.ts @client/src/lib/supabaseClient.ts Explain the complete authentication flow, from frontend context to backend route handling, including Supabase integration."
-
-Feature Verification: gemini -p "@client/src/pages/MyWordsNew.tsx @shared/schema.ts How does the 'My Journey' (MyWordsNew.tsx) page interact with user authentication and retrieve saved words from the database? Trace the data flow."
-
-Error Diagnosis Across Layers: gemini -p "@client/src/ @server/ @shared/ Analyze potential reasons for authentication token mismatches or session management gaps given the frontend and backend setup. Focus on how tokens are passed and validated."
-
-Key Directives for Using Gemini:
-Prioritize Directory Inclusion: Instead of listing many individual files, include entire relevant directories (e.g., @client/src/, @server/routes/, @shared/) for a more holistic view.
-
-Be Specific in Your Gemini Prompt: While including broad context, make your prompt to Gemini clear about the information you need from it (e.g., "explain the flow," "identify integration points," "trace data").
-
-Interpret Gemini's Output: Remember, Gemini provides the raw, comprehensive analysis. Your role is to synthesize that information into actionable plans or targeted code.
-
-No --yolo for Read-Only Analysis: As noted, gemini -p is for read-only analysis and doesn't require --yolo.
+Remember: **Gemini for context, Claude for code!**

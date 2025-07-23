@@ -61,6 +61,36 @@ router.get('/:id', protect, catchAsync(async (req: any, res) => {
   });
 }));
 
+router.patch('/:id', protect, catchAsync(async (req: any, res) => {
+  const assignmentId = parseInt(req.params.id);
+  const userId = req.user.claims.sub;
+  const user = await storage.getUser(userId);
+  
+  // Check if user is a therapist
+  if (user?.role !== 'therapist') {
+    return error(res, "Only therapists can edit assignments", 403);
+  }
+  
+  const assignment = await storage.getAssignment(assignmentId);
+  if (!assignment) {
+    return error(res, "Assignment not found", 404);
+  }
+  
+  // Check if the therapist owns this assignment
+  if (assignment.therapistId !== userId) {
+    return error(res, "You can only edit your own assignments", 403);
+  }
+  
+  // Only allow updating title and description
+  const allowedUpdates = {
+    ...(req.body.title && { title: req.body.title }),
+    ...(req.body.description && { description: req.body.description })
+  };
+  
+  const updatedAssignment = await storage.updateAssignment(assignmentId, allowedUpdates);
+  return success(res, updatedAssignment);
+}));
+
 router.post('/', protect, catchAsync(async (req: any, res) => {
   const assignmentData = insertAssignmentSchema.parse(req.body);
   const assignment = await storage.createAssignment(assignmentData);
