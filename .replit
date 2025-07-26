@@ -9,7 +9,7 @@ packages = ["c-ares", "dig", "ffmpeg", "glibcLocales", "grpc", "libxcrypt", "lib
 [deployment]
 deploymentTarget = "autoscale"
 run = ["sh", "-c", "npm start"]
-build = ["sh", "-c", "npm cache clean --force && npm install --legacy-peer-deps && npm run build"]
+build = ["sh", "-c", "npm run build"]
 
 [[ports]]
 localPort = 3001
