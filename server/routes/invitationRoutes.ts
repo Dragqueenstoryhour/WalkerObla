@@ -42,9 +42,16 @@ router.post('/accept/:token', protect, catchAsync(async (req: any, res) => {
   // Transfer any email-based assignments to the newly registered user
   await storage.transferEmailAssignments(invitation.clientEmail, userId);
   
+  const userAssignments = await storage.getUserAssignments(userId);
+  const hasAssignments = userAssignments && userAssignments.length > 0;
+  
   await storage.updateClientInvitationStatus(invitation.id, 'accepted', new Date());
   
-  return success(res, { success: true, message: 'Invitation accepted successfully' });
+  return success(res, { 
+    success: true, 
+    message: 'Invitation accepted successfully',
+    hasAssignments 
+  });
 }));
 
 export default router;

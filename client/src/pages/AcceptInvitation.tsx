@@ -66,9 +66,14 @@ export default function AcceptInvitation() {
       });
 
       if (response.ok) {
+        const data = await response.json();
         setSuccess(true);
         setTimeout(() => {
-          setLocation('/my-words');
+          if (data.data?.hasAssignments) {
+            setLocation('/my-words?tab=assignments');
+          } else {
+            setLocation('/my-words');
+          }
         }, 2000);
       } else {
         const errorData = await response.json();

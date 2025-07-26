@@ -762,7 +762,7 @@ function AssignmentCarousel({ items, assignmentId }: { items: AssignmentItem[], 
 }
 
 // AssignmentsTab Component
-function AssignmentsTab() {
+function AssignmentsTab({ targetAssignmentId }: { targetAssignmentId?: string | null }) {
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [assignmentItems, setAssignmentItems] = useState<AssignmentItem[]>([]);
   const [currentAssignmentIndex, setCurrentAssignmentIndex] = useState(0);
@@ -781,6 +781,19 @@ function AssignmentsTab() {
     enabled: !!selectedAssignment,
   });
   const assignmentDetails = assignmentDetailsResponse?.data;
+
+  useEffect(() => {
+    if (targetAssignmentId && assignments.length > 0) {
+      const targetAssignment = assignments.find(a => a.id.toString() === targetAssignmentId);
+      if (targetAssignment) {
+        setSelectedAssignment(targetAssignment);
+        const index = assignments.findIndex(a => a.id === targetAssignment.id);
+        if (index >= 0) {
+          setCurrentAssignmentIndex(index);
+        }
+      }
+    }
+  }, [targetAssignmentId, assignments]);
 
   useEffect(() => {
     if (assignmentDetails?.items) {
@@ -1930,6 +1943,12 @@ export default function MyWordsNew() {
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
   const [currentReadingIndex, setCurrentReadingIndex] = useState(0);
+  
+  const [urlParams] = useState(() => new URLSearchParams(window.location.search));
+  const targetTab = urlParams.get('tab');
+  const targetAssignmentId = urlParams.get('assignment');
+  
+  const [defaultTab, setDefaultTab] = useState(targetTab === 'assignments' ? 'assignments' : 'journey');
 
   // Fetch saved words, phrases, and practice groups
   const { data: savedWordsResponse } = useQuery({
@@ -2054,7 +2073,7 @@ export default function MyWordsNew() {
         </div>
 
         {/* Tabs for My Journey and My Assignments */}
-        <Tabs defaultValue="journey" className="w-full">
+        <Tabs defaultValue={defaultTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-8">
             <TabsTrigger value="journey">My Journey</TabsTrigger>
             <TabsTrigger value="assignments">My Assignments</TabsTrigger>
@@ -2102,7 +2121,7 @@ export default function MyWordsNew() {
           </TabsContent>
 
           <TabsContent value="assignments" className="space-y-6">
-            <AssignmentsTab />
+            <AssignmentsTab targetAssignmentId={targetAssignmentId} />
           </TabsContent>
         </Tabs>
       </div>
