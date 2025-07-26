@@ -11,7 +11,7 @@ import cors from 'cors';
 const app = express();
 
 app.use(cors({
-  origin: 'http://localhost:3001', // Allow only your frontend origin
+  origin: 'http://localhost:5000', // Allow only your frontend origin
   credentials: true, // Allow cookies and authorization headers
   allowedHeaders: ['Content-Type', 'Authorization'], // Explicitly allow Authorization header
 }));
@@ -114,8 +114,8 @@ app.get('/test-supabase-auth', async (req, res) => {
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = 3001;
-  server.listen(port, () => {
+  const port = 5000;
+  server.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
   });
 })();
