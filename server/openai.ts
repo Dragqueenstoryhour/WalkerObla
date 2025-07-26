@@ -968,20 +968,42 @@ function createBasicSyllabication(word: string): string {
 export async function generateWordsWithSound(
   targetSound: string,
   difficulty: DifficultyLevel = "4",
-  count: number = 8
+  count: number = 8,
+  position?: 'starts-with' | 'ends-with' | 'contains'
 ): Promise<any[]> {
   try {
     const safeDifficulty = difficulty in DIFFICULTY_SCALE ? difficulty : "4";
     const difficultyInfo = DIFFICULTY_SCALE[safeDifficulty];
-    const prompt = `Generate exactly ${count} English words that physically contain the letter "${targetSound}" in their spelling.
+    
+    let promptDescription = `physically contain the letter or sound "${targetSound}" in their spelling`;
+    if (position) {
+      switch (position) {
+        case 'starts-with':
+          promptDescription = `start with "${targetSound}"`;
+          break;
+        case 'ends-with':
+          promptDescription = `end with "${targetSound}"`;
+          break;
+        case 'contains':
+        default:
+          promptDescription = `contain "${targetSound}"`;
+          break;
+      }
+    }
+
+    const prompt = `Generate exactly ${count} English words that ${promptDescription}.
 
 CRITICAL REQUIREMENTS:
-- EVERY word must contain the letter "${targetSound}" somewhere in its spelling
-- For example, if targetSound is "s": words like "sun", "house", "music", "sister", "practice"
-- For example, if targetSound is "r": words like "red", "car", "friend", "surprise", "brother"
-- Words should be at ${difficultyInfo.name} difficulty level (${difficultyInfo.syllableRange})
-- Provide syllabication using hyphens (e.g., "sis-ter")
-- VERIFY each word contains "${targetSound}" before including it
+- EVERY word must ${promptDescription}
+- Words should be at ${difficultyInfo.name} difficulty level.
+- **Syllable Range:** ${difficultyInfo.syllableRange}
+- **Word Types:** ${difficultyInfo.wordTypes}
+- **Examples:** ${difficultyInfo.examples.join(", ")}
+- **Complexity:** ${difficultyInfo.complexity}
+- **Phonetics:** ${difficultyInfo.phonetics}
+- The 'text' field MUST be the word itself, without any hyphens or phonetic symbols.
+- The 'syllabication' field MUST contain the word with hyphens separating syllables (e.g., "sis-ter").
+- VERIFY each word meets the criteria before including it
 
 Respond with valid JSON in this exact format:
 {
@@ -996,7 +1018,7 @@ Respond with valid JSON in this exact format:
       messages: [
         {
           role: "system",
-          content: `You are a speech therapy assistant. Generate ONLY words that contain the specified letter. Double-check each word contains the target letter before including it.`
+          content: `You are a speech therapy assistant. Generate ONLY words that meet the specified criteria. Double-check each word before including it.`
         },
         {
           role: "user",
@@ -1013,18 +1035,25 @@ Respond with valid JSON in this exact format:
       throw new Error("Invalid response format from OpenAI");
     }
 
-    // Verify words actually contain the target sound
+    // Verify words actually meet the criteria
     const verifiedWords = result.words.filter((word: any) => {
       const text = (word.text || "").toLowerCase();
-      const target = targetSound.toLowerCase();
-      return text.includes(target);
+      const sound = targetSound.toLowerCase();
+      
+      if (position === 'starts-with') {
+        return text.startsWith(sound);
+      } else if (position === 'ends-with') {
+        return text.endsWith(sound);
+      } else {
+        return text.includes(sound);
+      }
     });
 
-    console.log(`Generated ${verifiedWords.length} verified words containing "${targetSound}":`, verifiedWords);
+    console.log(`Generated ${verifiedWords.length} verified words for "${targetSound}" (${position})`, verifiedWords);
 
     // If we don't have enough verified words, add fallback words
     if (verifiedWords.length < count) {
-      const fallbackWords = getFallbackWordsWithSound(targetSound, count - verifiedWords.length);
+      const fallbackWords = getFallbackWordsWithSound(targetSound, count - verifiedWords.length, position);
       return { phrases: [...verifiedWords, ...fallbackWords].slice(0, count) };
     }
 
@@ -1032,11 +1061,13 @@ Respond with valid JSON in this exact format:
 
   } catch (error) {
     console.error("Error generating words with sound:", error);
-    return { phrases: getFallbackWordsWithSound(targetSound, count) };
+    return { phrases: getFallbackWordsWithSound(targetSound, count, position) };
   }
 }
 
-function getFallbackWordsWithSound(targetSound: string, count: number): any[] {
+function getFallbackWordsWithSound(targetSound: string, count: number, position?: 'starts-with' | 'ends-with' | 'contains'): any[] {
+  const actualSound = targetSound.toLowerCase();
+
   const soundMaps: { [key: string]: any[] } = {
     's': [
       { text: "sun", syllabication: "sun" },
@@ -1067,6 +1098,26 @@ function getFallbackWordsWithSound(targetSound: string, count: number): any[] {
       { text: "birthday", syllabication: "birth-day" },
       { text: "nothing", syllabication: "noth-ing" },
       { text: "healthy", syllabication: "health-y" }
+    ],
+    'sh': [
+      { text: "ship", syllabication: "ship" },
+      { text: "shoe", syllabication: "shoe" },
+      { text: "shop", syllabication: "shop" },
+      { text: "shine", syllabication: "shine" },
+      { text: "fish", syllabication: "fish" },
+      { text: "wish", syllabication: "wish" },
+      { text: "shower", syllabication: "show-er" },
+      { text: "washing", syllabication: "wash-ing" }
+    ],
+    'ch': [
+      { text: "chair", syllabication: "chair" },
+      { text: "child", syllabication: "child" },
+      { text: "teacher", syllabication: "teach-er" },
+      { text: "kitchen", syllabication: "kitch-en" },
+      { text: "chocolate", syllabication: "choc-o-late" },
+      { text: "chicken", syllabication: "chick-en" },
+      { text: "church", syllabication: "church" },
+      { text: "watch", syllabication: "watch" }
     ]
   };
 
@@ -1077,11 +1128,24 @@ function getFallbackWordsWithSound(targetSound: string, count: number): any[] {
     { text: "speaking", syllabication: "speak-ing" }
   ];
 
-  const availableWords = soundMaps[targetSound.toLowerCase()] || 
-    defaultWords.filter(word => word.text.toLowerCase().includes(targetSound.toLowerCase()));
+  // Get words for the specific sound
+  let availableWords = soundMaps[actualSound] || [];
   
-  return availableWords.slice(0, count);
-}
+  // Filter by position if specified
+  if (position === 'starts-with') {
+    availableWords = availableWords.filter(word => word.text.toLowerCase().startsWith(actualSound));
+  } else if (position === 'ends-with') {
+    availableWords = availableWords.filter(word => word.text.toLowerCase().endsWith(actualSound));
+  } else {
+    availableWords = availableWords.filter(word => word.text.toLowerCase().includes(actualSound));
+  }
+  
+  // If no specific words found, use default words that contain the sound
+  if (availableWords.length === 0) {
+    availableWords = defaultWords.filter(word => word.text.toLowerCase().includes(actualSound));
+  }
+  
+  return availableWords.slice(0, count).map(word => ({ text: word.text, syllabication: word.syllabication }));
 
 export async function generateTopicPhrases(
   topic: string,

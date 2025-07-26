@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import * as schema from '../shared/schema';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+const supabaseAnonKey = process.env.REACT_APP_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
 
 console.log('Supabase URL from env:', supabaseUrl);
 console.log('Supabase Anon Key from env (first few chars):', supabaseAnonKey ? supabaseAnonKey.substring(0, 10) + '...' : 'not set');

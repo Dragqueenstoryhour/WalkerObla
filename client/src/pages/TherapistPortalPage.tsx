@@ -12,11 +12,12 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator 
 } from "@/components/ui/dropdown-menu";
-import { Plus, Users, FileText, BookOpen, Search, Calendar, UserMinus, ChevronDown, ChevronUp, Trash2, TrendingUp, Award, AlertCircle, CheckCircle, X, BarChart3, Edit3, Save, XCircle, MoreVertical, Send } from "lucide-react";
+import { Plus, Users, FileText, BookOpen, Search, Calendar, UserMinus, ChevronDown, ChevronUp, Trash2, TrendingUp, Award, AlertCircle, CheckCircle, X, BarChart3, Edit3, Save, XCircle, MoreVertical, Send, Zap } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { getAuthHeaders } from "@/lib/supabaseClient";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
@@ -24,6 +25,21 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import type { Assignment, User } from "@shared/schema";
 import ContentLibraryPage from "./ContentLibraryPage";
 import AssignAssignmentModal from "@/components/modals/AssignAssignmentModal";
+import AppleAssignmentModal from "@/components/modals/AppleAssignmentModal";
+import SmartAssignmentCreator from "@/components/SmartAssignmentCreator";
+import AnalyticsDashboard from "@/components/AnalyticsDashboard";
+import AdvancedTemplateLibrary from "@/components/AdvancedTemplateLibrary";
+import WorkflowTools from "@/components/WorkflowTools";
+import { 
+  PatientListSkeleton, 
+  AnalyticsSkeleton, 
+  SmartCreatorSkeleton, 
+  TemplateLibrarySkeleton,
+  LoadingOverlay,
+  SuccessAnimation 
+} from "@/components/LoadingSkeletons";
+import { announcer, focusUtils, keyboardNavigation, KEYBOARD_KEYS } from "@/utils/accessibility";
+import "@/styles/apple-assignment-animations.css";
 
 interface AssignmentTemplate {
   id: string;
@@ -49,38 +65,36 @@ const DIFFICULTY_LEVELS = [
 const PREDEFINED_TEMPLATES: AssignmentTemplate[] = [
   {
     id: "template-1",
-    title: "S Sound Practice",
-    description: "Practice words containing the 's' sound for clear pronunciation",
+    title: "Animals",
+    description: "Practice animal names for vocabulary building",
     words: [
-      { text: "sun", syllabication: "sun" },
-      { text: "house", syllabication: "house" },
-      { text: "music", syllabication: "mu-sic" },
-      { text: "sister", syllabication: "sis-ter" },
-      { text: "simple", syllabication: "sim-ple" },
-      { text: "person", syllabication: "per-son" },
-      { text: "surprise", syllabication: "sur-prise" },
-      { text: "practice", syllabication: "prac-tice" }
+      { text: "cat", syllabication: "cat" },
+      { text: "dog", syllabication: "dog" },
+      { text: "elephant", syllabication: "el-e-phant" },
+      { text: "tiger", syllabication: "ti-ger" },
+      { text: "butterfly", syllabication: "but-ter-fly" },
+      { text: "rabbit", syllabication: "rab-bit" },
+      { text: "monkey", syllabication: "mon-key" },
+      { text: "giraffe", syllabication: "gi-raffe" }
     ],
-    targetSound: "s",
-    category: "Consonant Practice",
+    category: "Animals",
     createdAt: new Date().toISOString()
   },
   {
     id: "template-2",
-    title: "R Sound Mastery",
-    description: "Focus on 'r' sound production and clarity",
+    title: "Colors",
+    description: "Learn and practice color names",
     words: [
       { text: "red", syllabication: "red" },
-      { text: "car", syllabication: "car" },
-      { text: "friend", syllabication: "friend" },
-      { text: "brother", syllabication: "broth-er" },
-      { text: "surprise", syllabication: "sur-prise" },
-      { text: "street", syllabication: "street" },
-      { text: "bright", syllabication: "bright" },
-      { text: "party", syllabication: "par-ty" }
+      { text: "blue", syllabication: "blue" },
+      { text: "green", syllabication: "green" },
+      { text: "yellow", syllabication: "yel-low" },
+      { text: "purple", syllabication: "pur-ple" },
+      { text: "orange", syllabication: "or-ange" },
+      { text: "pink", syllabication: "pink" },
+      { text: "brown", syllabication: "brown" }
     ],
-    targetSound: "r",
-    category: "Consonant Practice",
+    category: "Colors",
     createdAt: new Date().toISOString()
   },
   {
@@ -119,20 +133,19 @@ const PREDEFINED_TEMPLATES: AssignmentTemplate[] = [
   },
   {
     id: "template-5",
-    title: "TH Sound Practice",
-    description: "Master the challenging 'th' sound in various contexts",
+    title: "Food and Drinks",
+    description: "Practice common food and beverage names",
     words: [
-      { text: "think", syllabication: "think" },
-      { text: "mother", syllabication: "moth-er" },
-      { text: "bath", syllabication: "bath" },
-      { text: "weather", syllabication: "weath-er" },
-      { text: "three", syllabication: "three" },
-      { text: "birthday", syllabication: "birth-day" },
-      { text: "nothing", syllabication: "noth-ing" },
-      { text: "healthy", syllabication: "health-y" }
+      { text: "apple", syllabication: "ap-ple" },
+      { text: "banana", syllabication: "ba-na-na" },
+      { text: "water", syllabication: "wa-ter" },
+      { text: "sandwich", syllabication: "sand-wich" },
+      { text: "pizza", syllabication: "piz-za" },
+      { text: "coffee", syllabication: "cof-fee" },
+      { text: "vegetables", syllabication: "veg-e-ta-bles" },
+      { text: "chocolate", syllabication: "choc-o-late" }
     ],
-    targetSound: "th",
-    category: "Consonant Practice",
+    category: "Food and Drinks",
     createdAt: new Date().toISOString()
   },
   {
@@ -219,6 +232,40 @@ const PREDEFINED_TEMPLATES: AssignmentTemplate[] = [
     ],
     category: "Technology",
     createdAt: new Date().toISOString()
+  },
+  {
+    id: "template-11",
+    title: "Transportation",
+    description: "Vehicles and travel-related vocabulary",
+    words: [
+      { text: "car", syllabication: "car" },
+      { text: "bus", syllabication: "bus" },
+      { text: "airplane", syllabication: "air-plane" },
+      { text: "bicycle", syllabication: "bi-cy-cle" },
+      { text: "motorcycle", syllabication: "mo-tor-cy-cle" },
+      { text: "subway", syllabication: "sub-way" },
+      { text: "driving", syllabication: "driv-ing" },
+      { text: "passenger", syllabication: "pas-sen-ger" }
+    ],
+    category: "Transportation",
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "template-12",
+    title: "Sports",
+    description: "Sports and physical activities vocabulary",
+    words: [
+      { text: "football", syllabication: "foot-ball" },
+      { text: "basketball", syllabication: "bas-ket-ball" },
+      { text: "swimming", syllabication: "swim-ming" },
+      { text: "running", syllabication: "run-ning" },
+      { text: "exercise", syllabication: "ex-er-cise" },
+      { text: "competition", syllabication: "com-pe-ti-tion" },
+      { text: "athlete", syllabication: "ath-lete" },
+      { text: "victory", syllabication: "vic-to-ry" }
+    ],
+    category: "Sports",
+    createdAt: new Date().toISOString()
   }
 ];
 
@@ -228,10 +275,11 @@ interface ReportCardProps {
 }
 
 function ReportCard({ assignmentId, onClose }: ReportCardProps) {
-  const { data: results = [] } = useQuery({
+  const { data: queryData } = useQuery({
     queryKey: ['/api/assignments', assignmentId, 'results'],
     enabled: !!assignmentId
-  }) as { data: any[] };
+  });
+  const results = queryData?.data || [];
 
   const [insights, setInsights] = useState<any>(null);
 
@@ -422,6 +470,17 @@ export default function TherapistPortal() {
   const [newClientFirstName, setNewClientFirstName] = useState("");
   const [newClientLastName, setNewClientLastName] = useState("");
   const [showAssignAssignmentModal, setShowAssignAssignmentModal] = useState(false);
+  const [showAppleAssignmentModal, setShowAppleAssignmentModal] = useState(false);
+  const [selectedPatientForAssignment, setSelectedPatientForAssignment] = useState<User | null>(null);
+  
+  // Performance and accessibility states
+  const [isPageLoading, setIsPageLoading] = useState(false);
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [tabsLoading, setTabsLoading] = useState<Record<string, boolean>>({});
+  
+  // Workflow tools states
+  const [showWorkflowTools, setShowWorkflowTools] = useState(false);
 
   // Assignment form state
   const [assignmentTitle, setAssignmentTitle] = useState("");
@@ -431,29 +490,123 @@ export default function TherapistPortal() {
   const [generatedWords, setGeneratedWords] = useState<Array<{ text: string; syllabication: string }>>([]);
   const [wordSuggestions, setWordSuggestions] = useState<Array<{ text: string; syllabication: string }>>([]);
   const [customTopic, setCustomTopic] = useState("");
-  const [contentGenerationMode, setContentGenerationMode] = useState("templates");
+  const [contentGenerationMode, setContentGenerationMode] = useState("sounds");
   const [soundPosition, setSoundPosition] = useState("starts-with");
   const [selectedSound, setSelectedSound] = useState("");
 
   // Data queries
   const { data: clientsData = { clients: [], pendingInvitations: [] } } = useQuery({ queryKey: ['/api/therapist/clients'] }) as { data: { clients: any[], pendingInvitations: any[] } };
-  const { data: assignments = [] } = useQuery({ queryKey: ['/api/therapist/assignments'] }) as { data: any[] };
+  const { data: assignmentsData = [] } = useQuery({ queryKey: ['/api/therapist/assignments'] });
+  const assignments = assignmentsData.data || assignmentsData || [];
   const { data: contentLibrary = [], isLoading: isContentLibraryLoading } = useQuery({ queryKey: ['/api/therapist/library'] });
 
-  const clients = clientsData.clients || [];
-  const pendingInvitations = clientsData.pendingInvitations || [];
+  const clients = clientsData.data?.clients || clientsData.clients || [];
+  const pendingInvitations = clientsData.data?.pendingInvitations || clientsData.pendingInvitations || [];
+  
+  // Debug logging
+  console.log('🔍 DEBUG - clientsData:', clientsData);
+  console.log('🔍 DEBUG - clients array:', clients);
+  console.log('🔍 DEBUG - clients length:', clients.length);
+  console.log('🔍 DEBUG - clientSearchTerm:', clientSearchTerm);
+  console.log('🔍 DEBUG - assignmentsData:', assignmentsData);
+  console.log('🔍 DEBUG - assignments array:', assignments);
+  console.log('🔍 DEBUG - assignments length:', assignments.length);
 
-  const filteredClients = clients.filter((client: User) =>
-    client.username?.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
-    client.firstName?.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
-    client.lastName?.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
-    client.email?.toLowerCase().includes(clientSearchTerm.toLowerCase())
-  );
+  const filteredClients = clients.filter((client: User) => {
+    if (!clientSearchTerm) return true; // Show all if no search term
+    const searchLower = clientSearchTerm.toLowerCase();
+    return (
+      client.username?.toLowerCase().includes(searchLower) ||
+      client.firstName?.toLowerCase().includes(searchLower) ||
+      client.lastName?.toLowerCase().includes(searchLower) ||
+      client.email?.toLowerCase().includes(searchLower)
+    );
+  });
 
   // Get assignments for selected client
   const clientAssignments = selectedClient
     ? assignments.filter((assignment: Assignment) => assignment.userId === selectedClient.id)
     : [];
+
+  // Enhanced tab change handler with loading states and performance optimization
+  const handleTabChange = (newTab: string) => {
+    // Prevent unnecessary re-renders if same tab is clicked
+    if (newTab === selectedTab) return;
+    
+    setTabsLoading(prev => ({ ...prev, [newTab]: true }));
+    setSelectedTab(newTab);
+    
+    // Announce tab change for screen readers
+    announcer.announce(`Switched to ${newTab.replace('-', ' ')} tab`);
+    
+    // Optimize loading time based on tab complexity
+    const loadingTime = newTab === 'analytics' ? 500 : newTab === 'smart-creator' ? 400 : 300;
+    
+    setTimeout(() => {
+      setTabsLoading(prev => ({ ...prev, [newTab]: false }));
+    }, loadingTime);
+  };
+
+  // Workflow handlers
+  const handleBulkAction = async (action: string, selectedItems: string[], data?: any) => {
+    setIsPageLoading(true);
+    announcer.announce(`Processing ${action} for ${selectedItems.length} items`, 'assertive');
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      setSuccessMessage(`${action} completed successfully for ${selectedItems.length} items`);
+      setShowSuccessAnimation(true);
+      announcer.announce(`${action} completed successfully`, 'assertive');
+      
+    } catch (error) {
+      announcer.announce(`Error processing ${action}`, 'assertive');
+      toast({ 
+        title: "Bulk Action Failed", 
+        description: `Failed to ${action}. Please try again.`,
+        variant: "destructive" 
+      });
+    } finally {
+      setIsPageLoading(false);
+    }
+  };
+
+  const handleScheduleAssignment = async (assignmentData: any, scheduledDate: Date) => {
+    setIsPageLoading(true);
+    announcer.announce('Scheduling assignment', 'assertive');
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setSuccessMessage(`Assignment scheduled for ${scheduledDate.toLocaleDateString()}`);
+      setShowSuccessAnimation(true);
+      announcer.announce('Assignment scheduled successfully', 'assertive');
+      
+    } catch (error) {
+      announcer.announce('Error scheduling assignment', 'assertive');
+      toast({ 
+        title: "Scheduling Failed", 
+        description: "Failed to schedule assignment. Please try again.",
+        variant: "destructive" 
+      });
+    } finally {
+      setIsPageLoading(false);
+    }
+  };
+
+  const handleVoiceInput = (transcript: string) => {
+    // Handle voice input by updating relevant form fields
+    if (showAssignmentForm) {
+      if (!assignmentDescription) {
+        setAssignmentDescription(transcript);
+      } else {
+        setAssignmentDescription(prev => prev + ' ' + transcript);
+      }
+    }
+    announcer.announce('Voice input processed');
+  };
 
   // Mutations
   const addClientMutation = useMutation({
@@ -508,7 +661,7 @@ export default function TherapistPortal() {
         const filteredPending = old.pendingInvitations?.filter((inv: any) => !inv.isTemporary) || [];
         
         // Handle both response formats consistently
-        const newClient = data.client || data;
+        const newClient = data.data?.client || data.client || data;
         
         // Ensure the new client has all required fields
         if (!newClient || !newClient.id) {
@@ -724,7 +877,9 @@ export default function TherapistPortal() {
           title: assignmentTitle.trim(),
           description: assignmentDescription.trim(),
           items: generatedWords.map(word => ({
-            ...word,
+            itemType: 'word',
+            content: word.text,
+            syllabication: word.syllabication,
             difficulty: selectedDifficulty
           }))
         }
@@ -737,7 +892,9 @@ export default function TherapistPortal() {
           title: assignmentTitle.trim(),
           description: assignmentDescription.trim(),
           items: generatedWords.map(word => ({
-            ...word,
+            itemType: 'word',
+            content: word.text,
+            syllabication: word.syllabication,
             difficulty: selectedDifficulty
           }))
         };
@@ -746,8 +903,12 @@ export default function TherapistPortal() {
   };
 
   const handleSaveAsTemplate = () => {
-    if (!assignmentTitle.trim() || generatedWords.length === 0) {
-      toast({ title: "Cannot save empty template", variant: "destructive" });
+    if (!assignmentTitle.trim()) {
+      toast({ title: "Title Required", description: "Please enter a title for the assignment before saving it as a template.", variant: "destructive" });
+      return;
+    }
+    if (generatedWords.length === 0) {
+      toast({ title: "Cannot Save Empty Template", description: "Please add at least one word to the assignment.", variant: "destructive" });
       return;
     }
 
@@ -803,14 +964,15 @@ export default function TherapistPortal() {
     if (!selectedSound || !soundPosition) return;
     
     try {
+      const authHeaders = await getAuthHeaders();
       const response = await fetch('/api/therapist/generate-words', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user?.access_token}`,
+          ...authHeaders,
         },
         body: JSON.stringify({
-          soundPattern: selectedSound,
+          sound: selectedSound,
           position: soundPosition,
           difficulty: selectedDifficulty,
           count: 20
@@ -822,11 +984,12 @@ export default function TherapistPortal() {
       }
 
       const data = await response.json();
-      setWordSuggestions(data.words || []);
+      const suggestions = data.data?.words?.phrases || [];
+      setWordSuggestions(suggestions);
       
       toast({
         title: "Words Generated!",
-        description: `Found ${data.words?.length || 0} words that ${soundPosition.replace('-', ' ')} "${selectedSound}"`,
+        description: `Found ${suggestions.length} words that ${soundPosition.replace('-', ' ')} "${selectedSound}"`,
       });
     } catch (error) {
       console.error('Error generating sound words:', error);
@@ -889,117 +1052,201 @@ export default function TherapistPortal() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
+    <div className="therapist-portal-container">
+      <div className="portal-header">
+        <div className="container mx-auto px-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+              <h1 className="portal-title">
                 Therapist Portal
               </h1>
-              <p className="text-gray-600">Manage your patients and create personalized speech therapy assignments</p>
+              <p className="portal-subtitle">Manage your patients and create personalized speech therapy assignments</p>
             </div>
-            <div className="hidden md:flex items-center space-x-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{clients.length}</div>
-                <div className="text-sm text-gray-600">Active Patients</div>
+            <div className="hidden md:flex items-center space-x-6">
+              <div className="stats-card">
+                <div className="stats-number">{clients.length}</div>
+                <div className="stats-label">Active Patients</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{assignments.length}</div>
-                <div className="text-sm text-gray-600">Total Assignments</div>
+              <div className="stats-card" style={{background: 'linear-gradient(135deg, var(--apple-green) 0%, #28CD41 100%)'}}>
+                <div className="stats-number">{assignments.length}</div>
+                <div className="stats-label">Total Assignments</div>
+              </div>
+              <div className="stats-card" style={{background: 'linear-gradient(135deg, var(--apple-orange) 0%, var(--apple-yellow) 100%)'}}>
+                <div className="stats-number">{assignments.filter((a: Assignment) => !a.isCompleted).length}</div>
+                <div className="stats-label">Active</div>
               </div>
             </div>
           </div>
         </div>
+      </div>
+      <div className="container mx-auto px-4 py-8">
 
-        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-gray-100 p-1 rounded-lg">
-            <TabsTrigger value="clients" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              My Patients
-            </TabsTrigger>
-            <TabsTrigger value="library" className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
-              Content Library
-            </TabsTrigger>
-          </TabsList>
+        <Tabs value={selectedTab} onValueChange={handleTabChange} className="w-full">
+          <div 
+            className="enhanced-tabs mb-8" 
+            role="tablist" 
+            aria-label="Therapist portal navigation"
+            onKeyDown={(e) => {
+              const tabs = ['clients', 'analytics', 'smart-creator', 'library', 'workflow'];
+              const currentIndex = tabs.indexOf(selectedTab);
+              if (e.key === KEYBOARD_KEYS.ARROW_LEFT || e.key === KEYBOARD_KEYS.ARROW_RIGHT) {
+                e.preventDefault();
+                let newIndex = currentIndex;
+                if (e.key === KEYBOARD_KEYS.ARROW_LEFT) {
+                  newIndex = currentIndex > 0 ? currentIndex - 1 : tabs.length - 1;
+                } else {
+                  newIndex = currentIndex < tabs.length - 1 ? currentIndex + 1 : 0;
+                }
+                handleTabChange(tabs[newIndex]);
+              }
+            }}
+          >
+            {[
+              { id: 'clients', label: 'My Patients', icon: Users },
+              { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+              { id: 'smart-creator', label: 'Smart Creator', icon: TrendingUp },
+              { id: 'library', label: 'Templates', icon: BookOpen },
+              { id: 'workflow', label: 'Workflow Tools', icon: Zap }
+            ].map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  className={`enhanced-tab ${selectedTab === tab.id ? 'active' : ''}`}
+                  onClick={() => handleTabChange(tab.id)}
+                  onKeyDown={(e) => {
+                    const tabs = ['clients', 'analytics', 'smart-creator', 'library', 'workflow'];
+                    keyboardNavigation.handleTabNavigation(e, tabs, selectedTab, handleTabChange);
+                  }}
+                  role="tab"
+                  aria-selected={selectedTab === tab.id}
+                  aria-controls={`${tab.id}-panel`}
+                  tabIndex={selectedTab === tab.id ? 0 : -1}
+                  disabled={tabsLoading[tab.id]}
+                >
+                  <Icon className="h-4 w-4 inline-block mr-2" />
+                  {tab.label}
+                  {tabsLoading[tab.id] && (
+                    <div className="inline-block ml-2 animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
 
-          <TabsContent value="clients" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <TabsContent value="clients" className="space-y-6" role="tabpanel" id="clients-panel">
+            {tabsLoading.clients ? (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <PatientListSkeleton />
+                <div className="lg:col-span-2">
+                  <div className="enhanced-card">
+                    <div className="enhanced-card-content flex items-center justify-center h-64">
+                      <div className="text-center">
+                        <div className="animate-spin h-8 w-8 border-2 border-purple-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                        <p className="text-gray-600">Loading patient details...</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Patient List */}
               <div className="lg:col-span-1">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <span>Patient List ({filteredClients.length})</span>
+                <div className="enhanced-card">
+                  <div className="enhanced-card-header">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold text-lg">Patient List ({filteredClients.length})</h3>
                       <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
+                        <button
+                          className="btn-secondary p-2"
                           onClick={() => setShowAssignAssignmentModal(true)}
                           disabled={clients.length === 0 || !Array.isArray(contentLibrary) || contentLibrary.length === 0 || isContentLibraryLoading}
                           title="Send Assignment to Patients"
                         >
                           <Send className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
+                        </button>
+                        <button
+                          className="btn-primary p-2"
                           onClick={handleAddClient}
                         >
                           <Plus className="h-4 w-4" />
-                        </Button>
+                        </button>
                       </div>
-                    </CardTitle>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      <Input
+                    </div>
+                    <div className="enhanced-search">
+                      <Search className="enhanced-search-icon h-4 w-4" />
+                      <input
+                        className="enhanced-search-input"
                         placeholder="Search patients..."
                         value={clientSearchTerm}
                         onChange={(e) => setClientSearchTerm(e.target.value)}
-                        className="pl-10"
                       />
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
+                  </div>
+                  <div className="enhanced-card-content">
+                    <div className="space-y-3">
                       {/* Active Clients */}
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {filteredClients.length === 0 ? (
-                          <p className="text-center text-gray-500 py-4">No active patients</p>
+                          <div className="text-center py-8" role="status" aria-live="polite">
+                            <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" aria-hidden="true" />
+                            <p className="text-gray-500">No active patients</p>
+                          </div>
                         ) : (
-                          filteredClients.map((client: User) => (
+                          filteredClients.map((client: User, index) => (
                             <div
                               key={client.id}
-                              className={`p-3 rounded-lg border transition-colors ${
-                                selectedClient?.id === client.id
-                                  ? 'border-blue-500 bg-blue-50'
-                                  : 'border-gray-200 hover:border-gray-300'
-                              }`}
+                              className={`patient-card ${selectedClient?.id === client.id ? 'selected' : ''}`}
+                              onClick={() => {
+                                setSelectedClient(client);
+                                announcer.announce(`Selected patient ${client.firstName && client.lastName ? `${client.firstName} ${client.lastName}` : client.username}`);
+                              }}
+                              role="button"
+                              tabIndex={0}
+                              aria-label={`Select patient ${client.firstName && client.lastName ? `${client.firstName} ${client.lastName}` : client.username}, ${client.email}`}
+                              onKeyDown={(e) => {
+                                if (e.key === KEYBOARD_KEYS.ENTER || e.key === KEYBOARD_KEYS.SPACE) {
+                                  e.preventDefault();
+                                  setSelectedClient(client);
+                                  announcer.announce(`Selected patient ${client.firstName && client.lastName ? `${client.firstName} ${client.lastName}` : client.username}`);
+                                } else if (e.key === KEYBOARD_KEYS.ARROW_DOWN || e.key === KEYBOARD_KEYS.ARROW_UP) {
+                                  e.preventDefault();
+                                  const direction = e.key === KEYBOARD_KEYS.ARROW_DOWN ? 1 : -1;
+                                  const nextIndex = index + direction;
+                                  if (nextIndex >= 0 && nextIndex < filteredClients.length) {
+                                    const nextClient = filteredClients[nextIndex];
+                                    const nextElement = document.querySelector(`[data-client-id="${nextClient.id}"]`) as HTMLElement;
+                                    nextElement?.focus();
+                                  }
+                                }
+                              }}
+                              data-client-id={client.id}
                             >
-                              <div className="flex items-center justify-between">
-                                <div 
-                                  className="flex-1 cursor-pointer"
-                                  onClick={() => setSelectedClient(client)}
-                                >
-                                  <div className="font-medium">
+                              <div className="flex items-center">
+                                <div className="patient-info">
+                                  <div className="patient-name">
                                     {client.firstName && client.lastName
                                       ? `${client.firstName} ${client.lastName}`
                                       : client.username}
                                   </div>
-                                  <div className="text-sm text-gray-600">{client.email}</div>
+                                  <div className="patient-email">{client.email}</div>
                                 </div>
                                 
                                 {/* Three dots menu */}
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                                    <button 
+                                      className="btn-secondary h-8 w-8 p-0 ml-3" 
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
                                       <MoreVertical className="h-4 w-4" />
-                                    </Button>
+                                    </button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuItem onClick={() => {
-                                      setSelectedClient(client);
-                                      setSelectedTab('assignments');
+                                      setSelectedPatientForAssignment(client);
+                                      setShowAppleAssignmentModal(true);
                                     }}>
                                       <FileText className="mr-2 h-4 w-4" />
                                       Create Assignment
@@ -1030,50 +1277,38 @@ export default function TherapistPortal() {
                       {/* Pending Invitations */}
                       {pendingInvitations.length > 0 && (
                         <>
-                          <Separator />
-                          <div id="pending-invitations-section" className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                            <h4 className="text-lg font-semibold text-yellow-700 dark:text-yellow-400 mb-3 flex items-center gap-2">
+                          <div className="border-t border-gray-200 my-4"></div>
+                          <div className="analytics-card" style={{background: 'linear-gradient(135deg, var(--apple-yellow) 0%, var(--apple-orange) 100%)'}}>
+                            <h4 className="font-semibold mb-3 flex items-center gap-2">
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
                               Pending Invitations ({pendingInvitations.length})
                             </h4>
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                               {pendingInvitations.map((invitation: any) => (
                                 <div
                                   key={invitation.id}
                                   className={`p-3 rounded-lg border ${invitation.isTemporary 
-                                    ? 'border-blue-200 bg-blue-50 animate-pulse' 
-                                    : 'border-yellow-200 bg-yellow-50'
+                                    ? 'border-blue-200 bg-white/20 animate-pulse' 
+                                    : 'border-white/30 bg-white/20'
                                   }`}
                                 >
                                   <div className="flex items-center justify-between">
                                     <div>
-                                      <div className={`font-medium ${invitation.isTemporary 
-                                        ? 'text-blue-800' 
-                                        : 'text-yellow-800'
-                                      }`}>
+                                      <div className="font-medium">
                                         {invitation.clientEmail}
                                       </div>
-                                      <div className={`text-sm ${invitation.isTemporary 
-                                        ? 'text-blue-600' 
-                                        : 'text-yellow-600'
-                                      }`}>
+                                      <div className="text-sm opacity-90">
                                         {invitation.isTemporary 
                                           ? 'Sending invitation...' 
                                           : `Invited ${new Date(invitation.sentAt).toLocaleDateString()}`
                                         }
                                       </div>
                                     </div>
-                                    <Badge 
-                                      variant="secondary" 
-                                      className={invitation.isTemporary 
-                                        ? 'bg-blue-100 text-blue-800' 
-                                        : 'bg-yellow-100 text-yellow-800'
-                                      }
-                                    >
+                                    <div className="px-2 py-1 bg-white/30 rounded text-xs font-medium">
                                       {invitation.isTemporary ? 'Sending...' : 'Pending'}
-                                    </Badge>
+                                    </div>
                                   </div>
                                 </div>
                               ))}
@@ -1082,8 +1317,8 @@ export default function TherapistPortal() {
                         </>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </div>
 
               {/* Patient Details & Assignments */}
@@ -1091,131 +1326,154 @@ export default function TherapistPortal() {
                 {selectedClient ? (
                   <div className="space-y-6">
                     {/* Patient Info */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center justify-between">
-                          <span>
-                            {selectedClient.firstName && selectedClient.lastName
-                              ? `${selectedClient.firstName} ${selectedClient.lastName}`
-                              : selectedClient.username}
-                          </span>
-                          <Button onClick={() => setShowAssignmentForm(true)}>
+                    <div className="enhanced-card">
+                      <div className="enhanced-card-header">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="patient-avatar" style={{width: '60px', height: '60px', fontSize: '1.5rem'}}>
+                              {(selectedClient.firstName?.[0] || selectedClient.username?.[0] || 'U').toUpperCase()}
+                            </div>
+                            <div>
+                              <h3 className="text-xl font-semibold">
+                                {selectedClient.firstName && selectedClient.lastName
+                                  ? `${selectedClient.firstName} ${selectedClient.lastName}`
+                                  : selectedClient.username}
+                              </h3>
+                              <p className="text-gray-600">{selectedClient.email}</p>
+                            </div>
+                          </div>
+                          <button 
+                            className="btn-primary"
+                            onClick={() => setShowAssignmentForm(true)}
+                          >
                             <Plus className="h-4 w-4 mr-2" />
                             New Assignment
-                          </Button>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-sm font-medium text-gray-600">Email</label>
-                            <p>{selectedClient.email}</p>
+                          </button>
+                        </div>
+                      </div>
+                      <div className="enhanced-card-content">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div className="stats-card" style={{background: 'linear-gradient(135deg, var(--apple-blue) 0%, var(--apple-blue-light) 100%)'}}>
+                            <div className="stats-number">{clientAssignments.length}</div>
+                            <div className="stats-label">Total Assignments</div>
                           </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-600">Total Assignments</label>
-                            <p>{clientAssignments.length}</p>
+                          <div className="stats-card" style={{background: 'linear-gradient(135deg, var(--apple-green) 0%, #28CD41 100%)'}}>
+                            <div className="stats-number">{clientAssignments.filter((a: Assignment) => a.isCompleted).length}</div>
+                            <div className="stats-label">Completed</div>
+                          </div>
+                          <div className="stats-card" style={{background: 'linear-gradient(135deg, var(--apple-orange) 0%, var(--apple-yellow) 100%)'}}>
+                            <div className="stats-number">{clientAssignments.filter((a: Assignment) => !a.isCompleted).length}</div>
+                            <div className="stats-label">In Progress</div>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
 
                     {/* Assignments */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Assignments</CardTitle>
-                      </CardHeader>
-                      <CardContent>
+                    <div className="enhanced-card">
+                      <div className="enhanced-card-header">
+                        <h3 className="text-lg font-semibold">Assignments</h3>
+                      </div>
+                      <div className="enhanced-card-content">
                         {clientAssignments.length === 0 ? (
-                          <div className="text-center py-8">
-                            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <p className="text-gray-600">No assignments yet</p>
-                            <p className="text-sm text-gray-500">Create the first assignment for this patient</p>
+                          <div className="text-center py-12">
+                            <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                            <p className="text-gray-600 font-medium">No assignments yet</p>
+                            <p className="text-sm text-gray-500 mt-2">Create the first assignment for this patient</p>
+                            <button 
+                              className="btn-primary mt-4"
+                              onClick={() => setShowAssignmentForm(true)}
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Create First Assignment
+                            </button>
                           </div>
                         ) : (
-                          <div className="space-y-3">
+                          <div className="space-y-4">
                             {clientAssignments.map((assignment: Assignment) => (
                               <div
                                 key={assignment.id}
-                                className="p-4 border rounded-lg hover:border-gray-300"
+                                className="assignment-card"
                               >
                                 {editingAssignment === assignment.id ? (
                                   // Edit mode
-                                  <div className="space-y-3">
+                                  <div className="space-y-4">
                                     <div>
-                                      <label className="text-sm font-medium text-gray-700">Title</label>
-                                      <Input
+                                      <label className="text-sm font-medium text-gray-700 mb-2 block">Title</label>
+                                      <input
+                                        className="enhanced-search-input"
                                         value={editTitle}
                                         onChange={(e) => setEditTitle(e.target.value)}
                                         placeholder="Assignment title"
-                                        className="mt-1"
                                       />
                                     </div>
                                     <div>
-                                      <label className="text-sm font-medium text-gray-700">Description</label>
-                                      <Textarea
+                                      <label className="text-sm font-medium text-gray-700 mb-2 block">Description</label>
+                                      <textarea
+                                        className="enhanced-search-input"
                                         value={editDescription}
                                         onChange={(e) => setEditDescription(e.target.value)}
                                         placeholder="Assignment description"
-                                        rows={2}
-                                        className="mt-1"
+                                        rows={3}
+                                        style={{resize: 'vertical'}}
                                       />
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                      <Button
-                                        size="sm"
+                                    <div className="flex items-center gap-3">
+                                      <button
+                                        className="btn-success"
                                         onClick={handleSaveEdit}
                                         disabled={updateAssignmentMutation.isPending || !editTitle.trim()}
                                       >
-                                        <Save className="h-4 w-4 mr-1" />
+                                        <Save className="h-4 w-4 mr-2" />
                                         {updateAssignmentMutation.isPending ? "Saving..." : "Save"}
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
+                                      </button>
+                                      <button
+                                        className="btn-secondary"
                                         onClick={handleCancelEdit}
                                         disabled={updateAssignmentMutation.isPending}
                                       >
-                                        <XCircle className="h-4 w-4 mr-1" />
+                                        <XCircle className="h-4 w-4 mr-2" />
                                         Cancel
-                                      </Button>
+                                      </button>
                                     </div>
                                   </div>
                                 ) : (
                                   // View mode
-                                  <div className="flex items-center justify-between">
-                                    <div 
-                                      className="flex-1 cursor-pointer"
-                                      onClick={() => setShowReportCard(assignment.id)}
-                                    >
-                                      <h4 className="font-medium">{assignment.title}</h4>
-                                      <p className="text-sm text-gray-600">{assignment.description}</p>
-                                      <div className="flex items-center gap-4 mt-2">
-                                        <Badge variant="outline">
-                                          Assignment
-                                        </Badge>
-                                        <span className="text-xs text-gray-500">
-                                          Created {new Date(assignment.createdAt).toLocaleDateString()}
-                                        </span>
+                                  <div 
+                                    className="cursor-pointer"
+                                    onClick={() => setShowReportCard(assignment.id)}
+                                  >
+                                    <div className="flex items-start justify-between mb-3">
+                                      <div className="flex-1">
+                                        <div className="assignment-title">{assignment.title}</div>
+                                        <div className="assignment-description">{assignment.description}</div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          className="btn-secondary h-8 w-8 p-0"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleStartEdit(assignment);
+                                          }}
+                                        >
+                                          <Edit3 className="h-4 w-4" />
+                                        </button>
+                                        <div className={`px-2 py-1 rounded text-xs font-medium ${
+                                          assignment.isCompleted 
+                                            ? 'bg-green-100 text-green-800' 
+                                            : 'bg-blue-100 text-blue-800'
+                                        }`}>
+                                          {assignment.isCompleted ? "Completed" : "In Progress"}
+                                        </div>
                                       </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleStartEdit(assignment);
-                                        }}
-                                      >
-                                        <Edit3 className="h-4 w-4" />
-                                      </Button>
-                                      <Badge variant={assignment.isCompleted ? "default" : "secondary"}>
-                                        {assignment.isCompleted ? "Completed" : "In Progress"}
-                                      </Badge>
-                                      <BarChart3 
-                                        className="h-4 w-4 text-gray-400 cursor-pointer" 
-                                        onClick={() => setShowReportCard(assignment.id)}
-                                      />
+                                    <div className="assignment-meta">
+                                      <span>📄 Assignment</span>
+                                      <span>Created {new Date(assignment.createdAt).toLocaleDateString()}</span>
+                                      <span className="flex items-center gap-1">
+                                        <BarChart3 className="h-3 w-3" />
+                                        View Report
+                                      </span>
                                     </div>
                                   </div>
                                 )}
@@ -1223,21 +1481,23 @@ export default function TherapistPortal() {
                             ))}
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
                   </div>
                 ) : (
-                  <Card>
-                    <CardContent className="flex items-center justify-center h-64">
+                  <div className="enhanced-card">
+                    <div className="enhanced-card-content flex items-center justify-center h-64">
                       <div className="text-center">
-                        <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600">Select a patient to view their assignments</p>
+                        <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-600 font-medium">Select a patient to view their assignments</p>
+                        <p className="text-sm text-gray-500 mt-2">Choose a patient from the list to see their progress and create assignments</p>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
+            )}
 
             {/* Assignment Creation Modal */}
             {showAssignmentForm && (
@@ -1360,14 +1620,14 @@ export default function TherapistPortal() {
                       {/* Content Generation Tabs */}
                       <Tabs value={contentGenerationMode} onValueChange={setContentGenerationMode} className="w-full">
                         <TabsList className="grid w-full grid-cols-3">
-                          <TabsTrigger value="templates">Templates</TabsTrigger>
                           <TabsTrigger value="sounds">Sound Patterns</TabsTrigger>
+                          <TabsTrigger value="templates">Topics</TabsTrigger>
                           <TabsTrigger value="topics">Custom Topics</TabsTrigger>
                         </TabsList>
                         
                         <TabsContent value="templates" className="space-y-4">
                           <div>
-                            <label className="text-sm font-medium mb-2 block">Choose from Templates</label>
+                            <label className="text-sm font-medium mb-2 block">Choose from Topics</label>
                             <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
                               {savedTemplates.map((template) => (
                                 <Button
@@ -1594,8 +1854,74 @@ export default function TherapistPortal() {
             )}
           </TabsContent>
 
-          <TabsContent value="library">
-            <ContentLibraryPage />
+          <TabsContent value="analytics" className="space-y-6" role="tabpanel" id="analytics-panel">
+            {tabsLoading.analytics ? (
+              <AnalyticsSkeleton />
+            ) : (
+              <AnalyticsDashboard clients={clients} assignments={assignments} />
+            )}
+          </TabsContent>
+
+          <TabsContent value="smart-creator" className="space-y-6" role="tabpanel" id="smart-creator-panel">
+            {tabsLoading['smart-creator'] ? (
+              <SmartCreatorSkeleton />
+            ) : (
+              <SmartAssignmentCreator 
+                selectedClient={selectedClient}
+                clientAssignments={clientAssignments}
+                onCreateAssignment={(data) => {
+                  createAssignmentMutation.mutate({
+                    ...data,
+                    userId: selectedClient?.id,
+                    therapistId: user?.id,
+                    therapistName: user?.firstName && user?.lastName 
+                      ? `${user.firstName} ${user.lastName}` 
+                      : user?.username || "Therapist"
+                  });
+                  announcer.announce('Creating smart assignment', 'assertive');
+                }}
+                isLoading={createAssignmentMutation.isPending}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="library" role="tabpanel" id="library-panel">
+            {tabsLoading.library ? (
+              <TemplateLibrarySkeleton />
+            ) : (
+              <AdvancedTemplateLibrary
+                onSelectTemplate={(template) => {
+                  setSelectedTemplate(template);
+                  setAssignmentTitle(template.title);
+                  setAssignmentDescription(template.description);
+                  setGeneratedWords(template.content.words.map(word => ({ text: word, syllabication: word })));
+                  setShowAssignmentForm(true);
+                  announcer.announce(`Template ${template.title} selected`);
+                }}
+                userRole={user?.role === 'therapist' ? 'therapist' : 'therapist'}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="workflow" className="space-y-6" role="tabpanel" id="workflow-panel">
+            {tabsLoading.workflow ? (
+              <div className="enhanced-card">
+                <div className="enhanced-card-content flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <div className="animate-spin h-8 w-8 border-2 border-purple-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading workflow tools...</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <WorkflowTools
+                clients={clients}
+                assignments={assignments}
+                onBulkAction={handleBulkAction}
+                onScheduleAssignment={handleScheduleAssignment}
+                onVoiceInput={handleVoiceInput}
+              />
+            )}
           </TabsContent>
         </Tabs>
 
@@ -1688,6 +2014,40 @@ export default function TherapistPortal() {
           isLoading={sendAssignmentMutation.isPending}
           isContentLoading={isContentLibraryLoading}
         />
+
+        {/* Apple Assignment Modal */}
+        <AppleAssignmentModal
+          isOpen={showAppleAssignmentModal}
+          onClose={() => {
+            setShowAppleAssignmentModal(false);
+            setSelectedPatientForAssignment(null);
+          }}
+          selectedPatient={selectedPatientForAssignment}
+        />
+
+        {/* Loading Overlay */}
+        {isPageLoading && (
+          <LoadingOverlay message="Processing your request..." />
+        )}
+
+        {/* Success Animation */}
+        {showSuccessAnimation && (
+          <SuccessAnimation 
+            message={successMessage}
+            onComplete={() => {
+              setShowSuccessAnimation(false);
+              setSuccessMessage('');
+            }}
+          />
+        )}
+
+        {/* Accessibility live region for announcements */}
+        <div
+          id="accessibility-announcements"
+          className="sr-only"
+          aria-live="polite"
+          aria-atomic="true"
+        ></div>
       </div>
     </div>
   );

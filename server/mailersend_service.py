@@ -309,6 +309,11 @@ if __name__ == "__main__":
             else:
                 # Fallback to old template
                 result = send_client_invitation(to_email, therapist_name, invitation_link, assignments_link)
+        elif email_type == 'assignment_notification':
+            to_email = input_data.get('to', '')
+            email_subject = input_data.get('subject', '')
+            html_content = input_data.get('html', '')
+            result = send_custom_email(to_email, email_subject, html_content)
         else:
             # Contact form email (default)
             name = input_data.get('name', '')

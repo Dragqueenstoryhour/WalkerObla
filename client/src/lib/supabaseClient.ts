@@ -79,6 +79,10 @@ export async function getAuthHeaders(): Promise<HeadersInit> {
   try {
     const token = await getAuthToken();
     console.log('getAuthHeaders: Token available:', !!token);
+    if (token) {
+      console.log('getAuthHeaders: Token segments:', token.split('.').length);
+      console.log('getAuthHeaders: Token first 50 chars:', token.substring(0, 50));
+    }
     return token 
       ? { Authorization: `Bearer ${token}` }
       : {};

@@ -329,13 +329,13 @@ router.post('/generate-words', protect, catchAsync(async (req: any, res) => {
     return error(res, 'Access denied. Therapist role required.', 403);
   }
   
-  const { sound, difficulty, count } = req.body;
+  const { sound, difficulty, count, position } = req.body;
   
   if (!sound) {
     return error(res, 'Sound parameter is required', 400);
   }
   
-  const words = await memoizedGenerateWordsWithSound(sound, count || 8, difficulty || "4");
+  const words = await memoizedGenerateWordsWithSound(sound, difficulty || "4", count || 8, position);
   return success(res, { words });
 }));
 

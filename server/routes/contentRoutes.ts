@@ -106,4 +106,18 @@ router.post('/generate-suggested-words', catchAsync(async (req, res) => {
   return success(res, { phrases: formattedWords });
 }));
 
+// Generate words with specific sound - endpoint for Words.tsx
+router.post('/generate-words-with-sound', catchAsync(async (req, res) => {
+  const { targetSound, difficulty, count } = req.body;
+
+  if (!targetSound) {
+    return error(res, 'targetSound is required', 400);
+  }
+
+  console.log(`Generating words with sound: "${targetSound}", difficulty: ${difficulty || '4'}, count: ${count || 8}`);
+
+  const words = await memoizedGenerateWordsWithSound(targetSound, count || 8, difficulty || '4');
+  return success(res, { phrases: words.phrases || words });
+}));
+
 export default router;

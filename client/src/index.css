@@ -1,3 +1,9 @@
+/* Apple Assignment Modal Animations */
+@import "./styles/apple-assignment-animations.css";
+
+/* Phase 3: Therapist Portal Enhancements */
+@import "./styles/therapist-portal-enhancements.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

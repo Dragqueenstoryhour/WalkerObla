@@ -92,28 +92,44 @@ router.patch('/:id', protect, catchAsync(async (req: any, res) => {
 }));
 
 router.post('/', protect, catchAsync(async (req: any, res) => {
-  const assignmentData = insertAssignmentSchema.parse(req.body);
-  const assignment = await storage.createAssignment(assignmentData);
+  const { items, ...assignmentData } = req.body;
+  console.log('Assignment creation request data:', JSON.stringify(assignmentData, null, 2));
+  console.log('Assignment items:', JSON.stringify(items, null, 2));
+  
+  try {
+    const parsedAssignmentData = insertAssignmentSchema.parse(assignmentData);
+    const assignment = await storage.createAssignment(parsedAssignmentData);
+  
+  // Create assignment items if provided
+  if (items && Array.isArray(items)) {
+    for (const item of items) {
+      const itemData = insertAssignmentItemSchema.parse({
+        ...item,
+        assignmentId: assignment.id
+      });
+      await storage.createAssignmentItem(itemData);
+    }
+  }
   
   // Send email notification to client
   try {
-    const therapist = await storage.getUser(assignmentData.therapistId);
+    const therapist = await storage.getUser(parsedAssignmentData.therapistId);
     let clientEmail: string | undefined;
     let clientName: string | undefined;
     
-    if (assignmentData.userId) {
+    if (parsedAssignmentData.userId) {
       // Assignment to existing user
-      const client = await storage.getUser(assignmentData.userId);
+      const client = await storage.getUser(parsedAssignmentData.userId);
       if (client && client.email) {
         clientEmail = client.email;
         clientName = client.firstName && client.lastName 
           ? `${client.firstName} ${client.lastName}` 
           : client.username;
       }
-    } else if (assignmentData.clientEmail) {
+    } else if (parsedAssignmentData.clientEmail) {
       // Assignment to email address (non-registered user)
-      clientEmail = assignmentData.clientEmail;
-      clientName = assignmentData.clientEmail.split('@')[0]; // Use email prefix as name
+      clientEmail = parsedAssignmentData.clientEmail;
+      clientName = parsedAssignmentData.clientEmail.split('@')[0]; // Use email prefix as name
     }
     
     if (clientEmail && therapist) {
@@ -127,9 +143,9 @@ router.post('/', protect, catchAsync(async (req: any, res) => {
         clientEmail,
         clientName: clientName || 'Student',
         therapistName,
-        assignmentTitle: assignmentData.title,
-        assignmentDescription: assignmentData.description || undefined,
-        dueDate: assignmentData.dueDate?.toISOString() || undefined,
+        assignmentTitle: parsedAssignmentData.title,
+        assignmentDescription: parsedAssignmentData.description || undefined,
+        dueDate: parsedAssignmentData.dueDate?.toISOString() || undefined,
         assignmentId: assignment.id,
         baseUrl
       });
@@ -138,7 +154,18 @@ router.post('/', protect, catchAsync(async (req: any, res) => {
     console.error('Failed to send assignment notification email:', emailError);
   }
   
-  return success(res, assignment, 201);
+    return success(res, assignment, 201);
+  } catch (validationError) {
+    console.error('Assignment validation error:', validationError);
+    if (validationError.name === 'ZodError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        details: validationError.errors
+      });
+    }
+    throw validationError;
+  }
 }));
 
 router.post('/:id/items', protect, catchAsync(async (req: any, res) => {
