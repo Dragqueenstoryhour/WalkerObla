@@ -1146,6 +1146,7 @@ function getFallbackWordsWithSound(targetSound: string, count: number, position?
   }
   
   return availableWords.slice(0, count).map(word => ({ text: word.text, syllabication: word.syllabication }));
+  }
 
 export async function generateTopicPhrases(
   topic: string,
