@@ -8,7 +8,7 @@ import { generateReadingContent } from '@/lib/openai';
 import { useToast } from '@/hooks/use-toast';
 import { RotateCw, Users } from 'lucide-react';
 // import oblaLogoPath from '@assets/e0dfb3c8-508c-4b30-994b-f471210dcd7c_1749383232529.jpg'; // Original logo
-const whiskGifPath = '/Whisk_gif_dq0ywe4ywq.gif'; // New logo path
+const whiskGifPath = '/images/aWhisk_a29f889dea.jpg'; // Updated to use existing image
 
 interface DifficultySelectionDialogProps {
   open: boolean;
@@ -89,7 +89,7 @@ export function DifficultySelectionDialog({ open, onClose }: DifficultySelection
       <DialogContent className="sm:max-w-lg bg-[#f9fafb] border-2 border-blue-700 shadow-2xl"> {/* Changed background color */}
         <div className="text-center mb-6">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
-            <img src={whiskGifPath} alt="Whisk Logo" className="w-full h-full object-cover" /> {/* Updated logo path and alt text */}
+            <img src={whiskGifPath} alt="Obla Logo" className="w-full h-full object-cover" />
           </div>
           <DialogTitle className="text-3xl font-bold text-[#1537cc] mb-2"> {/* Changed text color */}
             Welcome to Obla!
