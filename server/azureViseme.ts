@@ -286,7 +286,7 @@ export async function generateSpeechWithVisemes(
         process.env.AZURE_SPEECH_REGION!
       );
       speechConfig.speechSynthesisOutputFormat = speechsdk.SpeechSynthesisOutputFormat.Riff16Khz16BitMonoPcm;
-      speechConfig.setProperty(speechsdk.PropertyId.Speech_Service_Response_RequestSentenceBoundary, "true"); // Not strictly needed for visemes, but good practice
+      speechConfig.setProperty(speechsdk.PropertyId.SpeechServiceResponse_RequestSentenceBoundary, "true"); // Not strictly needed for visemes, but good practice
 
       // Create an audio stream that will capture the synthesized audio
       const audioOutputStream = speechsdk.AudioOutputStream.createPullStream();
@@ -329,6 +329,16 @@ export async function generateSpeechWithVisemes(
         result => {
           if (result.reason === speechsdk.ResultReason.SynthesizingAudioCompleted) {
             console.log("Synthesis finished.");
+            
+            console.log("Audio data type:", typeof result.audioData);
+            console.log("Audio data byte length:", result.audioData ? result.audioData.byteLength : 'undefined');
+            
+            if (!result.audioData || result.audioData.byteLength === 0) {
+              synthesizer.close();
+              reject(new Error("No audio data received from Azure Speech synthesis"));
+              return;
+            }
+            
             // Directly get audio data from the result object
             const fullAudioBuffer = Buffer.from(result.audioData);
 
@@ -422,26 +432,26 @@ export async function processAudioForVisemes(
     let durationMs = 0;
 
     return new Promise<ConsolidatedVisemeData>((resolve, reject) => {
-      // Set up the viseme event handler
-      recognizer.visemeReceived = (s, e) => {
-        // Extract offset and viseme ID
-        const visemeId = e.visemeId;
-        const audioOffset = e.audioOffset / 10000; // Convert 100-nanosecond units to milliseconds
+      // Set up the viseme event handler - Note: This function is not currently used
+      // recognizer.visemeReceived = (s: any, e: any) => {
+      //   // Extract offset and viseme ID
+      //   const visemeId = e.visemeId;
+      //   const audioOffset = e.audioOffset / 10000; // Convert 100-nanosecond units to milliseconds
 
-        // Map viseme ID to animation data
-        const animation = format === "svg"
-          ? generateVisemeSvg(visemeId)
-          : generateVisemeBlendShapes(visemeId);
+      //   // Map viseme ID to animation data
+      //   const animation = format === "svg"
+      //     ? generateVisemeSvg(visemeId)
+      //     : generateVisemeBlendShapes(visemeId);
 
-        visemes.push({
-          visemeId,
-          audioOffset,
-          animation
-        });
+      //   visemes.push({
+      //     visemeId,
+      //     audioOffset,
+      //     animation
+      //   });
 
-        // Update duration if this is the latest viseme
-        durationMs = Math.max(durationMs, audioOffset);
-      };
+      //   // Update duration if this is the latest viseme
+      //   durationMs = Math.max(durationMs, audioOffset);
+      // };
 
       // Start recognition
       recognizer.recognizeOnceAsync(

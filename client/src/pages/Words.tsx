@@ -1605,9 +1605,13 @@ export default function Words() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const img = preloadedImages[visemeId];
-    if (img) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const img = preloadedImages[visemeId] || preloadedImages[0];
+    if (img && img.complete) {
+      ctx.globalAlpha = 0.1;
+      ctx.fillStyle = '#f0f9ff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      ctx.globalAlpha = 1.0;
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     }
   };
@@ -1621,38 +1625,43 @@ export default function Words() {
     const idsToLoad = [0, ...visemeIds].filter((id, index, arr) => arr.indexOf(id) === index);
 
     // Use Promise.all to ensure all images are fully loaded before continuing
-    const loadPromises = idsToLoad.map((id) => {
+    const loadPromises = idsToLoad.map((id, index) => {
       return new Promise<HTMLImageElement>((resolve, reject) => {
         // Check if image is already loaded and in cache
         if (preloadedImages[id] && preloadedImages[id].complete) {
-          // console.log(`Viseme image ${id} already preloaded and cached`);
+          setLoadingProgress(prev => ({ 
+            ...prev, 
+            images: Math.round(((index + 1) / idsToLoad.length) * 100) 
+          }));
           resolve(preloadedImages[id]);
           return;
         }
 
         const img = new Image();
 
+        const timeoutId = setTimeout(() => {
+          console.warn(`Timeout loading viseme image ${id}, using fallback`);
+          resolve(preloadedImages[0] || img);
+        }, 3000);
+
         img.onload = () => {
-          // console.log(`Successfully preloaded viseme image ${id}`);
+          clearTimeout(timeoutId);
+          setLoadingProgress(prev => ({ 
+            ...prev, 
+            images: Math.round(((index + 1) / idsToLoad.length) * 100) 
+          }));
           resolve(img);
         };
 
-        img.onerror = (e) => {
-          console.error(`Failed to preload viseme image ${id}:`, e);
-          reject(new Error(`Failed to load viseme image ${id}`));
+        img.onerror = () => {
+          clearTimeout(timeoutId);
+          console.warn(`Failed to load viseme image ${id}, using fallback`);
+          resolve(preloadedImages[0] || img);
         };
 
         // Set crossOrigin to handle potential CORS issues
         img.crossOrigin = "anonymous";
         img.src = visemeImages[id as keyof typeof visemeImages];
-
-        // Add timeout to prevent hanging
-        setTimeout(() => {
-          if (!img.complete) {
-            console.warn(`Timeout loading viseme image ${id}`);
-            reject(new Error(`Timeout loading viseme image ${id}`));
-          }
-        }, 5000);
       });
     });
 
@@ -1705,7 +1714,7 @@ export default function Words() {
           text: word.trim(),
           voice: "en-US-AriaNeural",
           format: "svg",
-          speed: 0.65 // 65% speed for slow demonstration
+          speed: slowPlaybackWords[word] ? 0.5 : 0.65 // Use slower speed if snail toggle is active
         }),
       });
 
@@ -1713,10 +1722,32 @@ export default function Words() {
         throw new Error(`Failed to generate visemes: ${response.statusText}`);
       }
 
-      const data: VisemeResponse = await response.json();
+      const response_data = await response.json();
+      const data: VisemeResponse = response_data.data || response_data; // Handle server success wrapper
 
-      // Convert base64 audio data to blob URL
-      const binaryString = atob(data.audioBuffer);
+      console.log("Client received response:", response_data);
+      console.log("Client extracted data:", {
+        hasAudioBuffer: !!data.audioBuffer,
+        audioBufferType: typeof data.audioBuffer,
+        audioBufferLength: data.audioBuffer ? data.audioBuffer.length : 'undefined',
+        visemesCount: data.visemes ? data.visemes.length : 'undefined',
+        duration: data.duration
+      });
+
+      // Convert base64 audio data to blob URL with validation
+      if (!data.audioBuffer || typeof data.audioBuffer !== 'string') {
+        console.error("Invalid audio buffer - data.audioBuffer:", data.audioBuffer);
+        throw new Error('Invalid audio buffer received from server');
+      }
+      
+      let binaryString;
+      try {
+        binaryString = atob(data.audioBuffer);
+      } catch (error) {
+        console.error('Failed to decode base64 audio buffer:', error);
+        throw new Error('Invalid base64 audio data received from server');
+      }
+      
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
@@ -1909,10 +1940,11 @@ export default function Words() {
 
         const targetVisemeId = visemeData[currentVisemeIndex]?.visemeId || 0;
 
-        // Update viseme with requestAnimationFrame for smooth rendering
+        // Update viseme with canvas rendering for smooth transitions
         setCurrentVisemeId(prevId => {
           if (prevId !== targetVisemeId) {
             console.log(`RAF: Syncing viseme ${targetVisemeId} at time ${currentTime.toFixed(0)}ms`);
+            drawVisemeOnCanvas(targetVisemeId);
             return targetVisemeId;
           }
           return prevId;
@@ -2177,18 +2209,19 @@ export default function Words() {
 
           <div className="flex items-start space-x-6">
             {/* Animation display - left aligned */}
-            <div 
-              className="relative w-48 h-48 rounded-lg overflow-hidden border-2 border-blue-200 flex-shrink-0 bg-cover bg-center bg-no-repeat"
-              style={{
-                backgroundImage: `url(${visemeImages[currentVisemeId as keyof typeof visemeImages]})`,
-                transform: isPlayingVisemes ? 'scale(1.01)' : 'scale(1)',
-                transition: 'transform 0.1s ease-out',
-                filter: isPlayingVisemes ? 'brightness(1.05)' : 'brightness(1)',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat'
-              }}
-            >
+            <div className="relative w-48 h-48 rounded-lg overflow-hidden border-2 border-blue-200 flex-shrink-0">
+              <canvas
+                ref={canvasRef}
+                width={192}
+                height={192}
+                className="w-full h-full"
+                style={{ 
+                  imageRendering: 'crisp-edges',
+                  transform: isPlayingVisemes ? 'scale(1.01)' : 'scale(1)',
+                  transition: 'transform 0.1s ease-out',
+                  filter: isPlayingVisemes ? 'brightness(1.05)' : 'brightness(1)'
+                }}
+              />
               {/* Loading overlay */}
               {isGeneratingVisemes && (
                 <div className="absolute inset-0 bg-blue-900 bg-opacity-50 flex items-center justify-center">
@@ -2297,14 +2330,12 @@ export default function Words() {
           </div>
 
           {/* Hidden audio element for viseme playback */}
-          {visemeAudioUrl && (
-            <audio
-              ref={visemeAudioRef}
-              src={visemeAudioUrl}
-              preload="auto"
-              style={{ display: 'none' }}
-            />
-          )}
+          <audio
+            ref={visemeAudioRef}
+            src={visemeAudioUrl || ''}
+            preload="auto"
+            style={{ display: 'none' }}
+          />
         </DialogContent>
       </Dialog>
 

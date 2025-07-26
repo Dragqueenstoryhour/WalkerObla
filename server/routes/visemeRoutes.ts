@@ -25,7 +25,17 @@ router.post('/generate', catchAsync(async (req, res) => {
   
   console.log(`✅ Generated ${visemeData.visemes.length} visemes with ${visemeData.duration.toFixed(2)}s duration`);
   
+  console.log("AudioBuffer type:", typeof visemeData.audioBuffer);
+  console.log("AudioBuffer length:", visemeData.audioBuffer ? visemeData.audioBuffer.length : 'undefined');
+  
+  if (!visemeData.audioBuffer || visemeData.audioBuffer.length === 0) {
+    return error(res, 'Invalid audio buffer generated', 500);
+  }
+  
   const audioBase64 = visemeData.audioBuffer.toString('base64');
+  console.log("Base64 conversion - type:", typeof audioBase64);
+  console.log("Base64 conversion - length:", audioBase64.length);
+  console.log("Base64 conversion - first 50 chars:", audioBase64.substring(0, 50));
   
   return success(res, {
     visemes: visemeData.visemes,
