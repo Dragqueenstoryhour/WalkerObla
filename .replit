@@ -1,5 +1,5 @@
 modules = ["nodejs-20", "python-3.11"]
-run = "run"
+run = "npm start"
 hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
@@ -8,7 +8,8 @@ packages = ["c-ares", "dig", "ffmpeg", "glibcLocales", "grpc", "libxcrypt", "lib
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["sh", "-c", "run"]
+run = ["sh", "-c", "npm start"]
+build = ["sh", "-c", "npm install --legacy-peer-deps && npm run build"]
 
 [[ports]]
 localPort = 3001
