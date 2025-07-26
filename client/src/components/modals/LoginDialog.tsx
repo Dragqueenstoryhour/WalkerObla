@@ -50,17 +50,17 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onSig
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Login</DialogTitle>
-          <DialogDescription>
-            Enter your email and password to access your account.
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader className="text-center space-y-2">
+          <DialogTitle className="text-2xl font-bold">Sign In</DialogTitle>
+          <DialogDescription className="text-gray-600">
+            Enter your email and password to access your account
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="email" className="text-right">
-              Email
+        <form onSubmit={handleSubmit} className="space-y-6 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+              Email Address <span className="text-red-500">*</span>
             </Label>
             <Input
               id="email"
@@ -68,12 +68,13 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onSig
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="col-span-3"
+              placeholder="patient@example.com"
+              className="w-full"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="password" className="text-right">
-              Password
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+              Password <span className="text-red-500">*</span>
             </Label>
             <Input
               id="password"
@@ -81,18 +82,21 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onSig
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="col-span-3"
+              placeholder="Enter your password"
+              className="w-full"
             />
           </div>
-          <DialogFooter>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Logging in...' : 'Login'}
-            </Button>
-          </DialogFooter>
+          <Button 
+            type="submit" 
+            disabled={isSubmitting}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-medium"
+          >
+            {isSubmitting ? 'Signing In...' : 'Sign In'}
+          </Button>
         </form>
-      <div className="text-center text-sm mt-4">
-          Don't have an account? {' '}
-          <Button variant="link" onClick={onSignupClick} className="p-0 h-auto">
+        <div className="text-center text-sm border-t pt-4">
+          <span className="text-gray-600">Don't have an account? </span>
+          <Button variant="link" onClick={onSignupClick} className="p-0 h-auto text-blue-600 hover:text-blue-700 font-medium">
             Sign Up
           </Button>
         </div>

@@ -22,7 +22,8 @@ interface SignupDialogProps {
 export const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, onLoginClick }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth(); // Use login to automatically log in after signup if email confirmation is off
   const { toast } = useToast();
@@ -37,7 +38,7 @@ export const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, onL
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({ email, password, firstName, lastName, role: 'user' }),
       });
 
       const data = await response.json();
@@ -73,30 +74,47 @@ export const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, onL
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Sign Up</DialogTitle>
-          <DialogDescription>
-            Create your account to get started.
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader className="text-center space-y-2">
+          <DialogTitle className="text-2xl font-bold">Create Patient Account</DialogTitle>
+          <DialogDescription className="text-gray-600">
+            Join the Obla platform to start improving your speech
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Name
-            </Label>
-            <Input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="col-span-3"
-            />
+        <form onSubmit={handleSubmit} className="space-y-6 py-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
+                First Name <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="firstName"
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+                placeholder="John"
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
+                Last Name <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="lastName"
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+                placeholder="Doe"
+                className="w-full"
+              />
+            </div>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="email" className="text-right">
-              Email
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+              Email Address <span className="text-red-500">*</span>
             </Label>
             <Input
               id="email"
@@ -104,12 +122,13 @@ export const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, onL
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="col-span-3"
+              placeholder="patient@example.com"
+              className="w-full"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="password" className="text-right">
-              Password
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+              Password <span className="text-red-500">*</span>
             </Label>
             <Input
               id="password"
@@ -117,19 +136,22 @@ export const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, onL
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="col-span-3"
+              placeholder="Enter your password"
+              className="w-full"
             />
           </div>
-          <DialogFooter>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Signing Up...' : 'Sign Up'}
-            </Button>
-          </DialogFooter>
+          <Button 
+            type="submit" 
+            disabled={isSubmitting}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-medium"
+          >
+            {isSubmitting ? 'Creating Account...' : 'Create Account'}
+          </Button>
         </form>
-        <div className="text-center text-sm mt-4">
-          Already have an account? {' '}
-          <Button variant="link" onClick={onLoginClick} className="p-0 h-auto">
-            Login
+        <div className="text-center text-sm border-t pt-4">
+          <span className="text-gray-600">Already have an account? </span>
+          <Button variant="link" onClick={onLoginClick} className="p-0 h-auto text-blue-600 hover:text-blue-700 font-medium">
+            Sign In
           </Button>
         </div>
       </DialogContent>
