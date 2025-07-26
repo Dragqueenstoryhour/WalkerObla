@@ -11,7 +11,9 @@ import cors from 'cors';
 const app = express();
 
 app.use(cors({
-  origin: 'http://localhost:5000', // Allow only your frontend origin
+  origin: process.env.NODE_ENV === 'production' 
+    ? true // Allow all origins in production deployment
+    : 'http://localhost:5000', // Allow only localhost in development
   credentials: true, // Allow cookies and authorization headers
   allowedHeaders: ['Content-Type', 'Authorization'], // Explicitly allow Authorization header
 }));
