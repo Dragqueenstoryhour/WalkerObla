@@ -37,7 +37,7 @@ export function useAuth() {
       return failureCount < 1;
     },
     retryOnMount: false,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
   });
 
@@ -193,6 +193,61 @@ export function useAuth() {
   };
 
   // User is authenticated if we have user data and no 401 error
+  const signUp = async (email: string, password: string) => {
+    try {
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: String(email), password: String(password) }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Sign up failed');
+      }
+
+      if (data.session) {
+        await supabaseClient.auth.setSession(data.session);
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
+      const updatedUserData = await queryClient.fetchQuery({
+        queryKey: ["/api/auth/user"],
+        queryFn: async () => {
+          console.log('Re-fetching user data after signup...');
+          const authHeaders = await getAuthHeaders();
+          
+          const userResponse = await fetch("/api/auth/user", {
+            headers: authHeaders,
+            credentials: "include",
+          });
+          
+          if (!userResponse.ok) {
+            const errorData = await userResponse.text();
+            console.error('Failed to fetch user data after signup:', userResponse.status, errorData);
+            const error = new Error(`${userResponse.status}: ${errorData}`);
+            (error as any).status = userResponse.status;
+            throw error;
+          }
+          
+          const userData = await userResponse.json();
+          console.log('User data fetched after signup:', userData.user?.role);
+          return userData;
+        },
+        staleTime: 0,
+      });
+
+      return { success: true, user: updatedUserData.user };
+    } catch (err: any) {
+      console.error('Sign up error:', err);
+      return { success: false, error: err.message };
+    }
+  };
+
   const isAuthenticated = !!user && !error;
 
   return {
@@ -202,6 +257,7 @@ export function useAuth() {
     login,
     logout,
     refreshUser,
+    signUp,
     error,
   };
 }

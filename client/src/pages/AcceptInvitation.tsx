@@ -1,8 +1,12 @@
+
+
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { CheckCircle, XCircle, Loader2, Users } from 'lucide-react';
 
 interface InvitationDetails {
@@ -14,13 +18,17 @@ interface InvitationDetails {
 
 export default function AcceptInvitation() {
   const [location, setLocation] = useLocation();
-  const { user, signInWithGoogle } = useAuth();
+  const { user, signUp, isAuthenticated } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [invitation, setInvitation] = useState<InvitationDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAccepting, setIsAccepting] = useState(false);
+  const [canAcceptInvitation, setCanAcceptInvitation] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSigningUp, setIsSigningUp] = useState(false);
 
   // Extract token from URL
   useEffect(() => {
@@ -35,6 +43,13 @@ export default function AcceptInvitation() {
       fetchInvitationDetails();
     }
   }, [token]);
+
+  // Automatically accept invitation if user is authenticated and token is present
+  useEffect(() => {
+    if (user && user.access_token && token && isAuthenticated && !isAccepting && !success) {
+      acceptInvitation();
+    }
+  }, [user, token, isAuthenticated, isAccepting, success]);
 
   const fetchInvitationDetails = async () => {
     try {
@@ -53,10 +68,11 @@ export default function AcceptInvitation() {
   };
 
   const acceptInvitation = async () => {
-    if (!user || !token) return;
+    if (!user || !token || !isAuthenticated) return;
 
     setIsAccepting(true);
     try {
+      console.log("Attempting to accept invitation with token:", token, "and user access token:", user.access_token);
       const response = await fetch(`/api/accept-invitation/accept/${token}`, {
         method: 'POST',
         headers: {
@@ -68,13 +84,7 @@ export default function AcceptInvitation() {
       if (response.ok) {
         const data = await response.json();
         setSuccess(true);
-        setTimeout(() => {
-          if (data.data?.hasAssignments) {
-            setLocation('/my-words?tab=assignments');
-          } else {
-            setLocation('/my-words');
-          }
-        }, 2000);
+        // No immediate redirect, show welcome message
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to accept invitation');
@@ -83,6 +93,27 @@ export default function AcceptInvitation() {
       setError('Failed to accept invitation');
     } finally {
       setIsAccepting(false);
+    }
+  };
+
+  const handleSignUp = async () => {
+    setIsSigningUp(true);
+    setError(null);
+    try {
+      const result = await signUp(email, password);
+      if (result.success) {
+        // After successful signup, user object in useAuth should be updated
+        // The useEffect for canAcceptInvitation will re-evaluate
+        if (token) {
+          acceptInvitation();
+        }
+      } else {
+        setError(result.error || 'Sign up failed');
+      }
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred during sign up');
+    } finally {
+      setIsSigningUp(false);
     }
   };
 
@@ -130,12 +161,30 @@ export default function AcceptInvitation() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
-            <CardTitle className="text-green-600">Invitation Accepted!</CardTitle>
+            <CardTitle className="text-green-600">Welcome to the Program!</CardTitle>
             <CardDescription>
-              You've successfully joined {invitation?.therapistName}'s program. 
-              Redirecting you to your assignments...
+              You've successfully joined <strong>{invitation?.therapistName}</strong>'s program.
             </CardDescription>
           </CardHeader>
+          <CardContent className="text-center">
+            <p className="mb-4">We're excited to have you on board!</p>
+            <p className="mb-4">
+              To get started, we recommend checking out our interactive tutorial.
+            </p>
+            <Button 
+              onClick={() => setLocation('/my-words?tutorial=true')} 
+              className="w-full mb-2"
+            >
+              Start Tutorial
+            </Button>
+            <Button 
+              onClick={() => setLocation('/my-words')} 
+              variant="outline" 
+              className="w-full"
+            >
+              Go to My Words
+            </Button>
+          </CardContent>
         </Card>
       </div>
     );
@@ -155,16 +204,47 @@ export default function AcceptInvitation() {
           <CardContent className="space-y-4">
             <div className="bg-blue-50 p-4 rounded-lg">
               <p className="text-sm text-blue-800">
-                To accept this invitation, please sign in with your Google account.
+                Please sign up or log in to accept this invitation.
               </p>
             </div>
-            <Button 
-              onClick={signInWithGoogle} 
-              className="w-full"
-              size="lg"
-            >
-              Sign In with Google
-            </Button>
+            <div className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="m@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <Button 
+                onClick={handleSignUp} 
+                className="w-full"
+                size="lg"
+                disabled={isSigningUp}
+              >
+                {isSigningUp ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing Up...
+                  </>
+                ) : (
+                  'Sign Up'
+                )}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -195,7 +275,7 @@ export default function AcceptInvitation() {
             onClick={acceptInvitation} 
             className="w-full"
             size="lg"
-            disabled={isAccepting}
+            disabled={isAccepting || !canAcceptInvitation}
           >
             {isAccepting ? (
               <>

@@ -2,6 +2,9 @@ import { Router } from 'express';
 import { supabase } from '../supabaseClient';
 import { storage } from '../storage';
 import { createClient } from '@supabase/supabase-js';
+import { db } from '../db';
+import { clientInvitations } from '../../shared/schema';
+import { eq, and } from 'drizzle-orm';
 
 // Create admin client for user creation
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
@@ -24,7 +27,7 @@ const authRoutes = Router();
 
 // 1. User Registration (Signup)
 authRoutes.post('/signup', async (req, res) => {
-  const { email, password, firstName, lastName, role, licenseNumber } = req.body;
+  const { email, password, firstName, lastName, role, licenseNumber, invitationToken } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required.' });
@@ -136,6 +139,40 @@ authRoutes.post('/signup', async (req, res) => {
       });
 
       console.log('Created custom user record:', customUser.email, 'with role:', customUser.role);
+
+      // Handle invitation token if provided
+      if (invitationToken) {
+        try {
+          console.log('🎯 Processing invitation token for new user:', invitationToken);
+          
+          // Get invitation details
+          const invitation = await storage.getClientInvitationByToken(invitationToken);
+          if (invitation && invitation.status === 'pending' && new Date() <= new Date(invitation.expiresAt)) {
+            // Verify email matches invitation
+            if (invitation.clientEmail.toLowerCase() === email.toLowerCase()) {
+              // Create therapist-client relationship
+              await storage.addTherapistClient({
+                therapistId: invitation.therapistId,
+                clientId: customUser.id,
+                isActive: true,
+                notes: `Accepted invitation via signup on ${new Date().toISOString()}`
+              });
+              
+              // Mark invitation as accepted
+              await storage.updateClientInvitationStatus(invitation.id, 'accepted', new Date());
+              
+              console.log('✅ Invitation processed successfully - user connected to therapist');
+            } else {
+              console.log('⚠️ Email mismatch in invitation - user created but not connected to therapist');
+            }
+          } else {
+            console.log('⚠️ Invalid or expired invitation token - user created but not connected to therapist');
+          }
+        } catch (invitationError) {
+          console.error('❌ Error processing invitation token:', invitationError);
+          // Don't fail signup if invitation processing fails - just log it
+        }
+      }
 
       // Check if user was actually confirmed by admin API
       const isUserConfirmed = data.user?.email_confirmed_at !== null;
@@ -268,6 +305,58 @@ authRoutes.post('/login', async (req, res) => {
         }
 
         console.log('LOGIN ENDPOINT: Found custom user during login with role:', customUser.role);
+        
+        // Check for and resolve any pending invitations for this user
+        try {
+          console.log('🔍 Checking for pending invitations for:', customUser.email);
+          
+          // Get all pending invitations for this email across all therapists
+          const allPendingInvitations = await db
+            .select()
+            .from(clientInvitations)
+            .where(and(
+              eq(clientInvitations.clientEmail, customUser.email.toLowerCase()),
+              eq(clientInvitations.status, 'pending')
+            ));
+            
+          console.log(`📧 Found ${allPendingInvitations.length} pending invitations for ${customUser.email}`);
+          
+          for (const invitation of allPendingInvitations) {
+            // Check if invitation is still valid (not expired)
+            if (new Date() <= new Date(invitation.expiresAt)) {
+              console.log('✅ Processing valid invitation from therapist:', invitation.therapistId);
+              
+              // Check if therapist-client relationship already exists
+              const existingRelationship = await storage.getTherapistClient(invitation.therapistId, customUser.id);
+              
+              if (!existingRelationship) {
+                // Create therapist-client relationship
+                await storage.addTherapistClient({
+                  therapistId: invitation.therapistId,
+                  clientId: customUser.id,
+                  isActive: true,
+                  notes: `Auto-connected via login on ${new Date().toISOString()}`
+                });
+                console.log('🔗 Created therapist-client relationship');
+              } else if (!existingRelationship.isActive) {
+                // Reactivate existing relationship
+                await storage.updateTherapistClientStatus(invitation.therapistId, customUser.id, true);
+                console.log('🔄 Reactivated existing therapist-client relationship');
+              }
+              
+              // Mark invitation as accepted
+              await storage.updateClientInvitationStatus(invitation.id, 'accepted', new Date());
+              console.log('✅ Marked invitation as accepted');
+            } else {
+              console.log('⏰ Invitation expired, marking as expired');
+              await storage.updateClientInvitationStatus(invitation.id, 'expired', undefined);
+            }
+          }
+        } catch (invitationError) {
+          console.error('❌ Error processing pending invitations:', invitationError);
+          // Don't fail login if invitation processing fails
+        }
+        
         console.log('LOGIN ENDPOINT: Returning existing user:', { id: customUser.id, email: customUser.email, role: customUser.role });
         return res.status(200).json({
           message: 'Logged in successfully.',

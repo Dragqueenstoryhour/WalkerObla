@@ -4,13 +4,81 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, Clock, User, CheckCircle, ChevronLeft, ChevronRight, Mic, Volume2, Eye, Snail, Ear, Flag } from 'lucide-react';
+import { ArrowLeft, Clock, User, CheckCircle, ChevronLeft, ChevronRight, Mic, Volume2, Eye, Snail, Ear, Flag, Play, Square, Pause, RotateCcw, X } from 'lucide-react';
 import { SimpleRecorder } from '@/components/SimpleRecorder';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'wouter';
 import { getAuthHeaders } from '@/lib/supabaseClient';
 import useEmblaCarousel from 'embla-carousel-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+// Import viseme images
+import viseme0 from "@/assets/Visemes/viseme-id-0.jpg";
+import viseme1 from "@/assets/Visemes/viseme-id-1.jpg";
+import viseme2 from "@/assets/Visemes/viseme-id-2.jpg";
+import viseme3 from "@/assets/Visemes/viseme-id-3.jpg";
+import viseme4 from "@/assets/Visemes/viseme-id-4.jpg";
+import viseme5 from "@/assets/Visemes/viseme-id-5.jpg";
+import viseme6 from "@/assets/Visemes/viseme-id-6.jpg";
+import viseme7 from "@/assets/Visemes/viseme-id-7.jpg";
+import viseme8 from "@/assets/Visemes/viseme-id-8.jpg";
+import viseme9 from "@/assets/Visemes/viseme-id-9.jpg";
+import viseme10 from "@/assets/Visemes/viseme-id-10.jpg";
+import viseme11 from "@/assets/Visemes/viseme-id-11.jpg";
+import viseme12 from "@/assets/Visemes/viseme-id-12.jpg";
+import viseme13 from "@/assets/Visemes/viseme-id-13.jpg";
+import viseme14 from "@/assets/Visemes/viseme-id-14.jpg";
+import viseme15 from "@/assets/Visemes/viseme-id-15.jpg";
+import viseme16 from "@/assets/Visemes/viseme-id-16.jpg";
+import viseme17 from "@/assets/Visemes/viseme-id-17.jpg";
+import viseme18 from "@/assets/Visemes/viseme-id-18.jpg";
+import viseme19 from "@/assets/Visemes/viseme-id-19.jpg";
+import viseme20 from "@/assets/Visemes/viseme-id-20.jpg";
+import viseme21 from "@/assets/Visemes/viseme-id-21.jpg";
+
+const visemeImages = {
+  0: viseme0,
+  1: viseme1,
+  2: viseme2,
+  3: viseme3,
+  4: viseme4,
+  5: viseme5,
+  6: viseme6,
+  7: viseme7,
+  8: viseme8,
+  9: viseme9,
+  10: viseme10,
+  11: viseme11,
+  12: viseme12,
+  13: viseme13,
+  14: viseme14,
+  15: viseme15,
+  16: viseme16,
+  17: viseme17,
+  18: viseme18,
+  19: viseme19,
+  20: viseme20,
+  21: viseme21,
+};
+
+interface VisemeData {
+  visemeId: number;
+  audioOffset: number;
+  animation?: string;
+}
+
+interface VisemeResponse {
+  visemes: VisemeData[];
+  audioBuffer: string; // base64 encoded audio data
+  duration: number;
+}
 
 interface Assignment {
   id: number;
@@ -62,6 +130,34 @@ const AssignmentPractice: React.FC = () => {
   const [slowPlaybackItems, setSlowPlaybackItems] = useState<Record<number, boolean>>({});
   const [audioPlaying, setAudioPlaying] = useState<number | null>(null);
 
+  // Enhanced Viseme animation state with comprehensive readiness tracking
+  const [showVisemeDialog, setShowVisemeDialog] = useState(false);
+  const [isGeneratingVisemes, setIsGeneratingVisemes] = useState(false);
+  const [isPlayingVisemes, setIsPlayingVisemes] = useState(false);
+  const [animationCompleted, setAnimationCompleted] = useState(false);
+  const [currentVisemeId, setCurrentVisemeId] = useState(0);
+  const [visemeData, setVisemeData] = useState<VisemeData[]>([]);
+  const [visemeAudioUrl, setVisemeAudioUrl] = useState<string>("");
+  const [currentVisemeWord, setCurrentVisemeWord] = useState<string>("");
+  const [preloadedImages, setPreloadedImages] = useState<{ [key: number]: HTMLImageElement }>({});
+  const [imagesReady, setImagesReady] = useState(false);
+  const [audioReady, setAudioReady] = useState(false);
+  const [animationReady, setAnimationReady] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState({ images: 0, audio: 0 });
+  const [canPlay, setCanPlay] = useState(false);
+  const [nextVisemeIndex, setNextVisemeIndex] = useState(0);
+
+  const visemeAudioRef = React.useRef<HTMLAudioElement | null>(null);
+  const animationTimeoutsRef = React.useRef<NodeJS.Timeout[]>([]);
+  const animationFrameRef = React.useRef<number | null>(null);
+  const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
+  const currentEventListenersRef = React.useRef<{
+    timeupdate?: () => void;
+    ended?: () => void;
+    error?: (e: Event) => void;
+  }>({});
+  const cleanupFunctionsRef = React.useRef<(() => void)[]>([]);
+
   const assignmentId = params?.id ? parseInt(params.id) : null;
   
   console.log(`🔍 AssignmentPractice loaded:`, { 
@@ -69,6 +165,39 @@ const AssignmentPractice: React.FC = () => {
     isAuthenticated, 
     params 
   });
+
+  // Preload all viseme images on component mount for optimal performance
+  useEffect(() => {
+    const preloadAllVisemeImages = async () => {
+      console.log("Preloading all viseme images for optimal performance...");
+      const allVisemeIds = Array.from({ length: 22 }, (_, i) => i); // Visemes 0-21
+
+      try {
+        const loadPromises = allVisemeIds.map((id) => {
+          return new Promise<HTMLImageElement>((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error(`Failed to load viseme ${id}`));
+            img.crossOrigin = "anonymous";
+            img.src = visemeImages[id as keyof typeof visemeImages];
+          });
+        });
+
+        const loadedImages = await Promise.all(loadPromises);
+        const imageMap: { [key: number]: HTMLImageElement } = {};
+        allVisemeIds.forEach((id, index) => {
+          imageMap[id] = loadedImages[index];
+        });
+
+        setPreloadedImages(imageMap);
+        console.log("All viseme images preloaded successfully");
+      } catch (error) {
+        console.warn("Some viseme images failed to preload:", error);
+      }
+    };
+
+    preloadAllVisemeImages();
+  }, []);
 
   // Fetch assignment details
   const { data: assignment, isLoading: assignmentLoading, error: assignmentError } = useQuery({
@@ -236,6 +365,533 @@ const AssignmentPractice: React.FC = () => {
   const goToNext = () => {
     if (emblaApi) emblaApi.scrollNext();
   };
+
+  // Effect to update canPlay state when all assets are ready
+  useEffect(() => {
+    const allReady = animationReady && imagesReady && audioReady;
+    if (allReady !== canPlay) {
+      setCanPlay(allReady);
+      console.log("Animation readiness state updated:", { animationReady, imagesReady, audioReady, canPlay: allReady });
+    }
+  }, [animationReady, imagesReady, audioReady, canPlay]);
+
+  // Effect to draw viseme when currentVisemeId changes
+  useEffect(() => {
+    if (canvasRef.current && imagesReady) {
+      drawVisemeOnCanvas(currentVisemeId);
+    }
+  }, [currentVisemeId, imagesReady]);
+
+  // Clear animation timeouts when component unmounts
+  useEffect(() => {
+    return () => {
+      // Clear all timeouts
+      animationTimeoutsRef.current.forEach(clearTimeout);
+      animationTimeoutsRef.current = [];
+
+      // Cancel any pending animation frames
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+
+      // Execute all stored cleanup functions
+      cleanupFunctionsRef.current.forEach(cleanup => cleanup());
+      cleanupFunctionsRef.current = [];
+
+      // Clean up audio event listeners
+      if (visemeAudioRef.current) {
+        const audio = visemeAudioRef.current;
+
+        if (currentEventListenersRef.current.timeupdate) {
+          audio.removeEventListener("timeupdate", currentEventListenersRef.current.timeupdate);
+        }
+        if (currentEventListenersRef.current.ended) {
+          audio.removeEventListener("ended", currentEventListenersRef.current.ended);
+        }
+        if (currentEventListenersRef.current.error) {
+          audio.removeEventListener("error", currentEventListenersRef.current.error);
+        }
+      }
+
+      // Clean up any blob URLs to prevent memory leaks
+      if (visemeAudioUrl) {
+        URL.revokeObjectURL(visemeAudioUrl);
+      }
+    };
+  }, [visemeAudioUrl]); // Correct dependencies specification
+
+  // Draw viseme on canvas for smooth rendering
+  const drawVisemeOnCanvas = (visemeId: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const img = preloadedImages[visemeId] || preloadedImages[0];
+    if (img && img.complete) {
+      ctx.globalAlpha = 0.1;
+      ctx.fillStyle = '#f0f9ff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      ctx.globalAlpha = 1.0;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    }
+  };
+
+  // Preload images for specific viseme IDs with comprehensive error handling
+  const preloadVisemeImages = async (visemeIds: number[]): Promise<void> => {
+    // console.log("Preloading viseme images for IDs:", visemeIds);
+    setImagesReady(false);
+
+    // Always include viseme 0 (neutral position) for smooth transitions
+    const idsToLoad = [0, ...visemeIds].filter((id, index, arr) => arr.indexOf(id) === index);
+
+    // Use Promise.all to ensure all images are fully loaded before continuing
+    const loadPromises = idsToLoad.map((id, index) => {
+      return new Promise<HTMLImageElement>((resolve, reject) => {
+        // Check if image is already loaded and in cache
+        if (preloadedImages[id] && preloadedImages[id].complete) {
+          setLoadingProgress(prev => ({ 
+            ...prev, 
+            images: Math.round(((index + 1) / idsToLoad.length) * 100) 
+          }));
+          resolve(preloadedImages[id]);
+          return;
+        }
+
+        const img = new Image();
+
+        const timeoutId = setTimeout(() => {
+          console.warn(`Timeout loading viseme image ${id}, using fallback`);
+          resolve(preloadedImages[0] || img);
+        }, 3000);
+
+        img.onload = () => {
+          clearTimeout(timeoutId);
+          setLoadingProgress(prev => ({ 
+            ...prev, 
+            images: Math.round(((index + 1) / idsToLoad.length) * 100) 
+          }));
+          resolve(img);
+        };
+
+        img.onerror = () => {
+          clearTimeout(timeoutId);
+          console.warn(`Failed to load viseme image ${id}, using fallback`);
+          resolve(preloadedImages[0] || img);
+        };
+
+        // Set crossOrigin to handle potential CORS issues
+        img.crossOrigin = "anonymous";
+        img.src = visemeImages[id as keyof typeof visemeImages];
+      });
+    });
+
+    try {
+      const loadedImages = await Promise.all(loadPromises);
+
+      // Update preloaded images state with all loaded images
+      const newPreloadedImages: { [key: number]: HTMLImageElement } = { ...preloadedImages };
+      idsToLoad.forEach((id, index) => {
+        newPreloadedImages[id] = loadedImages[index];
+      });
+
+      setPreloadedImages(newPreloadedImages);
+      setImagesReady(true);
+      // console.log("All viseme images preloaded successfully");
+
+    } catch (error) {
+      console.error("Error preloading viseme images:", error);
+      // Try to continue with partial loading
+      setImagesReady(true);
+    }
+  };
+
+  // Generate viseme animation for a word
+  const generateVisemeAnimation = async (word: string, itemId: number) => {
+    if (!word.trim()) {
+      toast({
+        title: "Error",
+        description: "No word provided for animation",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGeneratingVisemes(true);
+    setCurrentVisemeWord(word);
+    setShowVisemeDialog(true);
+    setCurrentVisemeId(0);
+    setImagesReady(false);
+    setAudioReady(false);
+    setAnimationReady(false);
+
+    try {
+      const response = await fetch("/api/visemes/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text: word.trim(),
+          voice: "en-US-AriaNeural",
+          format: "svg",
+          speed: slowPlaybackItems[itemId] ? 0.5 : 0.65 // Use slower speed if snail toggle is active
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate visemes: ${response.statusText}`);
+      }
+
+      const response_data = await response.json();
+      const data: VisemeResponse = response_data.data || response_data; // Handle server success wrapper
+
+      console.log("Client received response:", response_data);
+      console.log("Client extracted data:", {
+        hasAudioBuffer: !!data.audioBuffer,
+        audioBufferType: typeof data.audioBuffer,
+        audioBufferLength: data.audioBuffer ? data.audioBuffer.length : 'undefined',
+        visemesCount: data.visemes ? data.visemes.length : 'undefined',
+        duration: data.duration
+      });
+
+      // Convert base64 audio data to blob URL with validation
+      if (!data.audioBuffer || typeof data.audioBuffer !== 'string') {
+        console.error("Invalid audio buffer - data.audioBuffer:", data.audioBuffer);
+        throw new Error('Invalid audio buffer received from server');
+      }
+      
+      let binaryString;
+      try {
+        binaryString = atob(data.audioBuffer);
+      } catch (error) {
+        console.error('Failed to decode base64 audio buffer:', error);
+        throw new Error('Invalid base64 audio data received from server');
+      }
+      
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      const audioBlob = new Blob([bytes.buffer], { type: "audio/wav" });
+      const url = URL.createObjectURL(audioBlob);
+      setVisemeAudioUrl(url);
+      setVisemeData(data.visemes);
+
+      // Get unique viseme IDs and preload their images
+      const uniqueVisemeIds: number[] = [];
+      data.visemes.forEach(v => {
+        if (!uniqueVisemeIds.includes(v.visemeId)) {
+          uniqueVisemeIds.push(v.visemeId);
+        }
+      });
+      console.log("Unique viseme IDs to preload:", uniqueVisemeIds);
+
+      // Preload all required images and prepare audio simultaneously
+      const [imagesResult, audioResult] = await Promise.all([
+        preloadVisemeImages(uniqueVisemeIds),
+        prepareAudioForPlayback(url)
+      ]);
+
+      // Set animation ready only after both images and audio are prepared
+      setAnimationReady(true);
+
+      // Auto-play the animation once everything is ready
+      setTimeout(() => {
+        playVisemeAnimation();
+      }, 100);
+
+    } catch (error) {
+      console.error("Error generating visemes:", error);
+      setShowVisemeDialog(false);
+    } finally {
+      setIsGeneratingVisemes(false);
+    }
+  };
+
+  // 2. Guaranteed Audio Readiness and Playback Control with explicit canplaythrough event
+  const prepareAudioForPlayback = React.useCallback(async (audioUrl: string): Promise<void> => {
+    return new Promise<void>((resolve, reject) => {
+      if (!visemeAudioRef.current) {
+        reject(new Error("Audio element not available"));
+        return;
+      }
+
+      const audio = visemeAudioRef.current;
+      setLoadingProgress(prev => ({ ...prev, audio: 0 }));
+
+      const handleCanPlayThrough = () => {
+        console.log("Audio ready for synchronized playback - canplaythrough event received");
+        setAudioReady(true);
+        setLoadingProgress(prev => ({ ...prev, audio: 100 }));
+        audio.removeEventListener('canplaythrough', handleCanPlayThrough);
+        audio.removeEventListener('error', handleError);
+        audio.removeEventListener('loadstart', handleLoadStart);
+        audio.removeEventListener('progress', handleProgress);
+        resolve();
+      };
+
+      const handleError = (e: Event) => {
+        console.error("Audio preparation failed:", e);
+        audio.removeEventListener('canplaythrough', handleCanPlayThrough);
+        audio.removeEventListener('error', handleError);
+        audio.removeEventListener('loadstart', handleLoadStart);
+        audio.removeEventListener('progress', handleProgress);
+        reject(new Error("Audio preparation failed"));
+      };
+
+      const handleLoadStart = () => {
+        console.log("Audio loading started");
+        setLoadingProgress(prev => ({ ...prev, audio: 10 }));
+      };
+
+      const handleProgress = () => {
+        if (audio.buffered.length > 0) {
+          const bufferedEnd = audio.buffered.end(audio.buffered.length - 1);
+          const duration = audio.duration || 1;
+          const progress = Math.round((bufferedEnd / duration) * 90); // 90% max for progress, 100% for canplaythrough
+          setLoadingProgress(prev => ({ ...prev, audio: Math.min(progress, 90) }));
+        }
+      };
+
+      // Add comprehensive event listeners for loading feedback
+      audio.addEventListener('canplaythrough', handleCanPlayThrough);
+      audio.addEventListener('error', handleError);
+      audio.addEventListener('loadstart', handleLoadStart);
+      audio.addEventListener('progress', handleProgress);
+
+      // Set audio source and preload
+      audio.src = audioUrl;
+      audio.preload = 'auto';
+      audio.load();
+
+      // Extended timeout with better fallback handling
+      setTimeout(() => {
+        if (!audioReady) {
+          console.warn("Audio preparation timeout, checking readyState");
+          // Check if audio is actually ready despite timeout
+          if (audio.readyState >= 3) { // HAVE_FUTURE_DATA or HAVE_ENOUGH_DATA
+            console.log("Audio appears ready despite timeout, proceeding");
+            setAudioReady(true);
+            setLoadingProgress(prev => ({ ...prev, audio: 100 }));
+            resolve();
+          } else {
+            console.error("Audio not ready after timeout");
+            reject(new Error("Audio preparation timeout"));
+          }
+          audio.removeEventListener('canplaythrough', handleCanPlayThrough);
+          audio.removeEventListener('error', handleError);
+          audio.removeEventListener('loadstart', handleLoadStart);
+          audio.removeEventListener('progress', handleProgress);
+        }
+      }, 8000); // Extended timeout
+    });
+  }, [audioReady]);
+
+  // 3. Precise Audio-Visual Synchronization Logic with requestAnimationFrame and optimized nextVisemeIndex lookup
+  const playVisemeAnimation = React.useCallback(async () => {
+    if (!visemeAudioRef.current || !visemeData.length || !visemeAudioUrl) {
+      console.error("Animation prerequisites not met");
+      return;
+    }
+
+    // Ensure both images and audio are ready before starting
+    if (!animationReady || !imagesReady || !audioReady) {
+      console.log("Waiting for animation to be ready...", { animationReady, imagesReady, audioReady });
+      return;
+    }
+
+    // Clear any existing animation frames and timeouts
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+    animationTimeoutsRef.current.forEach(clearTimeout);
+    animationTimeoutsRef.current = [];
+
+    setIsPlayingVisemes(true);
+    setCurrentVisemeId(0);
+    setNextVisemeIndex(0);
+
+    console.log("Starting synchronized viseme animation with", visemeData.length, "visemes");
+    console.log("Viseme timing data:", visemeData.map(v => ({ id: v.visemeId, offset: v.audioOffset })));
+
+    try {
+      const audio = visemeAudioRef.current;
+
+      // Reset audio to beginning
+      audio.currentTime = 0;
+      audio.playbackRate = 1.0;
+
+      // Centralized cleanup function
+      const cleanupEventListeners = () => {
+        if (currentEventListenersRef.current.timeupdate) {
+          audio.removeEventListener("timeupdate", currentEventListenersRef.current.timeupdate);
+        }
+        if (currentEventListenersRef.current.ended) {
+          audio.removeEventListener("ended", currentEventListenersRef.current.ended);
+        }
+        if (currentEventListenersRef.current.error) {
+          audio.removeEventListener("error", currentEventListenersRef.current.error);
+        }
+        currentEventListenersRef.current = {};
+
+        // Cancel any pending animation frames
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = null;
+        }
+      };
+
+      // Store event listeners in ref for later use
+      cleanupFunctionsRef.current.push(cleanupEventListeners);
+
+      // Optimized viseme synchronization using requestAnimationFrame
+      let currentVisemeIndex = 0;
+      const syncVisemeWithAudio = () => {
+        if (!audio || audio.paused || audio.ended) return;
+
+        const currentTime = audio.currentTime * 1000; // Convert to milliseconds
+
+        // Optimized nextVisemeIndex lookup to minimize drift
+        while (currentVisemeIndex < visemeData.length - 1 && 
+               currentTime >= visemeData[currentVisemeIndex + 1].audioOffset) {
+          currentVisemeIndex++;
+        }
+
+        const targetVisemeId = visemeData[currentVisemeIndex]?.visemeId || 0;
+
+        // Update viseme with canvas rendering for smooth transitions
+        setCurrentVisemeId(prevId => {
+          if (prevId !== targetVisemeId) {
+            console.log(`RAF: Syncing viseme ${targetVisemeId} at time ${currentTime.toFixed(0)}ms`);
+            drawVisemeOnCanvas(targetVisemeId);
+            return targetVisemeId;
+          }
+          return prevId;
+        });
+
+        // Schedule next frame
+        animationFrameRef.current = requestAnimationFrame(syncVisemeWithAudio);
+      };
+
+      // Set up event handlers for precise control
+      const handleAudioEnd = () => {
+        console.log("Audio playback completed");
+        setIsPlayingVisemes(false);
+        setCurrentVisemeId(0);
+        setAnimationCompleted(true);
+        cleanupEventListeners();
+      };
+
+      const handleAudioError = (e: Event) => {
+        console.error("Audio error during synchronized playback:", e);
+        setIsPlayingVisemes(false);
+        setCurrentVisemeId(0);
+        cleanupEventListeners();
+
+        toast({
+          title: "Audio Error",
+          description: "Audio playback encountered an error.",
+          variant: "destructive",
+        });
+      };
+
+      // Store event listeners in ref for cleanup
+      currentEventListenersRef.current = {
+        ended: handleAudioEnd,
+        error: handleAudioError
+      };
+
+      // Attach event listeners for control
+      audio.addEventListener("ended", handleAudioEnd);
+      audio.addEventListener("error", handleAudioError);
+
+      // Draw initial viseme (neutral mouth position) before starting animation
+      drawVisemeOnCanvas(0);
+
+      // Start audio playback and animation synchronization
+      await audio.play();
+      animationFrameRef.current = requestAnimationFrame(syncVisemeWithAudio);
+
+    } catch (error) {
+      console.error("Error playing viseme animation:", error);
+      setIsPlayingVisemes(false);
+      setCurrentVisemeId(0);
+      toast({
+        title: "Animation Playback Error",
+        description: "Could not play the animation. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [visemeData, visemeAudioUrl, animationReady, imagesReady, audioReady, preloadedImages]);
+
+  // Handle closing animation modal with proper cleanup
+  const handleCloseAnimation = () => {
+    // Stop any playing animation
+    if (isPlayingVisemes && visemeAudioRef.current) {
+      visemeAudioRef.current.pause();
+      visemeAudioRef.current.currentTime = 0;
+      setIsPlayingVisemes(false);
+    }
+    
+    // Reset animation state
+    setCurrentVisemeId(0);
+    setAnimationCompleted(false);
+    setShowVisemeDialog(false);
+    
+    // Clean up audio URL to prevent memory leaks
+    if (visemeAudioUrl) {
+      URL.revokeObjectURL(visemeAudioUrl);
+      setVisemeAudioUrl("");
+    }
+    
+    // Clear any pending timeouts
+    animationTimeoutsRef.current.forEach(clearTimeout);
+    animationTimeoutsRef.current = [];
+    
+    // Cancel animation frame
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+  };
+
+  // Preload all viseme images on component mount for optimal performance
+  useEffect(() => {
+    const preloadAllVisemeImages = async () => {
+      console.log("Preloading all viseme images for optimal performance...");
+      const allVisemeIds = Array.from({ length: 22 }, (_, i) => i); // Visemes 0-21
+
+      try {
+        const loadPromises = allVisemeIds.map((id) => {
+          return new Promise<HTMLImageElement>((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error(`Failed to load viseme ${id}`));
+            img.crossOrigin = "anonymous";
+            img.src = visemeImages[id as keyof typeof visemeImages];
+          });
+        });
+
+        const loadedImages = await Promise.all(loadPromises);
+        const imageMap: { [key: number]: HTMLImageElement } = {};
+        allVisemeIds.forEach((id, index) => {
+          imageMap[id] = loadedImages[index];
+        });
+
+        setPreloadedImages(imageMap);
+        console.log("All viseme images preloaded successfully");
+      } catch (error) {
+        console.warn("Some viseme images failed to preload:", error);
+      }
+    };
+
+    preloadAllVisemeImages();
+  }, []);
 
   // Sync carousel with current index
   useEffect(() => {
@@ -551,18 +1207,133 @@ const AssignmentPractice: React.FC = () => {
 
                             {/* See Button */}
                             <Button
-                              onClick={() => {
-                                toast({
-                                  title: "Animation feature coming soon!",
-                                  description: "Facial animation will be available in a future update.",
-                                });
-                              }}
+                              onClick={() => generateVisemeAnimation(currentItem.content, currentItem.id)}
                               className="h-10 px-4 bg-[#F59E0B] hover:bg-[#D97706] text-white border-0"
+                              disabled={isGeneratingVisemes || isPlayingVisemes}
                             >
-                              <Eye className="h-4 w-4 mr-1" />
-                              See
+                              {isGeneratingVisemes ? (
+                                <div className="flex items-center">
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                  Generating...
+                                </div>
+                              ) : isPlayingVisemes ? (
+                                <div className="flex items-center">
+                                  <Square className="h-4 w-4 mr-1" />
+                                  Stop
+                                </div>
+                              ) : (
+                                <>
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  See
+                                </>
+                              )}
                             </Button>
                           </div>
+
+                          {/* Viseme Animation Dialog */}
+                          <Dialog open={showVisemeDialog} onOpenChange={setShowVisemeDialog}>
+                            <DialogContent className="w-[95vw] max-w-md sm:max-w-lg p-0 overflow-hidden">
+                              <DialogHeader className="p-4 pb-0">
+                                <DialogTitle className="text-center text-2xl font-bold text-blue-600">
+                                  Articulation Practice
+                                </DialogTitle>
+                                <DialogDescription className="text-center text-gray-600">
+                                  Watch the animation to see how to pronounce "{currentVisemeWord}"
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="relative w-full mx-auto max-w-sm" style={{ paddingTop: '75%' }}>
+                                <canvas
+                                  ref={canvasRef}
+                                  width="400"
+                                  height="300"
+                                  className="absolute top-0 left-0 w-full h-full object-contain bg-gray-50 rounded"
+                                ></canvas>
+                                {(isGeneratingVisemes || !canPlay) && (
+                                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-70 text-white">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+                                    <p className="text-lg">
+                                      {isGeneratingVisemes ? "Generating animation..." : "Loading assets..."}
+                                    </p>
+                                    <div className="w-3/4 bg-gray-700 rounded-full h-2.5 mt-2">
+                                      <div
+                                        className="bg-blue-500 h-2.5 rounded-full"
+                                        style={{ width: `${(loadingProgress.images + loadingProgress.audio) / 2}%` }}
+                                      ></div>
+                                    </div>
+                                    <p className="text-sm mt-1">
+                                      {Math.round((loadingProgress.images + loadingProgress.audio) / 2)}% loaded
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="p-4 pt-2 space-y-3">
+                                <audio ref={visemeAudioRef} src={visemeAudioUrl} preload="auto" />
+                                
+                                {/* Primary Action Button */}
+                                <div className="flex justify-center">
+                                  <Button
+                                    onClick={playVisemeAnimation}
+                                    disabled={!canPlay}
+                                    size="lg"
+                                    className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 text-lg"
+                                  >
+                                    {isPlayingVisemes ? (
+                                      <>
+                                        <Pause className="h-5 w-5 mr-2" />
+                                        Playing...
+                                      </>
+                                    ) : animationCompleted ? (
+                                      <>
+                                        <RotateCcw className="h-5 w-5 mr-2" />
+                                        Play Again
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Play className="h-5 w-5 mr-2" />
+                                        Play Animation
+                                      </>
+                                    )}
+                                  </Button>
+                                </div>
+                                
+                                {/* Secondary Actions */}
+                                <div className="flex justify-center">
+                                  <Button
+                                    onClick={handleCloseAnimation}
+                                    variant="outline"
+                                    size="sm"
+                                    className="px-4"
+                                  >
+                                    <X className="h-4 w-4 mr-1" />
+                                    Close
+                                  </Button>
+                                </div>
+                                
+                                {/* Animation Progress */}
+                                {isPlayingVisemes && visemeAudioRef.current && (
+                                  <div className="text-center text-sm text-gray-600">
+                                    <div className="w-full bg-gray-200 rounded-full h-1.5 mb-1">
+                                      <div 
+                                        className="bg-blue-500 h-1.5 rounded-full transition-all duration-100" 
+                                        style={{ width: visemeAudioRef.current.duration ? `${(visemeAudioRef.current.currentTime / visemeAudioRef.current.duration) * 100}%` : '0%' }}
+                                      ></div>
+                                    </div>
+                                    Practicing pronunciation...
+                                  </div>
+                                )}
+                                
+                                {/* Completion Message */}
+                                {animationCompleted && (
+                                  <div className="text-center p-2 bg-green-50 rounded border border-green-200">
+                                    <div className="text-green-700 font-medium text-sm flex items-center justify-center">
+                                      <CheckCircle className="h-4 w-4 mr-1" />
+                                      Great! You've seen how to pronounce "{currentVisemeWord}"
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </DialogContent>
+                          </Dialog>
 
                           {/* Progress Info */}
                           {(itemAttempts[item.id] > 0 || itemBestScores[item.id] > 0) && (

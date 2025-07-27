@@ -456,6 +456,67 @@ router.post('/assignments/send', protect, catchAsync(async (req: any, res) => {
   }
 }));
 
+// Manually resolve pending invitations for existing users (helper endpoint)
+router.post('/resolve-pending-invitations', protect, catchAsync(async (req: any, res) => {
+  const therapistId = req.user.claims.sub;
+  const { clientEmail } = req.body;
+  
+  if (!clientEmail) {
+    return error(res, 'Client email is required', 400);
+  }
+  
+  try {
+    console.log('🔧 Manual resolve: Checking for pending invitations for:', clientEmail);
+    
+    // Get pending invitations for this email and therapist
+    const pendingInvitations = await storage.getPendingInvitations(therapistId);
+    const matchingInvitation = pendingInvitations.find(inv => inv.clientEmail.toLowerCase() === clientEmail.toLowerCase());
+    
+    if (!matchingInvitation) {
+      return error(res, 'No pending invitation found for this email', 404);
+    }
+    
+    // Get user by email
+    const existingUser = await storage.getUserByEmail(clientEmail);
+    if (!existingUser) {
+      return error(res, 'User with this email does not exist', 404);
+    }
+    
+    // Check if therapist-client relationship already exists
+    const existingRelationship = await storage.getTherapistClient(therapistId, existingUser.id);
+    
+    if (!existingRelationship) {
+      // Create therapist-client relationship
+      await storage.addTherapistClient({
+        therapistId: therapistId,
+        clientId: existingUser.id,
+        isActive: true,
+        notes: `Manually resolved invitation on ${new Date().toISOString()}`
+      });
+      console.log('🔗 Created therapist-client relationship');
+    } else if (!existingRelationship.isActive) {
+      // Reactivate existing relationship
+      await storage.updateTherapistClientStatus(therapistId, existingUser.id, true);
+      console.log('🔄 Reactivated existing therapist-client relationship');
+    }
+    
+    // Mark invitation as accepted
+    await storage.updateClientInvitationStatus(matchingInvitation.id, 'accepted', new Date());
+    console.log('✅ Marked invitation as accepted');
+    
+    return success(res, {
+      message: 'Invitation resolved successfully',
+      clientEmail: clientEmail,
+      relationshipCreated: !existingRelationship,
+      relationshipReactivated: existingRelationship && !existingRelationship.isActive
+    });
+    
+  } catch (err: any) {
+    console.error('❌ Error resolving pending invitation:', err);
+    return error(res, 'Failed to resolve pending invitation', 500);
+  }
+}));
+
 // Get invitation details by token (public endpoint for email links)
 router.get('/invitation/:token', catchAsync(async (req: any, res) => {
   const { token } = req.params;

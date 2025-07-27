@@ -1,0 +1,36 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowJs": true,
+    "checkJs": true,
+    "lib": ["ES2022"],
+    "noEmit": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "server/**/*.ts", 
+    "server/**/*.js", 
+    "*.{js,cjs,ts}", 
+    "drizzle.config.ts", 
+    "postcss.config.js", 
+    "tailwind.config.ts", 
+    "vite.config.ts", 
+    "check-database.js", 
+    "debug_assignments.js", 
+    "jest.config.client.cjs", 
+    "jest.config.server.cjs", 
+    "jest.setup.client.cjs", 
+    "jest.setup.server.cjs", 
+    "test-supabase-auth.js", 
+    "test-user-activities.js", 
+    ".eslintrc.cjs", 
+    "eslint.config.js", 
+    "types.d.ts"
+  ]
+}

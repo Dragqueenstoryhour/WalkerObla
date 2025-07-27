@@ -589,13 +589,12 @@ export default function TherapistPortal() {
   const [isGeneratingSoundWords, setIsGeneratingSoundWords] = useState(false);
 
   // Data queries
-  const { data: clientsData = { clients: [], pendingInvitations: [] } } = useQuery({ queryKey: ['/api/therapist/clients'] }) as { data: { clients: any[], pendingInvitations: any[] } };
+  const { data: clientsData = { clients: [] } } = useQuery({ queryKey: ['/api/therapist/clients'] }) as { data: { clients: any[] } };
   const { data: assignmentsData = [] } = useQuery({ queryKey: ['/api/therapist/assignments'] });
   const assignments = assignmentsData.data || assignmentsData || [];
   const { data: contentLibrary = [], isLoading: isContentLibraryLoading } = useQuery({ queryKey: ['/api/therapist/library'] });
 
   const clients = clientsData.data?.clients || clientsData.clients || [];
-  const pendingInvitations = clientsData.data?.pendingInvitations || clientsData.pendingInvitations || [];
   
   // Debug logging
   console.log('🔍 DEBUG - clientsData:', clientsData);
@@ -752,7 +751,6 @@ export default function TherapistPortal() {
         
         // Remove temporary optimistic updates and add real client
         const filteredClients = old.clients?.filter((client: any) => !client.isTemporary) || [];
-        const filteredPending = old.pendingInvitations?.filter((inv: any) => !inv.isTemporary) || [];
         
         // Handle both response formats consistently
         const newClient = data.data?.client || data.client || data;
@@ -767,8 +765,7 @@ export default function TherapistPortal() {
         
         return {
           ...old,
-          clients: [...filteredClients, newClient],
-          pendingInvitations: filteredPending
+          clients: [...filteredClients, newClient]
         };
       });
       
@@ -904,10 +901,34 @@ export default function TherapistPortal() {
     }
   });
 
+  const removeClientMutation = useMutation({
+    mutationFn: async (clientId: string) => {
+      const response = await apiRequest(`/api/therapist/clients/${clientId}`, {
+        method: 'DELETE',
+      });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/therapist/clients'] });
+      toast({ title: "Patient removed successfully!" });
+      setSelectedClient(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error removing patient", description: error.message, variant: "destructive" });
+    }
+  });
+
   // Event handlers
-  const handleAddClient = () => {
-    setShowAddClientModal(true);
-  };
+    const handleAddClient = () => {
+      setShowAddClientModal(true);
+    };
+
+    const handleRemovePatient = (clientId: string) => {
+      if (window.confirm("Are you sure you want to remove this patient? This action cannot be undone.")) {
+        removeClientMutation.mutate(clientId);
+      }
+    };
+
 
   const handleSubmitAddClient = () => {
     if (newClientEmail.trim() && newClientFirstName.trim() && newClientLastName.trim()) {
@@ -1356,8 +1377,7 @@ export default function TherapistPortal() {
                                     <DropdownMenuItem 
                                       className="text-red-600"
                                       onClick={() => {
-                                        // TODO: Add remove patient functionality
-                                        console.log('Remove patient:', client.id);
+                                        handleRemovePatient(client.id);
                                       }}
                                     >
                                       <UserMinus className="mr-2 h-4 w-4" />
@@ -1371,48 +1391,6 @@ export default function TherapistPortal() {
                         )}
                       </div>
 
-                      {/* Pending Invitations */}
-                      {pendingInvitations.length > 0 && (
-                        <>
-                          <div className="border-t border-gray-200 my-4"></div>
-                          <div className="analytics-card" style={{background: 'linear-gradient(135deg, var(--apple-yellow) 0%, var(--apple-orange) 100%)'}}>
-                            <h4 className="font-semibold mb-3 flex items-center gap-2">
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              Pending Invitations ({pendingInvitations.length})
-                            </h4>
-                            <div className="space-y-3">
-                              {pendingInvitations.map((invitation: any) => (
-                                <div
-                                  key={invitation.id}
-                                  className={`p-3 rounded-lg border ${invitation.isTemporary 
-                                    ? 'border-blue-200 bg-white/20 animate-pulse' 
-                                    : 'border-white/30 bg-white/20'
-                                  }`}
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <div>
-                                      <div className="font-medium">
-                                        {invitation.clientEmail}
-                                      </div>
-                                      <div className="text-sm opacity-90">
-                                        {invitation.isTemporary 
-                                          ? 'Sending invitation...' 
-                                          : `Invited ${new Date(invitation.sentAt).toLocaleDateString()}`
-                                        }
-                                      </div>
-                                    </div>
-                                    <div className="px-2 py-1 bg-white/30 rounded text-xs font-medium">
-                                      {invitation.isTemporary ? 'Sending...' : 'Pending'}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -2083,7 +2061,7 @@ export default function TherapistPortal() {
                 <div className="bg-blue-50 p-3 rounded-lg">
                   <p className="text-sm text-blue-700">
                     <AlertCircle className="h-4 w-4 inline mr-1" />
-                    Your patient will receive a beautifully formatted invitation email with instructions to join the platform.
+                    Your patient will receive an invitation email to join the platform.
                   </p>
                 </div>
               </div>

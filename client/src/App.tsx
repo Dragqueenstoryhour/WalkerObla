@@ -22,6 +22,7 @@ import TherapistLogin from "@/pages/TherapistLogin";
 import TherapistPortalPage from "@/pages/TherapistPortalPage";
 import AcceptInvitation from "@/pages/AcceptInvitation";
 import InvitationLanding from "@/pages/InvitationLanding";
+import PatientSignUp from "@/pages/PatientSignUp";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ReadingProvider } from "./contexts/ReadingContext";
@@ -244,6 +245,7 @@ function Router() {
         <Route path="/animation" component={Animation} />
         <Route path="/azure-animation" component={AzureAnimation} />
         <Route path="/viseme" component={Viseme} />
+        <Route path="/sign-up" component={PatientSignUp} />
         <Route path="/therapist" component={TherapistLogin} />
         <Route path="/therapist-portal">
           <ProtectedRoute requiredRole="therapist">

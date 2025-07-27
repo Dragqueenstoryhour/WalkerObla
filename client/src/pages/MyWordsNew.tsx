@@ -20,8 +20,7 @@ import { MostRecentActivities } from '@/components/MostRecentActivities';
 import { CalendarDays, Users, ExternalLink } from 'lucide-react';
 import { Link } from 'wouter';
 import { SummaryCard } from '@/components/SummaryCard';
-import { LoginDialog } from '@/components/modals/LoginDialog';
-import { SignupDialog } from '@/components/modals/SignupDialog';
+
 
 // Helper function to get syllable color based on accuracy score
 const getSyllableColor = (accuracyScore: number): string => {
@@ -764,6 +763,31 @@ function AssignmentCarousel({ items, assignmentId }: { items: AssignmentItem[], 
   );
 }
 
+// New component for signed-in users with no assignments
+function EmptyAssignmentsPreview() {
+
+  return (
+    <div className="text-center py-12 bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl border border-purple-100">
+      <div className="max-w-2xl mx-auto px-6">
+        <BookOpen className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+        <h2 className="text-3xl font-bold text-purple-800 mb-4">Unlock Your Full Potential</h2>
+        <p className="text-lg text-gray-700 mb-6">
+          Connect with a therapist to receive personalized assignments, track your progress, and achieve your speech goals faster.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Button 
+            size="lg" 
+            className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg"
+          >
+            Find a Therapist (Coming Soon)
+          </Button>
+          
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // AssignmentsTab Component
 function AssignmentsTab({ targetAssignmentId }: { targetAssignmentId?: string | null }) {
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
@@ -825,13 +849,7 @@ function AssignmentsTab({ targetAssignmentId }: { targetAssignmentId?: string | 
   }
 
   if (assignments.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <BookOpen className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-        <h2 className="text-2xl font-semibold text-gray-600 mb-2">No assignments yet</h2>
-        <p className="text-gray-500">Your therapist will assign homework here</p>
-      </div>
-    );
+    return <EmptyAssignmentsPreview />;
   }
 
   return (
@@ -1967,8 +1985,6 @@ function PracticePhrasesCarousel({
 
 // Preview component for signed-out users showing what they could access
 function SignedOutJourneyPreview() {
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isSignupOpen, setIsSignupOpen] = useState(false);
 
   return (
     <div className="space-y-8">
@@ -1981,21 +1997,23 @@ function SignedOutJourneyPreview() {
             Track your progress, practice personalized content, and see your improvement over time
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              onClick={() => setIsSignupOpen(true)}
-              size="lg" 
-              className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg"
-            >
-              Get Started Free
-            </Button>
-            <Button 
-              onClick={() => setIsSignupOpen(true)}
-              variant="outline" 
-              size="lg"
-              className="border-purple-600 text-purple-600 hover:bg-purple-50 px-8 py-3 text-lg font-semibold rounded-full"
-            >
-              Sign Up
-            </Button>
+            <Link href="/sign-up">
+              <Button 
+                size="lg" 
+                className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg"
+              >
+                Get Started Free
+              </Button>
+            </Link>
+            <Link href="/sign-up">
+              <Button 
+                variant="outline" 
+                size="lg"
+                className="border-purple-600 text-purple-600 hover:bg-purple-50 px-8 py-3 text-lg font-semibold rounded-full"
+              >
+                Sign Up
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
@@ -2116,49 +2134,33 @@ function SignedOutJourneyPreview() {
       <div className="text-center py-8">
         <h3 className="text-xl font-semibold text-gray-800 mb-4">Ready to start your journey?</h3>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Button 
-            onClick={() => setIsSignupOpen(true)}
-            size="lg" 
-            className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg"
-          >
-            Create Free Account
-          </Button>
-          <Button 
-            onClick={() => setIsSignupOpen(true)}
-            variant="outline" 
-            size="lg"
-            className="border-purple-600 text-purple-600 hover:bg-purple-50 px-8 py-3 text-lg font-semibold rounded-full"
-          >
-            Sign Up
-          </Button>
+          <Link href="/sign-up">
+            <Button 
+              size="lg" 
+              className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg"
+            >
+              Create Free Account
+            </Button>
+          </Link>
+          <Link href="/sign-up">
+            <Button 
+              variant="outline" 
+              size="lg"
+              className="border-purple-600 text-purple-600 hover:bg-purple-50 px-8 py-3 text-lg font-semibold rounded-full"
+            >
+              Sign Up
+            </Button>
+          </Link>
         </div>
       </div>
 
-      {/* Login/Signup Modals */}
-      <LoginDialog 
-        isOpen={isLoginOpen} 
-        onClose={() => setIsLoginOpen(false)} 
-        onSignupClick={() => {
-          setIsLoginOpen(false);
-          setIsSignupOpen(true);
-        }} 
-      />
-      <SignupDialog 
-        isOpen={isSignupOpen} 
-        onClose={() => setIsSignupOpen(false)} 
-        onLoginClick={() => {
-          setIsSignupOpen(false);
-          setIsLoginOpen(true);
-        }} 
-      />
+      {/* Navigation handled by Link components above */}
     </div>
   );
 }
 
 // Preview component for signed-out users on assignments tab
 function SignedOutAssignmentsPreview() {
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isSignupOpen, setIsSignupOpen] = useState(false);
   const { toast } = useToast();
 
   return (
@@ -2185,14 +2187,15 @@ function SignedOutAssignmentsPreview() {
             >
               Find a Therapist
             </Button>
-            <Button 
-              onClick={() => setIsSignupOpen(true)}
-              variant="outline" 
-              size="lg"
-              className="border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-3 text-lg font-semibold rounded-full"
-            >
-              Sign Up
-            </Button>
+            <Link href="/sign-up">
+              <Button 
+                variant="outline" 
+                size="lg"
+                className="border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-3 text-lg font-semibold rounded-full"
+              >
+                Sign Up
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
@@ -2307,47 +2310,31 @@ function SignedOutAssignmentsPreview() {
         <h3 className="text-xl font-semibold text-gray-800 mb-4">Ready to work with a professional?</h3>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button 
-            onClick={() => {
+onClick={() => {
               toast({
                 title: "Coming Soon! 🚀",
                 description: "Professional therapy features are coming soon. Create an account now to access our speech practice tools!",
                 duration: 5000,
               });
-              setIsSignupOpen(true);
             }}
             size="lg" 
             className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg"
           >
             Get Started Today
           </Button>
-          <Button 
-            onClick={() => setIsLoginOpen(true)}
-            variant="outline" 
-            size="lg"
-            className="border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-3 text-lg font-semibold rounded-full"
-          >
-            I Have an Account
-          </Button>
+          <Link href="/sign-up">
+            <Button 
+              variant="outline" 
+              size="lg"
+              className="border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-3 text-lg font-semibold rounded-full"
+            >
+              I Have an Account
+            </Button>
+          </Link>
         </div>
       </div>
 
-      {/* Login/Signup Modals */}
-      <LoginDialog 
-        isOpen={isLoginOpen} 
-        onClose={() => setIsLoginOpen(false)} 
-        onSignupClick={() => {
-          setIsLoginOpen(false);
-          setIsSignupOpen(true);
-        }} 
-      />
-      <SignupDialog 
-        isOpen={isSignupOpen} 
-        onClose={() => setIsSignupOpen(false)} 
-        onLoginClick={() => {
-          setIsSignupOpen(false);
-          setIsLoginOpen(true);
-        }} 
-      />
+      {/* Navigation handled by Link components above */}
     </div>
   );
 }

@@ -1137,6 +1137,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async removeTherapistClient(therapistId: string, clientId: string): Promise<void> {
+    // Deactivate the therapist-client relationship (soft delete)
     await db
       .update(therapistClients)
       .set({ isActive: false })
@@ -1144,6 +1145,20 @@ export class DatabaseStorage implements IStorage {
         eq(therapistClients.therapistId, therapistId),
         eq(therapistClients.clientId, clientId)
       ));
+
+    // Find the client's email to update pending invitations
+    const client = await this.getUser(clientId);
+    if (client && client.email) {
+      // Update any pending invitations for this client from this therapist to 'expired'
+      await db
+        .update(clientInvitations)
+        .set({ status: 'expired', acceptedAt: new Date() }) // Set acceptedAt to now for expiration timestamp
+        .where(and(
+          eq(clientInvitations.therapistId, therapistId),
+          eq(clientInvitations.clientEmail, client.email),
+          eq(clientInvitations.status, 'pending')
+        ));
+    }
   }
 
   async getClientsByEmail(therapistId: string, emails: string[]): Promise<User[]> {

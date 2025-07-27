@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, XCircle, Loader2, Users, Star, Target, Award, Clock } from 'lucide-react';
+import { SignupForm } from '@/components/SignupForm'; // Updated import
 
 interface InvitationDetails {
   therapistName: string;
@@ -26,10 +27,9 @@ export default function InvitationLanding() {
   const [invitation, setInvitation] = useState<InvitationDetails | null>(null);
   const [therapistProfile, setTherapistProfile] = useState<TherapistProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAccepting, setIsAccepting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [acceptanceData, setAcceptanceData] = useState<any>(null);
+
+  // No longer need showSignupDialog state
 
   // Extract token from URL path
   useEffect(() => {
@@ -76,42 +76,13 @@ export default function InvitationLanding() {
     }
   };
 
-  const acceptInvitation = async () => {
-    if (!user || !token) return;
-
-    setIsAccepting(true);
-    try {
-      const response = await fetch(`/api/accept-invitation/accept/${token}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${user.access_token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAcceptanceData(data.data);
-        setSuccess(true);
-        
-        // Redirect after showing success for 3 seconds
-        setTimeout(() => {
-          if (data.data?.hasAssignments) {
-            setLocation('/my-words?tab=assignments');
-          } else {
-            setLocation('/my-words');
-          }
-        }, 3000);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to accept invitation');
-      }
-    } catch (err) {
-      setError('Failed to accept invitation');
-    } finally {
-      setIsAccepting(false);
+  // Automatically handle logged-in users
+  useEffect(() => {
+    if (user && invitation && !isLoading) {
+      // User is already logged in, just redirect to dashboard with tutorial
+      setLocation('/my-words?tutorial=true');
     }
-  };
+  }, [user, invitation, isLoading, setLocation]);
 
   if (isLoading) {
     return (
@@ -162,214 +133,137 @@ export default function InvitationLanding() {
     );
   }
 
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-50">
-        <Card className="w-full max-w-md shadow-lg">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 p-3 bg-green-100 rounded-full w-fit">
-              <CheckCircle className="h-16 w-16 text-green-500" />
-            </div>
-            <CardTitle className="text-green-600 text-xl">🎉 Welcome to Obla!</CardTitle>
-            <CardDescription className="text-gray-600">
-              You've successfully joined {therapistProfile?.name}'s speech therapy program!
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {acceptanceData?.hasAssignments && (
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <h4 className="font-semibold text-blue-800 mb-2">🎯 You have assignments waiting!</h4>
-                <p className="text-sm text-blue-700">
-                  {acceptanceData.assignmentsCount} assignment{acceptanceData.assignmentsCount > 1 ? 's' : ''} ready to start
-                </p>
-              </div>
-            )}
-            <div className="text-center">
-              <Loader2 className="h-6 w-6 animate-spin text-blue-600 mx-auto mb-2" />
-              <p className="text-sm text-gray-600">Redirecting you to your dashboard...</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Removed success state - logged-in users auto-redirect to dashboard
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-2xl mx-auto">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                🎉 Welcome to Your Speech Journey!
-              </h1>
-              <p className="text-xl text-gray-600">
-                {therapistProfile?.name} has invited you to join their personalized speech therapy program on Obla.
-              </p>
-            </div>
-
-            {/* Therapist Profile Card */}
-            <Card className="mb-8 shadow-lg border-0 bg-white/80 backdrop-blur">
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-4 mb-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                    {therapistProfile?.name.charAt(0)}
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900">{therapistProfile?.name}</h3>
-                    <p className="text-gray-600">Speech-Language Pathologist</p>
-                    <div className="flex items-center mt-1">
-                      <Star className="h-4 w-4 text-yellow-500 mr-1" />
-                      <span className="text-sm text-gray-500">{therapistProfile?.experience}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                {therapistProfile?.specialties && (
-                  <div className="flex flex-wrap gap-2">
-                    {therapistProfile.specialties.map((specialty, index) => (
-                      <span 
-                        key={index}
-                        className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
-                      >
-                        {specialty}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Benefits Section */}
-            <Card className="mb-8 shadow-lg border-0 bg-white/80 backdrop-blur">
-              <CardHeader>
-                <CardTitle className="text-xl text-gray-900">What you'll get:</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4">
-                  <div className="flex items-start space-x-3">
-                    <Target className="h-6 w-6 text-blue-500 mt-1 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-semibold text-gray-900">Personalized exercises</h4>
-                      <p className="text-gray-600 text-sm">Tailored to your specific speech goals</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <Award className="h-6 w-6 text-green-500 mt-1 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-semibold text-gray-900">Real-time pronunciation feedback</h4>
-                      <p className="text-gray-600 text-sm">AI-powered analysis of your speech patterns</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <Clock className="h-6 w-6 text-purple-500 mt-1 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-semibold text-gray-900">Progress tracking and insights</h4>
-                      <p className="text-gray-600 text-sm">Detailed analytics to monitor your improvement</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <Users className="h-6 w-6 text-orange-500 mt-1 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-semibold text-gray-900">Gamified learning experience</h4>
-                      <p className="text-gray-600 text-sm">Fun, engaging exercises that keep you motivated</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Call to Action */}
-            <Card className="shadow-lg border-0 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
-              <CardContent className="p-8 text-center">
-                <h3 className="text-2xl font-bold mb-4">Ready to begin your journey?</h3>
-                <p className="mb-6 text-blue-100">
-                  Sign in with your Google account to accept this invitation and start improving your speech today.
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-8">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            {/* Left Column: Header, Therapist Profile, Benefits */}
+            <div>
+              {/* Header */}
+              <div className="text-center lg:text-left mb-8">
+                <h1 className="text-4xl font-bold text-gray-900 mb-4">
+                  🎉 Welcome to Your Speech Journey!
+                </h1>
+                <p className="text-xl text-gray-600">
+                  {therapistProfile?.name} has invited you to join their personalized speech therapy program on Obla.
                 </p>
-                
-                <Button 
-                  onClick={signInWithGoogle} 
-                  className="bg-white text-blue-600 hover:bg-blue-50 font-semibold py-3 px-8 text-lg"
-                  size="lg"
-                >
-                  Sign In with Google
-                </Button>
+              </div>
 
-                <div className="mt-6 flex items-center justify-center space-x-6 text-sm text-blue-100">
-                  <span className="flex items-center">
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    Secure
-                  </span>
-                  <span className="flex items-center">
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    Works on all devices
-                  </span>
-                  <span className="flex items-center">
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    Free to start
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+              {/* Therapist Profile Card */}
+              <Card className="mb-8 shadow-lg border-0 bg-white/80 backdrop-blur enhanced-card">
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-4 mb-4">
+                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                      {therapistProfile?.name.charAt(0)}
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-900">{therapistProfile?.name}</h3>
+                      <p className="text-gray-600">Speech-Language Pathologist</p>
+                      <div className="flex items-center mt-1">
+                        <Star className="h-4 w-4 text-yellow-500 mr-1" />
+                        <span className="text-sm text-gray-500">{therapistProfile?.experience}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {therapistProfile?.specialties && (
+                    <div className="flex flex-wrap gap-2">
+                      {therapistProfile.specialties.map((specialty, index) => (
+                        <span 
+                          key={index}
+                          className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
+                        >
+                          {specialty}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-            {/* Fine Print */}
-            <div className="text-center mt-6">
-              <p className="text-sm text-gray-500">
-                By signing in, you'll be connected with {therapistProfile?.name} and can start your speech therapy program immediately.
-              </p>
+              {/* Benefits Section */}
+              <Card className="mb-8 shadow-lg border-0 bg-white/80 backdrop-blur enhanced-card">
+                <CardHeader>
+                  <CardTitle className="text-xl text-gray-900">What you'll get:</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4">
+                    <div className="flex items-start space-x-3">
+                      <Target className="h-6 w-6 text-blue-500 mt-1 flex-shrink-0" />
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Personalized exercises</h4>
+                        <p className="text-gray-600 text-sm">Tailored to your specific speech goals</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <Award className="h-6 w-6 text-green-500 mt-1 flex-shrink-0" />
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Real-time pronunciation feedback</h4>
+                        <p className="text-gray-600 text-sm">AI-powered analysis of your speech patterns</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <Clock className="h-6 w-6 text-purple-500 mt-1 flex-shrink-0" />
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Progress tracking and insights</h4>
+                        <p className="text-gray-600 text-sm">Detailed analytics to monitor your improvement</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <Users className="h-6 w-6 text-orange-500 mt-1 flex-shrink-0" />
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Gamified learning experience</h4>
+                        <p className="text-gray-600 text-sm">Fun, engaging exercises that keep you motivated</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
+
+            {/* Right Column: Signup Form */}
+            <div className="lg:mt-20">
+              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur enhanced-card">
+                <CardContent className="p-8">
+                  <h3 className="text-2xl font-bold mb-4 text-center text-gray-900">Ready to begin your journey?</h3>
+                  <p className="mb-6 text-gray-600 text-center">
+                    Sign up to start improving your speech today.
+                  </p>
+                  <SignupForm invitationToken={token || undefined} />
+                  <div className="mt-6 flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-6 text-sm text-gray-600">
+                    <span className="flex items-center">
+                      <CheckCircle className="h-4 w-4 mr-1 text-green-500" />
+                      Secure
+                    </span>
+                    <span className="flex items-center">
+                      <CheckCircle className="h-4 w-4 mr-1 text-green-500" />
+                      Works on all devices
+                    </span>
+                    <span className="flex items-center">
+                      <CheckCircle className="h-4 w-4 mr-1 text-green-500" />
+                      Free to start
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Fine Print */}
+          <div className="text-center mt-12">
+            <p className="text-sm text-gray-500">
+              By signing up, you'll be connected with {therapistProfile?.name} and can start your speech therapy program immediately.
+            </p>
           </div>
         </div>
       </div>
     );
   }
 
-  // User is logged in, show acceptance interface
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-md mx-auto">
-          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
-            <CardHeader className="text-center">
-              <div className="mx-auto mb-4 p-3 bg-blue-100 rounded-full w-fit">
-                <Users className="h-12 w-12 text-blue-600" />
-              </div>
-              <CardTitle className="text-xl">Accept Invitation</CardTitle>
-              <CardDescription>
-                You've been invited by <strong>{therapistProfile?.name}</strong> to join their speech therapy program.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                <h4 className="font-semibold text-green-800 mb-2">You're all set!</h4>
-                <p className="text-sm text-green-700 mb-3">
-                  Signed in as: <strong>{user.email}</strong>
-                </p>
-                <p className="text-sm text-green-700">
-                  Click accept to join {therapistProfile?.name}'s program and start your personalized speech therapy journey.
-                </p>
-              </div>
-              
-              <Button 
-                onClick={acceptInvitation} 
-                className="w-full bg-blue-600 hover:bg-blue-700"
-                size="lg"
-                disabled={isAccepting}
-              >
-                {isAccepting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Accepting invitation...
-                  </>
-                ) : (
-                  'Accept Invitation & Start Journey'
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
-  );
+  // Logged-in users are automatically redirected above
+  // This should never render for logged-in users
+  return null;
 }

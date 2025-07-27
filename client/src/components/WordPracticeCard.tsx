@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MicIcon, StopCircleIcon, RotateCw, Volume2, Ear, Star, Check } from 'lucide-react';
+import { MicIcon, StopCircleIcon, RotateCw, Volume2, Ear, Star, Check, Snail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import useWordRecording from '@/hooks/useWordRecording';
 import { PronunciationIssue } from '@/lib/types';

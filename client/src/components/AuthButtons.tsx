@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
 import { LoginDialog } from './modals/LoginDialog';
-import { SignupDialog } from './modals/SignupDialog';
+import { Link } from 'wouter';
 
 interface User {
   id: string;
@@ -46,17 +46,10 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
   const [, navigate] = useLocation();
   const [showTooltip, setShowTooltip] = useState(false);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
-  const [showSignupDialog, setShowSignupDialog] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLoginClick = () => {
-    setShowSignupDialog(false);
     setShowLoginDialog(true);
-  };
-
-  const handleSignupClick = () => {
-    setShowLoginDialog(false);
-    setShowSignupDialog(true);
   };
 
   if (isLoading) {
@@ -155,7 +148,7 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
   }
 
   return (
-    <>
+    <div className="flex items-center gap-2">
       <Button
         variant={variant}
         size={size}
@@ -165,8 +158,23 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
         <LogIn className="h-4 w-4 mr-1" />
         {showText && <span>Sign In</span>}
       </Button>
-      <LoginDialog isOpen={showLoginDialog} onClose={() => setShowLoginDialog(false)} onSignupClick={handleSignupClick} />
-      <SignupDialog isOpen={showSignupDialog} onClose={() => setShowSignupDialog(false)} onLoginClick={handleLoginClick} />
-    </>
+      <Link href="/sign-up">
+        <Button
+          variant="outline"
+          size={size}
+          className={cn(className, "border-primary text-primary hover:bg-primary hover:text-primary-foreground")}
+        >
+          {showText && <span>Sign Up</span>}
+        </Button>
+      </Link>
+      <LoginDialog 
+        isOpen={showLoginDialog} 
+        onClose={() => setShowLoginDialog(false)} 
+        onSignupClick={() => {
+          setShowLoginDialog(false);
+          navigate('/sign-up');
+        }}
+      />
+    </div>
   );
 };

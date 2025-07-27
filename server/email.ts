@@ -49,6 +49,7 @@ async function callMailerSend(data: any): Promise<boolean> {
               console.log('✅ Email sent successfully via MailerSend');
               resolve(true);
             } else {
+              if (result.error) {
               console.error('❌ MailerSend error:', result.error);
               
               // Check for specific error types
@@ -62,6 +63,7 @@ async function callMailerSend(data: any): Promise<boolean> {
               }
               
               resolve(false);
+            }
             }
           } catch (parseError) {
             console.error('❌ Failed to parse MailerSend response:', parseError);
@@ -90,6 +92,8 @@ async function callMailerSend(data: any): Promise<boolean> {
 export async function sendContactForm(data: ContactFormData): Promise<boolean> {
   return callMailerSend(data);
 }
+
+
 
 interface AssignmentNotificationData {
   clientEmail: string;

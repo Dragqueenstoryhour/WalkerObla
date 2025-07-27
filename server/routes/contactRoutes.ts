@@ -3,8 +3,11 @@ import { sendContactForm } from '../email';
 import { success, error } from '../utils/response';
 import { catchAsync } from '../utils/errorHandlers';
 import { z } from 'zod';
+import { supabase } from '../supabaseClient';
 
 const router = Router();
+
+
 
 // Contact form endpoint
 router.post('/', catchAsync(async (req, res) => {

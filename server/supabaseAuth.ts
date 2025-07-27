@@ -51,6 +51,7 @@ export async function protect(req, res, next) {
     }
     
     const token = req.headers.authorization.split(' ')[1];
+    console.log("Server received token:", token); // Add this line
     if (!token) {
       return res.status(401).json({ error: 'Invalid authorization format' });
     }
