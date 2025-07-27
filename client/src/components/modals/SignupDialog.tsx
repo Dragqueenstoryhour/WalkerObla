@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { supabaseClient } from '@/lib/supabaseClient';
 
 interface SignupDialogProps {
   isOpen: boolean;
@@ -25,7 +26,7 @@ export const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, onL
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login } = useAuth(); // Use login to automatically log in after signup if email confirmation is off
+  const { refreshUser } = useAuth(); // Use refreshUser to update auth state after signup
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,23 +43,58 @@ export const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, onL
       });
 
       const data = await response.json();
+      
+      console.log('🔍 Signup response:', { 
+        ok: response.ok, 
+        status: response.status, 
+        hasSession: !!data.session, 
+        message: data.message 
+      });
 
       if (!response.ok) {
         throw new Error(data.error || 'Signup failed');
       }
 
-      toast({
-        title: "Signup Successful",
-        description: data.message || "Please check your email for verification.",
-      });
-
-      // If a session is returned, it means email confirmation is off, so log them in
+      // If a session is returned, it means the user was auto-logged in
       if (data.session) {
-        // The backend already logged them in, just need to refresh auth state
-        // For simplicity, we can just close the dialog and let useAuth re-fetch
-        onClose();
+        console.log('✅ Session received, proceeding with auto-login');
+        // Set the session in Supabase client to enable immediate auth state
+        await supabaseClient.auth.setSession(data.session);
+        
+        // Show welcome message
+        toast({
+          title: "Welcome to Obla! 🎉",
+          description: "Your account has been created. Let's start practicing!",
+          duration: 5000,
+        });
+        
+        // Force immediate auth state refresh and close modal
+        try {
+          // Wait a bit longer to ensure session is fully established
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+          // Force refresh of auth state
+          await refreshUser();
+          
+          // Close modal
+          onClose();
+          
+          // Force a page reload as backup to ensure immediate UI update
+          setTimeout(() => {
+            window.location.reload();
+          }, 500);
+        } catch (error) {
+          console.error('Error refreshing auth state:', error);
+          onClose();
+          // Fallback: reload page to ensure auth state is updated
+          window.location.reload();
+        }
       } else {
-        // Email confirmation is on, just close the dialog
+        // Email confirmation is required (fallback case)
+        toast({
+          title: "Signup Successful",
+          description: "Please check your email for verification.",
+        });
         onClose();
       }
     } catch (err: any) {
@@ -76,7 +112,7 @@ export const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, onL
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader className="text-center space-y-2">
-          <DialogTitle className="text-2xl font-bold">Create Patient Account</DialogTitle>
+          <DialogTitle className="text-2xl font-bold">Create an Account</DialogTitle>
           <DialogDescription className="text-gray-600">
             Join the Obla platform to start improving your speech
           </DialogDescription>

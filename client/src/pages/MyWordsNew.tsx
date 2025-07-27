@@ -20,6 +20,8 @@ import { MostRecentActivities } from '@/components/MostRecentActivities';
 import { CalendarDays, Users, ExternalLink } from 'lucide-react';
 import { Link } from 'wouter';
 import { SummaryCard } from '@/components/SummaryCard';
+import { LoginDialog } from '@/components/modals/LoginDialog';
+import { SignupDialog } from '@/components/modals/SignupDialog';
 
 // Helper function to get syllable color based on accuracy score
 const getSyllableColor = (accuracyScore: number): string => {
@@ -1963,8 +1965,395 @@ function PracticePhrasesCarousel({
   );
 }
 
+// Preview component for signed-out users showing what they could access
+function SignedOutJourneyPreview() {
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isSignupOpen, setIsSignupOpen] = useState(false);
+
+  return (
+    <div className="space-y-8">
+      {/* Hero Section */}
+      <div className="text-center py-8 bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl border border-purple-100">
+        <div className="max-w-2xl mx-auto px-6">
+          <div className="text-6xl mb-4">🚀</div>
+          <h2 className="text-3xl font-bold text-purple-800 mb-4">Your Speech Journey Awaits!</h2>
+          <p className="text-lg text-gray-700 mb-6">
+            Track your progress, practice personalized content, and see your improvement over time
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button 
+              onClick={() => setIsSignupOpen(true)}
+              size="lg" 
+              className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg"
+            >
+              Get Started Free
+            </Button>
+            <Button 
+              onClick={() => setIsSignupOpen(true)}
+              variant="outline" 
+              size="lg"
+              className="border-purple-600 text-purple-600 hover:bg-purple-50 px-8 py-3 text-lg font-semibold rounded-full"
+            >
+              Sign Up
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Preview Cards Grid */}
+      <div className="grid md:grid-cols-3 gap-6">
+        {/* Practice Words Preview */}
+        <Card className="overflow-hidden border-purple-200 hover:shadow-lg transition-shadow">
+          <div className="bg-gradient-to-br from-blue-500 to-purple-600 text-white p-6">
+            <CardTitle className="text-xl mb-2 flex items-center">
+              <Volume2 className="h-6 w-6 mr-2" />
+              Practice Words
+            </CardTitle>
+            <p className="text-blue-100">Perfect your pronunciation with personalized word practice</p>
+          </div>
+          <CardContent className="p-6">
+            <div className="space-y-3">
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                <span className="font-medium">Example: "Pronunciation"</span>
+                <Badge className="bg-green-100 text-green-800">92%</Badge>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                <span className="font-medium">Example: "Communication"</span>
+                <Badge className="bg-yellow-100 text-yellow-800">76%</Badge>
+              </div>
+              <div className="text-sm text-gray-500 text-center pt-3">
+                📊 Track scores • 🎯 Get feedback • 📈 See progress
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Practice Phrases Preview */}
+        <Card className="overflow-hidden border-purple-200 hover:shadow-lg transition-shadow">
+          <div className="bg-gradient-to-br from-green-500 to-teal-600 text-white p-6">
+            <CardTitle className="text-xl mb-2 flex items-center">
+              <BookOpen className="h-6 w-6 mr-2" />
+              Practice Phrases
+            </CardTitle>
+            <p className="text-green-100">Master complex sentences and natural speech patterns</p>
+          </div>
+          <CardContent className="p-6">
+            <div className="space-y-3">
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <div className="font-medium mb-1">"The quick brown fox..."</div>
+                <div className="text-sm text-gray-600">✓ Fluency: 89% • Accuracy: 94%</div>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <div className="font-medium mb-1">"Practice makes perfect"</div>
+                <div className="text-sm text-gray-600">✓ Fluency: 82% • Accuracy: 87%</div>
+              </div>
+              <div className="text-sm text-gray-500 text-center pt-3">
+                🗣️ Natural speech • 📝 Save favorites • 🎵 Rhythm practice
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Analytics Preview */}
+        <Card className="overflow-hidden border-purple-200 hover:shadow-lg transition-shadow">
+          <div className="bg-gradient-to-br from-orange-500 to-red-600 text-white p-6">
+            <CardTitle className="text-xl mb-2 flex items-center">
+              <div className="h-6 w-6 mr-2">📊</div>
+              Progress Analytics
+            </CardTitle>
+            <p className="text-orange-100">See your improvement with detailed charts and insights</p>
+          </div>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-purple-600 mb-1">87%</div>
+                <div className="text-sm text-gray-600">Average Score This Week</div>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Words Practiced:</span>
+                <span className="font-medium">142</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Phrases Completed:</span>
+                <span className="font-medium">58</span>
+              </div>
+              <div className="text-sm text-gray-500 text-center pt-3">
+                📈 Track trends • 🎯 Set goals • 🏆 Earn achievements
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Feature Highlights */}
+      <div className="bg-white rounded-xl p-8 border border-gray-200">
+        <h3 className="text-2xl font-bold text-center text-purple-800 mb-8">What You'll Get</h3>
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="text-center">
+            <div className="text-4xl mb-3">🎯</div>
+            <h4 className="font-semibold mb-2">Personalized Practice</h4>
+            <p className="text-sm text-gray-600">Content tailored to your needs and progress level</p>
+          </div>
+          <div className="text-center">
+            <div className="text-4xl mb-3">📊</div>
+            <h4 className="font-semibold mb-2">Detailed Analytics</h4>
+            <p className="text-sm text-gray-600">Track your improvement with comprehensive insights</p>
+          </div>
+          <div className="text-center">
+            <div className="text-4xl mb-3">💾</div>
+            <h4 className="font-semibold mb-2">Save Progress</h4>
+            <p className="text-sm text-gray-600">Keep your practice history and favorite content</p>
+          </div>
+          <div className="text-center">
+            <div className="text-4xl mb-3">🎨</div>
+            <h4 className="font-semibold mb-2">Custom Content</h4>
+            <p className="text-sm text-gray-600">Create and practice your own words and phrases</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom CTA */}
+      <div className="text-center py-8">
+        <h3 className="text-xl font-semibold text-gray-800 mb-4">Ready to start your journey?</h3>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Button 
+            onClick={() => setIsSignupOpen(true)}
+            size="lg" 
+            className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg"
+          >
+            Create Free Account
+          </Button>
+          <Button 
+            onClick={() => setIsSignupOpen(true)}
+            variant="outline" 
+            size="lg"
+            className="border-purple-600 text-purple-600 hover:bg-purple-50 px-8 py-3 text-lg font-semibold rounded-full"
+          >
+            Sign Up
+          </Button>
+        </div>
+      </div>
+
+      {/* Login/Signup Modals */}
+      <LoginDialog 
+        isOpen={isLoginOpen} 
+        onClose={() => setIsLoginOpen(false)} 
+        onSignupClick={() => {
+          setIsLoginOpen(false);
+          setIsSignupOpen(true);
+        }} 
+      />
+      <SignupDialog 
+        isOpen={isSignupOpen} 
+        onClose={() => setIsSignupOpen(false)} 
+        onLoginClick={() => {
+          setIsSignupOpen(false);
+          setIsLoginOpen(true);
+        }} 
+      />
+    </div>
+  );
+}
+
+// Preview component for signed-out users on assignments tab
+function SignedOutAssignmentsPreview() {
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isSignupOpen, setIsSignupOpen] = useState(false);
+  const { toast } = useToast();
+
+  return (
+    <div className="space-y-8">
+      {/* Hero Section */}
+      <div className="text-center py-8 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border border-blue-100">
+        <div className="max-w-2xl mx-auto px-6">
+          <div className="text-6xl mb-4">👩‍⚕️</div>
+          <h2 className="text-3xl font-bold text-purple-800 mb-4">Professional Speech Therapy</h2>
+          <p className="text-lg text-gray-700 mb-6">
+            Connect with speech therapists and receive personalized assignments for targeted improvement
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button 
+              onClick={() => {
+                toast({
+                  title: "Coming Soon! 🚀",
+                  description: "We're working on connecting you with certified speech therapists. Sign up to be notified when this feature launches!",
+                  duration: 5000,
+                });
+              }}
+              size="lg" 
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg"
+            >
+              Find a Therapist
+            </Button>
+            <Button 
+              onClick={() => setIsSignupOpen(true)}
+              variant="outline" 
+              size="lg"
+              className="border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-3 text-lg font-semibold rounded-full"
+            >
+              Sign Up
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Sample Assignment Cards */}
+      <div className="space-y-6">
+        <h3 className="text-2xl font-bold text-center text-purple-800">Sample Therapy Assignments</h3>
+        
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Sample Assignment 1 */}
+          <Card className="border-blue-200 hover:shadow-lg transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+              <CardTitle className="flex items-center">
+                <Users className="h-5 w-5 mr-2" />
+                Dr. Sarah Johnson
+              </CardTitle>
+              <CardDescription className="text-blue-100">
+                Homework assignment - Oct 15, 2024
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <h4 className="font-semibold mb-3">R-Sound Practice</h4>
+              <p className="text-gray-600 mb-4">Focus on improving 'R' pronunciation in various positions</p>
+              
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                  <span className="text-sm">"Red" • "Right" • "Around"</span>
+                  <Badge className="bg-blue-100 text-blue-800 text-xs">3 words</Badge>
+                </div>
+                <div className="flex justify-between">
+                  <Progress value={75} className="flex-1 mr-2" />
+                  <span className="text-sm font-semibold text-blue-600">85%</span>
+                </div>
+              </div>
+
+              <div className="flex items-center text-sm text-gray-500 mb-4">
+                <CalendarDays className="h-4 w-4 mr-1" />
+                Due: Oct 22, 2024
+              </div>
+
+              <Button className="w-full" disabled>
+                <ExternalLink className="w-4 h-4 mr-1" />
+                Start Practice (Sign in required)
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Sample Assignment 2 */}
+          <Card className="border-blue-200 hover:shadow-lg transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-green-500 to-teal-600 text-white">
+              <CardTitle className="flex items-center">
+                <Users className="h-5 w-5 mr-2" />
+                Dr. Michael Chen
+              </CardTitle>
+              <CardDescription className="text-green-100">
+                Homework assignment - Oct 12, 2024
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <h4 className="font-semibold mb-3">Fluency Building</h4>
+              <p className="text-gray-600 mb-4">Practice smooth transitions between words in sentences</p>
+              
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                  <span className="text-sm">"The cat sat on the mat"</span>
+                  <Badge className="bg-green-100 text-green-800 text-xs">Completed</Badge>
+                </div>
+                <div className="flex justify-between">
+                  <Progress value={100} className="flex-1 mr-2" />
+                  <span className="text-sm font-semibold text-green-600">92%</span>
+                </div>
+              </div>
+
+              <div className="flex items-center text-sm text-gray-500 mb-4">
+                <CalendarDays className="h-4 w-4 mr-1" />
+                Completed: Oct 18, 2024
+              </div>
+
+              <Button className="w-full" disabled>
+                <Eye className="w-4 h-4 mr-1" />
+                View Results (Sign in required)
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Features Grid */}
+      <div className="bg-white rounded-xl p-8 border border-gray-200">
+        <h3 className="text-2xl font-bold text-center text-purple-800 mb-8">Professional Features</h3>
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="text-center">
+            <div className="text-4xl mb-3">🎯</div>
+            <h4 className="font-semibold mb-2">Targeted Assignments</h4>
+            <p className="text-sm text-gray-600">Receive specific exercises designed for your speech goals</p>
+          </div>
+          <div className="text-center">
+            <div className="text-4xl mb-3">📊</div>
+            <h4 className="font-semibold mb-2">Progress Tracking</h4>
+            <p className="text-sm text-gray-600">Therapists monitor your improvement and adjust treatment</p>
+          </div>
+          <div className="text-center">
+            <div className="text-4xl mb-3">💬</div>
+            <h4 className="font-semibold mb-2">Direct Communication</h4>
+            <p className="text-sm text-gray-600">Get feedback and ask questions about your practice</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom CTA */}
+      <div className="text-center py-8">
+        <h3 className="text-xl font-semibold text-gray-800 mb-4">Ready to work with a professional?</h3>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Button 
+            onClick={() => {
+              toast({
+                title: "Coming Soon! 🚀",
+                description: "Professional therapy features are coming soon. Create an account now to access our speech practice tools!",
+                duration: 5000,
+              });
+              setIsSignupOpen(true);
+            }}
+            size="lg" 
+            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg"
+          >
+            Get Started Today
+          </Button>
+          <Button 
+            onClick={() => setIsLoginOpen(true)}
+            variant="outline" 
+            size="lg"
+            className="border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-3 text-lg font-semibold rounded-full"
+          >
+            I Have an Account
+          </Button>
+        </div>
+      </div>
+
+      {/* Login/Signup Modals */}
+      <LoginDialog 
+        isOpen={isLoginOpen} 
+        onClose={() => setIsLoginOpen(false)} 
+        onSignupClick={() => {
+          setIsLoginOpen(false);
+          setIsSignupOpen(true);
+        }} 
+      />
+      <SignupDialog 
+        isOpen={isSignupOpen} 
+        onClose={() => setIsSignupOpen(false)} 
+        onLoginClick={() => {
+          setIsSignupOpen(false);
+          setIsLoginOpen(true);
+        }} 
+      />
+    </div>
+  );
+}
+
 export default function MyWordsNew() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
   const [currentReadingIndex, setCurrentReadingIndex] = useState(0);
@@ -1974,6 +2363,12 @@ export default function MyWordsNew() {
   const targetAssignmentId = urlParams.get('assignment');
   
   const [defaultTab, setDefaultTab] = useState(targetTab === 'assignments' ? 'assignments' : 'journey');
+
+  // Add useEffect to handle authentication state changes
+  useEffect(() => {
+    // This effect will trigger when authentication state changes
+    // ensuring the component properly reacts to sign-in/sign-out
+  }, [isAuthenticated, isLoading]);
 
   // Fetch saved words, phrases, and practice groups
   const { data: savedWordsResponse } = useQuery({
@@ -2074,13 +2469,21 @@ export default function MyWordsNew() {
   const shuffledPhrases = processedPhrases;
   const shuffledReadings = processedReadings;
 
-  if (!isAuthenticated) {
+  // Show loading state while authentication is being determined
+  if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8 bg-[#f9fafb] min-h-screen">
-        <div className="text-center py-12">
-          <BookOpen className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-          <h2 className="text-2xl font-semibold text-gray-600 mb-2">Sign in to view your journey</h2>
-          <p className="text-gray-500">Track your progress and access your saved words</p>
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-purple-800">My Journey</h1>
+            <p className="text-muted-foreground">
+              Track your progress and practice your saved words, phrases, and readings
+            </p>
+          </div>
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-800 mx-auto mb-4"></div>
+            <h2 className="text-xl text-gray-600">Loading your journey...</h2>
+          </div>
         </div>
       </div>
     );
@@ -2097,7 +2500,7 @@ export default function MyWordsNew() {
           </p>
         </div>
 
-        {/* Tabs for My Journey and My Assignments */}
+        {/* Tabs for My Journey and My Assignments - Always visible */}
         <Tabs defaultValue={defaultTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-8">
             <TabsTrigger value="journey">My Journey</TabsTrigger>
@@ -2105,48 +2508,58 @@ export default function MyWordsNew() {
           </TabsList>
 
           <TabsContent value="journey" className="space-y-6">
-            {/* Practice Words Carousel */}
-            <PracticeWordsCarousel
-              items={shuffledWords}
-              title="Practice Words"
-              color="#1947e5"
-              emptyMessage="No saved words yet"
-            />
+            {isAuthenticated ? (
+              <>
+                {/* Practice Words Carousel */}
+                <PracticeWordsCarousel
+                  items={shuffledWords}
+                  title="Practice Words"
+                  color="#1947e5"
+                  emptyMessage="No saved words yet"
+                />
 
-            {/* Practice Phrases Carousel */}
-            <PracticePhrasesCarousel
-              items={shuffledPhrases}
-              title="Practice Phrases"
-              color="#1947e5"
-              emptyMessage="No saved phrases yet"
-            />
+                {/* Practice Phrases Carousel */}
+                <PracticePhrasesCarousel
+                  items={shuffledPhrases}
+                  title="Practice Phrases"
+                  color="#1947e5"
+                  emptyMessage="No saved phrases yet"
+                />
 
-            {/* Practice Readings Carousel */}
-            <PracticePhrasesCarousel
-              items={shuffledReadings}
-              title="Practice Readings"
-              color="#1947e5"
-              emptyMessage="No saved readings yet"
-            />
+                {/* Practice Readings Carousel */}
+                <PracticePhrasesCarousel
+                  items={shuffledReadings}
+                  title="Practice Readings"
+                  color="#1947e5"
+                  emptyMessage="No saved readings yet"
+                />
 
-            {/* My Stats Component */}
-            <div className="mt-12">
-              <h2 className="text-2xl font-bold text-purple-800 mb-4">My Stats</h2>
-              <CombinedLineChart
-                wordActivities={wordActivities}
-                phraseActivities={phraseActivities}
-                readingActivities={readingActivities}
-              />
-              
-              {/* Most Recent Activities */}
-              <div className="mt-8">
-                <MostRecentActivities />
-              </div>
-            </div>
+                {/* My Stats Component */}
+                <div className="mt-12">
+                  <h2 className="text-2xl font-bold text-purple-800 mb-4">My Stats</h2>
+                  <CombinedLineChart
+                    wordActivities={wordActivities}
+                    phraseActivities={phraseActivities}
+                    readingActivities={readingActivities}
+                  />
+                  
+                  {/* Most Recent Activities */}
+                  <div className="mt-8">
+                    <MostRecentActivities />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <SignedOutJourneyPreview />
+            )}
           </TabsContent>
 
           <TabsContent value="assignments" className="space-y-6">
-            <AssignmentsTab targetAssignmentId={targetAssignmentId} />
+            {isAuthenticated ? (
+              <AssignmentsTab targetAssignmentId={targetAssignmentId} />
+            ) : (
+              <SignedOutAssignmentsPreview />
+            )}
           </TabsContent>
         </Tabs>
       </div>

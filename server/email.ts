@@ -112,7 +112,7 @@ interface ClientInvitationData {
 
 export async function sendClientInvitation(data: ClientInvitationData): Promise<boolean> {
   const clientDisplayName = data.clientName || data.clientEmail.split('@')[0];
-  const invitationLink = `${data.baseUrl}/accept-invitation?token=${data.invitationToken}`;
+  const invitationLink = `${data.baseUrl}/invite/${data.invitationToken}`;
   
   const emailData = {
     type: 'client_invitation',

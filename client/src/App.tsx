@@ -21,6 +21,7 @@ import Viseme from "@/pages/Viseme";
 import TherapistLogin from "@/pages/TherapistLogin";
 import TherapistPortalPage from "@/pages/TherapistPortalPage";
 import AcceptInvitation from "@/pages/AcceptInvitation";
+import InvitationLanding from "@/pages/InvitationLanding";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ReadingProvider } from "./contexts/ReadingContext";
@@ -249,6 +250,7 @@ function Router() {
             <TherapistPortalPage />
           </ProtectedRoute>
         </Route>
+        <Route path="/invite/:token" component={InvitationLanding} />
         <Route path="/accept-invitation" component={AcceptInvitation} />
         <Route component={NotFound} />
       </Switch>

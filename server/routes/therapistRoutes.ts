@@ -106,8 +106,13 @@ router.post('/clients', protect, catchAsync(async (req: any, res) => {
           
           // Send invitation email for reactivated client
           try {
-            // Generate a simple invitation token (in production, use a proper JWT or UUID)
-            const invitationToken = `${existingUser.id}_${Date.now()}`;
+            // Create invitation record in database with secure token
+            const invitation = await storage.createClientInvitation({
+              therapistId,
+              clientEmail: existingUser.email!,
+              status: 'pending'
+            });
+            
             const baseUrl = process.env.CLIENT_BASE_URL || 'http://localhost:3001';
             
             await sendClientInvitation({
@@ -118,7 +123,7 @@ router.post('/clients', protect, catchAsync(async (req: any, res) => {
               therapistName: user.firstName && user.lastName 
                 ? `${user.firstName} ${user.lastName}` 
                 : user.username || 'Your Therapist',
-              invitationToken,
+              invitationToken: invitation.invitationToken,
               baseUrl
             });
             console.log(`📧 Invitation email sent to reactivated client: ${clientEmail}`);
@@ -145,8 +150,13 @@ router.post('/clients', protect, catchAsync(async (req: any, res) => {
 
       // Send invitation email for existing user
       try {
-        // Generate a simple invitation token (in production, use a proper JWT or UUID)
-        const invitationToken = `${existingUser.id}_${Date.now()}`;
+        // Create invitation record in database with secure token
+        const invitation = await storage.createClientInvitation({
+          therapistId,
+          clientEmail: existingUser.email!,
+          status: 'pending'
+        });
+        
         const baseUrl = process.env.CLIENT_BASE_URL || 'http://localhost:3001';
         
         await sendClientInvitation({
@@ -157,7 +167,7 @@ router.post('/clients', protect, catchAsync(async (req: any, res) => {
           therapistName: user.firstName && user.lastName 
             ? `${user.firstName} ${user.lastName}` 
             : user.username || 'Your Therapist',
-          invitationToken,
+          invitationToken: invitation.invitationToken,
           baseUrl
         });
         console.log(`📧 Invitation email sent to existing user: ${clientEmail}`);
@@ -201,8 +211,13 @@ router.post('/clients', protect, catchAsync(async (req: any, res) => {
 
     // Send invitation email for new user
     try {
-      // Generate a simple invitation token (in production, use a proper JWT or UUID)
-      const invitationToken = `${newUser.id}_${Date.now()}`;
+      // Create invitation record in database with secure token
+      const invitation = await storage.createClientInvitation({
+        therapistId,
+        clientEmail: newUser.email!,
+        status: 'pending'
+      });
+      
       const baseUrl = process.env.CLIENT_BASE_URL || 'http://localhost:3001';
       
       await sendClientInvitation({
@@ -213,7 +228,7 @@ router.post('/clients', protect, catchAsync(async (req: any, res) => {
         therapistName: user.firstName && user.lastName 
           ? `${user.firstName} ${user.lastName}` 
           : user.username || 'Your Therapist',
-        invitationToken,
+        invitationToken: invitation.invitationToken,
         baseUrl
       });
       console.log(`📧 Invitation email sent to new user: ${clientEmail}`);

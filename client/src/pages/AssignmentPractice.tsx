@@ -175,10 +175,25 @@ const AssignmentPractice: React.FC = () => {
   const handleTextToSpeech = async (text: string, itemId: number, slow: boolean = false) => {
     try {
       setAudioPlaying(itemId);
-      const speedValue = slow ? 0.7 : 1.0;
-      console.log(`🔊 Playing "${text}" at ${speedValue}x speed (${slow ? 'SLOW' : 'NORMAL'})`);
+      console.log(`🔊 Playing "${text}" at ${slow ? 'SLOW' : 'NORMAL'} speed`);
       
       const authHeaders = await getAuthHeaders();
+      
+      // Use SSML approach like Words.tsx and Phrases.tsx for consistent speed control
+      let ssmlText = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">`;
+      ssmlText += `<voice name="en-US-AvaNeural">`;
+      
+      if (slow) {
+        // Use SSML prosody rate to slow down - Azure uses "slow" or decimal values
+        ssmlText += `<prosody rate="0.6">`;
+        ssmlText += text;
+        ssmlText += `</prosody>`;
+      } else {
+        ssmlText += text;
+      }
+      ssmlText += `</voice>`;
+      ssmlText += `</speak>`;
+      
       const response = await fetch('/api/pronunciation/synthesize', {
         method: 'POST',
         headers: {
@@ -186,8 +201,7 @@ const AssignmentPractice: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          text, 
-          speed: speedValue
+          ssml: ssmlText
         }),
       });
 

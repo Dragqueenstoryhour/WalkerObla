@@ -1,6 +1,24 @@
 import { Router } from 'express';
 import { supabase } from '../supabaseClient';
 import { storage } from '../storage';
+import { createClient } from '@supabase/supabase-js';
+
+// Create admin client for user creation
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+let adminSupabase: any = null;
+if (supabaseUrl && supabaseServiceKey) {
+  adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+  console.log('✅ Admin Supabase client created for user management');
+} else {
+  console.warn('⚠️ Missing service role key, will fallback to regular signup');
+}
 
 const authRoutes = Router();
 
@@ -17,22 +35,83 @@ authRoutes.post('/signup', async (req, res) => {
   }
 
   try {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { 
+    console.log('🔧 Checking for existing user before creating:', email);
+    
+    // FIRST: Check if user already exists in our custom database
+    const existingCustomUser = await storage.getUserByEmail(email);
+    if (existingCustomUser) {
+      console.log('❌ User already exists with role:', existingCustomUser.role);
+      return res.status(409).json({ 
+        error: `Account already exists with role: ${existingCustomUser.role}. Please sign in or use "Forgot My Password" to reset your password.` 
+      });
+    }
+
+    // SECOND: Check if user exists in Supabase auth
+    let existingAuthUser = null;
+    if (adminSupabase) {
+      try {
+        const { data: userData } = await adminSupabase.auth.admin.getUserByEmail(email);
+        existingAuthUser = userData.user;
+        if (existingAuthUser) {
+          console.log('❌ Supabase auth user already exists:', email);
+          return res.status(409).json({ 
+            error: 'Account already exists - please sign in or use "Forgot My Password" to reset your password.' 
+          });
+        }
+      } catch (err) {
+        console.log('✅ No existing Supabase user found, proceeding with creation');
+      }
+    }
+
+    console.log('🔧 Creating new user with admin API:', email);
+    
+    let data: any, error: any;
+    
+    if (adminSupabase) {
+      // Use admin client with service role key to create CONFIRMED user
+      const result = await adminSupabase.auth.admin.createUser({
+        email,
+        password,
+        user_metadata: { 
           firstName,
           lastName,
           role: role || 'client'
         },
-      },
-    });
+        email_confirm: true, // Force email to be confirmed immediately
+        phone_confirm: true, // Also confirm phone if needed
+      });
+      data = result.data;
+      error = result.error;
+      
+      if (data.user) {
+        console.log('✅ User created with admin API, email confirmed:', data.user.email);
+        console.log('✅ User confirmation status:', data.user.email_confirmed_at ? 'CONFIRMED' : 'NOT CONFIRMED');
+      }
+    } else {
+      // Fallback approach: Use regular signup but modify project settings
+      console.log('⚠️ Admin client not available, using regular signup');
+      console.log('🚨 WARNING: This will require email confirmation unless Supabase settings are changed');
+      const result = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { 
+            firstName,
+            lastName,
+            role: role || 'client'
+          },
+        },
+      });
+      data = result.data;
+      error = result.error;
+    }
 
     if (error) {
       // Handle specific Supabase errors
-      if (error.message.includes('User already registered')) {
-        return res.status(409).json({ error: 'User with this email already exists.' });
+      if (error.message.includes('User already registered') || error.message.includes('already been registered')) {
+        return res.status(409).json({ 
+          error: 'Account already exists - please sign in or use "Forgot My Password" to reset your password.' 
+        });
       }
       if (error.message.includes('Invalid email') || error.message.includes('Password should be at least 6 characters')) {
         return res.status(400).json({ error: error.message });
@@ -58,17 +137,69 @@ authRoutes.post('/signup', async (req, res) => {
 
       console.log('Created custom user record:', customUser.email, 'with role:', customUser.role);
 
-      // Check if a session is returned immediately (email_confirm is off) or if email verification is required
-      if (data.session) {
-        return res.status(200).json({
-          message: 'User registered and logged in successfully.',
-          user: customUser, // Return our custom user data instead of Supabase user
-          session: data.session,
-        });
-      } else {
+      // Check if user was actually confirmed by admin API
+      const isUserConfirmed = data.user?.email_confirmed_at !== null;
+      console.log('📧 User email confirmation status:', isUserConfirmed ? 'CONFIRMED' : 'NOT CONFIRMED');
+      
+      if (!isUserConfirmed) {
+        console.log('⚠️ Admin API failed to confirm user email - Supabase project settings may override admin API');
+        console.log('💡 SOLUTION: Disable "Enable email confirmations" in Supabase Dashboard → Authentication → Settings');
         return res.status(200).json({
           message: 'User registered successfully. Please check your email for verification.',
-          user: customUser, // Return our custom user data instead of Supabase user
+          user: customUser,
+          needsEmailConfirmation: true,
+        });
+      }
+
+      // User is confirmed, attempt immediate sign-in
+      console.log('🔑 Attempting immediate sign-in for confirmed user:', customUser.email);
+      try {
+        // Use admin client for sign-in to ensure it works with confirmed users
+        const signInClient = adminSupabase || supabase;
+        const { data: signInData, error: signInError } = await signInClient.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (signInError) {
+          console.error('❌ Failed to sign in newly created user:', signInError.message);
+          console.log('🔧 Possible causes:');
+          console.log('   1. Password policy enforcement');
+          console.log('   2. User not actually confirmed despite admin API');
+          console.log('   3. Supabase project settings preventing sign-in');
+          
+          return res.status(500).json({ 
+            error: 'Account created but failed to sign in. Please try logging in manually.',
+            debug: signInError.message 
+          });
+        }
+
+        if (signInData.session) {
+          // Successfully created account and signed in
+          console.log('🎉 User created and signed in successfully:', customUser.email);
+          console.log('🎯 Returning session for immediate frontend login');
+          console.log('✅ Session details:', {
+            userId: signInData.user?.id,
+            email: signInData.user?.email,
+            confirmed: signInData.user?.email_confirmed_at ? 'YES' : 'NO'
+          });
+          
+          return res.status(200).json({
+            message: 'User registered and logged in successfully.',
+            user: customUser,
+            session: signInData.session,
+          });
+        } else {
+          console.error('❌ No session returned despite successful auth');
+          return res.status(500).json({ 
+            error: 'Account created but no session returned. Please try logging in manually.' 
+          });
+        }
+      } catch (signInErr) {
+        console.error('❌ Exception during immediate sign-in attempt:', signInErr);
+        return res.status(500).json({ 
+          error: 'Account created but failed to establish session. Please try logging in manually.',
+          debug: signInErr.message 
         });
       }
     } catch (dbError: any) {
