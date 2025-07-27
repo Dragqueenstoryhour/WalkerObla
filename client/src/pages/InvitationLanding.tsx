@@ -3,8 +3,11 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, XCircle, Loader2, Users, Star, Target, Award, Clock } from 'lucide-react';
-import { SignupForm } from '@/components/SignupForm'; // Updated import
+import { CheckCircle, XCircle, Loader2, Users, Star, Target, Award, Clock, Lock } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { supabaseClient } from '@/lib/supabaseClient';
 
 interface InvitationDetails {
   therapistName: string;
@@ -22,12 +25,16 @@ interface TherapistProfile {
 
 export default function InvitationLanding() {
   const [location, setLocation] = useLocation();
-  const { user, signInWithGoogle } = useAuth();
+  const { user } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [invitation, setInvitation] = useState<InvitationDetails | null>(null);
   const [therapistProfile, setTherapistProfile] = useState<TherapistProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isSettingPassword, setIsSettingPassword] = useState(false);
+  const { toast } = useToast();
 
   // No longer need showSignupDialog state
 
@@ -73,6 +80,90 @@ export default function InvitationLanding() {
       setError('Failed to load invitation details');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePasswordSetup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (password !== confirmPassword) {
+      toast({
+        title: "Password Mismatch",
+        description: "Passwords do not match. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({
+        title: "Password Too Short",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSettingPassword(true);
+
+    try {
+      const { error: resetError } = await supabaseClient.auth.resetPasswordForEmail(
+        invitation!.clientEmail,
+        {
+          redirectTo: `${window.location.origin}/set-password`
+        }
+      );
+
+      if (resetError) {
+        const response = await fetch('/api/invitation/accept', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            invitationToken: token,
+            password: password
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to set password');
+        }
+
+        const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
+          email: invitation!.clientEmail,
+          password: password
+        });
+
+        if (signInError) {
+          throw signInError;
+        }
+
+        toast({
+          title: "Welcome to Obla! 🎉",
+          description: "Your password has been set successfully. Let's start practicing!",
+        });
+
+        // Redirect to dashboard
+        setLocation('/my-words?tutorial=true');
+      } else {
+        toast({
+          title: "Password Reset Sent",
+          description: "Please check your email for password reset instructions.",
+        });
+      }
+
+    } catch (err: any) {
+      console.error('Password setup error:', err);
+      toast({
+        title: "Password Setup Failed",
+        description: err.message || "Failed to set password. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSettingPassword(false);
     }
   };
 
@@ -224,15 +315,77 @@ export default function InvitationLanding() {
               </Card>
             </div>
 
-            {/* Right Column: Signup Form */}
+            {/* Right Column: Password Setup Form */}
             <div className="lg:mt-20">
               <Card className="shadow-lg border-0 bg-white/80 backdrop-blur enhanced-card">
                 <CardContent className="p-8">
-                  <h3 className="text-2xl font-bold mb-4 text-center text-gray-900">Ready to begin your journey?</h3>
-                  <p className="mb-6 text-gray-600 text-center">
-                    Sign up to start improving your speech today.
-                  </p>
-                  <SignupForm invitationToken={token || undefined} />
+                  <div className="text-center mb-6">
+                    <Lock className="h-16 w-16 text-blue-600 mx-auto mb-4" />
+                    <h3 className="text-2xl font-bold mb-2 text-gray-900">Set Your Password</h3>
+                    <p className="text-gray-600">
+                      Your account has been created. Set a secure password to get started.
+                    </p>
+                  </div>
+                  
+                  <form onSubmit={handlePasswordSetup} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                        Email Address
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={invitation?.clientEmail || ''}
+                        disabled
+                        className="w-full bg-gray-50"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+                        New Password <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Enter your new password"
+                        required
+                        minLength={6}
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
+                        Confirm Password <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm your new password"
+                        required
+                        minLength={6}
+                        className="w-full"
+                      />
+                    </div>
+                    <Button 
+                      type="submit" 
+                      disabled={isSettingPassword}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-medium"
+                    >
+                      {isSettingPassword ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Setting Password...
+                        </>
+                      ) : (
+                        'Set Password & Continue'
+                      )}
+                    </Button>
+                  </form>
+                  
                   <div className="mt-6 flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-6 text-sm text-gray-600">
                     <span className="flex items-center">
                       <CheckCircle className="h-4 w-4 mr-1 text-green-500" />
