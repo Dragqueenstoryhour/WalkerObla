@@ -314,6 +314,11 @@ if __name__ == "__main__":
             email_subject = input_data.get('subject', '')
             html_content = input_data.get('html', '')
             result = send_custom_email(to_email, email_subject, html_content)
+        elif email_type == 'password_setup_invitation':
+            to_email = input_data.get('to', '')
+            email_subject = input_data.get('subject', '')
+            html_content = input_data.get('html', '')
+            result = send_custom_email(to_email, email_subject, html_content)
         else:
             # Contact form email (default)
             name = input_data.get('name', '')
