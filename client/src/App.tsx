@@ -22,6 +22,7 @@ import TherapistLogin from "@/pages/TherapistLogin";
 import TherapistPortalPage from "@/pages/TherapistPortalPage";
 import AcceptInvitation from "@/pages/AcceptInvitation";
 import InvitationLanding from "@/pages/InvitationLanding";
+import SetPassword from "@/pages/SetPassword";
 import PatientSignUp from "@/pages/PatientSignUp";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { SettingsProvider } from "./contexts/SettingsContext";
@@ -253,6 +254,7 @@ function Router() {
           </ProtectedRoute>
         </Route>
         <Route path="/invite/:token" component={InvitationLanding} />
+        <Route path="/set-password" component={SetPassword} />
         <Route path="/accept-invitation" component={AcceptInvitation} />
         <Route component={NotFound} />
       </Switch>

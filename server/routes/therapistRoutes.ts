@@ -4,8 +4,25 @@ import { protect } from '../supabaseAuth';
 import { success, error } from '../utils/response';
 import { catchAsync } from '../utils/errorHandlers';
 import { storage } from '../storage';
-import { sendClientInvitation, sendAssignmentNotification } from '../email';
+import { sendClientInvitation, sendAssignmentNotification, sendPasswordSetupInvitation } from '../email';
 import { generateWordsWithSound, generateTopicPhrases } from '../openai';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+let adminSupabase: any = null;
+if (supabaseUrl && supabaseServiceKey) {
+  adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+  console.log('✅ Admin Supabase client created for therapist routes');
+} else {
+  console.warn('⚠️ Missing service role key in therapist routes');
+}
 
 const router = Router();
 
@@ -104,31 +121,52 @@ router.post('/clients', protect, catchAsync(async (req: any, res) => {
           console.log(`🔄 Reactivating existing relationship for ${clientEmail}`);
           const reactivatedRelationship = await storage.updateTherapistClientStatus(therapistId, existingUser.id, true);
           
-          // Send invitation email for reactivated client
+          // Send password setup email for reactivated client
           try {
-            // Create invitation record in database with secure token
-            const invitation = await storage.createClientInvitation({
-              therapistId,
-              clientEmail: existingUser.email!,
-              status: 'pending'
+            const { data: resetLinkData, error: resetLinkError } = await adminSupabase.auth.admin.generateLink({
+              type: 'recovery',
+              email: clientEmail,
+              options: {
+                redirectTo: `${process.env.CLIENT_BASE_URL || 'http://localhost:3001'}/set-password`
+              }
             });
-            
+
             const baseUrl = process.env.CLIENT_BASE_URL || 'http://localhost:3001';
             
-            await sendClientInvitation({
-              clientEmail: existingUser.email!,
-              clientName: existingUser.firstName && existingUser.lastName 
-                ? `${existingUser.firstName} ${existingUser.lastName}` 
-                : existingUser.username || 'Client',
-              therapistName: user.firstName && user.lastName 
-                ? `${user.firstName} ${user.lastName}` 
-                : user.username || 'Your Therapist',
-              invitationToken: invitation.invitationToken,
-              baseUrl
-            });
-            console.log(`📧 Invitation email sent to reactivated client: ${clientEmail}`);
+            if (resetLinkData?.properties?.action_link) {
+              await sendPasswordSetupInvitation({
+                clientEmail: existingUser.email!,
+                clientName: existingUser.firstName && existingUser.lastName 
+                  ? `${existingUser.firstName} ${existingUser.lastName}` 
+                  : existingUser.username || 'Client',
+                therapistName: user.firstName && user.lastName 
+                  ? `${user.firstName} ${user.lastName}` 
+                  : user.username || 'Your Therapist',
+                passwordSetupLink: resetLinkData.properties.action_link,
+                baseUrl
+              });
+            } else {
+              const invitation = await storage.createClientInvitation({
+                therapistId,
+                clientEmail: existingUser.email!,
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+              });
+              
+              await sendClientInvitation({
+                clientEmail: existingUser.email!,
+                clientName: existingUser.firstName && existingUser.lastName 
+                  ? `${existingUser.firstName} ${existingUser.lastName}` 
+                  : existingUser.username || 'Client',
+                therapistName: user.firstName && user.lastName 
+                  ? `${user.firstName} ${user.lastName}` 
+                  : user.username || 'Your Therapist',
+                invitationToken: invitation.invitationToken,
+                baseUrl
+              });
+            }
+            console.log(`📧 Password setup email sent to reactivated client: ${clientEmail}`);
           } catch (emailError) {
-            console.error(`❌ Failed to send invitation email to ${clientEmail}:`, emailError);
+            console.error(`❌ Failed to send password setup email to ${clientEmail}:`, emailError);
           }
           
           return success(res, {
@@ -148,31 +186,52 @@ router.post('/clients', protect, catchAsync(async (req: any, res) => {
         notes: notes || null
       });
 
-      // Send invitation email for existing user
+      // Send password setup email for existing user
       try {
-        // Create invitation record in database with secure token
-        const invitation = await storage.createClientInvitation({
-          therapistId,
-          clientEmail: existingUser.email!,
-          status: 'pending'
+        const { data: resetLinkData, error: resetLinkError } = await adminSupabase.auth.admin.generateLink({
+          type: 'recovery',
+          email: clientEmail,
+          options: {
+            redirectTo: `${process.env.CLIENT_BASE_URL || 'http://localhost:3001'}/set-password`
+          }
         });
-        
+
         const baseUrl = process.env.CLIENT_BASE_URL || 'http://localhost:3001';
         
-        await sendClientInvitation({
-          clientEmail: existingUser.email!,
-          clientName: existingUser.firstName && existingUser.lastName 
-            ? `${existingUser.firstName} ${existingUser.lastName}` 
-            : existingUser.username || 'Client',
-          therapistName: user.firstName && user.lastName 
-            ? `${user.firstName} ${user.lastName}` 
-            : user.username || 'Your Therapist',
-          invitationToken: invitation.invitationToken,
-          baseUrl
-        });
-        console.log(`📧 Invitation email sent to existing user: ${clientEmail}`);
+        if (resetLinkData?.properties?.action_link) {
+          await sendPasswordSetupInvitation({
+            clientEmail: existingUser.email!,
+            clientName: existingUser.firstName && existingUser.lastName 
+              ? `${existingUser.firstName} ${existingUser.lastName}` 
+              : existingUser.username || 'Client',
+            therapistName: user.firstName && user.lastName 
+              ? `${user.firstName} ${user.lastName}` 
+              : user.username || 'Your Therapist',
+            passwordSetupLink: resetLinkData.properties.action_link,
+            baseUrl
+          });
+        } else {
+          const invitation = await storage.createClientInvitation({
+            therapistId,
+            clientEmail: existingUser.email!,
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+          });
+          
+          await sendClientInvitation({
+            clientEmail: existingUser.email!,
+            clientName: existingUser.firstName && existingUser.lastName 
+              ? `${existingUser.firstName} ${existingUser.lastName}` 
+              : existingUser.username || 'Client',
+            therapistName: user.firstName && user.lastName 
+              ? `${user.firstName} ${user.lastName}` 
+              : user.username || 'Your Therapist',
+            invitationToken: invitation.invitationToken,
+            baseUrl
+          });
+        }
+        console.log(`📧 Password setup email sent to existing user: ${clientEmail}`);
       } catch (emailError) {
-        console.error(`❌ Failed to send invitation email to ${clientEmail}:`, emailError);
+        console.error(`❌ Failed to send password setup email to ${clientEmail}:`, emailError);
       }
 
       console.log(`✅ Existing user added to client list: ${clientEmail} (ID: ${existingUser.id})`);
@@ -191,9 +250,25 @@ router.post('/clients', protect, catchAsync(async (req: any, res) => {
       ? `${firstName}_${lastName}_${timestamp}` 
       : `${clientEmail.split('@')[0]}_${timestamp}`;
     
-    const userId = `client_${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
+    // Create user in Supabase with admin API
+    const { data: supabaseUser, error: supabaseError } = await adminSupabase.auth.admin.createUser({
+      email: clientEmail,
+      password: `temp_${timestamp}_${Math.random().toString(36).substr(2, 9)}`,
+      user_metadata: { 
+        firstName: firstName || null,
+        lastName: lastName || null,
+        role: 'client'
+      },
+      email_confirm: true
+    });
+
+    if (supabaseError || !supabaseUser.user) {
+      console.error('Failed to create Supabase user:', supabaseError);
+      return error(res, 'Failed to create user account', 500);
+    }
+
     const newUser = await storage.upsertUser({
-      id: userId,
+      id: supabaseUser.user.id,
       email: clientEmail,
       username: uniqueUsername,
       firstName: firstName || null,
@@ -209,31 +284,56 @@ router.post('/clients', protect, catchAsync(async (req: any, res) => {
       notes: notes || null
     });
 
-    // Send invitation email for new user
+    // Generate password reset link for the new user
+    const { data: resetLinkData, error: resetLinkError } = await adminSupabase.auth.admin.generateLink({
+      type: 'recovery',
+      email: clientEmail,
+      options: {
+        redirectTo: `${process.env.CLIENT_BASE_URL || 'http://localhost:3001'}/set-password`
+      }
+    });
+
+    if (resetLinkError) {
+      console.error('Failed to generate password reset link:', resetLinkError);
+    }
+
     try {
-      // Create invitation record in database with secure token
-      const invitation = await storage.createClientInvitation({
-        therapistId,
-        clientEmail: newUser.email!,
-        status: 'pending'
-      });
-      
       const baseUrl = process.env.CLIENT_BASE_URL || 'http://localhost:3001';
       
-      await sendClientInvitation({
-        clientEmail: newUser.email!,
-        clientName: newUser.firstName && newUser.lastName 
-          ? `${newUser.firstName} ${newUser.lastName}` 
-          : newUser.username || 'Client',
-        therapistName: user.firstName && user.lastName 
-          ? `${user.firstName} ${user.lastName}` 
-          : user.username || 'Your Therapist',
-        invitationToken: invitation.invitationToken,
-        baseUrl
-      });
-      console.log(`📧 Invitation email sent to new user: ${clientEmail}`);
+      if (resetLinkData?.properties?.action_link) {
+        await sendPasswordSetupInvitation({
+          clientEmail: newUser.email!,
+          clientName: newUser.firstName && newUser.lastName 
+            ? `${newUser.firstName} ${newUser.lastName}` 
+            : newUser.username || 'Client',
+          therapistName: user.firstName && user.lastName 
+            ? `${user.firstName} ${user.lastName}` 
+            : user.username || 'Your Therapist',
+          passwordSetupLink: resetLinkData.properties.action_link,
+          baseUrl
+        });
+      } else {
+        const invitation = await storage.createClientInvitation({
+          therapistId,
+          clientEmail: newUser.email!,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        });
+        
+        await sendClientInvitation({
+          clientEmail: newUser.email!,
+          clientName: newUser.firstName && newUser.lastName 
+            ? `${newUser.firstName} ${newUser.lastName}` 
+            : newUser.username || 'Client',
+          therapistName: user.firstName && user.lastName 
+            ? `${user.firstName} ${user.lastName}` 
+            : user.username || 'Your Therapist',
+          invitationToken: invitation.invitationToken,
+          baseUrl
+        });
+      }
+      console.log(`📧 Password setup email sent to new user: ${clientEmail}`);
     } catch (emailError) {
-      console.error(`❌ Failed to send invitation email to ${clientEmail}:`, emailError);
+      console.error(`❌ Failed to send password setup email to ${clientEmail}:`, emailError);
     }
 
     console.log(`✅ New user created and added to client list: ${clientEmail} (ID: ${newUser.id})`);
