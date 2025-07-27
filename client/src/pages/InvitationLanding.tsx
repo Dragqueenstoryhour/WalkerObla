@@ -107,59 +107,45 @@ export default function InvitationLanding() {
     setIsSettingPassword(true);
 
     try {
-      const { error: resetError } = await supabaseClient.auth.resetPasswordForEmail(
-        invitation!.clientEmail,
-        {
-          redirectTo: `${window.location.origin}/set-password`
-        }
-      );
-
-      if (resetError) {
-        const response = await fetch('/api/invitation/accept', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            invitationToken: token,
-            password: password
-          }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to set password');
-        }
-
-        const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
-          email: invitation!.clientEmail,
+      const response = await fetch('/api/invitation/accept', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          invitationToken: token,
           password: password
-        });
+        }),
+      });
 
-        if (signInError) {
-          throw signInError;
-        }
+      const data = await response.json();
 
-        toast({
-          title: "Welcome to Obla! 🎉",
-          description: "Your password has been set successfully. Let's start practicing!",
-        });
-
-        // Redirect to dashboard
-        setLocation('/my-words?tutorial=true');
-      } else {
-        toast({
-          title: "Password Reset Sent",
-          description: "Please check your email for password reset instructions.",
-        });
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create account');
       }
 
-    } catch (err: any) {
-      console.error('Password setup error:', err);
+      const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
+        email: invitation!.clientEmail,
+        password: password
+      });
+
+      if (signInError) {
+        throw signInError;
+      }
+
       toast({
-        title: "Password Setup Failed",
-        description: err.message || "Failed to set password. Please try again.",
+        title: "Welcome to Obla! 🎉",
+        description: "Your account has been created successfully. Let's start practicing!",
+      });
+
+      // Redirect to dashboard
+      setLocation('/my-words?tutorial=true');
+
+    } catch (err: any) {
+      console.error('Account creation error:', err);
+      toast({
+        title: "Account Creation Failed",
+        description: err.message || "Failed to create account. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -321,9 +307,9 @@ export default function InvitationLanding() {
                 <CardContent className="p-8">
                   <div className="text-center mb-6">
                     <Lock className="h-16 w-16 text-blue-600 mx-auto mb-4" />
-                    <h3 className="text-2xl font-bold mb-2 text-gray-900">Set Your Password</h3>
+                    <h3 className="text-2xl font-bold mb-2 text-gray-900">Create Your Account</h3>
                     <p className="text-gray-600">
-                      Your account has been created. Set a secure password to get started.
+                      You've been invited to join! Create a secure password to get started.
                     </p>
                   </div>
                   
@@ -378,10 +364,10 @@ export default function InvitationLanding() {
                       {isSettingPassword ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Setting Password...
+                          Creating Account...
                         </>
                       ) : (
-                        'Set Password & Continue'
+                        'Create Account & Continue'
                       )}
                     </Button>
                   </form>

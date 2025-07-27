@@ -44,7 +44,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/contact', contactRoutes);
   app.use('/api/voice', voiceRoutes);
   app.use('/api/visemes', visemeRoutes);
-  app.use('/api/accept-invitation', invitationRoutes);
+  app.use('/api/invitation', invitationRoutes);
 
   const httpServer = createServer(app);
   return httpServer;
