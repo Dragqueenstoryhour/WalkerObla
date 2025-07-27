@@ -68,7 +68,7 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onSig
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder="patient@example.com"
+              placeholder=""
               className="w-full"
             />
           </div>

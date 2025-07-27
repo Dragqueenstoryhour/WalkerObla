@@ -47,6 +47,7 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
   const [showTooltip, setShowTooltip] = useState(false);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showSignupDialog, setShowSignupDialog] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLoginClick = () => {
     setShowSignupDialog(false);
@@ -122,11 +123,32 @@ export const AuthButtons: React.FC<AuthButtonsProps> = ({
         <Button
           variant="outline"
           size="sm"
+          disabled={isLoggingOut}
           className={cn(className, "border-primary text-primary hover:bg-primary hover:text-primary-foreground")}
-          onClick={logout}
+          onClick={async () => {
+            setIsLoggingOut(true);
+            try {
+              await logout();
+              navigate('/');
+              
+              // Fallback: If UI doesn't update after 500ms, force reload
+              setTimeout(() => {
+                if (isAuthenticated) {
+                  console.log('🚪 Forcing page reload as fallback');
+                  window.location.reload();
+                }
+              }, 500);
+            } catch (error) {
+              console.error('Logout failed:', error);
+              // Force reload on error as well
+              window.location.reload();
+            } finally {
+              setIsLoggingOut(false);
+            }
+          }}
         >
           <LogOut className="h-4 w-4 mr-1" />
-          {showText && <span>Sign Out</span>}
+          {showText && <span>{isLoggingOut ? 'Signing Out...' : 'Sign Out'}</span>}
         </Button>
       </div>
     );

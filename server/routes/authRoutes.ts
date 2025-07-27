@@ -1,4 +1,3 @@
-
 import { Router } from 'express';
 import { supabase } from '../supabaseClient';
 import { storage } from '../storage';
@@ -166,18 +165,13 @@ authRoutes.post('/login', async (req, res) => {
 // 3. User Logout
 authRoutes.post('/logout', async (req, res) => {
   try {
-    // Supabase handles invalidating the session and revoking refresh tokens.
-    // The JWT on the client side will become invalid upon its expiration or if explicitly removed.
-    // You can specify a scope for signOut: 'global' (default), 'local', or 'others'.
-    // 'global': Signs out from all active sessions.
-    // 'local': Signs out only from the current device/session.
-    // 'others': Signs out from all other sessions except the current one.
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      return res.status(500).json({ error: error.message });
-    }
-
+    // Server-side logout is primarily for logging purposes
+    // The actual session invalidation is handled on the client side
+    console.log('User logout request received');
+    
+    // Optionally: Add any server-side cleanup logic here
+    // (e.g., clearing server-side sessions, logging logout events, etc.)
+    
     return res.status(200).json({ message: 'Logged out successfully.' });
   } catch (err: any) {
     console.error('Logout error:', err);

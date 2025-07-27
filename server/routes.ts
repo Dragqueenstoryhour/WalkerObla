@@ -12,7 +12,6 @@ import therapistRoutes from './routes/therapistRoutes';
 import contactRoutes from './routes/contactRoutes';
 import voiceRoutes from './routes/voiceRoutes';
 import visemeRoutes from './routes/visemeRoutes';
-import invitationRoutes from './routes/invitationRoutes';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Readiness check endpoint for deployment
@@ -44,7 +43,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/contact', contactRoutes);
   app.use('/api/voice', voiceRoutes);
   app.use('/api/visemes', visemeRoutes);
-  app.use('/api/accept-invitation', invitationRoutes);
 
   const httpServer = createServer(app);
   return httpServer;

@@ -115,24 +115,42 @@ export function useAuth() {
 
   const logout = async () => {
     try {
-      // Clear local session first
-      await supabaseClient.auth.signOut();
+      console.log('Starting logout process...');
       
-      const response = await fetch('/api/auth/logout', {
+      // Step 1: Clear all auth-related queries immediately for instant UI update
+      queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.setQueryData(["/api/auth/user"], null);
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
+      // Step 2: Clear local Supabase session
+      await supabaseClient.auth.signOut();
+      console.log('Local session cleared');
+      
+      // Step 3: Force a complete cache reset to ensure UI updates
+      queryClient.clear();
+      
+      // Step 4: Notify backend (non-blocking)
+      fetch('/api/auth/logout', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      }).then(response => {
+        if (response.ok) {
+          console.log('Server logout notification successful');
+        } else {
+          console.warn('Server logout notification failed, but local logout succeeded');
+        }
+      }).catch(error => {
+        console.warn('Server logout request failed:', error);
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Logout failed');
-      }
-
-      // Clear all auth-related queries
-      queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.invalidateQueries();
+      console.log('Logout completed successfully');
       return { success: true };
     } catch (err: any) {
       console.error('Logout error:', err);
+      // Even if logout fails, ensure local state is cleared
+      queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.setQueryData(["/api/auth/user"], null);
+      queryClient.clear();
       return { success: false, error: err.message };
     }
   };

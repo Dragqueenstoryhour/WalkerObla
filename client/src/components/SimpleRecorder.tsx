@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { MicIcon, StopCircleIcon, PlayIcon, CheckCircle } from 'lucide-react';
+import { MicIcon, StopCircleIcon, PlayIcon, CheckCircle, Mic, RotateCw, Volume2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { submitReadingRecording } from '@/lib/azure';
 import { PronunciationAssessmentResult } from '@/lib/types';
+import { getAuthHeaders } from '@/lib/supabaseClient';
 
 interface SimpleRecorderProps {
   referenceText: string;
@@ -148,14 +149,25 @@ export function SimpleRecorder({
       const formData = new FormData();
       formData.append("audio", audioBlob);
       formData.append("text", referenceText.trim());
-      formData.append("itemType", "reading");
-      formData.append("source", "reader");
+      formData.append("itemType", "word");  // Changed from "reading" to "word" for assignment practice
+      formData.append("source", "assignment");  // Changed from "reader" to "assignment"
       if (contentId) {
         formData.append("contentId", contentId.toString());
       }
 
+      console.log(`🎯 Sending assessment request:`, {
+        text: referenceText.trim(),
+        itemType: "word",
+        source: "assignment",
+        contentId
+      });
+
+      const authHeaders = await getAuthHeaders();
       const response = await fetch("/api/pronunciation/assess", {
         method: "POST",
+        headers: {
+          ...authHeaders,
+        },
         body: formData,
       });
 
@@ -163,12 +175,26 @@ export function SimpleRecorder({
         throw new Error("Failed to assess pronunciation");
       }
 
-      const results = await response.json();
-      console.log('Received assessment results:', results);
+      const responseData = await response.json();
+      console.log('📊 Raw API response:', responseData);
+
+      // Handle both direct response and wrapped response formats
+      let results = responseData;
+      if (responseData.data && typeof responseData.data === 'object') {
+        results = responseData.data;
+        console.log('📊 Extracted results from .data:', results);
+      }
+
+      console.log('📊 Final assessment results:', results);
 
       // Validate the result has expected properties
       if (typeof results.pronunciationScore !== "number") {
-        throw new Error("Invalid assessment result format");
+        console.error('❌ Assessment validation failed:', {
+          receivedType: typeof results.pronunciationScore,
+          receivedValue: results.pronunciationScore,
+          fullResults: results
+        });
+        throw new Error(`Invalid assessment result format - pronunciationScore is ${typeof results.pronunciationScore}, expected number`);
       }
 
       setAssessmentResults(results);
@@ -266,98 +292,66 @@ export function SimpleRecorder({
   const buttonStatus = isRecording ? 'listening' : isProcessing ? 'processing' : 'idle';
 
   return (
-      <CardContent className="p-6 pt-0"> {/* Removed top padding here to let content align */}
-        {/* Title and "Record your speech..." line, aligned left at the top */}
-        <h3 className="text-lg font-medium text-left mt-6 -ml-6 mb-2">Practice Speaking</h3> {/* Added negative left margin and margin-bottom */}
-        <div className="flex items-center text-success text-left -ml-6 mb-4"> {/* Added negative left margin */}
-          <CheckCircle className="w-5 h-5 mr-1" />
-          <span>Record your speech to receive feedback</span>
-        </div>
-
-        <div className="bg-muted/40 rounded-lg p-4 mb-4">
-          <p className="font-medium mb-2">Text to read:</p>
-          <p className="text-lg">{referenceText}</p>
-        </div>
+      <CardContent className="p-6 pt-0">
 
         <div className="flex flex-col items-center space-y-4 mb-4">
-          {!isRecording ? (
-             <button
-                onClick={startRecording}
-                className={`relative flex items-center justify-center w-20 h-20 rounded-md p-4 cursor-pointer hover:bg-opacity-90 transition-all
-                  ${buttonStatus === 'listening' ? 'bg-red-500' : buttonStatus === 'processing' ? 'bg-yellow-500' : 'bg-[#00C6AE]'}
-                  ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                aria-label={
-                  buttonStatus === 'listening'
-                    ? 'Stop listening'
-                    : buttonStatus === 'processing'
-                    ? 'Processing'
-                    : 'Start listening'
-                }
-                disabled={isProcessing}
-              >
-                <div className="relative w-full h-full">
-                  {buttonStatus === 'processing' ? (
-                    <span className="absolute inset-0 flex items-center justify-center text-4xl text-white animate-[flash_1s_infinite_ease-in-out]">
-                      <MicIcon className="w-10 h-10" />
-                    </span>
-                  ) : (
-                    <>
-                      <span className="absolute inset-0 flex items-center justify-center text-4xl text-white animate-[pulse_1.5s_infinite_ease-in-out] [text-shadow:0_0_20px_rgba(59,130,246,0.8)]">
-                        <MicIcon className="w-10 h-10" />
-                      </span>
-                      {buttonStatus === 'listening' && (
-                        <>
-                          <div className="absolute inset-0 border-4 border-blue-400 rounded-full animate-[wave_2s_infinite_ease-out] opacity-0" />
-                          <div className="absolute inset-0 border-4 border-blue-400 rounded-full animate-[wave_2s_infinite_ease-out] [animation-delay:0.5s] opacity-0" />
-                          <div className="absolute inset-0 border-4 border-blue-400 rounded-full animate-[wave_2s_infinite_ease-out] [animation-delay:1s] opacity-0" />
-                        </>
-                      )}
-                    </>
-                  )}
-                </div>
-              </button>
-          ) : (
-            <button
-              onClick={stopRecording}
-              className="relative flex items-center justify-center w-20 h-20 rounded-md p-4 cursor-pointer hover:bg-opacity-90 transition-all bg-red-500"
-              aria-label="Stop recording"
-            >
-              <div className="relative w-full h-full">
-                <span className="absolute inset-0 flex items-center justify-center text-4xl text-white">
-                  <StopCircleIcon className="w-10 h-10" />
-                </span>
-                <div className="absolute inset-0 border-4 border-red-400 rounded-full animate-[wave_2s_infinite_ease-out] opacity-0" />
-                <div className="absolute inset-0 border-4 border-red-400 rounded-full animate-[wave_2s_infinite_ease-out] [animation-delay:0.5s] opacity-0" />
-                <div className="absolute inset-0 border-4 border-red-400 rounded-full animate-[wave_2s_infinite_ease-out] [animation-delay:1s] opacity-0" />
-              </div>
-            </button>
-          )}
-
-          {audioUrl && (
+          {!isRecording && !assessmentResults ? (
             <Button
-              variant="outline"
-              onClick={async () => {
-                try {
-                  const audioPlayer = new Audio(audioUrl);
-                  audioPlayer.onerror = (e) => {
-                    console.error('Audio playback error:', e);
-                  };
-                  await audioPlayer.play();
-                } catch (error) {
-                  console.error('Error playing audio:', error);
-                }
-              }}
-              disabled={isRecording || isProcessing}
-              className="flex-1 w-full"
+              onClick={startRecording}
+              className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0 start-recording-button"
+              disabled={isProcessing}
             >
-              <PlayIcon className="mr-2 h-4 w-4" />
-              Play Recording
+              <Mic className="h-5 w-5" />
+              Start Recording
             </Button>
+          ) : isRecording ? (
+            <Button
+              onClick={stopRecording}
+              className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white border-0"
+            >
+              <StopCircleIcon className="h-5 w-5" />
+              Stop Recording
+            </Button>
+          ) : null}
+
+          {assessmentResults && (
+            <div className="flex gap-2">
+              <Button
+                onClick={() => {
+                  setAssessmentResults(null);
+                  setAudioUrl(null);
+                  startRecording();
+                }}
+                className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
+              >
+                <RotateCw className="h-5 w-5" />
+                Try Again
+              </Button>
+              {audioUrl && (
+                <Button
+                  onClick={async () => {
+                    try {
+                      const audioPlayer = new Audio(audioUrl);
+                      audioPlayer.onerror = (e) => {
+                        console.error('Audio playback error:', e);
+                      };
+                      await audioPlayer.play();
+                    } catch (error) {
+                      console.error('Error playing audio:', error);
+                    }
+                  }}
+                  className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0"
+                >
+                  <Volume2 className="h-4 w-4" />
+                  Listen to Me
+                </Button>
+              )}
+            </div>
           )}
         </div>
 
         {assessmentResults && (
-          <div className="bg-primary/10 rounded-lg p-4">
+          <div className="bg-white rounded-lg p-4 shadow-lg">
             <h4 className="font-semibold mb-4">Speech Assessment Results:</h4>
             <div className="text-4xl font-bold text-center mb-4" style={{ color: assessmentResults.pronunciationScore >= 80 ? '#2a9d8f' : '#e76f51' }}>
               {Math.round(assessmentResults.pronunciationScore)}%

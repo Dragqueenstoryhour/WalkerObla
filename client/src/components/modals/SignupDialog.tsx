@@ -122,7 +122,7 @@ export const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose, onL
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder="patient@example.com"
+              placeholder=""
               className="w-full"
             />
           </div>

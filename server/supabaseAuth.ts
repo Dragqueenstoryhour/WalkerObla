@@ -10,9 +10,10 @@ if (!SUPABASE_URL || (!SUPABASE_SERVICE_ROLE_KEY && !SUPABASE_ANON_KEY)) {
 }
 
 // Create Supabase client for server-side operations
+// Use anon key for user token validation, service role key for admin operations
 const supabase = createClient(
   SUPABASE_URL, 
-  SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY,
+  SUPABASE_ANON_KEY || SUPABASE_SERVICE_ROLE_KEY,
   {
     auth: {
       autoRefreshToken: false,

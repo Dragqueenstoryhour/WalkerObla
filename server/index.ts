@@ -13,7 +13,7 @@ const app = express();
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? true // Allow all origins in production deployment
-    : 'http://localhost:5000', // Allow only localhost in development
+    : 'http://localhost:3001', // Allow only localhost in development
   credentials: true, // Allow cookies and authorization headers
   allowedHeaders: ['Content-Type', 'Authorization'], // Explicitly allow Authorization header
 }));
@@ -113,8 +113,8 @@ app.get('/test-supabase-auth', async (req, res) => {
     serveStatic(app);
   }
 
-  // Use PORT environment variable in production, fallback to 5000 for development
-  const port = process.env.PORT ? parseInt(process.env.PORT) : 5000;
+  // Use PORT environment variable in production, fallback to 3001 for development
+  const port = process.env.PORT ? parseInt(process.env.PORT) : 3001;
   server.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
   });

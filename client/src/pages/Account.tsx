@@ -8,7 +8,7 @@ import { Link, useLocation } from 'wouter';
 import { Star, Trophy, Clock, BarChart2, Flame, BookOpen } from 'lucide-react';
 
 const Account = () => {
-  const { isAuthenticated, user, logoutAsync } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [userStats, setUserStats] = useState({
@@ -78,18 +78,24 @@ const Account = () => {
 
   const handleSignOut = async () => {
     try {
-      await logoutAsync();
-      navigate('/');
-      toast({
-        title: 'Successfully logged out',
-        description: 'You have been logged out successfully.',
-      });
+      const result = await logout();
+      if (result.success) {
+        navigate('/');
+        toast({
+          title: 'Successfully logged out',
+          description: 'You have been logged out successfully.',
+        });
+      } else {
+        throw new Error(result.error || 'Logout failed');
+      }
     } catch (error) {
       console.error('Error signing out:', error);
+      // Even if there's an error, try to navigate away as the local state should be cleared
+      navigate('/');
       toast({
-        title: 'Sign out failed',
-        description: 'There was a problem signing out. Please try again.',
-        variant: 'destructive',
+        title: 'Logged out with warnings',
+        description: 'You have been logged out locally. Please refresh if you see any issues.',
+        variant: 'default',
       });
     }
   };

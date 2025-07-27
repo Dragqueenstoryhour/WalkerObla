@@ -81,7 +81,7 @@ export interface IStorage {
     phraseStats: { total: number; avgScore: number; recent: UserActivity[] };
     readingStats: { total: number; avgScore: number; recent: UserActivity[] };
   }>;
-  getRecentActivities(userId: string, limit?: number, offset?: number): Promise<UserActivity[]>;
+  getRecentActivities(userId: string, limit?: number): Promise<UserActivity[]>;
   getTotalActivitiesCount(userId: string): Promise<number>;
   
   // User profile operations
@@ -273,6 +273,60 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    console.log(`🔧 upsertUser called with:`, { id: userData.id, email: userData.email, role: userData.role });
+    
+    // FIRST: Check if there's an existing user with this email (handles synthetic clients)
+    const existingUserByEmail = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, userData.email))
+      .limit(1);
+
+    if (existingUserByEmail.length > 0) {
+      const existing = existingUserByEmail[0];
+      console.log(`🔧 Found existing user with same email:`, { id: existing.id, email: existing.email, role: existing.role });
+      
+      // If it's a synthetic client (starts with 'client_'), transfer assignments to OAuth user
+      if (existing.id.startsWith('client_') && userData.id !== existing.id) {
+        console.log(`🔧 Transferring assignments from synthetic client ${existing.id} to OAuth user ${userData.id}`);
+        
+        // First, change the synthetic client's email to avoid constraint violation
+        await db
+          .update(users)
+          .set({ email: `${existing.email}.synthetic` })
+          .where(eq(users.id, existing.id));
+        
+        // Transfer all assignments from synthetic client to OAuth user
+        await db
+          .update(assignments)
+          .set({ userId: userData.id })
+          .where(eq(assignments.userId, existing.id));
+          
+        console.log(`🔧 Assignments transferred and synthetic client email updated`);
+        
+        // Now proceed with creating the OAuth user
+      } else if (existing.id === userData.id) {
+        // Same user ID, just update the record
+        console.log(`🔧 Updating existing user with same ID`);
+        const [user] = await db
+          .update(users)
+          .set({
+            email: userData.email,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            profileImageUrl: userData.profileImageUrl,
+          })
+          .where(eq(users.id, userData.id))
+          .returning();
+        return user;
+      } else {
+        // Different OAuth user with same email - this shouldn't happen but handle gracefully
+        console.log(`🔧 Warning: Different user with same email exists`);
+        return existing;
+      }
+    }
+
+    // Standard upsert for new users
     try {
       const [user] = await db
         .insert(users)
@@ -683,31 +737,6 @@ export class DatabaseStorage implements IStorage {
     await db.delete(practiceGroups).where(eq(practiceGroups.id, id));
   }
 
-  // Practice group phrase operations
-  async getPracticeGroupPhrases(groupId: number): Promise<PracticeGroupPhrase[]> {
-    return await db
-      .select()
-      .from(practiceGroupPhrases)
-      .where(eq(practiceGroupPhrases.groupId, groupId))
-      .orderBy(desc(practiceGroupPhrases.addedAt));
-  }
-
-  async addPhraseToPracticeGroup(groupPhrase: InsertPracticeGroupPhrase): Promise<PracticeGroupPhrase> {
-    const [newGroupPhrase] = await db.insert(practiceGroupPhrases).values(groupPhrase).returning();
-    return newGroupPhrase;
-  }
-
-  async removePhrasesFromPracticeGroup(groupId: number, phraseIds: number[]): Promise<void> {
-    await db
-      .delete(practiceGroupPhrases)
-      .where(
-        and(
-          eq(practiceGroupPhrases.groupId, groupId),
-          inArray(practiceGroupPhrases.phraseId, phraseIds)
-        )
-      );
-  }
-
   async getUserActivityStats(userId: string): Promise<{
     wordStats: { total: number; avgScore: number; recent: UserActivity[] };
     phraseStats: { total: number; avgScore: number; recent: UserActivity[] };
@@ -782,20 +811,64 @@ export class DatabaseStorage implements IStorage {
 
   // Assignment operations
   async getUserAssignments(userId: string): Promise<Assignment[]> {
+    console.log(`🔍 getUserAssignments called for userId: ${userId}`);
+    
     const user = await this.getUser(userId);
+    console.log(`🔍 User found:`, user ? { id: user.id, email: user.email, role: user.role } : 'No user found');
+    
     if (!user) return [];
 
-    // Get assignments either by userId OR by matching email address
-    return db
+    // Get assignments by multiple criteria:
+    // 1. Direct userId match
+    // 2. clientEmail match
+    // 3. Any user with same email who has assignments (handles therapist-created vs OAuth users)
+    let conditions = [
+      eq(assignments.userId, userId),
+      user.email ? eq(assignments.clientEmail, user.email) : sql`false`
+    ];
+
+    console.log(`🔍 Initial conditions: Direct userId match, clientEmail match for ${user.email}`);
+
+    // If this user has an email, also check for assignments to other users with same email
+    if (user.email) {
+      const usersWithSameEmail = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, user.email));
+      
+      console.log(`🔍 Users with same email (${user.email}):`, usersWithSameEmail);
+      
+      const userIds = usersWithSameEmail.map(u => u.id);
+      if (userIds.length > 0) {
+        conditions.push(inArray(assignments.userId, userIds));
+        console.log(`🔍 Added userIds to search:`, userIds);
+      }
+    }
+
+    // Also check all assignments to see what's in the database
+    const allAssignments = await db.select().from(assignments);
+    console.log(`🔍 Total assignments in database: ${allAssignments.length}`);
+    if (allAssignments.length > 0) {
+      console.log(`🔍 Sample assignments:`, allAssignments.slice(0, 3).map(a => ({
+        id: a.id,
+        userId: a.userId,
+        clientEmail: a.clientEmail,
+        title: a.title
+      })));
+    }
+
+    const result = await db
       .select()
       .from(assignments)
-      .where(
-        or(
-          eq(assignments.userId, userId),
-          user.email ? eq(assignments.clientEmail, user.email) : sql`false`
-        )
-      )
+      .where(or(...conditions))
       .orderBy(desc(assignments.createdAt));
+
+    console.log(`🔍 Query result: Found ${result.length} assignments for user ${userId}`);
+    if (result.length > 0) {
+      console.log(`🔍 Found assignments:`, result.map(a => ({ id: a.id, title: a.title, userId: a.userId })));
+    }
+
+    return result;
   }
 
   async getTherapistAssignments(therapistId: string): Promise<Assignment[]> {
@@ -987,11 +1060,6 @@ export class DatabaseStorage implements IStorage {
     return readings;
   }
 
-  async createUserSavedReading(content: InsertUserSavedPhrase): Promise<UserSavedPhrase> {
-    const [newReading] = await db.insert(userSavedPhrases).values(content).returning();
-    return newReading;
-  }
-
   // Therapist-client relationship operations
   async getTherapistClients(therapistId: string): Promise<(TherapistClient & { client: User })[]> {
     console.log(`🔍 getTherapistClients called for therapist: ${therapistId}`);
@@ -1045,8 +1113,10 @@ export class DatabaseStorage implements IStorage {
       assignedDate: r.assignedDate
     })));
     
-    // Now filter for active only
-    const activeRelationships = allRelationships.filter(r => r.isActive);
+    // Now filter for active only and exclude synthetic users (those with .synthetic email suffix)
+    const activeRelationships = allRelationships.filter(r => 
+      r.isActive && !r.client.email.endsWith('.synthetic')
+    );
     
     console.log(`🔍 ACTIVE relationships for therapist ${therapistId}:`, activeRelationships.map(r => ({
       relationshipId: r.id,

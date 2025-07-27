@@ -274,6 +274,35 @@ interface ReportCardProps {
   onClose: () => void;
 }
 
+interface AssignmentScoreDisplayProps {
+  assignmentId: number;
+}
+
+function AssignmentScoreDisplay({ assignmentId }: AssignmentScoreDisplayProps) {
+  const { data: queryData } = useQuery({
+    queryKey: ['/api/assignments', assignmentId, 'results'],
+    enabled: !!assignmentId,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+  const results = queryData?.data || [];
+
+  if (results.length === 0) {
+    return null;
+  }
+
+  const averageScore = results.reduce((sum: number, r: any) => sum + r.pronunciationScore, 0) / results.length;
+  const completedCount = results.filter((r: any) => r.pronunciationScore > 70).length;
+  
+  return (
+    <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 rounded text-xs">
+      <Award className="w-3 h-3 text-blue-600" />
+      <span className="font-medium text-blue-800">
+        {Math.round(averageScore)}% ({completedCount}/{results.length})
+      </span>
+    </div>
+  );
+}
+
 function ReportCard({ assignmentId, onClose }: ReportCardProps) {
   const { data: queryData } = useQuery({
     queryKey: ['/api/assignments', assignmentId, 'results'],
@@ -296,12 +325,36 @@ function ReportCard({ assignmentId, onClose }: ReportCardProps) {
     }
   }, [results]);
 
-  const averageScore = results.length > 0 
-    ? results.reduce((sum: number, r: any) => sum + r.pronunciationScore, 0) / results.length 
+  // Group results by word to show all attempts
+  const wordGroups = results.reduce((groups: any, result: any) => {
+    const word = result.itemPracticed;
+    if (!groups[word]) {
+      groups[word] = [];
+    }
+    groups[word].push(result);
+    return groups;
+  }, {});
+
+  // Calculate statistics using best scores per word
+  const wordStats = Object.entries(wordGroups).map(([word, attempts]: [string, any]) => {
+    const sortedAttempts = attempts.sort((a: any, b: any) => b.pronunciationScore - a.pronunciationScore);
+    const bestAttempt = sortedAttempts[0];
+    const allAttempts = attempts.sort((a: any, b: any) => new Date(a.practiceDate).getTime() - new Date(b.practiceDate).getTime());
+    
+    return {
+      word,
+      bestScore: bestAttempt.pronunciationScore,
+      attempts: allAttempts,
+      attemptCount: attempts.length
+    };
+  });
+
+  const averageScore = wordStats.length > 0 
+    ? wordStats.reduce((sum: number, w: any) => sum + w.bestScore, 0) / wordStats.length 
     : 0;
 
-  const correctWords = results.filter((r: any) => r.pronunciationScore > 70);
-  const incorrectWords = results.filter((r: any) => r.pronunciationScore <= 70);
+  const correctWords = wordStats.filter((w: any) => w.bestScore > 70);
+  const incorrectWords = wordStats.filter((w: any) => w.bestScore <= 70);
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -395,16 +448,36 @@ function ReportCard({ assignmentId, onClose }: ReportCardProps) {
                   {correctWords.length === 0 ? (
                     <p className="text-gray-500">No words scored above 70% yet.</p>
                   ) : (
-                    <div className="space-y-2">
-                      {correctWords.map((result: any, index: number) => (
-                        <div key={index} className="flex justify-between items-center p-2 bg-green-50 rounded">
-                          <span className="font-medium">{result.itemPracticed}</span>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="default" className="bg-green-600">{result.pronunciationScore}%</Badge>
-                            <div className="text-xs text-gray-600">
-                              A:{result.accuracy} F:{result.fluency} C:{result.completeness}
+                    <div className="space-y-3">
+                      {correctWords.map((wordStat: any, index: number) => (
+                        <div key={index} className="p-3 bg-green-50 rounded-lg">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="font-medium">{wordStat.word}</span>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="default" className="bg-green-600">{Math.round(wordStat.bestScore)}%</Badge>
+                              <span className="text-xs text-gray-600">{wordStat.attemptCount} attempt{wordStat.attemptCount > 1 ? 's' : ''}</span>
                             </div>
                           </div>
+                          {wordStat.attemptCount > 1 && (
+                            <div className="space-y-1 mt-2 pt-2 border-t border-green-200">
+                              <div className="text-xs font-medium text-gray-700 mb-1">Attempt History:</div>
+                              {wordStat.attempts.map((attempt: any, attemptIndex: number) => (
+                                <div key={attemptIndex} className="flex justify-between items-center text-xs">
+                                  <span className="text-gray-600">
+                                    {new Date(attempt.practiceDate).toLocaleDateString()} {new Date(attempt.practiceDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`font-medium ${attempt.pronunciationScore > 70 ? 'text-green-600' : 'text-orange-600'}`}>
+                                      {Math.round(attempt.pronunciationScore)}%
+                                    </span>
+                                    <span className="text-gray-500">
+                                      A:{Math.round(attempt.accuracy)} F:{Math.round(attempt.fluency)} C:{Math.round(attempt.completeness)}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -424,16 +497,36 @@ function ReportCard({ assignmentId, onClose }: ReportCardProps) {
                   {incorrectWords.length === 0 ? (
                     <p className="text-gray-500">Great! All attempted words scored above 70%.</p>
                   ) : (
-                    <div className="space-y-2">
-                      {incorrectWords.map((result: any, index: number) => (
-                        <div key={index} className="flex justify-between items-center p-2 bg-orange-50 rounded">
-                          <span className="font-medium">{result.itemPracticed}</span>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="destructive" className="bg-orange-600">{result.pronunciationScore}%</Badge>
-                            <div className="text-xs text-gray-600">
-                              A:{result.accuracy} F:{result.fluency} C:{result.completeness}
+                    <div className="space-y-3">
+                      {incorrectWords.map((wordStat: any, index: number) => (
+                        <div key={index} className="p-3 bg-orange-50 rounded-lg">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="font-medium">{wordStat.word}</span>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="destructive" className="bg-orange-600">{Math.round(wordStat.bestScore)}%</Badge>
+                              <span className="text-xs text-gray-600">{wordStat.attemptCount} attempt{wordStat.attemptCount > 1 ? 's' : ''}</span>
                             </div>
                           </div>
+                          {wordStat.attemptCount > 1 && (
+                            <div className="space-y-1 mt-2 pt-2 border-t border-orange-200">
+                              <div className="text-xs font-medium text-gray-700 mb-1">Attempt History:</div>
+                              {wordStat.attempts.map((attempt: any, attemptIndex: number) => (
+                                <div key={attemptIndex} className="flex justify-between items-center text-xs">
+                                  <span className="text-gray-600">
+                                    {new Date(attempt.practiceDate).toLocaleDateString()} {new Date(attempt.practiceDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`font-medium ${attempt.pronunciationScore > 70 ? 'text-green-600' : 'text-orange-600'}`}>
+                                      {Math.round(attempt.pronunciationScore)}%
+                                    </span>
+                                    <span className="text-gray-500">
+                                      A:{Math.round(attempt.accuracy)} F:{Math.round(attempt.fluency)} C:{Math.round(attempt.completeness)}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -493,6 +586,7 @@ export default function TherapistPortal() {
   const [contentGenerationMode, setContentGenerationMode] = useState("sounds");
   const [soundPosition, setSoundPosition] = useState("starts-with");
   const [selectedSound, setSelectedSound] = useState("");
+  const [isGeneratingSoundWords, setIsGeneratingSoundWords] = useState(false);
 
   // Data queries
   const { data: clientsData = { clients: [], pendingInvitations: [] } } = useQuery({ queryKey: ['/api/therapist/clients'] }) as { data: { clients: any[], pendingInvitations: any[] } };
@@ -963,6 +1057,7 @@ export default function TherapistPortal() {
   const handleGenerateSoundWords = async () => {
     if (!selectedSound || !soundPosition) return;
     
+    setIsGeneratingSoundWords(true);
     try {
       const authHeaders = await getAuthHeaders();
       const response = await fetch('/api/therapist/generate-words', {
@@ -998,6 +1093,8 @@ export default function TherapistPortal() {
         description: "Could not generate words for the selected sound pattern.",
         variant: "destructive",
       });
+    } finally {
+      setIsGeneratingSoundWords(false);
     }
   };
 
@@ -1458,18 +1555,26 @@ export default function TherapistPortal() {
                                         >
                                           <Edit3 className="h-4 w-4" />
                                         </button>
-                                        <div className={`px-2 py-1 rounded text-xs font-medium ${
-                                          assignment.isCompleted 
-                                            ? 'bg-green-100 text-green-800' 
-                                            : 'bg-blue-100 text-blue-800'
-                                        }`}>
-                                          {assignment.isCompleted ? "Completed" : "In Progress"}
+                                        <div className="flex items-center gap-2">
+                                          {assignment.isCompleted && (
+                                            <AssignmentScoreDisplay assignmentId={assignment.id} />
+                                          )}
+                                          <div className={`px-2 py-1 rounded text-xs font-medium ${
+                                            assignment.isCompleted 
+                                              ? 'bg-green-100 text-green-800' 
+                                              : 'bg-blue-100 text-blue-800'
+                                          }`}>
+                                            {assignment.isCompleted ? "Completed" : "In Progress"}
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
                                     <div className="assignment-meta">
                                       <span>📄 Assignment</span>
                                       <span>Created {new Date(assignment.createdAt).toLocaleDateString()}</span>
+                                      {assignment.isCompleted && assignment.completedAt && (
+                                        <span>✅ Completed {new Date(assignment.completedAt).toLocaleDateString()}</span>
+                                      )}
                                       <span className="flex items-center gap-1">
                                         <BarChart3 className="h-3 w-3" />
                                         View Report
@@ -1705,10 +1810,14 @@ export default function TherapistPortal() {
                             
                             <Button 
                               onClick={handleGenerateSoundWords}
-                              disabled={generateContentMutation.isPending || !selectedSound || !soundPosition}
+                              disabled={isGeneratingSoundWords || !selectedSound || !soundPosition}
                               className="w-full"
                             >
-                              {generateContentMutation.isPending ? "Generating..." : `Generate words that ${soundPosition.replace('-', ' ')} "${selectedSound}"`}
+                              {isGeneratingSoundWords ? (
+                                <><div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" /> Loading...</>
+                              ) : (
+                                `Generate words that ${soundPosition.replace('-', ' ')} "${selectedSound}"`
+                              )}
                             </Button>
                           </div>
                         </TabsContent>

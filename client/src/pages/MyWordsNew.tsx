@@ -17,7 +17,8 @@ import { apiRequest } from '@/lib/queryClient';
 import { getAuthHeaders } from '@/lib/supabaseClient';
 import { CombinedLineChart } from '@/components/CombinedLineChart'; // Import the chart component
 import { MostRecentActivities } from '@/components/MostRecentActivities';
-import { CalendarDays, Users } from 'lucide-react';
+import { CalendarDays, Users, ExternalLink } from 'lucide-react';
+import { Link } from 'wouter';
 import { SummaryCard } from '@/components/SummaryCard';
 
 // Helper function to get syllable color based on accuracy score
@@ -924,9 +925,33 @@ function AssignmentsTab({ targetAssignmentId }: { targetAssignmentId?: string | 
                 </div>
               )}
 
-              <div className="flex items-center text-sm text-gray-500">
+              <div className="flex items-center text-sm text-gray-500 mb-4">
                 <Users className="h-4 w-4 mr-1" />
                 {assignment.therapistName}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                <Link href={`/assignments/${assignment.id}`}>
+                  <Button 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-1" />
+                    Start Practice
+                  </Button>
+                </Link>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAssignmentClick(assignment);
+                  }}
+                >
+                  View Details
+                </Button>
               </div>
             </CardContent>
           </Card>

@@ -1,5 +1,5 @@
 import { Switch, Route, Link, useLocation } from "wouter";
-import { queryClient } from "./lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
@@ -13,6 +13,7 @@ import AzureTest from "@/pages/AzureTest";
 import Words from "@/pages/Words";
 import Phrases from "@/pages/Phrases";
 import MyWordsNew from "@/pages/MyWordsNew";
+import AssignmentPractice from "@/pages/AssignmentPractice";
 import Profile from "@/pages/Profile";
 import Animation from "@/pages/Animation";
 import AzureAnimation from "@/pages/AzureAnimation";
@@ -100,7 +101,7 @@ function TabBar() {
                            item.label === 'Reading' ? '67px' : '64px',
                   zIndex: 2
                 }}
-              >
+              > 
                 {/* Active indicator dot - positioned above the tab */}
                 {isActive && (
                   <>
@@ -234,6 +235,7 @@ function Router() {
         <Route path="/azure-test" component={AzureTest} />
 
         <Route path="/my-words" component={MyWordsNew} />
+        <Route path="/assignments/:id" component={AssignmentPractice} />
         <Route path="/account" component={Account} />
         <Route path="/my-account" component={MyAccount} />
         <Route path="/our-story" component={OurStory} />
@@ -258,14 +260,16 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <SettingsProvider>
-          <DifficultyProvider>
-            <ReadingProvider>
-              <Router />
-              <Toaster />
-            </ReadingProvider>
-          </DifficultyProvider>
-        </SettingsProvider>
+        <DifficultyProvider>
+          <GameProvider>
+            <SettingsProvider>
+              <ReadingProvider>
+                <Router />
+                <Toaster />
+              </ReadingProvider>
+            </SettingsProvider>
+          </GameProvider>
+        </DifficultyProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

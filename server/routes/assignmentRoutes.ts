@@ -17,6 +17,14 @@ const memoizedGenerateAssignmentTemplate = memoize(generateAssignmentTemplate, {
 // Assignment routes
 router.get('/', protect, catchAsync(async (req: any, res) => {
   const userId = req.user.claims.sub;
+  console.log(`🚀 Assignment API called for userId: ${userId}`);
+  
+  // Disable caching for debugging
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('ETag', Date.now().toString()); // Force unique response
+  
   const assignments = await storage.getUserAssignments(userId);
   
   const assignmentsWithProgress = await Promise.all(
@@ -29,6 +37,7 @@ router.get('/', protect, catchAsync(async (req: any, res) => {
     })
   );
   
+  console.log(`🚀 Assignment API returning ${assignmentsWithProgress.length} assignments`);
   return success(res, assignmentsWithProgress);
 }));
 
@@ -215,6 +224,21 @@ router.post('/:id/results', protect, catchAsync(async (req: any, res) => {
     }
     
     await storage.updateAssignmentItem(req.body.itemId, itemUpdates);
+    
+    // Check if all items in the assignment are now completed
+    const allItems = await storage.getAssignmentItems(assignmentId);
+    const completedItems = allItems.filter(item => item.isCompleted);
+    
+    console.log(`🎯 Assignment ${assignmentId}: ${completedItems.length}/${allItems.length} items completed`);
+    
+    // If all items are completed, mark the assignment as completed
+    if (completedItems.length === allItems.length && allItems.length > 0) {
+      console.log(`🎉 Assignment ${assignmentId} is now complete! Updating assignment status.`);
+      await storage.updateAssignment(assignmentId, {
+        isCompleted: true,
+        completedAt: new Date()
+      });
+    }
   }
   
   return success(res, result, 201);

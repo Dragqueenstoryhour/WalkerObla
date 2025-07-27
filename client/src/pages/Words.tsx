@@ -388,6 +388,13 @@ export default function Words() {
     }
   }, [animationReady, imagesReady, audioReady, canPlay]);
 
+  // Effect to draw viseme when currentVisemeId changes
+  useEffect(() => {
+    if (canvasRef.current && imagesReady) {
+      drawVisemeOnCanvas(currentVisemeId);
+    }
+  }, [currentVisemeId, imagesReady]);
+
   // Use audio recording hook for consistent recording management
   const {
     isRecording,
@@ -1954,15 +1961,15 @@ export default function Words() {
         animationFrameRef.current = requestAnimationFrame(syncVisemeWithAudio);
       };
 
-      // Set up event handlers for precise control with useCallback optimization
-      const handleAudioEnd = React.useCallback(() => {
+      // Set up event handlers for precise control
+      const handleAudioEnd = () => {
         console.log("Audio playback completed");
         setIsPlayingVisemes(false);
         setCurrentVisemeId(0);
         cleanupEventListeners();
-      }, []);
+      };
 
-      const handleAudioError = React.useCallback((e: Event) => {
+      const handleAudioError = (e: Event) => {
         console.error("Audio error during synchronized playback:", e);
         setIsPlayingVisemes(false);
         setCurrentVisemeId(0);
@@ -1973,7 +1980,7 @@ export default function Words() {
           description: "Audio playback encountered an error.",
           variant: "destructive",
         });
-      }, [toast]);
+      };
 
       // Store event listeners in ref for cleanup
       currentEventListenersRef.current = {
@@ -1984,6 +1991,9 @@ export default function Words() {
       // Attach event listeners for control
       audio.addEventListener("ended", handleAudioEnd);
       audio.addEventListener("error", handleAudioError);
+
+      // Draw initial viseme (neutral mouth position) before starting animation
+      drawVisemeOnCanvas(0);
 
       // Start audio playback and animation synchronization
       await audio.play();
