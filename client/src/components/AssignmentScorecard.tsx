@@ -325,7 +325,7 @@ export function AssignmentScorecard({
       )}
 
       {/* Key Insights */}
-      {insights.length > 0 && (
+      {calculatedInsights.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -335,7 +335,7 @@ export function AssignmentScorecard({
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {insights.map((insight, index) => (
+              {calculatedInsights.map((insight, index) => (
                 <div 
                   key={index}
                   className={`p-4 rounded-lg border ${
@@ -377,7 +377,7 @@ export function AssignmentScorecard({
           </TabsTrigger>
           <TabsTrigger value="insights" className="flex items-center gap-2">
             <PieChart className="h-4 w-4" />
-            Analysis & Insights
+            Analysis &amp; Insights
           </TabsTrigger>
         </TabsList>
 

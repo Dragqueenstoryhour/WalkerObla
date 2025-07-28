@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Play, Eye, Mic, ArrowRight, CheckCircle, RotateCcw } from 'lucide-react';
+import { Play, Eye, Mic, ArrowRight, CheckCircle, RotateCcw, Trophy, Star, TrendingUp } from 'lucide-react';
 import { FacialAnimation } from '@/components/FacialAnimation';
 import { SimpleRecorder } from '@/components/SimpleRecorder';
 import { useToast } from '@/hooks/use-toast';
@@ -493,8 +493,44 @@ export function WatchThenPracticeAssignment({ assignment, items, onComplete }: W
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-center">
-              <div className="text-4xl font-bold text-green-600 mb-2">{overallScore}%</div>
-              <div className="text-gray-600">Overall Score</div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
+                  <div className="text-3xl font-bold text-blue-600 mb-1">{overallScore}%</div>
+                  <div className="text-blue-700 font-medium">Overall Score</div>
+                </div>
+                
+                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="text-2xl font-bold text-green-600 mb-1">{results.length}</div>
+                  <div className="text-green-700 font-medium">Words Practiced</div>
+                </div>
+                
+                <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                  <div className="text-2xl font-bold text-purple-600 mb-1">
+                    {results.reduce((sum, wr) => sum + wr.phraseResults.length, 0)}
+                  </div>
+                  <div className="text-purple-700 font-medium">Phrases Completed</div>
+                </div>
+              </div>
+
+              {/* Performance Level Badge */}
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-200 mb-4">
+                {overallScore >= 90 ? (
+                  <>
+                    <Trophy className="h-5 w-5 text-yellow-600" />
+                    <span className="font-semibold text-yellow-800">Excellent Performance!</span>
+                  </>
+                ) : overallScore >= 80 ? (
+                  <>
+                    <Star className="h-5 w-5 text-blue-600" />
+                    <span className="font-semibold text-blue-800">Great Progress!</span>
+                  </>
+                ) : (
+                  <>
+                    <TrendingUp className="h-5 w-5 text-green-600" />
+                    <span className="font-semibold text-green-800">Keep Practicing!</span>
+                  </>
+                )}
+              </div>
             </div>
 
             <div className="space-y-4">

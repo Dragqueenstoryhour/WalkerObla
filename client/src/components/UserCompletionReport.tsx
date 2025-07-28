@@ -117,6 +117,8 @@ export function UserCompletionReport({
     });
 
     const wordCount = scorecardData.results.length;
+    const improvementWords = scorecardData.results.filter(result => result.overallScores.pronunciation < 80).length;
+    
     return {
       overallPronunciation: Math.round(totalPronunciation / wordCount),
       overallAccuracy: Math.round(totalAccuracy / wordCount),
@@ -126,7 +128,8 @@ export function UserCompletionReport({
       perfectWords,
       strongWords,
       wordCount,
-      averageAttempts: Math.round(totalAttempts / wordCount)
+      averageAttempts: Math.round(totalAttempts / wordCount),
+      improvementWords
     };
   };
 
@@ -135,22 +138,26 @@ export function UserCompletionReport({
     if (overallScore >= 95) return {
       message: "Outstanding work! Your pronunciation is excellent!",
       icon: <Trophy className="h-5 w-5 text-yellow-500" />,
-      color: "text-yellow-600"
+      color: "text-yellow-600",
+      bgColor: "bg-yellow-50 border-yellow-200"
     };
     if (overallScore >= 85) return {
       message: "Great job! You're making excellent progress!",
       icon: <Star className="h-5 w-5 text-blue-500" />,
-      color: "text-blue-600"
+      color: "text-blue-600",
+      bgColor: "bg-blue-50 border-blue-200"
     };
     if (overallScore >= 75) return {
       message: "Nice work! Keep practicing to improve even more!",
       icon: <ThumbsUp className="h-5 w-5 text-green-500" />,
-      color: "text-green-600"
+      color: "text-green-600",
+      bgColor: "bg-green-50 border-green-200"
     };
     return {
       message: "Good effort! Every practice session helps you improve!",
       icon: <TrendingUp className="h-5 w-5 text-purple-500" />,
-      color: "text-purple-600"
+      color: "text-purple-600",
+      bgColor: "bg-purple-50 border-purple-200"
     };
   };
 
@@ -255,7 +262,7 @@ export function UserCompletionReport({
         </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Assignment Complete!</h1>
         <h2 className="text-xl text-gray-700 mb-4">{assignmentTitle}</h2>
-        <div className={`flex items-center justify-center gap-2 ${encouragement.color}`}>
+        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border ${encouragement.bgColor} ${encouragement.color}`}>
           {encouragement.icon}
           <span className="font-medium">{encouragement.message}</span>
         </div>
@@ -442,6 +449,32 @@ export function UserCompletionReport({
           </div>
         </CardContent>
       </Card>
+
+      {/* Improvement Tips */}
+      {stats.improvementWords > 0 && (
+        <Card className="border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-semibold text-orange-900 mb-3 flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Areas for Growth
+            </h3>
+            <p className="text-orange-700 mb-4">
+              {stats.improvementWords} word{stats.improvementWords > 1 ? 's' : ''} could benefit from additional practice. 
+              Focus on these during your next session for even better results!
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {scorecardData.results
+                .filter(result => result.overallScores.pronunciation < 80)
+                .slice(0, 5)
+                .map((result) => (
+                  <Badge key={result.itemId} variant="outline" className="text-orange-700 border-orange-300">
+                    "{result.word}" ({result.overallScores.pronunciation}%)
+                  </Badge>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Next Steps */}
       <Card className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-green-100">
