@@ -24,17 +24,11 @@ export function SignInToSaveModal({ isOpen, onClose, wordToSave, onSaveAfterLogi
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent aria-labelledby="signin-title" aria-describedby="signin-description" className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <LogIn className="h-5 w-5" />
-            Sign in to save words
-          </DialogTitle>
-          <DialogDescription>
-            {wordToSave 
-              ? `Sign in to save "${wordToSave}" to your personal collection and track your learning progress.`
-              : "Sign in to save words to your personal collection and track your learning progress."
-            }
+          <DialogTitle id="signin-title">Save Your Progress</DialogTitle>
+          <DialogDescription id="signin-description">
+            Sign in or create an account to save your custom words and track your practice history.
           </DialogDescription>
         </DialogHeader>
         

@@ -6,10 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, Clock, User, CheckCircle, ChevronLeft, ChevronRight, Mic, Volume2, Eye, Snail, Ear, Flag, Play, Square, Pause, RotateCcw, X } from 'lucide-react';
 import { SimpleRecorder } from '@/components/SimpleRecorder';
+import { WatchThenPracticeAssignment } from '@/components/WatchThenPracticeAssignment';
+import { UserCompletionReport } from '@/components/UserCompletionReport';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { Link } from 'wouter';
 import { getAuthHeaders } from '@/lib/supabaseClient';
+import { Link } from 'wouter';
 import useEmblaCarousel from 'embla-carousel-react';
 import {
   Dialog,
@@ -117,6 +119,7 @@ const AssignmentPractice: React.FC = () => {
   const [itemBestScores, setItemBestScores] = useState<Record<number, number>>({});
   const [isFinishing, setIsFinishing] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [showUserReport, setShowUserReport] = useState(false);
   
   // Carousel state
   const [emblaRef, emblaApi] = useEmblaCarousel({ 
@@ -991,6 +994,100 @@ const AssignmentPractice: React.FC = () => {
     );
   }
 
+  // Check if this is a "Watch then Practice" assignment
+  const isWatchPracticeAssignment = assignment?.metadata?.assignmentType === 'watch-practice';
+
+  // Route to specialized component for "Watch then Practice" assignments
+  if (isWatchPracticeAssignment) {
+    return (
+      <WatchThenPracticeAssignment
+        assignment={assignment}
+        items={items}
+        onComplete={async (results) => {
+          console.log('🎯 Assignment completion - saving results:', results);
+          
+          // Save detailed results to the server using new comprehensive endpoint
+          try {
+            const response = await fetch(`/api/assignments/${assignment.id}/complete`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...await getAuthHeaders()
+              },
+              body: JSON.stringify({
+                assignmentType: 'watch-then-practice',
+                results: results.map(wordResult => {
+                  const matchedItem = items.find(item => item.content === wordResult.word);
+                  if (!matchedItem) {
+                    console.error(`❌ Could not find item for word: "${wordResult.word}"`);
+                    console.log('Available items:', items.map(i => ({ id: i.id, content: i.content })));
+                  }
+                  
+                  return {
+                    itemId: matchedItem?.id,
+                    word: wordResult.word,
+                    animationPlays: wordResult.animationPlays,
+                    wordPractice: wordResult.wordPracticeAttempts.map((attempt, index) => ({
+                      attemptNumber: index + 1,
+                      pronunciationScore: attempt.score,
+                      accuracyScore: attempt.accuracy,
+                      fluencyScore: attempt.fluency,
+                      completenessScore: attempt.completeness
+                    })),
+                    phrasePractice: wordResult.phraseResults.map((phraseResult, phraseIndex) => ({
+                      phraseIndex: phraseIndex + 1,
+                      phrase: phraseResult.phrase,
+                      attempts: phraseResult.attempts.map((attempt, attemptIndex) => ({
+                        attemptNumber: attemptIndex + 1,
+                        pronunciationScore: attempt.score,
+                        accuracyScore: attempt.accuracy,
+                        fluencyScore: attempt.fluency,
+                        completenessScore: attempt.completeness
+                      }))
+                    }))
+                  };
+                }).filter(result => result.itemId) // Only include items with valid IDs
+              })
+            });
+
+            if (!response.ok) {
+              throw new Error(`Failed to save assignment results: ${response.statusText}`);
+            }
+
+            const responseData = await response.json();
+            console.log('✅ Assignment results saved successfully:', responseData);
+            
+          } catch (error) {
+            console.error('❌ Error saving assignment results:', error);
+            toast({
+              title: "Save Error",
+              description: "There was an issue saving your results. Please try again.",
+              variant: "destructive"
+            });
+            return; // Don't mark as completed if save failed
+          }
+          
+          // Mark assignment as completed and redirect
+          toast({
+            title: "🎉 Assignment Complete!",
+            description: `Great job! You've completed "${assignment?.title}"`,
+          });
+          setShowUserReport(true);
+        }}
+      />
+    );
+  }
+
+  if (showUserReport) {
+    return (
+      <UserCompletionReport 
+        assignmentId={assignmentId!} 
+        assignmentTitle={assignment?.title || 'Assignment'} 
+        onDismiss={() => window.location.href = '/my-words'} 
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Header */}
@@ -1232,12 +1329,12 @@ const AssignmentPractice: React.FC = () => {
 
                           {/* Viseme Animation Dialog */}
                           <Dialog open={showVisemeDialog} onOpenChange={setShowVisemeDialog}>
-                            <DialogContent className="w-[95vw] max-w-md sm:max-w-lg p-0 overflow-hidden">
+                            <DialogContent aria-labelledby="viseme-title" aria-describedby="viseme-description" className="w-[95vw] max-w-md sm:max-w-lg p-0 overflow-hidden">
                               <DialogHeader className="p-4 pb-0">
-                                <DialogTitle className="text-center text-2xl font-bold text-blue-600">
+                                <DialogTitle id="viseme-title" className="text-center text-2xl font-bold text-blue-600">
                                   Articulation Practice
                                 </DialogTitle>
-                                <DialogDescription className="text-center text-gray-600">
+                                <DialogDescription id="viseme-description" className="text-center text-gray-600">
                                   Watch the animation to see how to pronounce "{currentVisemeWord}"
                                 </DialogDescription>
                               </DialogHeader>

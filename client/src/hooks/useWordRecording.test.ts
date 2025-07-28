@@ -6,8 +6,8 @@ import useWordRecording from './useWordRecording';
 const mockMediaRecorder = {
   start: jest.fn(),
   stop: jest.fn(),
-  ondataavailable: null as any,
-  onstop: null as any,
+  ondataavailable: null,
+  onstop: null,
   state: 'inactive',
   mimeType: 'audio/webm',
 };

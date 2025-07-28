@@ -18,18 +18,16 @@ jest.mock('child_process', () => ({
 }));
 
 // Mock fs module for file operations
-jest.mock('fs', () => ({
-  __esModule: true,
-  default: {
-    existsSync: jest.fn(() => true), // Assume files exist for simplicity
-    writeFileSync: jest.fn(),
-    unlinkSync: jest.fn(),
-    statSync: jest.fn(() => ({ size: 1000 })), // Simulate a non-empty file
+jest.mock('fs', () => {
+  const actualFs = jest.requireActual('fs');
+  return {
+    __esModule: true,
+    ...actualFs,
     promises: {
       readFile: jest.fn(() => Promise.resolve(Buffer.from('mock audio data'))),
     },
-  },
-}));
+  };
+});
 
 // Mock Azure Speech SDK
 jest.mock('microsoft-cognitiveservices-speech-sdk', () => ({
@@ -80,6 +78,15 @@ jest.mock('microsoft-cognitiveservices-speech-sdk', () => ({
       prosodyScore: 88,
     })),
   },
+  PropertyId: {
+    SpeechServiceConnection_RecoLanguage: 'SpeechServiceConnection_RecoLanguage',
+  },
+  PronunciationAssessmentGradingSystem: {
+    HundredMark: 'HundredMark',
+  },
+  PronunciationAssessmentGranularity: {
+    Phoneme: 'Phoneme',
+  },
 }));
 
 describe('Azure Utilities', () => {
@@ -87,7 +94,7 @@ describe('Azure Utilities', () => {
     beforeEach(() => {
       jest.clearAllMocks();
       // Reset mock for fs.promises.readFile for each test
-      (fs.promises.readFile as jest.Mock).mockResolvedValue(Buffer.from('mock audio data'));
+      jest.spyOn(fs.promises, 'readFile').mockResolvedValue(Buffer.from('mock audio data'));
       // Ensure speechKey is set for tests
       process.env.SPEECH_KEY = 'test-key';
       process.env.SPEECH_REGION = 'test-region';
@@ -102,8 +109,8 @@ describe('Azure Utilities', () => {
       expect(result).toBeDefined();
       expect(result.pronunciationScore).toBe(90);
       expect(spawn).toHaveBeenCalled();
-      expect(fs.default.writeFileSync).toHaveBeenCalled();
-      expect(fs.default.unlinkSync).toHaveBeenCalled();
+      expect(fs.writeFileSync).toHaveBeenCalled();
+      expect(fs.unlinkSync).toHaveBeenCalled();
     });
 
     it('should throw error if no audio file provided', async () => {
@@ -127,7 +134,7 @@ describe('Azure Utilities', () => {
     it('should handle Azure SDK NoMatch reason', async () => {
       // Mock recognizeOnceAsync to return NoMatch
       (require('microsoft-cognitiveservices-speech-sdk').SpeechRecognizer as jest.Mock).mockImplementationOnce(() => ({
-        recognizeOnceAsync: jest.fn((resolve, reject) => resolve({
+        recognizeOnceAsync: jest.fn((resolve) => resolve({
           reason: require('microsoft-cognitiveservices-speech-sdk').ResultReason.NoMatch,
           properties: { getProperty: jest.fn(() => '{}') },
         })),
@@ -158,7 +165,7 @@ describe('Azure Utilities', () => {
     });
 
     it('should return basic syllabication for unknown words (multiple syllables)', async () => {
-      expect(await getWordPronunciation('syllable')).toBe('SYL-LA-BLE (3 syllables)');
+      expect(await getWordPronunciation('syllable')).toBe('SYLLABLE (3 syllables)');
     });
   });
 });

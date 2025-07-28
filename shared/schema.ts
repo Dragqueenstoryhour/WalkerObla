@@ -445,6 +445,7 @@ export const assignments = pgTable("assignments", {
   description: text("description"), // Optional description/instructions
   dueDate: timestamp("due_date"), // Optional due date
   invitationId: integer("invitation_id"), // Link to client invitation if created for email
+  metadata: jsonb("metadata"), // Assignment type and configuration (e.g., watch-practice settings)
   isCompleted: boolean("is_completed").notNull().default(false),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

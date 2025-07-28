@@ -83,21 +83,16 @@ export function DifficultySelectionDialog({ open, onClose }: DifficultySelection
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-      if (!isOpen) onClose();
-    }}>
-      <DialogContent className="sm:max-w-lg bg-[#f9fafb] border-2 border-blue-700 shadow-2xl"> {/* Changed background color */}
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
-            <img src={whiskGifPath} alt="Obla Logo" className="w-full h-full object-cover" />
-          </div>
-          <DialogTitle className="text-3xl font-bold text-[#1537cc] mb-2"> {/* Changed text color */}
-            Welcome to Obla!
-          </DialogTitle>
-          <DialogDescription className="text-lg text-[#1537cc] leading-relaxed mb-6"> {/* Changed text color */}
-            Your AI-powered speech therapy companion is ready to help you improve your pronunciation!
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent aria-labelledby="difficulty-title" aria-describedby="difficulty-description" className="sm:max-w-lg bg-[#f9fafb] border-2 border-blue-700 shadow-2xl"> {/* Changed background color */}
+        <DialogHeader>
+          <DialogTitle id="difficulty-title" className="text-blue-800">Select Your Difficulty Level</DialogTitle>
+          <DialogDescription id="difficulty-description" className="text-blue-700">
+            Choose a level that matches your current speaking ability.
           </DialogDescription>
+        </DialogHeader>
 
+        <div>
           {/* Start Tutorial Button */}
           <div className="mb-6 flex justify-center"> {/* Centered the button */}
             <Button

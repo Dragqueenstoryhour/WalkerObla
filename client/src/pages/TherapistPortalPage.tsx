@@ -12,12 +12,13 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator 
 } from "@/components/ui/dropdown-menu";
-import { Plus, Users, FileText, BookOpen, Search, Calendar, UserMinus, ChevronDown, ChevronUp, Trash2, TrendingUp, Award, AlertCircle, CheckCircle, X, BarChart3, Edit3, Save, XCircle, MoreVertical, Send, Zap } from "lucide-react";
+import { Plus, Users, FileText, BookOpen, Search, Calendar, UserMinus, ChevronDown, ChevronUp, Trash2, TrendingUp, Award, AlertCircle, CheckCircle, X, BarChart3, Edit3, Save, XCircle, MoreVertical, Send, Zap, Eye } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthHeaders } from "@/lib/supabaseClient";
+import { AssignmentScorecard } from "@/components/AssignmentScorecard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
@@ -48,6 +49,7 @@ interface AssignmentTemplate {
   words: Array<{ text: string; syllabication: string }>;
   targetSound?: string;
   category?: string;
+  assignmentType?: string;
   createdAt: string;
 }
 
@@ -266,6 +268,48 @@ const PREDEFINED_TEMPLATES: AssignmentTemplate[] = [
     ],
     category: "Sports",
     createdAt: new Date().toISOString()
+  },
+  {
+    id: "template-13",
+    title: "Watch then Practice: R Sound",
+    description: "Watch pronunciation animations then practice R sound words individually and in phrases",
+    words: [
+      { text: "red", syllabication: "red" },
+      { text: "run", syllabication: "run" },
+      { text: "rabbit", syllabication: "rab-bit" }
+    ],
+    category: "Watch then Practice",
+    targetSound: "r",
+    assignmentType: "watch-practice",
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "template-14", 
+    title: "Watch then Practice: S Sound",
+    description: "Watch pronunciation animations then practice S sound words individually and in phrases",
+    words: [
+      { text: "sun", syllabication: "sun" },
+      { text: "sit", syllabication: "sit" },
+      { text: "seven", syllabication: "sev-en" }
+    ],
+    category: "Watch then Practice",
+    targetSound: "s",
+    assignmentType: "watch-practice",
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "template-15",
+    title: "Watch then Practice: L Sound", 
+    description: "Watch pronunciation animations then practice L sound words individually and in phrases",
+    words: [
+      { text: "look", syllabication: "look" },
+      { text: "love", syllabication: "love" },
+      { text: "little", syllabication: "lit-tle" }
+    ],
+    category: "Watch then Practice",
+    targetSound: "l",
+    assignmentType: "watch-practice",
+    createdAt: new Date().toISOString()
   }
 ];
 
@@ -304,243 +348,35 @@ function AssignmentScoreDisplay({ assignmentId }: AssignmentScoreDisplayProps) {
 }
 
 function ReportCard({ assignmentId, onClose }: ReportCardProps) {
-  const { data: queryData } = useQuery({
-    queryKey: ['/api/assignments', assignmentId, 'results'],
+  // Get assignment details for the scorecard
+  const { data: assignmentData } = useQuery({
+    queryKey: ['/api/assignments', assignmentId],
     enabled: !!assignmentId
   });
-  const results = queryData?.data || [];
-
-  const [insights, setInsights] = useState<any>(null);
-
-  useEffect(() => {
-    if (results.length > 0) {
-      const correctWords = results.filter((r: any) => r.pronunciationScore > 70);
-      const incorrectWords = results.filter((r: any) => r.pronunciationScore <= 70);
-      
-      // Generate insights
-      apiRequest('/api/pronunciation/insights', {
-        method: 'POST',
-        body: JSON.stringify({ correctWords, incorrectWords })
-      }).then(setInsights).catch(console.error);
-    }
-  }, [results]);
-
-  // Group results by word to show all attempts
-  const wordGroups = results.reduce((groups: any, result: any) => {
-    const word = result.itemPracticed;
-    if (!groups[word]) {
-      groups[word] = [];
-    }
-    groups[word].push(result);
-    return groups;
-  }, {});
-
-  // Calculate statistics using best scores per word
-  const wordStats = Object.entries(wordGroups).map(([word, attempts]: [string, any]) => {
-    const sortedAttempts = attempts.sort((a: any, b: any) => b.pronunciationScore - a.pronunciationScore);
-    const bestAttempt = sortedAttempts[0];
-    const allAttempts = attempts.sort((a: any, b: any) => new Date(a.practiceDate).getTime() - new Date(b.practiceDate).getTime());
-    
-    return {
-      word,
-      bestScore: bestAttempt.pronunciationScore,
-      attempts: allAttempts,
-      attemptCount: attempts.length
-    };
-  });
-
-  const averageScore = wordStats.length > 0 
-    ? wordStats.reduce((sum: number, w: any) => sum + w.bestScore, 0) / wordStats.length 
-    : 0;
-
-  const correctWords = wordStats.filter((w: any) => w.bestScore > 70);
-  const incorrectWords = wordStats.filter((w: any) => w.bestScore <= 70);
+  const assignment = assignmentData?.data;
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent aria-labelledby="report-card-title" aria-describedby="report-card-description" className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle id="report-card-title" className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
             Assignment Report Card
           </DialogTitle>
+          <DialogDescription id="report-card-description">
+            Comprehensive performance analysis and detailed scoring breakdown
+          </DialogDescription>
         </DialogHeader>
 
-        {results.length === 0 ? (
-          <div className="text-center py-8">
-            <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">No results available for this assignment yet.</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Overview Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
-                  Performance Overview
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 gap-4 mb-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{Math.round(averageScore)}%</div>
-                    <div className="text-sm text-gray-600">Average Score</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{correctWords.length}</div>
-                    <div className="text-sm text-gray-600">Words Mastered</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600">{incorrectWords.length}</div>
-                    <div className="text-sm text-gray-600">Needs Practice</div>
-                  </div>
-                </div>
-                <Progress value={averageScore} className="w-full" />
-              </CardContent>
-            </Card>
-
-            {/* AI Insights */}
-            {insights && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5" />
-                    AI Analysis & Recommendations
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <h4 className="font-semibold mb-2">Key Insights</h4>
-                    <p className="text-gray-700">{insights.insights}</p>
-                  </div>
-                  
-                  {insights.soundsToFocus.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold mb-2">Sounds to Focus On</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {insights.soundsToFocus.map((sound: string, index: number) => (
-                          <Badge key={index} variant="outline">{sound}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div>
-                    <h4 className="font-semibold mb-2">Overall Feedback</h4>
-                    <p className="text-green-700">{insights.overallFeedback}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Detailed Results */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Correct Words */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-green-600">
-                    <CheckCircle className="h-5 w-5" />
-                    Words Done Correctly (Score &gt; 70%)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {correctWords.length === 0 ? (
-                    <p className="text-gray-500">No words scored above 70% yet.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {correctWords.map((wordStat: any, index: number) => (
-                        <div key={index} className="p-3 bg-green-50 rounded-lg">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="font-medium">{wordStat.word}</span>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="default" className="bg-green-600">{Math.round(wordStat.bestScore)}%</Badge>
-                              <span className="text-xs text-gray-600">{wordStat.attemptCount} attempt{wordStat.attemptCount > 1 ? 's' : ''}</span>
-                            </div>
-                          </div>
-                          {wordStat.attemptCount > 1 && (
-                            <div className="space-y-1 mt-2 pt-2 border-t border-green-200">
-                              <div className="text-xs font-medium text-gray-700 mb-1">Attempt History:</div>
-                              {wordStat.attempts.map((attempt: any, attemptIndex: number) => (
-                                <div key={attemptIndex} className="flex justify-between items-center text-xs">
-                                  <span className="text-gray-600">
-                                    {new Date(attempt.practiceDate).toLocaleDateString()} {new Date(attempt.practiceDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                  </span>
-                                  <div className="flex items-center gap-2">
-                                    <span className={`font-medium ${attempt.pronunciationScore > 70 ? 'text-green-600' : 'text-orange-600'}`}>
-                                      {Math.round(attempt.pronunciationScore)}%
-                                    </span>
-                                    <span className="text-gray-500">
-                                      A:{Math.round(attempt.accuracy)} F:{Math.round(attempt.fluency)} C:{Math.round(attempt.completeness)}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Incorrect Words */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-orange-600">
-                    <AlertCircle className="h-5 w-5" />
-                    Words Needing Work (Score &lt; 70%)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {incorrectWords.length === 0 ? (
-                    <p className="text-gray-500">Great! All attempted words scored above 70%.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {incorrectWords.map((wordStat: any, index: number) => (
-                        <div key={index} className="p-3 bg-orange-50 rounded-lg">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="font-medium">{wordStat.word}</span>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="destructive" className="bg-orange-600">{Math.round(wordStat.bestScore)}%</Badge>
-                              <span className="text-xs text-gray-600">{wordStat.attemptCount} attempt{wordStat.attemptCount > 1 ? 's' : ''}</span>
-                            </div>
-                          </div>
-                          {wordStat.attemptCount > 1 && (
-                            <div className="space-y-1 mt-2 pt-2 border-t border-orange-200">
-                              <div className="text-xs font-medium text-gray-700 mb-1">Attempt History:</div>
-                              {wordStat.attempts.map((attempt: any, attemptIndex: number) => (
-                                <div key={attemptIndex} className="flex justify-between items-center text-xs">
-                                  <span className="text-gray-600">
-                                    {new Date(attempt.practiceDate).toLocaleDateString()} {new Date(attempt.practiceDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                  </span>
-                                  <div className="flex items-center gap-2">
-                                    <span className={`font-medium ${attempt.pronunciationScore > 70 ? 'text-green-600' : 'text-orange-600'}`}>
-                                      {Math.round(attempt.pronunciationScore)}%
-                                    </span>
-                                    <span className="text-gray-500">
-                                      A:{Math.round(attempt.accuracy)} F:{Math.round(attempt.fluency)} C:{Math.round(attempt.completeness)}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
+        <AssignmentScorecard 
+          assignmentId={assignmentId}
+          assignmentTitle={assignment?.title || 'Assignment'}
+          isTherapistView={true}
+        />
       </DialogContent>
     </Dialog>
   );
 }
-
 export default function TherapistPortal() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -597,13 +433,6 @@ export default function TherapistPortal() {
   const clients = clientsData.data?.clients || clientsData.clients || [];
   
   // Debug logging
-  console.log('🔍 DEBUG - clientsData:', clientsData);
-  console.log('🔍 DEBUG - clients array:', clients);
-  console.log('🔍 DEBUG - clients length:', clients.length);
-  console.log('🔍 DEBUG - clientSearchTerm:', clientSearchTerm);
-  console.log('🔍 DEBUG - assignmentsData:', assignmentsData);
-  console.log('🔍 DEBUG - assignments array:', assignments);
-  console.log('🔍 DEBUG - assignments length:', assignments.length);
 
   const filteredClients = clients.filter((client: User) => {
     if (!clientSearchTerm) return true; // Show all if no search term
@@ -961,6 +790,15 @@ export default function TherapistPortal() {
     setAssignmentTitle(template.title);
     setAssignmentDescription(template.description);
     setGeneratedWords(template.words);
+    
+    // If it's a "Watch then Practice" template, switch to that mode
+    if (template.assignmentType === 'watch-practice') {
+      setContentGenerationMode('watch-practice');
+      if (template.targetSound) {
+        setSelectedSound(template.targetSound);
+        setSoundPosition('starts-with'); // Default position
+      }
+    }
   };
 
   const handleCreateAssignment = () => {
@@ -982,6 +820,22 @@ export default function TherapistPortal() {
       }
     }
 
+    // Determine assignment type and create appropriate metadata
+    const isWatchPracticeAssignment = contentGenerationMode === "watch-practice";
+    const assignmentMetadata = isWatchPracticeAssignment ? {
+      assignmentType: 'watch-practice',
+      soundPattern: {
+        sound: selectedSound,
+        position: soundPosition
+      },
+      structure: {
+        wordsPerAssignment: 3,
+        animationPlaysPerWord: 3,
+        practiceAttemptsPerWord: 3,
+        phrasesPerWord: 3
+      }
+    } : null;
+
     const assignmentData = assignmentMode === "existing" 
       ? {
           userId: selectedClient?.id,
@@ -990,8 +844,10 @@ export default function TherapistPortal() {
             ? `${user.firstName} ${user.lastName}` 
             : user?.username || "Therapist",
           title: assignmentTitle.trim(),
-          description: assignmentDescription.trim(),
-          items: generatedWords.map(word => ({
+          description: assignmentDescription.trim() + (isWatchPracticeAssignment ? 
+            "\n\nFor each word, phrase, or sentence in the video, watch us say it first. Then you'll practice." : ""),
+          metadata: assignmentMetadata,
+          items: generatedWords.slice(0, isWatchPracticeAssignment ? 3 : generatedWords.length).map(word => ({
             itemType: 'word',
             content: word.text,
             syllabication: word.syllabication,
@@ -1005,8 +861,10 @@ export default function TherapistPortal() {
             ? `${user.firstName} ${user.lastName}` 
             : user?.username || "Therapist",
           title: assignmentTitle.trim(),
-          description: assignmentDescription.trim(),
-          items: generatedWords.map(word => ({
+          description: assignmentDescription.trim() + (isWatchPracticeAssignment ? 
+            "\n\nFor each word, phrase, or sentence in the video, watch us say it first. Then you'll practice." : ""),
+          metadata: assignmentMetadata,
+          items: generatedWords.slice(0, isWatchPracticeAssignment ? 3 : generatedWords.length).map(word => ({
             itemType: 'word',
             content: word.text,
             syllabication: word.syllabication,
@@ -1705,7 +1563,7 @@ export default function TherapistPortal() {
                         <TabsList className="grid w-full grid-cols-3">
                           <TabsTrigger value="sounds">Sound Patterns</TabsTrigger>
                           <TabsTrigger value="templates">Topics</TabsTrigger>
-                          <TabsTrigger value="topics">Custom Topics</TabsTrigger>
+                          <TabsTrigger value="exercises">Custom Exercises</TabsTrigger>
                         </TabsList>
                         
                         <TabsContent value="templates" className="space-y-4">
@@ -1800,19 +1658,134 @@ export default function TherapistPortal() {
                           </div>
                         </TabsContent>
                         
-                        <TabsContent value="topics" className="space-y-4">
-                          <div className="flex gap-2">
-                            <Input
-                              placeholder="Enter topic (e.g., 'Animals', 'Food', 'Family')"
-                              value={customTopic}
-                              onChange={(e) => setCustomTopic(e.target.value)}
-                            />
-                            <Button 
-                              onClick={handleGenerateContent}
-                              disabled={generateContentMutation.isPending || !customTopic.trim()}
-                            >
-                              {generateContentMutation.isPending ? "Generating..." : "Generate"}
-                            </Button>
+                        <TabsContent value="exercises" className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Watch then Practice Card */}
+                            <div className="p-4 border-2 border-dashed border-blue-300 rounded-lg bg-blue-50 hover:border-blue-400 transition-colors cursor-pointer">
+                              <div className="text-center">
+                                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                                  <Eye className="h-6 w-6 text-white" />
+                                </div>
+                                <h3 className="font-semibold text-lg mb-2">Watch then Practice</h3>
+                                <p className="text-sm text-gray-600 mb-4">
+                                  Students watch animations up to 3 times, then practice words individually and in phrases
+                                </p>
+                                <Button 
+                                  variant="outline" 
+                                  className="w-full"
+                                  onClick={() => setContentGenerationMode("watch-practice")}
+                                >
+                                  Create Exercise
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* Custom Topic Card */}
+                            <div className="p-4 border-2 border-dashed border-green-300 rounded-lg bg-green-50 hover:border-green-400 transition-colors cursor-pointer">
+                              <div className="text-center">
+                                <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                                  <FileText className="h-6 w-6 text-white" />
+                                </div>
+                                <h3 className="font-semibold text-lg mb-2">Custom Topic</h3>
+                                <p className="text-sm text-gray-600 mb-4">
+                                  Generate practice words based on a specific topic or theme
+                                </p>
+                                <div className="flex gap-2">
+                                  <Input
+                                    placeholder="Enter topic (e.g., 'Animals')"
+                                    value={customTopic}
+                                    onChange={(e) => setCustomTopic(e.target.value)}
+                                    className="text-sm"
+                                  />
+                                  <Button 
+                                    onClick={handleGenerateContent}
+                                    disabled={generateContentMutation.isPending || !customTopic.trim()}
+                                    size="sm"
+                                  >
+                                    {generateContentMutation.isPending ? "..." : "Generate"}
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </TabsContent>
+                        
+                        <TabsContent value="watch-practice" className="space-y-4">
+                          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <h4 className="font-semibold text-blue-800 mb-2">Watch then Practice Exercise</h4>
+                            <p className="text-sm text-blue-700 mb-4">
+                              Create an assignment where students first watch pronunciation animations, then practice the words individually and in phrases.
+                            </p>
+                            
+                            <div className="space-y-4">
+                              <div>
+                                <label className="text-sm font-medium mb-2 block">Sound Position</label>
+                                <div className="flex gap-2">
+                                  {['starts-with', 'contains', 'ends-with'].map((position) => (
+                                    <Button
+                                      key={position}
+                                      variant={soundPosition === position ? "default" : "outline"}
+                                      size="sm"
+                                      onClick={() => setSoundPosition(position)}
+                                      className="capitalize"
+                                    >
+                                      {position.replace('-', ' ')}
+                                    </Button>
+                                  ))}
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <label className="text-sm font-medium mb-2 block">Select Sound</label>
+                                <div className="space-y-3">
+                                  <div>
+                                    <div className="text-xs text-gray-600 mb-1">Consonant Sounds</div>
+                                    <div className="flex flex-wrap gap-1">
+                                      {['s', 'r', 'l', 'th', 'sh', 'ch', 'f', 'v', 'k', 'g', 'p', 'b', 't', 'd', 'm', 'n'].map((sound) => (
+                                        <Button
+                                          key={sound}
+                                          variant={selectedSound === sound ? "default" : "outline"}
+                                          size="sm"
+                                          onClick={() => setSelectedSound(sound)}
+                                          className="min-w-[40px] h-8"
+                                        >
+                                          {sound}
+                                        </Button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  
+                                  <div>
+                                    <div className="text-xs text-gray-600 mb-1">Vowel Sounds</div>
+                                    <div className="flex flex-wrap gap-1">
+                                      {['a', 'e', 'i', 'o', 'u', 'ay', 'ee', 'igh', 'ow', 'oo'].map((sound) => (
+                                        <Button
+                                          key={sound}
+                                          variant={selectedSound === sound ? "default" : "outline"}
+                                          size="sm"
+                                          onClick={() => setSelectedSound(sound)}
+                                          className="min-w-[40px] h-8"
+                                        >
+                                          {sound}
+                                        </Button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <Button 
+                                onClick={handleGenerateSoundWords}
+                                disabled={isGeneratingSoundWords || !selectedSound || !soundPosition}
+                                className="w-full"
+                              >
+                                {isGeneratingSoundWords ? (
+                                  <><div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" /> Loading...</>
+                                ) : (
+                                  `Generate words that ${soundPosition.replace('-', ' ')} "${selectedSound}"`
+                                )}
+                              </Button>
+                            </div>
                           </div>
                         </TabsContent>
                       </Tabs>
@@ -2015,13 +1988,13 @@ export default function TherapistPortal() {
         {/* Add Patient Modal */}
         {showAddClientModal && (
           <Dialog open={showAddClientModal} onOpenChange={handleCloseAddClientModal}>
-            <DialogContent className="max-w-md">
+            <DialogContent aria-labelledby="add-patient-title" aria-describedby="add-patient-description" className="max-w-md">
               <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
+                <DialogTitle id="add-patient-title" className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-blue-600" />
                   Add New Patient
                 </DialogTitle>
-                <DialogDescription>
+                <DialogDescription id="add-patient-description">
                   Fill in the details below to send an email invitation to your new patient.
                 </DialogDescription>
               </DialogHeader>

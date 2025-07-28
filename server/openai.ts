@@ -1148,6 +1148,81 @@ function getFallbackWordsWithSound(targetSound: string, count: number, position?
   return availableWords.slice(0, count).map(word => ({ text: word.text, syllabication: word.syllabication }));
   }
 
+export async function generateWordPhrases(
+  word: string,
+  soundPattern: string,
+  count: number = 3
+): Promise<string[]> {
+  try {
+    console.log(`Generating ${count} contextual phrases for word: "${word}" with sound pattern: ${soundPattern}`);
+
+    // Create optimized prompt for natural phrase generation
+    const systemPrompt = `
+You are a speech therapy assistant creating natural, contextually appropriate phrases for pronunciation practice.
+
+**Task**: Generate exactly ${count} natural phrases that use the word "${word}" in meaningful, everyday contexts.
+
+**Requirements**:
+- Each phrase must use the word "${word}" naturally and appropriately
+- Phrases should be 4-8 words long and conversational
+- Focus on common, realistic situations where this word would naturally occur
+- Avoid forced or awkward constructions like "Look at this ${word}" or "The ${word} is red"
+- Create phrases that sound like something a native speaker would actually say
+- Consider the semantic meaning and typical usage patterns of "${word}"
+- Phrases should be appropriate for adult learners practicing pronunciation
+
+**Sound Pattern Context**: This practice focuses on the "${soundPattern}" sound, so emphasize clear pronunciation opportunities.
+
+**Examples of good vs. bad phrases**:
+❌ BAD: "Look at this fascination" (awkward, unnatural)
+✅ GOOD: "The fascination with science grows" (natural usage)
+
+❌ BAD: "The elephant is red" (nonsensical)  
+✅ GOOD: "An elephant drinks from the river" (realistic context)
+
+Generate natural, meaningful phrases that help learners practice pronunciation in realistic conversational contexts.`;
+
+    const userPrompt = `Generate ${count} natural phrases using the word "${word}". Each phrase should be on a separate line with no numbering or formatting.`;
+
+    const response = await openai.chat.completions.create({
+      model: MODEL_NAME,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 300
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('No content generated from OpenAI');
+    }
+
+    // Parse phrases from response
+    const phrases = content
+      .split('\n')
+      .map(phrase => phrase.trim())
+      .filter(phrase => phrase.length > 0 && !phrase.match(/^\d+\./)) // Remove numbering
+      .slice(0, count); // Ensure we get exactly the requested count
+
+    if (phrases.length < count) {
+      console.warn(`Generated ${phrases.length} phrases but requested ${count}`);
+    }
+
+    return phrases;
+
+  } catch (error) {
+    console.error('Error generating word phrases:', error);
+    // Fallback to basic templates if OpenAI fails
+    return [
+      `${word} is important`,
+      `I think about ${word}`,
+      `${word} makes sense`
+    ].slice(0, count);
+  }
+}
+
 export async function generateTopicPhrases(
   topic: string,
   difficulty: DifficultyLevel = "4", // Use DifficultyLevel type

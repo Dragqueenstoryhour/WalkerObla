@@ -194,6 +194,122 @@ router.patch('/items/:id', protect, catchAsync(async (req: any, res) => {
   return success(res, updatedItem);
 }));
 
+// Comprehensive assignment completion endpoint for Watch Then Practice assignments
+router.post('/:id/complete', protect, catchAsync(async (req: any, res) => {
+  const assignmentId = parseInt(req.params.id);
+  const userId = req.user.claims.sub;
+  const { assignmentType, results } = req.body;
+
+  console.log(`📊 Processing ${assignmentType} assignment completion:`, {
+    assignmentId,
+    userId,
+    resultsCount: results?.length
+  });
+
+  if (!results || !Array.isArray(results)) {
+    return error(res, 'Results array is required', 400);
+  }
+
+  try {
+    const savedResults = [];
+
+    for (const wordResult of results) {
+      const { itemId, word, animationPlays, wordPractice, phrasePractice } = wordResult;
+
+      if (!itemId) {
+        console.warn(`⚠️ Skipping word "${word}" - no valid itemId`);
+        continue;
+      }
+
+      console.log(`💾 Saving results for word: "${word}" (itemId: ${itemId})`);
+
+      // Save word practice attempts
+      for (const attempt of wordPractice || []) {
+        const wordResult = await storage.saveAssignmentResult({
+          assignmentId,
+          itemId,
+          userId,
+          practiceType: 'word',
+          word: word,
+          attemptNumber: attempt.attemptNumber,
+          pronunciationScore: attempt.pronunciationScore,
+          accuracyScore: attempt.accuracyScore,
+          fluencyScore: attempt.fluencyScore,
+          completenessScore: attempt.completenessScore,
+          animationPlays: animationPlays,
+          practiceDate: new Date().toISOString()
+        });
+        savedResults.push(wordResult);
+      }
+
+      // Save phrase practice attempts
+      for (const phraseResult of phrasePractice || []) {
+        for (const attempt of phraseResult.attempts || []) {
+          const phraseResultSaved = await storage.saveAssignmentResult({
+            assignmentId,
+            itemId,
+            userId,
+            practiceType: 'phrase',
+            word: word,
+            phrase: phraseResult.phrase,
+            phraseIndex: phraseResult.phraseIndex,
+            attemptNumber: attempt.attemptNumber,
+            pronunciationScore: attempt.pronunciationScore,
+            accuracyScore: attempt.accuracyScore,
+            fluencyScore: attempt.fluencyScore,
+            completenessScore: attempt.completenessScore,
+            practiceDate: new Date().toISOString()
+          });
+          savedResults.push(phraseResultSaved);
+        }
+      }
+    }
+
+    // Mark assignment as completed
+    await storage.markAssignmentCompleted(assignmentId, userId);
+
+    // Calculate overall score for immediate feedback
+    const overallScore = calculateOverallScore(results);
+
+    console.log(`✅ Assignment ${assignmentId} completed successfully. Saved ${savedResults.length} results. Overall score: ${overallScore}%`);
+
+    return success(res, {
+      message: 'Assignment completed successfully',
+      overallScore,
+      resultsCount: savedResults.length,
+      assignmentId
+    });
+
+  } catch (err) {
+    console.error('❌ Error saving assignment completion:', err);
+    return error(res, 'Failed to save assignment results', 500);
+  }
+}));
+
+// Helper function to calculate overall score
+function calculateOverallScore(results: any[]): number {
+  let totalScore = 0;
+  let totalAttempts = 0;
+
+  for (const wordResult of results) {
+    // Count word practice attempts
+    for (const attempt of wordResult.wordPractice || []) {
+      totalScore += attempt.pronunciationScore || 0;
+      totalAttempts++;
+    }
+    
+    // Count phrase practice attempts
+    for (const phraseResult of wordResult.phrasePractice || []) {
+      for (const attempt of phraseResult.attempts || []) {
+        totalScore += attempt.pronunciationScore || 0;
+        totalAttempts++;
+      }
+    }
+  }
+
+  return totalAttempts > 0 ? Math.round(totalScore / totalAttempts) : 0;
+}
+
 router.post('/:id/results', protect, catchAsync(async (req: any, res) => {
   const assignmentId = parseInt(req.params.id);
   const userId = req.user.claims.sub;
@@ -245,6 +361,120 @@ router.post('/:id/results', protect, catchAsync(async (req: any, res) => {
 }));
 
 // Endpoint to get detailed results for a specific assignment (for therapists)
+// Get comprehensive assignment results for detailed reporting
+router.get('/:id/comprehensive-results', protect, catchAsync(async (req: any, res) => {
+  const assignmentId = parseInt(req.params.id);
+  
+  try {
+    const results = await storage.getComprehensiveAssignmentResults(assignmentId);
+    
+    // Group results by item and practice type for better organization
+    const groupedResults = results.reduce((groups: any, result: any) => {
+      const key = `${result.itemId}-${result.word || result.itemContent}`;
+      
+      if (!groups[key]) {
+        groups[key] = {
+          itemId: result.itemId,
+          word: result.word || result.itemContent,
+          syllabication: result.syllabication,
+          wordPractice: [],
+          phrasePractice: [],
+          overallScores: {
+            pronunciation: 0,
+            accuracy: 0,
+            fluency: 0,
+            completeness: 0,
+            attemptCount: 0
+          }
+        };
+      }
+      
+      const practiceData = {
+        id: result.id,
+        attemptNumber: result.attemptNumber,
+        pronunciationScore: result.pronunciationScore,
+        accuracyScore: result.accuracyScore,
+        fluencyScore: result.fluencyScore,
+        completenessScore: result.completenessScore,
+        practiceDate: result.practiceDate,
+        phrase: result.phrase,
+        phraseIndex: result.phraseIndex
+      };
+      
+      if (result.practiceType === 'phrase') {
+        groups[key].phrasePractice.push(practiceData);
+      } else {
+        groups[key].wordPractice.push(practiceData);
+      }
+      
+      // Update overall scores
+      groups[key].overallScores.pronunciation += result.pronunciationScore || 0;
+      groups[key].overallScores.accuracy += result.accuracyScore || 0;
+      groups[key].overallScores.fluency += result.fluencyScore || 0;
+      groups[key].overallScores.completeness += result.completenessScore || 0;
+      groups[key].overallScores.attemptCount += 1;
+      
+      return groups;
+    }, {});
+    
+    // Calculate averages
+    Object.values(groupedResults).forEach((group: any) => {
+      const count = group.overallScores.attemptCount;
+      if (count > 0) {
+        group.overallScores.pronunciation = Math.round(group.overallScores.pronunciation / count);
+        group.overallScores.accuracy = Math.round(group.overallScores.accuracy / count);
+        group.overallScores.fluency = Math.round(group.overallScores.fluency / count);
+        group.overallScores.completeness = Math.round(group.overallScores.completeness / count);
+      }
+    });
+    
+    console.log(`📊 Retrieved ${results.length} results for assignment ${assignmentId}, grouped into ${Object.keys(groupedResults).length} items`);
+    
+    return success(res, {
+      assignmentId,
+      totalResults: results.length,
+      itemCount: Object.keys(groupedResults).length,
+      results: Object.values(groupedResults)
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching comprehensive assignment results:', error);
+    return error(res, 'Failed to fetch assignment results', 500);
+  }
+}));
+
+// Endpoint to generate pronunciation insights for an assignment
+router.get('/:id/insights', protect, catchAsync(async (req: any, res) => {
+  const assignmentId = parseInt(req.params.id);
+
+  try {
+    const results = await storage.getComprehensiveAssignmentResults(assignmentId);
+
+    if (results.length === 0) {
+      return success(res, { insights: "Not enough data for insights." });
+    }
+
+    // Separate words into correct and incorrect based on a threshold
+    const correctWords = results
+      .filter(r => r.pronunciationScore && r.pronunciationScore > 70)
+      .map(r => r.word || r.itemContent);
+      
+    const incorrectWords = results
+      .filter(r => r.pronunciationScore && r.pronunciationScore <= 70)
+      .map(r => r.word || r.itemContent);
+
+    // Generate insights using the memoized OpenAI function
+    const insights = await memoizedGeneratePronunciationInsights(correctWords, incorrectWords);
+    
+    console.log(`🧠 Generated insights for assignment ${assignmentId}`);
+    return success(res, { insights });
+
+  } catch (error) {
+    console.error(`❌ Error generating insights for assignment ${assignmentId}:`, error);
+    return error(res, 'Failed to generate pronunciation insights', 500);
+  }
+}));
+
 router.get('/:id/results', protect, catchAsync(async (req: any, res) => {
   const assignmentId = parseInt(req.params.id);
   const results = await storage.getAssignmentResults(assignmentId);

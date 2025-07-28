@@ -45,6 +45,11 @@ export async function setupVite(app: Express, server: Server) {
   });
 
   app.use(vite.middlewares);
+  
+  // Serve static files from client/public directory (for auth-callback.html, etc.)
+  const publicPath = path.resolve(import.meta.dirname, "..", "client", "public");
+  app.use(express.static(publicPath));
+  
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
 

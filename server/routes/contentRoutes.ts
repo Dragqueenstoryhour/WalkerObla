@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import memoize from 'memoizee';
-import { generateReadingContent, generateTopicPhrases, generateSampleContent, generateWordsWithSound } from '../openai';
+import { generateReadingContent, generateTopicPhrases, generateSampleContent, generateWordsWithSound, generateWordPhrases } from '../openai';
 import { protect } from '../supabaseAuth';
 import { success, error } from '../utils/response';
 import { catchAsync } from '../utils/errorHandlers';
@@ -92,6 +92,26 @@ router.post('/generate-topic-phrases', catchAsync(async (req, res) => {
   
   console.log(`Generated ${phrases.length} items:`, phrases);
   return success(res, { phrases });
+}));
+
+// Generate contextual phrases for a specific word in assignments
+router.post('/generate-word-phrases', catchAsync(async (req, res) => {
+  const { word, soundPattern, count = 3 } = req.body;
+  
+  if (!word) {
+    return error(res, 'Word is required', 400);
+  }
+
+  console.log(`Generating ${count} contextual phrases for word: "${word}" with sound pattern: ${soundPattern}`);
+
+  try {
+    const phrases = await generateWordPhrases(word, soundPattern, count);
+    console.log(`Generated ${phrases.length} contextual phrases:`, phrases);
+    return success(res, { phrases });
+  } catch (err) {
+    console.error('Error generating word phrases:', err);
+    return error(res, 'Failed to generate phrases', 500);
+  }
 }));
 
 router.post('/generate-suggested-words', catchAsync(async (req, res) => {

@@ -4,7 +4,56 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CssAnimatedViseme } from './CssAnimatedViseme';
+import { ImageAnimatedViseme } from './ImageAnimatedViseme';
+
+// Import viseme images
+import viseme0 from "@/assets/Visemes/viseme-id-0.jpg";
+import viseme1 from "@/assets/Visemes/viseme-id-1.jpg";
+import viseme2 from "@/assets/Visemes/viseme-id-2.jpg";
+import viseme3 from "@/assets/Visemes/viseme-id-3.jpg";
+import viseme4 from "@/assets/Visemes/viseme-id-4.jpg";
+import viseme5 from "@/assets/Visemes/viseme-id-5.jpg";
+import viseme6 from "@/assets/Visemes/viseme-id-6.jpg";
+import viseme7 from "@/assets/Visemes/viseme-id-7.jpg";
+import viseme8 from "@/assets/Visemes/viseme-id-8.jpg";
+import viseme9 from "@/assets/Visemes/viseme-id-9.jpg";
+import viseme10 from "@/assets/Visemes/viseme-id-10.jpg";
+import viseme11 from "@/assets/Visemes/viseme-id-11.jpg";
+import viseme12 from "@/assets/Visemes/viseme-id-12.jpg";
+import viseme13 from "@/assets/Visemes/viseme-id-13.jpg";
+import viseme14 from "@/assets/Visemes/viseme-id-14.jpg";
+import viseme15 from "@/assets/Visemes/viseme-id-15.jpg";
+import viseme16 from "@/assets/Visemes/viseme-id-16.jpg";
+import viseme17 from "@/assets/Visemes/viseme-id-17.jpg";
+import viseme18 from "@/assets/Visemes/viseme-id-18.jpg";
+import viseme19 from "@/assets/Visemes/viseme-id-19.jpg";
+import viseme20 from "@/assets/Visemes/viseme-id-20.jpg";
+import viseme21 from "@/assets/Visemes/viseme-id-21.jpg";
+
+const visemeImages = {
+  0: viseme0,
+  1: viseme1,
+  2: viseme2,
+  3: viseme3,
+  4: viseme4,
+  5: viseme5,
+  6: viseme6,
+  7: viseme7,
+  8: viseme8,
+  9: viseme9,
+  10: viseme10,
+  11: viseme11,
+  12: viseme12,
+  13: viseme13,
+  14: viseme14,
+  15: viseme15,
+  16: viseme16,
+  17: viseme17,
+  18: viseme18,
+  19: viseme19,
+  20: viseme20,
+  21: viseme21,
+};
 
 // The possible viseme IDs from Azure Documentation (0-21)
 export const VISEME_DESCRIPTIONS = [
@@ -34,17 +83,28 @@ export const VISEME_DESCRIPTIONS = [
 
 // Interface for a viseme animation frame
 interface VisemeFrame {
-  time: number;      // Time in seconds
-  visemeId: number;  // Azure viseme ID (0-21)
-  svg?: string;      // SVG content
+  time: number;         // Time in seconds
+  audioOffset?: number; // Time in milliseconds (from API)
+  visemeId: number;     // Azure viseme ID (0-21)
+  svg?: string;         // SVG content
   blendshapes?: Record<string, number>; // Blendshape values for 3D animation
 }
 
 interface FacialAnimationProps {
   initialText?: string;
+  maxPlays?: number;
+  onAnimationPlay?: () => void;
+  showPlayButton?: boolean;
+  simplified?: boolean; // New prop for simplified mode
 }
 
-export function FacialAnimation({ initialText = "Hello, how are you today?" }: FacialAnimationProps) {
+export function FacialAnimation({ 
+  initialText = "Hello, how are you today?", 
+  maxPlays,
+  onAnimationPlay,
+  showPlayButton = true,
+  simplified = false
+}: FacialAnimationProps) {
   const [text, setText] = useState(initialText);
   const [voice, setVoice] = useState("en-US-GuyNeural");
   const [loading, setLoading] = useState(false);
@@ -55,13 +115,15 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
   const [currentViseme, setCurrentViseme] = useState(0);
   const [previewMode, setPreviewMode] = useState(false);
   const [visemePreview, setVisemePreview] = useState(0);
+  const [playCount, setPlayCount] = useState(0);
   
   const audioRef = useRef<HTMLAudioElement>(null);
   const animationRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
+  const shouldAutoPlayRef = useRef<boolean>(false);
 
   // Function to generate animation data from text
-  const generateAnimation = async () => {
+  const generateAnimation = async (shouldAutoPlay = false) => {
     if (!text.trim()) return;
     
     try {
@@ -72,15 +134,16 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
       setPlaying(false);
       
       // Call server API to generate viseme data
-      const response = await fetch('/api/viseme/generate', {
+      const response = await fetch('/api/visemes/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          text,
-          voice,
-          format: 'svg'
+          text: text.trim(),
+          voice: voice || "en-US-AriaNeural",
+          format: "svg",
+          speed: 0.65
         })
       });
       
@@ -89,22 +152,43 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
         throw new Error(errorData.error || 'Failed to generate animation');
       }
       
-      const data = await response.json();
+      const response_data = await response.json();
+      const data = response_data.data || response_data; // Handle server success wrapper
       
-      // Parse the CSV data into animation frames
-      if (data.success && data.blendshapesCsv) {
-        const frames = parseVisemeCsv(data.blendshapesCsv);
+      // Convert viseme data to animation frames
+      if (data.visemes && data.audioBuffer) {
+        const frames: VisemeFrame[] = data.visemes.map((viseme: any) => ({
+          time: viseme.audioOffset / 1000, // Convert ms to seconds (for compatibility)
+          audioOffset: viseme.audioOffset, // Keep original ms for precise timing
+          visemeId: viseme.visemeId,
+          svg: viseme.animation
+        })).sort((a: VisemeFrame, b: VisemeFrame) => a.time - b.time);
+        
         setAnimationData(frames);
         
         // Create audio URL from base64 data
-        if (data.audioData) {
-          const audioBuffer = Uint8Array.from(atob(data.audioData), c => c.charCodeAt(0));
-          const audioBlob = new Blob([audioBuffer], { type: 'audio/wav' });
-          const url = URL.createObjectURL(audioBlob);
-          setAudioUrl(url);
+        let binaryString;
+        try {
+          binaryString = atob(data.audioBuffer);
+        } catch (error) {
+          throw new Error('Invalid base64 audio data received from server');
         }
         
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        const audioBlob = new Blob([bytes.buffer], { type: 'audio/wav' });
+        const url = URL.createObjectURL(audioBlob);
+        setAudioUrl(url);
+        
         console.log(`Generated ${frames.length} viseme frames with audio (duration: ${data.duration}ms)`);
+        
+        // Set flag for auto-play if requested (useEffect will handle the actual playback)
+        if (shouldAutoPlay) {
+          shouldAutoPlayRef.current = true;
+        }
       } else {
         throw new Error('Invalid response format from server');
       }
@@ -166,12 +250,23 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
     return frames.sort((a, b) => a.time - b.time);
   };
   
-  // Play the animation
-  const playAnimation = () => {
+  // Start the actual playback (internal function)
+  const startActualPlayback = () => {
     if (!animationData.length || !audioRef.current) return;
+    
+    // Check if max plays reached
+    if (maxPlays && playCount >= maxPlays) {
+      return;
+    }
     
     // Reset
     stopAnimation();
+    
+    // Increment play count and call callback
+    setPlayCount(prev => prev + 1);
+    if (onAnimationPlay) {
+      onAnimationPlay();
+    }
     
     // Start playing audio
     if (audioRef.current) {
@@ -214,6 +309,18 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
     
     animationRef.current = requestAnimationFrame(animate);
   };
+
+  // Play the animation (generate first if needed)
+  const playAnimation = async () => {
+    // If no animation data exists, generate it first
+    if (!animationData.length && text.trim()) {
+      await generateAnimation(true); // Pass true to auto-play after generation
+      return;
+    }
+    
+    // If we already have animation data, play it directly
+    startActualPlayback();
+  };
   
   // Stop the animation
   const stopAnimation = () => {
@@ -230,6 +337,24 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
     setPlaying(false);
     setCurrentViseme(0);
   };
+  
+  // Set text when initialText changes, but don't auto-generate
+  useEffect(() => {
+    if (initialText && initialText !== text) {
+      setText(initialText);
+    }
+  }, [initialText]);
+  
+  // Auto-play when animation data is ready and auto-play is requested
+  useEffect(() => {
+    if (animationData.length > 0 && audioUrl && shouldAutoPlayRef.current && audioRef.current) {
+      shouldAutoPlayRef.current = false; // Reset the flag
+      // Give ImageAnimatedViseme more time to preload images
+      setTimeout(() => {
+        startActualPlayback();
+      }, 300);
+    }
+  }, [animationData, audioUrl]);
   
   // Clean up on unmount
   useEffect(() => {
@@ -250,138 +375,106 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
     stopAnimation();
   };
   
-  // Get the SVG for a viseme ID
-  const getVisemeSvg = (visemeId: number): React.ReactNode => {
-    // Find the SVG for this viseme ID if we have animation data
-    if (animationData.length > 0) {
-      const visemeFrame = animationData.find(frame => frame.visemeId === visemeId);
-      
-      if (visemeFrame?.svg) {
-        // Return the SVG directly from the frame
-        return <div dangerouslySetInnerHTML={{ __html: visemeFrame.svg }} />;
-      }
+  // Get button text based on play count
+  const getButtonText = () => {
+    if (playCount === 0) {
+      return 'Watch';
+    } else if (playCount === 1) {
+      return 'Say it With Me';
+    } else {
+      return 'Say it With Me';
     }
+  };
+  
+  // Get the image for a viseme ID
+  const getVisemeImage = (visemeId: number, showDescription: boolean = false): React.ReactNode => {
+    // Use the actual viseme images
+    const imageSource = visemeImages[visemeId as keyof typeof visemeImages] || visemeImages[0];
     
-    // When in preview mode or no animation data, use a placeholder for demonstration
-    // This is just a preview for the user to see the viseme IDs
     return (
       <div className="flex flex-col items-center">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 130" width="130" height="130">
-          <rect width="100%" height="100%" fill="none" />
-          
-          {/* Face outline */}
-          <ellipse cx="65" cy="65" rx="45" ry="55" stroke="black" strokeWidth="1.5" fill="none" />
-          <circle cx="48" cy="50" r="3" fill="black" /> {/* left eye */}
-          <circle cx="82" cy="50" r="3" fill="black" /> {/* right eye */}
-          <path d="M65,42 L65,55 M55,95 Q65,100 75,95" stroke="black" strokeWidth="1" fill="none" /> {/* nose and chin */}
-          
-          {/* Viseme number */}
-          <text x="65" y="20" textAnchor="middle" fontSize="10" fill="black">Viseme {visemeId}</text>
-          
-          {/* Mouth shape based on viseme ID */}
-          {visemeId === 0 && <path d="M45,70 Q65,72 85,70" stroke="black" strokeWidth="2" fill="none" />}
-          {visemeId === 1 && <path d="M45,65 Q65,75 85,65" stroke="black" strokeWidth="2" fill="none" />}
-          {visemeId === 2 && <path d="M45,60 Q65,85 85,60" stroke="black" strokeWidth="2" fill="none" />}
-          {visemeId === 3 && <path d="M50,65 Q65,78 80,65" stroke="black" strokeWidth="2" fill="none" />}
-          {visemeId === 4 && <path d="M45,65 Q65,72 85,65" stroke="black" strokeWidth="2" fill="none" />}
-          {visemeId === 5 && <path d="M50,68 Q65,75 80,68" stroke="black" strokeWidth="2" fill="none" />}
-          
-          {visemeId === 6 && (
-            <>
-              <path d="M45,68 Q65,72 85,68" stroke="black" strokeWidth="2" fill="none" />
-              <path d="M45,68 C50,65 80,65 85,68" stroke="black" strokeWidth="1.5" fill="none" />
-            </>
-          )}
-          
-          {visemeId === 7 && <circle cx="65" cy="70" r="5" stroke="black" strokeWidth="2" fill="none" />}
-          {visemeId === 8 && <circle cx="65" cy="70" r="8" stroke="black" strokeWidth="2" fill="none" />}
-          {visemeId === 9 && <circle cx="65" cy="70" r="12" stroke="black" strokeWidth="2" fill="none" />}
-          
-          {visemeId === 10 && (
-            <>
-              <path d="M50,65 Q65,75 80,65" stroke="black" strokeWidth="2" fill="none" />
-              <path d="M55,65 C60,63 70,63 75,65" stroke="black" strokeWidth="1.5" fill="none" />
-            </>
-          )}
-          
-          {visemeId === 11 && (
-            <>
-              <path d="M45,65 Q65,75 85,65" stroke="black" strokeWidth="2" fill="none" />
-              <path d="M50,65 C55,63 75,63 80,65" stroke="black" strokeWidth="1.5" fill="none" />
-            </>
-          )}
-          
-          {visemeId === 12 && <path d="M50,68 Q65,73 80,68" stroke="black" strokeWidth="2" fill="none" />}
-          
-          {visemeId === 13 && (
-            <>
-              <path d="M55,68 Q65,73 75,68" stroke="black" strokeWidth="2" fill="none" />
-              <path d="M60,68 Q65,73 70,68" stroke="black" strokeWidth="1.5" fill="none" />
-            </>
-          )}
-          
-          {visemeId === 14 && (
-            <>
-              <path d="M50,68 Q65,72 80,68" stroke="black" strokeWidth="2" fill="none" />
-              <path d="M58,68 H72" stroke="black" strokeWidth="1" fill="none" />
-              <path d="M65,68 L65,73" stroke="black" strokeWidth="1.5" fill="none" />
-            </>
-          )}
-          
-          {visemeId === 15 && (
-            <>
-              <path d="M50,69 Q65,71 80,69" stroke="black" strokeWidth="2" fill="none" />
-              <path d="M50,69 L80,69" stroke="black" strokeWidth="1" strokeDasharray="2,1" fill="none" />
-            </>
-          )}
-          
-          {visemeId === 16 && (
-            <>
-              <path d="M55,68 Q65,72 75,68" stroke="black" strokeWidth="2" fill="none" />
-              <path d="M60,68 Q65,71 70,68" stroke="black" strokeWidth="1.5" fill="none" />
-            </>
-          )}
-          
-          {visemeId === 17 && (
-            <>
-              <path d="M50,69 Q65,70 80,69" stroke="black" strokeWidth="2" fill="none" />
-              <path d="M58,69 L72,69" stroke="black" strokeWidth="1" fill="none" />
-              <path d="M65,69 L65,74" stroke="black" strokeWidth="2" fill="none" />
-            </>
-          )}
-          
-          {visemeId === 18 && (
-            <>
-              <path d="M50,68 Q65,70 80,68" stroke="black" strokeWidth="2" fill="none" />
-              <path d="M50,65 L80,65" stroke="black" strokeWidth="1" strokeDasharray="2,1" fill="none" />
-              <path d="M55,68 H75" stroke="black" strokeWidth="1.5" fill="none" />
-            </>
-          )}
-          
-          {visemeId === 19 && (
-            <>
-              <path d="M50,69 Q65,71 80,69" stroke="black" strokeWidth="2" fill="none" />
-              <path d="M60,69 L70,69" stroke="black" strokeWidth="1" fill="none" />
-              <path d="M65,66 L65,69" stroke="black" strokeWidth="1" fill="none" />
-            </>
-          )}
-          
-          {visemeId === 20 && (
-            <>
-              <path d="M50,69 Q65,71 80,69" stroke="black" strokeWidth="2" fill="none" />
-              <path d="M55,69 C60,66 70,66 75,69" stroke="black" strokeWidth="1" fill="none" />
-            </>
-          )}
-          
-          {visemeId === 21 && <path d="M50,70 L80,70" stroke="black" strokeWidth="2.5" fill="none" />}
-        </svg>
-        <div className="text-xs mt-1 text-center">
-          {VISEME_DESCRIPTIONS[visemeId]}
-        </div>
+        <img 
+          src={imageSource} 
+          alt={`Viseme ${visemeId}`}
+          className="w-full h-full object-cover rounded"
+          style={{ maxWidth: '270px', maxHeight: '270px' }}
+        />
+        {showDescription && (
+          <div className="text-xs mt-1 text-center">
+            {VISEME_DESCRIPTIONS[visemeId]}
+          </div>
+        )}
       </div>
     );
   };
   
+  // Simplified mode for WatchThenPracticeAssignment
+  if (simplified) {
+    return (
+      <div className="flex flex-col items-center gap-4">
+        <audio 
+          ref={audioRef} 
+          src={audioUrl || undefined} 
+          onEnded={handleAudioEnded} 
+          style={{ display: 'none' }} 
+        />
+        
+        <div className="w-72 h-72 bg-gray-50 rounded border flex items-center justify-center">
+          {animationData.length > 0 && (playing || audioUrl) ? (
+            <ImageAnimatedViseme 
+              frames={animationData}
+              playing={playing}
+              onEnd={handleAudioEnded}
+              width={270}
+              height={270}
+              audioRef={audioRef}
+            />
+          ) : (
+            getVisemeImage(currentViseme, false)
+          )}
+        </div>
+        
+        <div className="flex flex-col items-center gap-2">
+          {maxPlays && (
+            <div className="text-sm text-gray-600">
+              Plays: {playCount} / {maxPlays}
+            </div>
+          )}
+          
+          {loading && (
+            <div className="animate-pulse text-gray-500">
+              Generating animation...
+            </div>
+          )}
+          
+          {error && (
+            <div className="text-red-600 text-sm text-center">
+              {error}
+            </div>
+          )}
+          
+          {showPlayButton && (
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => playAnimation()} 
+                disabled={playing || loading || (maxPlays ? playCount >= maxPlays : false)}
+                size="sm"
+              >
+                {maxPlays && playCount >= maxPlays ? 'Max Plays Reached' : loading ? 'Generating...' : getButtonText()}
+              </Button>
+            </div>
+          )}
+          
+          {!showPlayButton && !loading && !error && (
+            <div className="text-gray-500 italic text-sm">
+              Ready to watch
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <Card>
@@ -419,7 +512,7 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
             </div>
             
             <div className="flex gap-2">
-              <Button onClick={generateAnimation} disabled={loading}>
+              <Button onClick={() => generateAnimation()} disabled={loading}>
                 {loading ? 'Generating...' : 'Generate Animation'}
               </Button>
               <Button 
@@ -455,7 +548,7 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
                 </div>
               </div>
               <div className="w-32 h-32 bg-gray-50 rounded border flex items-center justify-center">
-                {getVisemeSvg(visemePreview)}
+                {getVisemeImage(visemePreview, true)}
               </div>
               <div className="flex gap-2 w-full max-w-xs justify-between">
                 <Button 
@@ -488,34 +581,45 @@ export function FacialAnimation({ initialText = "Hello, how are you today?" }: F
               
               <div className="w-48 h-48 bg-gray-50 rounded border flex items-center justify-center">
                 {animationData.length > 0 ? (
-                  <CssAnimatedViseme 
+                  <ImageAnimatedViseme 
                     frames={animationData}
                     playing={playing}
                     onEnd={handleAudioEnded}
                     width={180}
                     height={180}
+                    audioRef={audioRef}
                   />
                 ) : (
-                  getVisemeSvg(currentViseme)
+                  getVisemeImage(currentViseme, true)
                 )}
               </div>
               
-              <div className="flex gap-2">
-                {audioUrl && (
-                  <>
-                    <Button onClick={playAnimation} disabled={playing || !audioUrl}>
-                      Play
-                    </Button>
-                    <Button onClick={stopAnimation} disabled={!playing}>
-                      Stop
-                    </Button>
-                  </>
+              <div className="flex flex-col items-center gap-4">
+                {maxPlays && (
+                  <div className="text-sm text-gray-600">
+                    Plays: {playCount} / {maxPlays}
+                  </div>
                 )}
+                <div className="flex gap-2">
+                  {showPlayButton && (
+                    <>
+                      <Button 
+                        onClick={() => playAnimation()} 
+                        disabled={playing || loading || (maxPlays ? playCount >= maxPlays : false)}
+                      >
+                        {maxPlays && playCount >= maxPlays ? 'Max Plays Reached' : loading ? 'Generating...' : 'Play'}
+                      </Button>
+                      <Button onClick={stopAnimation} disabled={!playing}>
+                        Stop
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
               
               {!audioUrl && !loading && (
                 <div className="text-gray-500 italic">
-                  Generate animation to preview
+                  Ready to watch
                 </div>
               )}
               

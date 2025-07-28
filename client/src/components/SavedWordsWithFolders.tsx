@@ -242,9 +242,9 @@ export function SavedWordsWithFolders() {
               New Folder
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent aria-labelledby="new-folder-title">
             <DialogHeader>
-              <DialogTitle>Create New Folder</DialogTitle>
+              <DialogTitle id="new-folder-title">Create New Folder</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>

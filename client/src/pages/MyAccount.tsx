@@ -162,17 +162,14 @@ export default function MyAccount() {
           </p>
           
           <div className="flex gap-4">
-            <Dialog open={isContactDialogOpen} onOpenChange={setIsContactDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  Contact Us
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Contact Us</DialogTitle>
-                </DialogHeader>
+            <Dialog open={isConfirmingDelete} onOpenChange={setIsConfirmingDelete}>
+      <DialogContent aria-labelledby="delete-account-title" aria-describedby="delete-account-description" className="max-w-md">
+        <DialogHeader>
+          <DialogTitle id="delete-account-title">Confirm Account Deletion</DialogTitle>
+          <DialogDescription id="delete-account-description">
+            This action is irreversible. Please type your email to confirm.
+          </DialogDescription>
+        </DialogHeader>
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="category">About</Label>

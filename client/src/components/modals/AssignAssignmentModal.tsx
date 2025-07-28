@@ -64,8 +64,6 @@ export default function AssignAssignmentModal({
   const [therapistNotes, setTherapistNotes] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Debug: Log contentLibrary to inspect its value and structure
-  console.log('contentLibrary:', contentLibrary);
 
   // Filter assignments based on search term
   const filteredAssignments = contentLibrary.filter(item =>
@@ -115,13 +113,10 @@ export default function AssignAssignmentModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent aria-labelledby="assign-title" className="max-w-4xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Send className="h-5 w-5" />
-            Send Assignment to Patients
-          </DialogTitle>
+          <DialogTitle id="assign-title">Assign New Assignment</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[70vh]">

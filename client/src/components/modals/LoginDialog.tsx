@@ -81,16 +81,11 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onSig
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader className="text-center space-y-2">
-          <DialogTitle className="text-2xl font-bold">
-            {isForgotPassword ? 'Reset Password' : 'Sign In'}
-          </DialogTitle>
-          <DialogDescription className="text-gray-600">
-            {isForgotPassword 
-              ? 'Enter your email address and we\'ll send you a link to reset your password'
-              : 'Enter your email and password to access your account'
-            }
+      <DialogContent aria-labelledby="login-title" aria-describedby="login-description" className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle id="login-title">Welcome Back</DialogTitle>
+          <DialogDescription id="login-description">
+            Sign in to access your personalized assignments and track your progress.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6 py-4">

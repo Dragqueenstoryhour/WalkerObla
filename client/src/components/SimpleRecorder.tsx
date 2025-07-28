@@ -8,18 +8,30 @@ import { PronunciationAssessmentResult } from '@/lib/types';
 import { getAuthHeaders } from '@/lib/supabaseClient';
 
 interface SimpleRecorderProps {
-  referenceText: string;
+  referenceText?: string;
+  targetWord?: string; // Alternative prop name for compatibility
   contentId?: number;
   onTranscriptReceived?: (transcript: string) => void;
   onAssessmentReceived?: (assessment: PronunciationAssessmentResult) => void;
+  onResult?: (assessment: PronunciationAssessmentResult) => void; // Alternative callback for compatibility
+  maxAttempts?: number; // For display purposes
+  currentAttempt?: number; // For display purposes
+  nextActionText?: string; // Custom text for the action button after assessment
 }
 
 export function SimpleRecorder({
   referenceText,
+  targetWord,
   contentId,
   onTranscriptReceived,
-  onAssessmentReceived
+  onAssessmentReceived,
+  onResult,
+  maxAttempts,
+  currentAttempt,
+  nextActionText = "Try Again"
 }: SimpleRecorderProps) {
+  // Use targetWord as fallback for referenceText for compatibility
+  const actualReferenceText = referenceText || targetWord;
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -136,19 +148,19 @@ export function SimpleRecorder({
 
     try {
       // Validate reference text
-      if (!referenceText || referenceText.trim() === '') {
-        console.error('Invalid reference text:', referenceText);
+      if (!actualReferenceText || actualReferenceText.trim() === '') {
+        console.error('Invalid reference text:', actualReferenceText);
         throw new Error('No text available for assessment');
       }
 
-      console.log(`Processing recording with text: "${referenceText}"`);
+      console.log(`Processing recording with text: "${actualReferenceText}"`);
 
 
 
       // Send to Azure Speech for assessment using the same pattern as phrases
       const formData = new FormData();
       formData.append("audio", audioBlob);
-      formData.append("text", referenceText.trim());
+      formData.append("text", actualReferenceText.trim());
       formData.append("itemType", "word");  // Changed from "reading" to "word" for assignment practice
       formData.append("source", "assignment");  // Changed from "reader" to "assignment"
       if (contentId) {
@@ -156,7 +168,7 @@ export function SimpleRecorder({
       }
 
       console.log(`🎯 Sending assessment request:`, {
-        text: referenceText.trim(),
+        text: actualReferenceText.trim(),
         itemType: "word",
         source: "assignment",
         contentId
@@ -201,6 +213,11 @@ export function SimpleRecorder({
 
       if (onAssessmentReceived) {
         onAssessmentReceived(results);
+      }
+      
+      // Also call onResult for compatibility with WatchThenPracticeAssignment
+      if (onResult) {
+        onResult(results);
       }
 
       toast({
@@ -293,6 +310,14 @@ export function SimpleRecorder({
 
   return (
       <CardContent className="p-6 pt-0">
+        {/* Display attempt counter if provided */}
+        {maxAttempts && currentAttempt && (
+          <div className="text-center mb-4">
+            <div className="text-sm text-gray-600">
+              Attempt {currentAttempt} of {maxAttempts}
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-col items-center space-y-4 mb-4">
           {!isRecording && !assessmentResults ? (
@@ -325,7 +350,7 @@ export function SimpleRecorder({
                 className="flex items-center gap-2 bg-[#00C6AE] hover:bg-[#00B39E] text-white border-0"
               >
                 <RotateCw className="h-5 w-5" />
-                Try Again
+                {nextActionText}
               </Button>
               {audioUrl && (
                 <Button

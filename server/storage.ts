@@ -1287,6 +1287,102 @@ export class DatabaseStorage implements IStorage {
       .where(eq(contentLibrary.id, id));
   }
 
+  // Save comprehensive assignment result for Watch Then Practice assignments
+  async saveAssignmentResult(resultData: {
+    assignmentId: number;
+    itemId: number;
+    userId: string;
+    practiceType: 'word' | 'phrase';
+    word: string;
+    phrase?: string;
+    phraseIndex?: number;
+    attemptNumber: number;
+    pronunciationScore: number;
+    accuracyScore: number;
+    fluencyScore: number;
+    completenessScore: number;
+    animationPlays?: number;
+    practiceDate: string;
+  }) {
+    // Store detailed practice data in the existing jsonb field
+    const detailedResults = {
+      practiceType: resultData.practiceType,
+      word: resultData.word,
+      phrase: resultData.phrase,
+      phraseIndex: resultData.phraseIndex,
+      attemptNumber: resultData.attemptNumber,
+      animationPlays: resultData.animationPlays,
+      timestamp: resultData.practiceDate,
+      assignmentType: 'watch-then-practice'
+    };
+
+    const result = await db
+      .insert(assignmentResults)
+      .values({
+        assignmentId: resultData.assignmentId,
+        itemId: resultData.itemId,
+        userId: resultData.userId,
+        pronunciationScore: resultData.pronunciationScore,
+        accuracyScore: resultData.accuracyScore,
+        fluencyScore: resultData.fluencyScore,
+        completenessScore: resultData.completenessScore,
+        detailedResults: detailedResults,
+        practiceDate: resultData.practiceDate
+      })
+      .returning();
+    
+    return result[0];
+  }
+
+  // Mark assignment as completed
+  async markAssignmentCompleted(assignmentId: number, userId: string): Promise<void> {
+    await db
+      .update(assignments)
+      .set({ 
+        status: 'completed',
+        completedAt: new Date().toISOString()
+      })
+      .where(and(
+        eq(assignments.id, assignmentId),
+        eq(assignments.userId, userId)
+      ));
+  }
+
+  // Get comprehensive assignment results for reporting
+  async getComprehensiveAssignmentResults(assignmentId: number) {
+    const results = await db
+      .select({
+        id: assignmentResults.id,
+        itemId: assignmentResults.itemId,
+        pronunciationScore: assignmentResults.pronunciationScore,
+        accuracyScore: assignmentResults.accuracyScore,
+        fluencyScore: assignmentResults.fluencyScore,
+        completenessScore: assignmentResults.completenessScore,
+        detailedResults: assignmentResults.detailedResults,
+        practiceDate: assignmentResults.practiceDate,
+        itemContent: assignmentItems.content,
+        syllabication: assignmentItems.syllabication,
+        itemPracticed: assignmentItems.content // For backward compatibility with existing reports
+      })
+      .from(assignmentResults)
+      .leftJoin(assignmentItems, eq(assignmentResults.itemId, assignmentItems.id))
+      .where(eq(assignmentResults.assignmentId, assignmentId))
+      .orderBy(assignmentResults.itemId, assignmentResults.practiceDate);
+
+    // Process results to extract detailed data from jsonb field
+    return results.map(result => ({
+      ...result,
+      // Extract detailed practice data from jsonb field
+      practiceType: result.detailedResults?.practiceType || 'word',
+      word: result.detailedResults?.word || result.itemContent,
+      phrase: result.detailedResults?.phrase,
+      phraseIndex: result.detailedResults?.phraseIndex,
+      attemptNumber: result.detailedResults?.attemptNumber || 1,
+      animationPlays: result.detailedResults?.animationPlays,
+      assignmentType: result.detailedResults?.assignmentType || 'watch-then-practice'
+    }));
+  }
+
   // Health check for deployment readiness
   async healthCheck(): Promise<void> {
     try {
