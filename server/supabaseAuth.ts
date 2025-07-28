@@ -13,7 +13,7 @@ if (!SUPABASE_URL || (!SUPABASE_SERVICE_ROLE_KEY && !SUPABASE_ANON_KEY)) {
 // Use anon key for user token validation, service role key for admin operations
 const supabase = createClient(
   SUPABASE_URL, 
-  SUPABASE_ANON_KEY || SUPABASE_SERVICE_ROLE_KEY,
+  SUPABASE_ANON_KEY || SUPABASE_SERVICE_ROLE_KEY || '',
   {
     auth: {
       autoRefreshToken: false,
@@ -22,7 +22,7 @@ const supabase = createClient(
   }
 );
 
-export async function getUser(req) {
+export async function getUser(req: any) {
   if (!req.headers.authorization) {
     return null;
   }
@@ -44,7 +44,7 @@ export async function getUser(req) {
   }
 }
 
-export async function protect(req, res, next) {
+export async function protect(req: any, res: any, next: any) {
   try {
     if (!req.headers.authorization) {
       return res.status(401).json({ error: 'Missing authorization header' });

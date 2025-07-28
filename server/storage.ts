@@ -169,6 +169,10 @@ export interface IStorage {
   // Assignment result operations
     getAssignmentResults(assignmentId: number): Promise<AssignmentResult[]>;
     createAssignmentResult(result: InsertAssignmentResult): Promise<AssignmentResult>;
+    saveAssignmentResult(resultData: any): Promise<AssignmentResult>;
+    markAssignmentCompleted(assignmentId: number, userId: string): Promise<void>;
+    getComprehensiveAssignmentResults(assignmentId: number): Promise<any>;
+    transferEmailAssignments(oldEmail: string, newUserId: string): Promise<void>;
     getAssignmentProgress(assignmentId: number): Promise<{
       totalItems: number;
       completedItems: number;
@@ -186,6 +190,11 @@ export interface IStorage {
     // User saved readings operations
     getUserSavedReadings(userId: string): Promise<UserSavedPhrase[]>;
     createUserSavedReading(content: InsertUserSavedPhrase): Promise<UserSavedPhrase>;
+    
+    // Practice group phrase operations
+    getPracticeGroupPhrases(groupId: number): Promise<PracticeGroupPhrase[]>;
+    addPhraseToPracticeGroup(groupPhrase: InsertPracticeGroupPhrase): Promise<PracticeGroupPhrase>;
+    removePhrasesFromPracticeGroup(groupId: number, phraseIds: number[]): Promise<void>;
     
     // Therapist-client relationship operations
     getTherapistClients(therapistId: string): Promise<(TherapistClient & { client: User })[]>;
@@ -279,7 +288,7 @@ export class DatabaseStorage implements IStorage {
     const existingUserByEmail = await db
       .select()
       .from(users)
-      .where(eq(users.email, userData.email))
+      .where(eq(users.email, userData.email!))
       .limit(1);
 
     if (existingUserByEmail.length > 0) {
@@ -702,6 +711,27 @@ export class DatabaseStorage implements IStorage {
     await db.delete(userSavedPhrases).where(eq(userSavedPhrases.id, id));
   }
 
+  async createUserSavedReading(content: InsertUserSavedPhrase): Promise<UserSavedPhrase> {
+    return await db.insert(userSavedPhrases).values(content).returning().then(rows => rows[0]);
+  }
+
+  async getPracticeGroupPhrases(groupId: number): Promise<PracticeGroupPhrase[]> {
+    return await db.select().from(practiceGroupPhrases).where(eq(practiceGroupPhrases.groupId, groupId));
+  }
+
+  async addPhraseToPracticeGroup(groupPhrase: InsertPracticeGroupPhrase): Promise<PracticeGroupPhrase> {
+    return await db.insert(practiceGroupPhrases).values(groupPhrase).returning().then(rows => rows[0]);
+  }
+
+  async removePhrasesFromPracticeGroup(groupId: number, phraseIds: number[]): Promise<void> {
+    await db.delete(practiceGroupPhrases).where(
+      and(
+        eq(practiceGroupPhrases.groupId, groupId),
+        inArray(practiceGroupPhrases.phraseId, phraseIds)
+      )
+    );
+  }
+
   // Practice group operations
   async getPracticeGroups(userId: string): Promise<PracticeGroup[]> {
     return await db
@@ -1115,7 +1145,7 @@ export class DatabaseStorage implements IStorage {
     
     // Now filter for active only and exclude synthetic users (those with .synthetic email suffix)
     const activeRelationships = allRelationships.filter(r => 
-      r.isActive && !r.client.email.endsWith('.synthetic')
+      r.isActive && r.client.email && !r.client.email.endsWith('.synthetic')
     );
     
     console.log(`🔍 ACTIVE relationships for therapist ${therapistId}:`, activeRelationships.map(r => ({
@@ -1326,8 +1356,8 @@ export class DatabaseStorage implements IStorage {
         accuracyScore: resultData.accuracyScore,
         fluencyScore: resultData.fluencyScore,
         completenessScore: resultData.completenessScore,
-        detailedResults: detailedResults,
-        practiceDate: resultData.practiceDate
+        detailedResults: detailedResults as any,
+        practiceDate: new Date(resultData.practiceDate)
       })
       .returning();
     
@@ -1339,8 +1369,8 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(assignments)
       .set({ 
-        status: 'completed',
-        completedAt: new Date().toISOString()
+        isCompleted: true,
+        completedAt: new Date()
       })
       .where(and(
         eq(assignments.id, assignmentId),
@@ -1370,17 +1400,21 @@ export class DatabaseStorage implements IStorage {
       .orderBy(assignmentResults.itemId, assignmentResults.practiceDate);
 
     // Process results to extract detailed data from jsonb field
-    return results.map(result => ({
-      ...result,
-      // Extract detailed practice data from jsonb field
-      practiceType: result.detailedResults?.practiceType || 'word',
-      word: result.detailedResults?.word || result.itemContent,
-      phrase: result.detailedResults?.phrase,
-      phraseIndex: result.detailedResults?.phraseIndex,
-      attemptNumber: result.detailedResults?.attemptNumber || 1,
-      animationPlays: result.detailedResults?.animationPlays,
-      assignmentType: result.detailedResults?.assignmentType || 'watch-then-practice'
-    }));
+    return results.map(result => {
+      const detailedData = result.detailedResults as any;
+      
+      return {
+        ...result,
+        // Extract detailed practice data from jsonb field
+        practiceType: detailedData?.practiceType || 'word',
+        word: detailedData?.word || result.itemContent,
+        phrase: detailedData?.phrase,
+        phraseIndex: detailedData?.phraseIndex,
+        attemptNumber: detailedData?.attemptNumber || 1,
+        animationPlays: detailedData?.animationPlays,
+        assignmentType: detailedData?.assignmentType || 'watch-then-practice'
+      };
+    });
   }
 
   // Health check for deployment readiness

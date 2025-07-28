@@ -164,7 +164,7 @@ router.post('/', protect, catchAsync(async (req: any, res) => {
   }
   
     return success(res, assignment, 201);
-  } catch (validationError) {
+  } catch (validationError: any) {
     console.error('Assignment validation error:', validationError);
     if (validationError.name === 'ZodError') {
       return res.status(400).json({
@@ -364,6 +364,37 @@ router.post('/:id/results', protect, catchAsync(async (req: any, res) => {
 // Get comprehensive assignment results for detailed reporting
 router.get('/:id/comprehensive-results', protect, catchAsync(async (req: any, res) => {
   const assignmentId = parseInt(req.params.id);
+  const userId = req.user.claims.sub;
+  const user = await storage.getUser(userId);
+  
+  const assignment = await storage.getAssignment(assignmentId);
+  if (!assignment) {
+    return error(res, "Assignment not found", 404);
+  }
+  
+  // Check access permissions
+  let hasAccess = false;
+  
+  // If user is the assigned client or matches the email
+  if (assignment.userId === userId || (assignment.clientEmail && user?.email === assignment.clientEmail)) {
+    hasAccess = true;
+  }
+  
+  if (user?.role === 'therapist') {
+    if (assignment.therapistId === userId) {
+      hasAccess = true;
+    } else if (assignment.userId) {
+      // Check if therapist has a relationship with the client
+      const relationship = await storage.getTherapistClient(userId, assignment.userId);
+      if (relationship && relationship.isActive) {
+        hasAccess = true;
+      }
+    }
+  }
+  
+  if (!hasAccess) {
+    return error(res, "Access denied", 403);
+  }
   
   try {
     const results = await storage.getComprehensiveAssignmentResults(assignmentId);
@@ -437,8 +468,8 @@ router.get('/:id/comprehensive-results', protect, catchAsync(async (req: any, re
       results: Object.values(groupedResults)
     });
     
-  } catch (error) {
-    console.error('❌ Error fetching comprehensive assignment results:', error);
+  } catch (err) {
+    console.error('❌ Error fetching comprehensive assignment results:', err);
     return error(res, 'Failed to fetch assignment results', 500);
   }
 }));
@@ -469,8 +500,8 @@ router.get('/:id/insights', protect, catchAsync(async (req: any, res) => {
     console.log(`🧠 Generated insights for assignment ${assignmentId}`);
     return success(res, { insights });
 
-  } catch (error) {
-    console.error(`❌ Error generating insights for assignment ${assignmentId}:`, error);
+  } catch (err) {
+    console.error(`❌ Error generating insights for assignment ${assignmentId}:`, err);
     return error(res, 'Failed to generate pronunciation insights', 500);
   }
 }));
