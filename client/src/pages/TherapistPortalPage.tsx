@@ -552,9 +552,10 @@ export default function TherapistPortal() {
   const [soundPosition, setSoundPosition] = useState("starts-with");
   const [selectedSound, setSelectedSound] = useState("");
   const [isGeneratingSoundWords, setIsGeneratingSoundWords] = useState(false);
-  const [wordPairs, setWordPairs] = useState<Array<{ word1: string; word2: string }>>([]);
-  const [selectedWordPairs, setSelectedWordPairs] = useState<Array<{ word1: string; word2: string }>>([]);
+  const [wordPairs, setWordPairs] = useState<Array<{ word1: string; word2: string; connection: string }>>([]);
+  const [selectedWordPairs, setSelectedWordPairs] = useState<Array<{ word1: string; word2: string; connection: string }>>([]);
   const [isGeneratingWordPairs, setIsGeneratingWordPairs] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   // Data queries
   const { data: clientsData = { clients: [] } } = useQuery({ queryKey: ['/api/therapist/clients'] }) as { data: { clients: any[] } };
@@ -977,23 +978,30 @@ export default function TherapistPortal() {
     }
   };
 
-  const handleGenerateWordPairs = () => {
+  const handleGenerateWordPairs = async () => {
     if (selectedSound && soundPosition) {
       setIsGeneratingWordPairs(true);
       
-      fetch('/api/content/generate-word-pairs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders()
-        },
-        body: JSON.stringify({
-          soundPattern: selectedSound,
-          position: soundPosition
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
+      try {
+        const authHeaders = await getAuthHeaders();
+        const response = await fetch('/api/content/generate-word-pairs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders
+          },
+          body: JSON.stringify({
+            soundPattern: selectedSound,
+            position: soundPosition,
+            difficulty: selectedDifficulty
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to generate word pairs');
+        }
+
+        const data = await response.json();
         if (data.success) {
           setWordPairs(data.data.pairs);
           setAssignmentTitle(`Word Pairs - ${selectedSound.toUpperCase()}`);
@@ -1005,18 +1013,16 @@ export default function TherapistPortal() {
             variant: "destructive" 
           });
         }
-      })
-      .catch(error => {
+      } catch (error) {
         console.error('Error generating word pairs:', error);
         toast({ 
           title: "Error generating word pairs", 
           description: "Failed to generate word pairs. Please try again.", 
           variant: "destructive" 
         });
-      })
-      .finally(() => {
+      } finally {
         setIsGeneratingWordPairs(false);
-      });
+      }
     }
   };
 
@@ -1267,10 +1273,10 @@ export default function TherapistPortal() {
     e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'word-pair', data: pair }));
   };
 
-  const addWordPairToAssignment = (pair: { word1: string; word2: string }) => {
+  const addWordPairToAssignment = (pair: { word1: string; word2: string; connection?: string }) => {
     setSelectedWordPairs(prev => {
       if (!prev.find(p => p.word1 === pair.word1 && p.word2 === pair.word2)) {
-        return [...prev, pair];
+        return [...prev, { word1: pair.word1, word2: pair.word2, connection: pair.connection || '' }];
       }
       return prev;
     });
@@ -1282,20 +1288,36 @@ export default function TherapistPortal() {
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    setIsDragOver(false);
     const dragData = e.dataTransfer.getData('text/plain');
     try {
       const parsedData = JSON.parse(dragData);
       if (parsedData.type === 'word-pair') {
         addWordPairToAssignment(parsedData.data);
+        toast({
+          title: "Word pair added!",
+          description: `${parsedData.data.word1} + ${parsedData.data.word2} added to assignment`,
+        });
       } else {
         addWordToAssignment(parsedData);
       }
     } catch (error) {
       console.error('Error parsing dropped item:', error);
+      toast({
+        title: "Drop failed",
+        description: "Could not add the item to assignment. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -2240,7 +2262,7 @@ export default function TherapistPortal() {
                                     key={index}
                                     draggable
                                     onDragStart={(e) => handleDragStartPair(e, pair)}
-                                    className="flex items-center justify-between p-2 bg-white rounded border cursor-move hover:shadow-md transition-shadow"
+                                    className="flex items-center justify-between p-2 bg-white rounded border cursor-move hover:shadow-lg hover:border-purple-400 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
                                   >
                                     <div className="flex-1">
                                       <div className="flex items-center gap-2 font-medium">
@@ -2248,12 +2270,15 @@ export default function TherapistPortal() {
                                         <span className="text-gray-400">+</span>
                                         <span className="text-purple-700">{pair.word2}</span>
                                       </div>
+                                      {pair.connection && (
+                                        <div className="text-xs text-gray-500 mt-1">{pair.connection}</div>
+                                      )}
                                     </div>
                                     <Button
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => addWordPairToAssignment(pair)}
-                                      className="h-6 w-6 p-0"
+                                      className="h-6 w-6 p-0 hover:bg-purple-100"
                                     >
                                       <Plus className="h-3 w-3" />
                                     </Button>
@@ -2317,12 +2342,17 @@ export default function TherapistPortal() {
                             </Button>
                           </div>
                           <div
-                            className={`min-h-60 max-h-60 overflow-y-auto border-2 border-dashed rounded-lg p-3 ${
-                              contentGenerationMode === "word-pairs" 
-                                ? "border-purple-300 bg-purple-50" 
-                                : "border-green-300 bg-green-50"
+                            className={`min-h-60 max-h-60 overflow-y-auto border-2 border-dashed rounded-lg p-3 transition-all duration-200 ${
+                              isDragOver 
+                                ? (contentGenerationMode === "word-pairs" 
+                                  ? "border-purple-500 bg-purple-100 shadow-lg" 
+                                  : "border-green-500 bg-green-100 shadow-lg")
+                                : (contentGenerationMode === "word-pairs" 
+                                  ? "border-purple-300 bg-purple-50" 
+                                  : "border-green-300 bg-green-50")
                             }`}
                             onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
                             onDrop={handleDrop}
                           >
                             {(contentGenerationMode === "word-pairs" ? selectedWordPairs.length === 0 : generatedWords.length === 0) ? (
@@ -2343,8 +2373,6 @@ export default function TherapistPortal() {
                                     <div 
                                       key={index} 
                                       className="flex items-center justify-between p-2 bg-white rounded border"
-                                      onDragOver={handleDragOver}
-                                      onDrop={handleDrop}
                                     >
                                       <div className="flex-1">
                                         <div className="flex items-center gap-2 font-medium">
@@ -2352,12 +2380,15 @@ export default function TherapistPortal() {
                                           <span className="text-gray-400">+</span>
                                           <span className="text-purple-700">{pair.word2}</span>
                                         </div>
+                                        {pair.connection && (
+                                          <div className="text-xs text-gray-500 mt-1">{pair.connection}</div>
+                                        )}
                                       </div>
                                       <Button
                                         size="sm"
                                         variant="ghost"
                                         onClick={() => removeWordPairFromAssignment(index)}
-                                        className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                        className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
                                       >
                                         <X className="h-3 w-3" />
                                       </Button>
@@ -2368,8 +2399,6 @@ export default function TherapistPortal() {
                                     <div 
                                       key={index} 
                                       className="flex items-center justify-between p-2 bg-white rounded border"
-                                      onDragOver={handleDragOver}
-                                      onDrop={handleDrop}
                                     >
                                       <span className="font-medium">{word.text}</span>
                                       <div className="flex items-center gap-2">
