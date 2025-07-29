@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import memoize from 'memoizee';
-import { generateReadingContent, generateTopicPhrases, generateSampleContent, generateWordsWithSound, generateWordPhrases } from '../openai';
+import { generateReadingContent, generateTopicPhrases, generateSampleContent, generateWordsWithSound, generateWordPhrases, generateWordPairs } from '../openai';
 import { protect } from '../supabaseAuth';
 import { success, error } from '../utils/response';
 import { catchAsync } from '../utils/errorHandlers';
@@ -76,18 +76,19 @@ router.post('/generate-legacy', catchAsync(async (req, res) => {
 
 // Topic phrases/words generation endpoint (no auth required for content generation)
 router.post('/generate-topic-phrases', catchAsync(async (req, res) => {
-  const { topic, difficulty, type } = req.body;
+  const { topic, difficulty, type, count } = req.body;
   
   if (!topic) {
     return error(res, 'Topic is required', 400);
   }
 
-  console.log(`Generating ${type || 'phrases'} for topic: "${topic}" with difficulty: ${difficulty || 'easy'}`);
+  console.log(`Generating ${count || 8} ${type || 'phrases'} for topic: "${topic}" with difficulty: ${difficulty || 'easy'}`);
 
-  const phrases = await memoizedGenerateTopicPhrases(
+  const phrases = await generateTopicPhrases(
     topic, 
     difficulty || '4', 
-    type || 'phrases'
+    type || 'phrases',
+    count || 8  // Allow custom count, default to 8
   );
   
   console.log(`Generated ${phrases.length} items:`, phrases);
@@ -138,6 +139,30 @@ router.post('/generate-words-with-sound', catchAsync(async (req, res) => {
 
   const words = await memoizedGenerateWordsWithSound(targetSound, count || 8, difficulty || '4');
   return success(res, { phrases: words.phrases || words });
+}));
+
+// Generate word pairs for Word Pairs assignment type
+router.post('/generate-word-pairs', catchAsync(async (req, res) => {
+  const { soundPattern, position } = req.body;
+
+  if (!soundPattern || !position) {
+    return error(res, 'soundPattern and position are required', 400);
+  }
+
+  if (!['starts-with', 'contains', 'ends-with'].includes(position)) {
+    return error(res, 'position must be one of: starts-with, contains, ends-with', 400);
+  }
+
+  console.log(`Generating word pairs for sound: "${soundPattern}", position: ${position}`);
+
+  try {
+    const pairs = await generateWordPairs(soundPattern, position);
+    console.log(`Generated ${pairs.length} word pairs:`, pairs);
+    return success(res, { pairs });
+  } catch (err) {
+    console.error('Error generating word pairs:', err);
+    return error(res, 'Failed to generate word pairs', 500);
+  }
 }));
 
 export default router;

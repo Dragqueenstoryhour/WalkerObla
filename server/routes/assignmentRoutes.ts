@@ -194,7 +194,7 @@ router.patch('/items/:id', protect, catchAsync(async (req: any, res) => {
   return success(res, updatedItem);
 }));
 
-// Comprehensive assignment completion endpoint for Watch Then Practice assignments
+// Comprehensive assignment completion endpoint for Watch Then Practice and Word Pairs assignments
 router.post('/:id/complete', protect, catchAsync(async (req: any, res) => {
   const assignmentId = parseInt(req.params.id);
   const userId = req.user.claims.sub;
@@ -213,54 +213,98 @@ router.post('/:id/complete', protect, catchAsync(async (req: any, res) => {
   try {
     const savedResults = [];
 
-    for (const wordResult of results) {
-      const { itemId, word, animationPlays, wordPractice, phrasePractice } = wordResult;
+    if (assignmentType === 'word-pairs') {
+      // Handle word pairs assignment results
+      for (const pairResult of results) {
+        const { itemId, word1, word2, connection, sentences } = pairResult;
 
-      if (!itemId) {
-        console.warn(`⚠️ Skipping word "${word}" - no valid itemId`);
-        continue;
-      }
+        if (!itemId) {
+          console.warn(`⚠️ Skipping word pair "${word1}-${word2}" - no valid itemId`);
+          continue;
+        }
 
-      console.log(`💾 Saving results for word: "${word}" (itemId: ${itemId})`);
+        console.log(`💾 Saving results for word pair: "${word1}+${word2}" (itemId: ${itemId})`);
 
-      // Save word practice attempts
-      for (const attempt of wordPractice || []) {
-        const wordResult = await storage.saveAssignmentResult({
-          assignmentId,
-          itemId,
-          userId,
-          practiceType: 'word',
-          word: word,
-          attemptNumber: attempt.attemptNumber,
-          pronunciationScore: attempt.pronunciationScore,
-          accuracyScore: attempt.accuracyScore,
-          fluencyScore: attempt.fluencyScore,
-          completenessScore: attempt.completenessScore,
-          animationPlays: animationPlays,
-          practiceDate: new Date().toISOString()
-        });
-        savedResults.push(wordResult);
-      }
-
-      // Save phrase practice attempts
-      for (const phraseResult of phrasePractice || []) {
-        for (const attempt of phraseResult.attempts || []) {
-          const phraseResultSaved = await storage.saveAssignmentResult({
+        // Save each sentence attempt
+        for (const sentence of sentences || []) {
+          const pairResultSaved = await storage.saveAssignmentResult({
             assignmentId,
             itemId,
             userId,
-            practiceType: 'phrase',
+            practiceType: 'word-pair',
+            word: `${word1}+${word2}`,
+            phrase: sentence.transcription,
+            attemptNumber: sentence.attemptNumber,
+            pronunciationScore: Math.round((sentence.word1Score + sentence.word2Score) / 2), // Average of both words
+            accuracyScore: sentence.word1Detected && sentence.word2Detected ? 100 : 0,
+            fluencyScore: Math.round((sentence.word1Score + sentence.word2Score) / 2),
+            completenessScore: sentence.word1Detected && sentence.word2Detected ? 100 : 0,
+            practiceDate: new Date().toISOString(),
+            metadata: {
+              word1: word1,
+              word2: word2,
+              word1Score: sentence.word1Score,
+              word2Score: sentence.word2Score,
+              word1Detected: sentence.word1Detected,
+              word2Detected: sentence.word2Detected,
+              transcription: sentence.transcription,
+              connection: connection
+            }
+          });
+          savedResults.push(pairResultSaved);
+        }
+      }
+    } else {
+      // Handle watch-practice and other assignment results (existing logic)
+      for (const wordResult of results) {
+        const { itemId, word, animationPlays, wordPractice, phrasePractice } = wordResult;
+
+        if (!itemId) {
+          console.warn(`⚠️ Skipping word "${word}" - no valid itemId`);
+          continue;
+        }
+
+        console.log(`💾 Saving results for word: "${word}" (itemId: ${itemId})`);
+
+        // Save word practice attempts
+        for (const attempt of wordPractice || []) {
+          const wordResult = await storage.saveAssignmentResult({
+            assignmentId,
+            itemId,
+            userId,
+            practiceType: 'word',
             word: word,
-            phrase: phraseResult.phrase,
-            phraseIndex: phraseResult.phraseIndex,
             attemptNumber: attempt.attemptNumber,
             pronunciationScore: attempt.pronunciationScore,
             accuracyScore: attempt.accuracyScore,
             fluencyScore: attempt.fluencyScore,
             completenessScore: attempt.completenessScore,
+            animationPlays: animationPlays,
             practiceDate: new Date().toISOString()
           });
-          savedResults.push(phraseResultSaved);
+          savedResults.push(wordResult);
+        }
+
+        // Save phrase practice attempts
+        for (const phraseResult of phrasePractice || []) {
+          for (const attempt of phraseResult.attempts || []) {
+            const phraseResultSaved = await storage.saveAssignmentResult({
+              assignmentId,
+              itemId,
+              userId,
+              practiceType: 'phrase',
+              word: word,
+              phrase: phraseResult.phrase,
+              phraseIndex: phraseResult.phraseIndex,
+              attemptNumber: attempt.attemptNumber,
+              pronunciationScore: attempt.pronunciationScore,
+              accuracyScore: attempt.accuracyScore,
+              fluencyScore: attempt.fluencyScore,
+              completenessScore: attempt.completenessScore,
+              practiceDate: new Date().toISOString()
+            });
+            savedResults.push(phraseResultSaved);
+          }
         }
       }
     }
@@ -269,7 +313,7 @@ router.post('/:id/complete', protect, catchAsync(async (req: any, res) => {
     await storage.markAssignmentCompleted(assignmentId, userId);
 
     // Calculate overall score for immediate feedback
-    const overallScore = calculateOverallScore(results);
+    const overallScore = calculateOverallScore(results, assignmentType);
 
     console.log(`✅ Assignment ${assignmentId} completed successfully. Saved ${savedResults.length} results. Overall score: ${overallScore}%`);
 
@@ -287,22 +331,35 @@ router.post('/:id/complete', protect, catchAsync(async (req: any, res) => {
 }));
 
 // Helper function to calculate overall score
-function calculateOverallScore(results: any[]): number {
+function calculateOverallScore(results: any[], assignmentType: string): number {
   let totalScore = 0;
   let totalAttempts = 0;
 
-  for (const wordResult of results) {
-    // Count word practice attempts
-    for (const attempt of wordResult.wordPractice || []) {
-      totalScore += attempt.pronunciationScore || 0;
-      totalAttempts++;
+  if (assignmentType === 'word-pairs') {
+    // Handle word pairs scoring
+    for (const pairResult of results) {
+      for (const sentence of pairResult.sentences || []) {
+        // Average the two word scores for each sentence
+        const avgScore = (sentence.word1Score + sentence.word2Score) / 2;
+        totalScore += avgScore;
+        totalAttempts++;
+      }
     }
-    
-    // Count phrase practice attempts
-    for (const phraseResult of wordResult.phrasePractice || []) {
-      for (const attempt of phraseResult.attempts || []) {
+  } else {
+    // Handle watch-practice and other assignment types (existing logic)
+    for (const wordResult of results) {
+      // Count word practice attempts
+      for (const attempt of wordResult.wordPractice || []) {
         totalScore += attempt.pronunciationScore || 0;
         totalAttempts++;
+      }
+      
+      // Count phrase practice attempts
+      for (const phraseResult of wordResult.phrasePractice || []) {
+        for (const attempt of phraseResult.attempts || []) {
+          totalScore += attempt.pronunciationScore || 0;
+          totalAttempts++;
+        }
       }
     }
   }

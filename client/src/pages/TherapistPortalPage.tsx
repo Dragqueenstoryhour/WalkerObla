@@ -54,13 +54,14 @@ interface AssignmentTemplate {
 }
 
 const DIFFICULTY_LEVELS = [
-  { value: "1", label: "Level 1 - Beginner" },
+  { value: "1", label: "Level 1 - Very Easy" },
   { value: "2", label: "Level 2 - Easy" },
-  { value: "3", label: "Level 3 - Easy-Medium" },
-  { value: "4", label: "Level 4 - Medium" },
-  { value: "5", label: "Level 5 - Medium-Hard" },
-  { value: "6", label: "Level 6 - Hard" },
-  { value: "7", label: "Level 7 - Expert" }
+  { value: "3", label: "Level 3 - Basic" },
+  { value: "4", label: "Level 4 - Intermediate" },
+  { value: "5", label: "Level 5 - Upper Intermediate" },
+  { value: "6", label: "Level 6 - Advanced" },
+  { value: "7", label: "Level 7 - Very Advanced" },
+  { value: "8", label: "Level 8 - Expert" }
 ];
 
 // Pre-generated assignment templates
@@ -271,44 +272,172 @@ const PREDEFINED_TEMPLATES: AssignmentTemplate[] = [
   },
   {
     id: "template-13",
-    title: "Watch then Practice: R Sound",
-    description: "Watch pronunciation animations then practice R sound words individually and in phrases",
+    title: "Action Words",
+    description: "Dynamic verbs and action-related vocabulary for clear pronunciation",
     words: [
-      { text: "red", syllabication: "red" },
-      { text: "run", syllabication: "run" },
-      { text: "rabbit", syllabication: "rab-bit" }
+      { text: "running", syllabication: "run-ning" },
+      { text: "jumping", syllabication: "jump-ing" },
+      { text: "climbing", syllabication: "climb-ing" },
+      { text: "swimming", syllabication: "swim-ming" },
+      { text: "dancing", syllabication: "danc-ing" },
+      { text: "writing", syllabication: "writ-ing" },
+      { text: "reading", syllabication: "read-ing" },
+      { text: "cooking", syllabication: "cook-ing" }
     ],
-    category: "Watch then Practice",
-    targetSound: "r",
-    assignmentType: "watch-practice",
+    category: "Action Words",
     createdAt: new Date().toISOString()
   },
   {
     id: "template-14", 
-    title: "Watch then Practice: S Sound",
-    description: "Watch pronunciation animations then practice S sound words individually and in phrases",
+    title: "Colors & Descriptions",
+    description: "Descriptive words including colors and visual characteristics",
     words: [
-      { text: "sun", syllabication: "sun" },
-      { text: "sit", syllabication: "sit" },
-      { text: "seven", syllabication: "sev-en" }
+      { text: "purple", syllabication: "pur-ple" },
+      { text: "orange", syllabication: "or-ange" },
+      { text: "beautiful", syllabication: "beau-ti-ful" },
+      { text: "sparkling", syllabication: "spark-ling" },
+      { text: "brilliant", syllabication: "bril-liant" },
+      { text: "transparent", syllabication: "trans-par-ent" },
+      { text: "colorful", syllabication: "col-or-ful" },
+      { text: "magnificent", syllabication: "mag-nif-i-cent" }
     ],
-    category: "Watch then Practice",
-    targetSound: "s",
-    assignmentType: "watch-practice",
+    category: "Colors & Descriptions",
     createdAt: new Date().toISOString()
   },
   {
     id: "template-15",
-    title: "Watch then Practice: L Sound", 
-    description: "Watch pronunciation animations then practice L sound words individually and in phrases",
+    title: "Animals & Nature", 
+    description: "Wildlife and natural world vocabulary practice",
     words: [
-      { text: "look", syllabication: "look" },
-      { text: "love", syllabication: "love" },
-      { text: "little", syllabication: "lit-tle" }
+      { text: "elephant", syllabication: "el-e-phant" },
+      { text: "butterfly", syllabication: "but-ter-fly" },
+      { text: "mountain", syllabication: "moun-tain" },
+      { text: "forest", syllabication: "for-est" },
+      { text: "ocean", syllabication: "o-cean" },
+      { text: "environment", syllabication: "en-vi-ron-ment" },
+      { text: "wilderness", syllabication: "wil-der-ness" },
+      { text: "creature", syllabication: "crea-ture" }
     ],
-    category: "Watch then Practice",
-    targetSound: "l",
-    assignmentType: "watch-practice",
+    category: "Animals & Nature",
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "template-16",
+    title: "Numbers & Mathematics",
+    description: "Numerical terms and mathematical vocabulary",
+    words: [
+      { text: "seventeen", syllabication: "sev-en-teen" },
+      { text: "thirty", syllabication: "thir-ty" },
+      { text: "hundred", syllabication: "hun-dred" },
+      { text: "thousand", syllabication: "thou-sand" },
+      { text: "multiplication", syllabication: "mul-ti-pli-ca-tion" },
+      { text: "division", syllabication: "di-vi-sion" },
+      { text: "calculation", syllabication: "cal-cu-la-tion" },
+      { text: "percentage", syllabication: "per-cent-age" }
+    ],
+    category: "Numbers & Mathematics",
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "template-17",
+    title: "Occupations & Careers",
+    description: "Professional roles and career-related vocabulary",
+    words: [
+      { text: "teacher", syllabication: "teach-er" },
+      { text: "engineer", syllabication: "en-gi-neer" },
+      { text: "firefighter", syllabication: "fire-fight-er" },
+      { text: "veterinarian", syllabication: "vet-er-i-nar-i-an" },
+      { text: "architect", syllabication: "ar-chi-tect" },
+      { text: "photographer", syllabication: "pho-tog-ra-pher" },
+      { text: "scientist", syllabication: "sci-en-tist" },
+      { text: "electrician", syllabication: "e-lec-tri-cian" }
+    ],
+    category: "Occupations & Careers",
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "template-18",
+    title: "Time & Calendar",
+    description: "Time-related words, days, months, and scheduling vocabulary",
+    words: [
+      { text: "yesterday", syllabication: "yes-ter-day" },
+      { text: "tomorrow", syllabication: "to-mor-row" },
+      { text: "September", syllabication: "Sep-tem-ber" },
+      { text: "February", syllabication: "Feb-ru-ar-y" },
+      { text: "appointment", syllabication: "ap-point-ment" },
+      { text: "schedule", syllabication: "sched-ule" },
+      { text: "calendar", syllabication: "cal-en-dar" },
+      { text: "anniversary", syllabication: "an-ni-ver-sa-ry" }
+    ],
+    category: "Time & Calendar",
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "template-19",
+    title: "Body Parts & Health",
+    description: "Anatomical terms and health-related vocabulary",
+    words: [
+      { text: "shoulder", syllabication: "shoul-der" },
+      { text: "forehead", syllabication: "fore-head" },
+      { text: "stomach", syllabication: "stom-ach" },
+      { text: "muscle", syllabication: "mus-cle" },
+      { text: "skeleton", syllabication: "skel-e-ton" },
+      { text: "respiratory", syllabication: "res-pi-ra-to-ry" },
+      { text: "circulation", syllabication: "cir-cu-la-tion" },
+      { text: "temperature", syllabication: "tem-per-a-ture" }
+    ],
+    category: "Body Parts & Health",
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "template-20",
+    title: "School & Education",
+    description: "Academic vocabulary and educational terms",
+    words: [
+      { text: "classroom", syllabication: "class-room" },
+      { text: "library", syllabication: "li-brar-y" },
+      { text: "education", syllabication: "ed-u-ca-tion" },
+      { text: "graduation", syllabication: "grad-u-a-tion" },
+      { text: "university", syllabication: "u-ni-ver-si-ty" },
+      { text: "laboratory", syllabication: "lab-o-ra-to-ry" },
+      { text: "assignment", syllabication: "as-sign-ment" },
+      { text: "vocabulary", syllabication: "vo-cab-u-lar-y" }
+    ],
+    category: "School & Education",
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "template-21",
+    title: "Clothing & Fashion",
+    description: "Apparel and fashion-related vocabulary practice",
+    words: [
+      { text: "sweater", syllabication: "sweat-er" },
+      { text: "umbrella", syllabication: "um-brel-la" },
+      { text: "comfortable", syllabication: "com-fort-a-ble" },
+      { text: "accessories", syllabication: "ac-ces-so-ries" },
+      { text: "wardrobe", syllabication: "ward-robe" },
+      { text: "fashionable", syllabication: "fash-ion-a-ble" },
+      { text: "zipper", syllabication: "zip-per" },
+      { text: "elegant", syllabication: "el-e-gant" }
+    ],
+    category: "Clothing & Fashion",
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "template-22",
+    title: "Music & Arts",
+    description: "Creative and artistic vocabulary for music and visual arts",
+    words: [
+      { text: "instrument", syllabication: "in-stru-ment" },
+      { text: "orchestra", syllabication: "or-ches-tra" },
+      { text: "painting", syllabication: "paint-ing" },
+      { text: "sculpture", syllabication: "sculp-ture" },
+      { text: "creative", syllabication: "cre-a-tive" },
+      { text: "performance", syllabication: "per-for-mance" },
+      { text: "gallery", syllabication: "gal-ler-y" },
+      { text: "exhibition", syllabication: "ex-hi-bi-tion" }
+    ],
+    category: "Music & Arts",
     createdAt: new Date().toISOString()
   }
 ];
@@ -423,6 +552,9 @@ export default function TherapistPortal() {
   const [soundPosition, setSoundPosition] = useState("starts-with");
   const [selectedSound, setSelectedSound] = useState("");
   const [isGeneratingSoundWords, setIsGeneratingSoundWords] = useState(false);
+  const [wordPairs, setWordPairs] = useState<Array<{ word1: string; word2: string }>>([]);
+  const [selectedWordPairs, setSelectedWordPairs] = useState<Array<{ word1: string; word2: string }>>([]);
+  const [isGeneratingWordPairs, setIsGeneratingWordPairs] = useState(false);
 
   // Data queries
   const { data: clientsData = { clients: [] } } = useQuery({ queryKey: ['/api/therapist/clients'] }) as { data: { clients: any[] } };
@@ -664,6 +796,55 @@ export default function TherapistPortal() {
     }
   });
 
+  const generateTopicWordsMutation = useMutation({
+    mutationFn: async ({ topic, difficulty, count }: { topic: string; difficulty: string; count: number }) => {
+      const response = await apiRequest('/api/content/generate-topic-phrases', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          topic, 
+          difficulty, 
+          type: "words",
+          count: count || 20
+        })
+      });
+      
+      // Handle both response formats
+      const words = response.data?.phrases || response.phrases || response.words || response;
+      
+      // Convert to the expected format with syllabication
+      const formattedWords = words.map((word: any) => {
+        if (typeof word === 'string') {
+          return { text: word, syllabication: word };
+        }
+        return { text: word.text || word, syllabication: word.syllabication || word.text || word };
+      });
+      
+      return formattedWords;
+    },
+    onSuccess: (words) => {
+      setWordSuggestions(words);
+      
+      // Auto-populate assignment title and description when generating custom topic words
+      if (!assignmentTitle.trim()) {
+        setAssignmentTitle(`${customTopic.charAt(0).toUpperCase() + customTopic.slice(1)} Practice`);
+      }
+      if (!assignmentDescription.trim()) {
+        setAssignmentDescription(`Practice pronunciation with words related to ${customTopic.toLowerCase()}. Drag words from the suggestions to build your custom assignment.`);
+      }
+      
+      toast({
+        title: "Words Generated!",
+        description: `Generated ${words.length} words for "${customTopic}". Drag them to create your assignment.`,
+      });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error generating topic words", description: error.message, variant: "destructive" });
+    }
+  });
+
   const saveTemplateMutation = useMutation({
     mutationFn: async (template: Omit<AssignmentTemplate, 'id' | 'createdAt'>) => {
       // In a real app, this would save to the database
@@ -785,6 +966,60 @@ export default function TherapistPortal() {
     }
   };
 
+  const handleGenerateTopicWords = () => {
+    if (customTopic.trim()) {
+      // Generate 20 words for the topic
+      generateTopicWordsMutation.mutate({ 
+        topic: customTopic.trim(), 
+        difficulty: selectedDifficulty,
+        count: 20
+      });
+    }
+  };
+
+  const handleGenerateWordPairs = () => {
+    if (selectedSound && soundPosition) {
+      setIsGeneratingWordPairs(true);
+      
+      fetch('/api/content/generate-word-pairs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        },
+        body: JSON.stringify({
+          soundPattern: selectedSound,
+          position: soundPosition
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          setWordPairs(data.data.pairs);
+          setAssignmentTitle(`Word Pairs - ${selectedSound.toUpperCase()}`);
+          setAssignmentDescription(`Practice making sentences with word pairs that ${soundPosition.replace('-', ' ')} "${selectedSound}".`);
+        } else {
+          toast({ 
+            title: "Error generating word pairs", 
+            description: data.message || "Failed to generate word pairs", 
+            variant: "destructive" 
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Error generating word pairs:', error);
+        toast({ 
+          title: "Error generating word pairs", 
+          description: "Failed to generate word pairs. Please try again.", 
+          variant: "destructive" 
+        });
+      })
+      .finally(() => {
+        setIsGeneratingWordPairs(false);
+      });
+    }
+  };
+
   const handleUseTemplate = (template: AssignmentTemplate) => {
     setSelectedTemplate(template);
     setAssignmentTitle(template.title);
@@ -803,14 +1038,22 @@ export default function TherapistPortal() {
 
   const handleCreateAssignment = () => {
     // Validate based on assignment mode
+    const hasContent = contentGenerationMode === "word-pairs" ? selectedWordPairs.length > 0 : generatedWords.length > 0;
+    
     if (assignmentMode === "existing") {
-      if (!selectedClient || !assignmentTitle.trim() || generatedWords.length === 0) {
-        toast({ title: "Please select a client, enter a title, and generate content", variant: "destructive" });
+      if (!selectedClient || !assignmentTitle.trim() || !hasContent) {
+        toast({ 
+          title: `Please select a client, enter a title, and ${contentGenerationMode === "word-pairs" ? "select word pairs" : "generate content"}`, 
+          variant: "destructive" 
+        });
         return;
       }
     } else if (assignmentMode === "email") {
-      if (!clientEmail.trim() || !assignmentTitle.trim() || generatedWords.length === 0) {
-        toast({ title: "Please enter client email, title, and generate content", variant: "destructive" });
+      if (!clientEmail.trim() || !assignmentTitle.trim() || !hasContent) {
+        toast({ 
+          title: `Please enter client email, title, and ${contentGenerationMode === "word-pairs" ? "select word pairs" : "generate content"}`, 
+          variant: "destructive" 
+        });
         return;
       }
       // Basic email validation
@@ -822,19 +1065,34 @@ export default function TherapistPortal() {
 
     // Determine assignment type and create appropriate metadata
     const isWatchPracticeAssignment = contentGenerationMode === "watch-practice";
-    const assignmentMetadata = isWatchPracticeAssignment ? {
-      assignmentType: 'watch-practice',
-      soundPattern: {
-        sound: selectedSound,
-        position: soundPosition
-      },
-      structure: {
-        wordsPerAssignment: 3,
-        animationPlaysPerWord: 3,
-        practiceAttemptsPerWord: 3,
-        phrasesPerWord: 3
-      }
-    } : null;
+    const isWordPairsAssignment = contentGenerationMode === "word-pairs";
+    
+    let assignmentMetadata = null;
+    if (isWatchPracticeAssignment) {
+      assignmentMetadata = {
+        assignmentType: 'watch-practice',
+        soundPattern: {
+          sound: selectedSound,
+          position: soundPosition
+        },
+        structure: {
+          wordsPerAssignment: 3,
+          animationPlaysPerWord: 3,
+          practiceAttemptsPerWord: 3,
+          phrasesPerWord: 3
+        }
+      };
+    } else if (isWordPairsAssignment) {
+      assignmentMetadata = {
+        assignmentType: 'word-pairs',
+        soundPattern: {
+          sound: selectedSound,
+          position: soundPosition
+        },
+        selectedPairs: selectedWordPairs,
+        instructions: "Make a sentence using both words from each pair. Say the sentence out loud three times."
+      };
+    }
 
     const assignmentData = assignmentMode === "existing" 
       ? {
@@ -845,14 +1103,25 @@ export default function TherapistPortal() {
             : user?.username || "Therapist",
           title: assignmentTitle.trim(),
           description: assignmentDescription.trim() + (isWatchPracticeAssignment ? 
-            "\n\nFor each word, phrase, or sentence in the video, watch us say it first. Then you'll practice." : ""),
+            "\n\nFor each word, phrase, or sentence in the video, watch us say it first. Then you'll practice." : 
+            isWordPairsAssignment ? "\n\nMake a sentence using both words from each pair. Say the sentence out loud three times." : ""),
           metadata: assignmentMetadata,
-          items: generatedWords.slice(0, isWatchPracticeAssignment ? 3 : generatedWords.length).map(word => ({
-            itemType: 'word',
-            content: word.text,
-            syllabication: word.syllabication,
-            difficulty: selectedDifficulty
-          }))
+          items: isWordPairsAssignment 
+            ? selectedWordPairs.map(pair => ({
+                itemType: 'word-pair',
+                content: `${pair.word1} + ${pair.word2}`,
+                syllabication: `${pair.word1} / ${pair.word2}`,
+                difficulty: selectedDifficulty,
+                word1: pair.word1,
+                word2: pair.word2,
+                connection: pair.connection
+              }))
+            : generatedWords.slice(0, isWatchPracticeAssignment ? 3 : generatedWords.length).map(word => ({
+                itemType: 'word',
+                content: word.text,
+                syllabication: word.syllabication,
+                difficulty: selectedDifficulty
+              }))
         }
       : {
           clientEmail: clientEmail.trim(),
@@ -862,14 +1131,25 @@ export default function TherapistPortal() {
             : user?.username || "Therapist",
           title: assignmentTitle.trim(),
           description: assignmentDescription.trim() + (isWatchPracticeAssignment ? 
-            "\n\nFor each word, phrase, or sentence in the video, watch us say it first. Then you'll practice." : ""),
+            "\n\nFor each word, phrase, or sentence in the video, watch us say it first. Then you'll practice." : 
+            isWordPairsAssignment ? "\n\nMake a sentence using both words from each pair. Say the sentence out loud three times." : ""),
           metadata: assignmentMetadata,
-          items: generatedWords.slice(0, isWatchPracticeAssignment ? 3 : generatedWords.length).map(word => ({
-            itemType: 'word',
-            content: word.text,
-            syllabication: word.syllabication,
-            difficulty: selectedDifficulty
-          }))
+          items: isWordPairsAssignment 
+            ? selectedWordPairs.map(pair => ({
+                itemType: 'word-pair',
+                content: `${pair.word1} + ${pair.word2}`,
+                syllabication: `${pair.word1} / ${pair.word2}`,
+                difficulty: selectedDifficulty,
+                word1: pair.word1,
+                word2: pair.word2,
+                connection: pair.connection
+              }))
+            : generatedWords.slice(0, isWatchPracticeAssignment ? 3 : generatedWords.length).map(word => ({
+                itemType: 'word',
+                content: word.text,
+                syllabication: word.syllabication,
+                difficulty: selectedDifficulty
+              }))
         };
 
     createAssignmentMutation.mutate(assignmentData);
@@ -902,6 +1182,8 @@ export default function TherapistPortal() {
     setSelectedTemplate(null);
     setGeneratedWords([]);
     setWordSuggestions([]);
+    setWordPairs([]);
+    setSelectedWordPairs([]);
     setCustomTopic("");
     setAssignmentMode("existing");
     setClientEmail("");
@@ -981,18 +1263,39 @@ export default function TherapistPortal() {
     e.dataTransfer.setData('text/plain', JSON.stringify(word));
   };
 
+  const handleDragStartPair = (e: React.DragEvent, pair: { word1: string; word2: string }) => {
+    e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'word-pair', data: pair }));
+  };
+
+  const addWordPairToAssignment = (pair: { word1: string; word2: string }) => {
+    setSelectedWordPairs(prev => {
+      if (!prev.find(p => p.word1 === pair.word1 && p.word2 === pair.word2)) {
+        return [...prev, pair];
+      }
+      return prev;
+    });
+  };
+
+  const removeWordPairFromAssignment = (index: number) => {
+    setSelectedWordPairs(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const wordData = e.dataTransfer.getData('text/plain');
+    const dragData = e.dataTransfer.getData('text/plain');
     try {
-      const word = JSON.parse(wordData);
-      addWordToAssignment(word);
+      const parsedData = JSON.parse(dragData);
+      if (parsedData.type === 'word-pair') {
+        addWordPairToAssignment(parsedData.data);
+      } else {
+        addWordToAssignment(parsedData);
+      }
     } catch (error) {
-      console.error('Error parsing dropped word:', error);
+      console.error('Error parsing dropped item:', error);
     }
   };
 
@@ -1680,6 +1983,26 @@ export default function TherapistPortal() {
                               </div>
                             </div>
 
+                            {/* Word Pairs Card */}
+                            <div className="p-4 border-2 border-dashed border-purple-300 rounded-lg bg-purple-50 hover:border-purple-400 transition-colors cursor-pointer">
+                              <div className="text-center">
+                                <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                                  <Zap className="h-6 w-6 text-white" />
+                                </div>
+                                <h3 className="font-semibold text-lg mb-2">Word Pairs</h3>
+                                <p className="text-sm text-gray-600 mb-4">
+                                  Students make sentences using both words from each pair and say them out loud three times
+                                </p>
+                                <Button 
+                                  variant="outline" 
+                                  className="w-full"
+                                  onClick={() => setContentGenerationMode("word-pairs")}
+                                >
+                                  Create Exercise
+                                </Button>
+                              </div>
+                            </div>
+
                             {/* Custom Topic Card */}
                             <div className="p-4 border-2 border-dashed border-green-300 rounded-lg bg-green-50 hover:border-green-400 transition-colors cursor-pointer">
                               <div className="text-center">
@@ -1690,19 +2013,49 @@ export default function TherapistPortal() {
                                 <p className="text-sm text-gray-600 mb-4">
                                   Generate practice words based on a specific topic or theme
                                 </p>
+                                <Button 
+                                  variant="outline" 
+                                  className="w-full"
+                                  onClick={() => setContentGenerationMode("custom-topic")}
+                                >
+                                  Create Exercise
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </TabsContent>
+                        
+                        <TabsContent value="custom-topic" className="space-y-4">
+                          <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                            <h4 className="font-semibold text-green-800 mb-2">Custom Topic Exercise</h4>
+                            <p className="text-sm text-green-700 mb-4">
+                              Generate 20 practice words based on a specific topic or theme. Drag words from the suggestions to create your assignment.
+                            </p>
+                            
+                            <div className="space-y-4">
+                              <div>
+                                <label className="text-sm font-medium mb-2 block">Topic or Theme</label>
                                 <div className="flex gap-2">
                                   <Input
-                                    placeholder="Enter topic (e.g., 'Animals')"
+                                    placeholder="Enter topic (e.g., 'Animals', 'Food', 'Transportation')"
                                     value={customTopic}
                                     onChange={(e) => setCustomTopic(e.target.value)}
-                                    className="text-sm"
+                                    className="flex-1"
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' && customTopic.trim()) {
+                                        handleGenerateTopicWords();
+                                      }
+                                    }}
                                   />
                                   <Button 
-                                    onClick={handleGenerateContent}
+                                    onClick={handleGenerateTopicWords}
                                     disabled={generateContentMutation.isPending || !customTopic.trim()}
-                                    size="sm"
                                   >
-                                    {generateContentMutation.isPending ? "..." : "Generate"}
+                                    {generateContentMutation.isPending ? (
+                                      <><div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" /> Loading...</>
+                                    ) : (
+                                      "Generate 20 Words"
+                                    )}
                                   </Button>
                                 </div>
                               </div>
@@ -1788,14 +2141,128 @@ export default function TherapistPortal() {
                             </div>
                           </div>
                         </TabsContent>
+                        
+                        <TabsContent value="word-pairs" className="space-y-4">
+                          <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                            <h4 className="font-semibold text-purple-800 mb-2">Word Pairs Exercise</h4>
+                            <p className="text-sm text-purple-700 mb-4">
+                              Create an assignment where students make sentences using both words from each pair and say them out loud three times.
+                            </p>
+                            
+                            <div className="space-y-4">
+                              <div>
+                                <label className="text-sm font-medium mb-2 block">Sound Position</label>
+                                <div className="flex gap-2">
+                                  {['starts-with', 'contains', 'ends-with'].map((position) => (
+                                    <Button
+                                      key={position}
+                                      variant={soundPosition === position ? "default" : "outline"}
+                                      size="sm"
+                                      onClick={() => setSoundPosition(position)}
+                                      className="capitalize"
+                                    >
+                                      {position.replace('-', ' ')}
+                                    </Button>
+                                  ))}
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <label className="text-sm font-medium mb-2 block">Select Sound</label>
+                                <div className="space-y-3">
+                                  <div>
+                                    <div className="text-xs text-gray-600 mb-1">Consonant Sounds</div>
+                                    <div className="flex flex-wrap gap-1">
+                                      {['s', 'r', 'l', 'th', 'sh', 'ch', 'f', 'v', 'k', 'g', 'p', 'b', 't', 'd', 'm', 'n'].map((sound) => (
+                                        <Button
+                                          key={sound}
+                                          variant={selectedSound === sound ? "default" : "outline"}
+                                          size="sm"
+                                          onClick={() => setSelectedSound(sound)}
+                                          className="min-w-[40px] h-8"
+                                        >
+                                          {sound}
+                                        </Button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  
+                                  <div>
+                                    <div className="text-xs text-gray-600 mb-1">Vowel Sounds</div>
+                                    <div className="flex flex-wrap gap-1">
+                                      {['a', 'e', 'i', 'o', 'u', 'ay', 'ee', 'igh', 'ow', 'oo'].map((sound) => (
+                                        <Button
+                                          key={sound}
+                                          variant={selectedSound === sound ? "default" : "outline"}
+                                          size="sm"
+                                          onClick={() => setSelectedSound(sound)}
+                                          className="min-w-[40px] h-8"
+                                        >
+                                          {sound}
+                                        </Button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <Button 
+                                onClick={handleGenerateWordPairs}
+                                disabled={isGeneratingWordPairs || !selectedSound || !soundPosition}
+                                className="w-full"
+                              >
+                                {isGeneratingWordPairs ? (
+                                  <><div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" /> Loading...</>
+                                ) : (
+                                  `Generate word pairs that ${soundPosition.replace('-', ' ')} "${selectedSound}"`
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        </TabsContent>
                       </Tabs>
                     </div>
 
                     {/* Word Suggestions and Assignment Builder */}
-                    {(wordSuggestions.length > 0 || generatedWords.length > 0) && (
+                    {(wordSuggestions.length > 0 || generatedWords.length > 0 || wordPairs.length > 0) && (
                       <div className="grid grid-cols-2 gap-6">
-                        {/* Word Suggestions */}
-                        {wordSuggestions.length > 0 && (
+                        {/* Word Pairs or Word Suggestions */}
+                        {contentGenerationMode === "word-pairs" && wordPairs.length > 0 ? (
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                              <label className="text-sm font-medium">Generated Word Pairs ({wordPairs.length})</label>
+                            </div>
+                            <div className="max-h-60 overflow-y-auto border rounded-lg p-3 bg-purple-50">
+                              <div className="grid gap-2">
+                                {wordPairs.map((pair, index) => (
+                                  <div
+                                    key={index}
+                                    draggable
+                                    onDragStart={(e) => handleDragStartPair(e, pair)}
+                                    className="flex items-center justify-between p-2 bg-white rounded border cursor-move hover:shadow-md transition-shadow"
+                                  >
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 font-medium">
+                                        <span className="text-purple-700">{pair.word1}</span>
+                                        <span className="text-gray-400">+</span>
+                                        <span className="text-purple-700">{pair.word2}</span>
+                                      </div>
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => addWordPairToAssignment(pair)}
+                                      className="h-6 w-6 p-0"
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        ) : wordSuggestions.length > 0 && (
                           <div>
                             <div className="flex items-center gap-2 mb-3">
                               <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
@@ -1829,52 +2296,96 @@ export default function TherapistPortal() {
                           </div>
                         )}
                         
-                        {/* Assignment Words */}
+                        {/* Assignment Words or Word Pairs */}
                         <div>
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                              <label className="text-sm font-medium">Assignment Words ({generatedWords.length})</label>
+                              <div className={`w-3 h-3 rounded-full ${contentGenerationMode === "word-pairs" ? "bg-purple-500" : "bg-green-500"}`}></div>
+                              <label className="text-sm font-medium">
+                                {contentGenerationMode === "word-pairs" 
+                                  ? `Assignment Word Pairs (${selectedWordPairs.length})` 
+                                  : `Assignment Words (${generatedWords.length})`}
+                              </label>
                             </div>
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={handleSaveAsTemplate}
-                              disabled={generatedWords.length === 0}
+                              disabled={contentGenerationMode === "word-pairs" ? selectedWordPairs.length === 0 : generatedWords.length === 0}
                             >
                               Save as Template
                             </Button>
                           </div>
                           <div
-                            className="min-h-60 max-h-60 overflow-y-auto border-2 border-dashed border-green-300 rounded-lg p-3 bg-green-50"
+                            className={`min-h-60 max-h-60 overflow-y-auto border-2 border-dashed rounded-lg p-3 ${
+                              contentGenerationMode === "word-pairs" 
+                                ? "border-purple-300 bg-purple-50" 
+                                : "border-green-300 bg-green-50"
+                            }`}
                             onDragOver={handleDragOver}
                             onDrop={handleDrop}
                           >
-                            {generatedWords.length === 0 ? (
+                            {(contentGenerationMode === "word-pairs" ? selectedWordPairs.length === 0 : generatedWords.length === 0) ? (
                               <div className="flex items-center justify-center h-full text-gray-500">
                                 <div className="text-center">
                                   <Plus className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                                  <p className="text-sm">Drag words here or use the + button</p>
+                                  <p className="text-sm">
+                                    {contentGenerationMode === "word-pairs" 
+                                      ? "Drag word pairs here or use the + button" 
+                                      : "Drag words here or use the + button"}
+                                  </p>
                                 </div>
                               </div>
                             ) : (
                               <div className="grid gap-2">
-                                {generatedWords.map((word, index) => (
-                                  <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
-                                    <span className="font-medium">{word.text}</span>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs text-gray-600">{word.syllabication}</span>
+                                {contentGenerationMode === "word-pairs" ? (
+                                  selectedWordPairs.map((pair, index) => (
+                                    <div 
+                                      key={index} 
+                                      className="flex items-center justify-between p-2 bg-white rounded border"
+                                      onDragOver={handleDragOver}
+                                      onDrop={handleDrop}
+                                    >
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2 font-medium">
+                                          <span className="text-purple-700">{pair.word1}</span>
+                                          <span className="text-gray-400">+</span>
+                                          <span className="text-purple-700">{pair.word2}</span>
+                                        </div>
+                                      </div>
                                       <Button
                                         size="sm"
                                         variant="ghost"
-                                        onClick={() => removeWordFromAssignment(index)}
+                                        onClick={() => removeWordPairFromAssignment(index)}
                                         className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
                                       >
                                         <X className="h-3 w-3" />
                                       </Button>
                                     </div>
-                                  </div>
-                                ))}
+                                  ))
+                                ) : (
+                                  generatedWords.map((word, index) => (
+                                    <div 
+                                      key={index} 
+                                      className="flex items-center justify-between p-2 bg-white rounded border"
+                                      onDragOver={handleDragOver}
+                                      onDrop={handleDrop}
+                                    >
+                                      <span className="font-medium">{word.text}</span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs text-gray-600">{word.syllabication}</span>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => removeWordFromAssignment(index)}
+                                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ))
+                                )}
                               </div>
                             )}
                           </div>
@@ -1892,7 +2403,7 @@ export default function TherapistPortal() {
                         disabled={
                           createAssignmentMutation.isPending || 
                           !assignmentTitle.trim() || 
-                          generatedWords.length === 0 ||
+                          (contentGenerationMode === "word-pairs" ? selectedWordPairs.length === 0 : generatedWords.length === 0) ||
                           (assignmentMode === "existing" && !selectedClient) ||
                           (assignmentMode === "email" && !clientEmail.trim())
                         }

@@ -25,11 +25,11 @@ export const mapDifficultyToServer = (diff: DifficultyLevel): string => {
 export const difficultyLevelNames = {
   '1': 'Very Easy',
   '2': 'Easy',
-  '3': 'Easy Medium',
-  '4': 'Medium',
-  '5': 'Medium Hard',
-  '6': 'Hard',
-  '7': 'Very Hard', 
+  '3': 'Basic',
+  '4': 'Intermediate',
+  '5': 'Upper Intermediate',
+  '6': 'Advanced',
+  '7': 'Very Advanced', 
   '8': 'Expert'
 };
 
