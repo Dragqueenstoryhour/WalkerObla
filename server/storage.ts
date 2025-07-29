@@ -1322,7 +1322,7 @@ export class DatabaseStorage implements IStorage {
     assignmentId: number;
     itemId: number;
     userId: string;
-    practiceType: 'word' | 'phrase';
+    practiceType: 'word' | 'phrase' | 'word-pair';
     word: string;
     phrase?: string;
     phraseIndex?: number;

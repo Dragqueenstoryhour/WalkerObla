@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, Clock, User, CheckCircle, ChevronLeft, ChevronRight, Mic, Volume2, Eye, Snail, Ear, Flag, Play, Square, Pause, RotateCcw, X } from 'lucide-react';
 import { SimpleRecorder } from '@/components/SimpleRecorder';
 import { WatchThenPracticeAssignment } from '@/components/WatchThenPracticeAssignment';
+import { WordPairsAssignment } from '@/components/WordPairsAssignment';
 import { UserCompletionReport } from '@/components/UserCompletionReport';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -996,6 +997,65 @@ const AssignmentPractice: React.FC = () => {
 
   // Check if this is a "Watch then Practice" assignment
   const isWatchPracticeAssignment = assignment?.metadata?.assignmentType === 'watch-practice';
+  // Check if this is a "Word Pairs" assignment
+  const isWordPairsAssignment = assignment?.metadata?.assignmentType === 'word-pairs';
+
+  // Route to specialized component for "Word Pairs" assignments
+  if (isWordPairsAssignment) {
+    return (
+      <WordPairsAssignment
+        assignment={assignment}
+        items={items}
+        onComplete={async (results) => {
+          console.log('🎯 Word Pairs assignment completion - saving results:', results);
+          
+          // Save results to the server
+          try {
+            const response = await fetch(`/api/assignments/${assignment.id}/complete`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...await getAuthHeaders()
+              },
+              body: JSON.stringify({
+                assignmentType: 'word-pairs',
+                results: results.map(pairResult => ({
+                  itemId: items.find(item => item.word1 === pairResult.word1 && item.word2 === pairResult.word2)?.id,
+                  word1: pairResult.word1,
+                  word2: pairResult.word2,
+                  connection: pairResult.connection,
+                  sentences: pairResult.sentences
+                }))
+              })
+            });
+
+            if (!response.ok) {
+              throw new Error('Failed to save assignment results');
+            }
+
+            const responseData = await response.json();
+            console.log('✅ Word Pairs assignment results saved successfully:', responseData);
+            
+            toast({
+              title: "Assignment Completed!",
+              description: "Your word pairs practice has been saved successfully.",
+            });
+
+            // Navigate back to assignments
+            window.location.href = '/assignments';
+            
+          } catch (error) {
+            console.error('❌ Error saving word pairs assignment results:', error);
+            toast({
+              title: "Error saving results",
+              description: "Your practice was completed but there was an error saving the results.",
+              variant: "destructive"
+            });
+          }
+        }}
+      />
+    );
+  }
 
   // Route to specialized component for "Watch then Practice" assignments
   if (isWatchPracticeAssignment) {

@@ -1,4 +1,5 @@
 import { ReadingContent } from "./types";
+import { getApiUrl } from '@/lib/utils';
 
 // This client-side module handles communication with our backend OpenAI service
 
@@ -26,7 +27,7 @@ export async function generateReadingContent(topic: string, difficulty: string):
     
     console.log(`Sending API request for content with topic: "${topic}" and numeric difficulty: "${numericDifficulty}"`);
 
-    const response = await fetch('/api/content/generate', {
+    const response = await fetch(getApiUrl('/api/content/generate'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -53,7 +54,7 @@ export async function submitVoiceCommand(audioBlob: Blob): Promise<string> {
     const formData = new FormData();
     formData.append('audio', audioBlob);
 
-    const response = await fetch('/api/voice/command', {
+    const response = await fetch(getApiUrl('/api/voice/command'), {
       method: 'POST',
       body: formData,
       credentials: 'include',
@@ -73,7 +74,7 @@ export async function submitVoiceCommand(audioBlob: Blob): Promise<string> {
 
 export async function processVoiceCommand(command: string): Promise<any> {
   try {
-    const response = await fetch('/api/voice/process', {
+    const response = await fetch(getApiUrl('/api/voice/process'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

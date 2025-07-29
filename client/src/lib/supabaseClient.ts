@@ -6,25 +6,32 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.
 
 // Validate that we have the required environment variables
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.error('Missing Supabase environment variables:', {
+  console.warn('Missing Supabase environment variables:', {
     SUPABASE_URL: !!SUPABASE_URL,
     SUPABASE_ANON_KEY: !!SUPABASE_ANON_KEY
   });
-  throw new Error('Missing required Supabase environment variables. Please check your .env file.');
+  console.warn('Authentication features will be disabled. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.');
 }
 
-// Create Supabase client with proper config for browser usage
-export const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    storageKey: 'supabase.auth.token',
-    detectSessionInUrl: false // We'll handle this manually with auth-callback.html
-  }
-});
+// Create Supabase client with proper config for browser usage, or null if env vars missing
+export const supabaseClient = (SUPABASE_URL && SUPABASE_ANON_KEY) 
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        storageKey: 'supabase.auth.token',
+        detectSessionInUrl: false // We'll handle this manually with auth-callback.html
+      }
+    })
+  : null;
 
 // Helper to get the current auth session
 export async function getSession() {
+  if (!supabaseClient) {
+    console.debug('Supabase client not available - authentication disabled');
+    return null;
+  }
+  
   try {
     const { data, error } = await supabaseClient.auth.getSession();
     if (error) {
@@ -45,6 +52,11 @@ export async function getSession() {
 
 // Helper to get the current user
 export async function getCurrentUser() {
+  if (!supabaseClient) {
+    console.debug('Supabase client not available - authentication disabled');
+    return null;
+  }
+  
   try {
     const { data, error } = await supabaseClient.auth.getUser();
     if (error) {
@@ -93,12 +105,19 @@ export async function getAuthHeaders(): Promise<HeadersInit> {
 }
 
 // Setup auth state change listener for debugging
-supabaseClient.auth.onAuthStateChange((event, session) => {
-  console.log('Auth state changed:', event);
-});
+if (supabaseClient) {
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    console.log('Auth state changed:', event);
+  });
+}
 
 // Initialize auth - check for hash params from OAuth redirect
 export async function initializeAuth() {
+  if (!supabaseClient) {
+    console.debug('Supabase client not available - authentication initialization disabled');
+    return null;
+  }
+  
   // Listen for OAuth callback message from popup window
   window.addEventListener('message', async (event) => {
     if (event.origin !== window.location.origin) return;
@@ -146,5 +165,9 @@ export async function initializeAuth() {
 
 // Export a function to get the client (for backward compatibility)
 export function getSupabaseClient() {
+  if (!supabaseClient) {
+    console.debug('Supabase client not available - authentication disabled');
+    return null;
+  }
   return supabaseClient;
 }

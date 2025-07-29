@@ -1,4 +1,5 @@
 import { PronunciationAssessmentResult } from './types';
+import { getApiUrl } from '@/lib/utils';
 
 // This client-side module handles communication with our backend Azure services
 
@@ -19,7 +20,7 @@ export async function submitReadingRecording(
     console.log(`[Azure Client] Sending audio blob of size ${audioBlob.size} bytes, type: ${audioBlob.type}`);
     console.log(`[Azure Client] Content ID: ${contentId}, Text length: ${text.length} chars`);
 
-    const response = await fetch('/api/pronunciation/assess', {
+    const response = await fetch(getApiUrl('/api/pronunciation/assess'), {
       method: 'POST',
       body: formData,
       credentials: 'include',
@@ -77,7 +78,7 @@ export async function synthesizeSpeech(text: string, voice = 'default'): Promise
   try {
     console.log(`Requesting speech synthesis for: "${text}"`);
     
-    const response = await fetch('/api/pronunciation/synthesize', {
+    const response = await fetch(getApiUrl('/api/pronunciation/synthesize'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

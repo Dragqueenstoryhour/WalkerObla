@@ -229,4 +229,90 @@ router.post('/phonetic-breakdown', catchAsync(async (req, res) => {
   return success(res, { results });
 }));
 
+// Word pairs assessment endpoint - checks if both words are present in the sentence
+router.post('/assess-word-pairs', upload.single('audio'), catchAsync(async (req: any, res) => {
+  if (!req.file) {
+    return error(res, 'No audio file provided', 400);
+  }
+
+  const { targetWords } = req.body;
+  
+  if (!targetWords) {
+    return error(res, 'Target words are required', 400);
+  }
+
+  let parsedTargetWords;
+  try {
+    parsedTargetWords = JSON.parse(targetWords);
+  } catch (e) {
+    return error(res, 'Target words must be a valid JSON array', 400);
+  }
+
+  if (!Array.isArray(parsedTargetWords) || parsedTargetWords.length !== 2) {
+    return error(res, 'Exactly two target words are required', 400);
+  }
+
+  const [word1, word2] = parsedTargetWords;
+  console.log(`🎯 Starting word pairs assessment for: "${word1}" and "${word2}"`);
+
+  const audioBuffer = req.file.buffer;
+  
+  try {
+    // First, do a general assessment to get the transcription
+    const generalAssessment = await assessPronunciation(audioBuffer, `${word1} ${word2}`);
+    const transcription = generalAssessment.recognitionResult?.DisplayText || '';
+    
+    console.log(`📝 Transcription: "${transcription}"`);
+    
+    // Check if both words are present in the transcription (case-insensitive)
+    const transcriptionLower = transcription.toLowerCase();
+    const word1Lower = word1.toLowerCase();
+    const word2Lower = word2.toLowerCase();
+    
+    const word1Detected = transcriptionLower.includes(word1Lower);
+    const word2Detected = transcriptionLower.includes(word2Lower);
+    
+    console.log(`🔍 Word detection - ${word1}: ${word1Detected}, ${word2}: ${word2Detected}`);
+    
+    // Assess each word individually for scoring
+    let word1Score = 0;
+    let word2Score = 0;
+    
+    if (word1Detected) {
+      try {
+        const word1Assessment = await assessPronunciation(audioBuffer, word1);
+        word1Score = Math.round(word1Assessment.pronunciationAssessment?.PronunciationScore || 0);
+      } catch (error) {
+        console.warn(`Failed to assess word1 "${word1}":`, error);
+      }
+    }
+    
+    if (word2Detected) {
+      try {
+        const word2Assessment = await assessPronunciation(audioBuffer, word2);
+        word2Score = Math.round(word2Assessment.pronunciationAssessment?.PronunciationScore || 0);
+      } catch (error) {
+        console.warn(`Failed to assess word2 "${word2}":`, error);
+      }
+    }
+    
+    const result = {
+      transcription,
+      word1Detected,
+      word2Detected,
+      word1Score,
+      word2Score,
+      bothWordsDetected: word1Detected && word2Detected
+    };
+    
+    console.log(`✅ Word pairs assessment complete:`, result);
+    
+    return success(res, result);
+    
+  } catch (assessmentError) {
+    console.error('❌ Error in word pairs assessment:', assessmentError);
+    return error(res, 'Failed to assess word pairs', 500);
+  }
+}));
+
 export default router;

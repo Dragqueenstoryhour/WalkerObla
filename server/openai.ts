@@ -16,98 +16,98 @@ const ADVANCED_MODEL = "gpt-4o";
 export const DIFFICULTY_SCALE = {
   "1": {
     name: "Very Easy",
-    syllableRange: "mostly 1-syllable words, very few common 2-syllable words",
-    wordTypes: "basic everyday nouns, verbs, and simple adjectives, extremely common sight words",
-    examples: ["cat", "run", "happy", "big", "blue"],
-    complexity: "Extremely simple sentences, straightforward vocabulary, direct and clear meaning. Sentences are very short.",
-    phonetics: "Simple consonant-vowel patterns (CV, CVC), basic sight words.",
-    maxSentenceLength: 8,
-    maxWords: 25,
-    gradeLevel: 3,
-    numSentences: 3
+    syllableRange: "only 1-syllable words",
+    wordTypes: "basic nouns and verbs, 3-4 letters max",
+    examples: ["cat", "dog", "run", "sit", "red", "big"],
+    complexity: "2-3 word phrases only",
+    phonetics: "Simple consonant-vowel patterns (CV, CVC)",
+    maxSentenceLength: 3,
+    maxWords: 10,
+    gradeLevel: 1,
+    numSentences: 1
   },
   "2": {
     name: "Easy",
-    syllableRange: "primarily 1-2 syllable words, with a small percentage of common 3-syllable words",
-    wordTypes: "common everyday vocabulary, simple actions, basic adverbs, familiar compound words",
-    examples: ["water", "quickly", "morning", "playing", "small"],
-    complexity: "Simple sentence structures, regular spelling patterns, easy to understand meaning.",
-    phonetics: "Common blends and digraphs, increasing sight word recognition.",
+    syllableRange: "1-syllable words, few 2-syllable",
+    wordTypes: "common nouns/verbs, simple adjectives",
+    examples: ["apple", "happy", "jump", "water", "table"],
+    complexity: "Simple 3-4 word sentences",
+    phonetics: "Basic blends (st, bl, tr)",
+    maxSentenceLength: 4,
+    maxWords: 15,
+    gradeLevel: 1,
+    numSentences: 2
+  },
+  "3": {
+    name: "Basic",
+    syllableRange: "mostly 1-2 syllable words",
+    wordTypes: "everyday vocabulary, simple actions",
+    examples: ["garden", "running", "yellow", "mother", "eating"],
+    complexity: "Simple sentences with basic structure",
+    phonetics: "Common digraphs (sh, ch, th)",
+    maxSentenceLength: 6,
+    maxWords: 20,
+    gradeLevel: 2,
+    numSentences: 2
+  },
+  "4": {
+    name: "Intermediate",
+    syllableRange: "1-2 syllable words, few 3-syllable",
+    wordTypes: "common vocabulary, some adjectives/adverbs",
+    examples: ["banana", "quickly", "outside", "picture", "playing"],
+    complexity: "Compound sentences with 'and'/'but'",
+    phonetics: "Multi-syllable word patterns",
+    maxSentenceLength: 8,
+    maxWords: 30,
+    gradeLevel: 3,
+    numSentences: 3
+  },
+  "5": {
+    name: "Upper Intermediate",
+    syllableRange: "2-3 syllable words",
+    wordTypes: "common abstract nouns, varied verbs",
+    examples: ["family", "important", "remember", "beautiful", "together"],
+    complexity: "Some complex sentence structures",
+    phonetics: "Common prefixes/suffixes",
     maxSentenceLength: 10,
-    maxWords: 35,
+    maxWords: 40,
     gradeLevel: 4,
     numSentences: 3
   },
-  "3": {
-    name: "Medium",
-    syllableRange: "a mix of 1-3 syllable words, gradually introducing more 3-syllable words",
-    wordTypes: "familiar vocabulary, some abstract nouns and verbs, slightly more complex adjectives and adverbs",
-    examples: ["adventure", "important", "discover", "exciting", "beautiful"],
-    complexity: "Clear sentence structures, some compound and complex sentences, expanding vocabulary. Slightly longer, but still straightforward, sentences.",
-    phonetics: "Multi-syllable words, less common spelling patterns, expanding phonics skills.",
+  "6": {
+    name: "Advanced",
+    syllableRange: "2-4 syllable words",
+    wordTypes: "abstract concepts, some academic terms",
+    examples: ["education", "difficult", "understand", "different", "hospital"],
+    complexity: "Varied sentence structures",
+    phonetics: "Longer multi-syllable patterns",
     maxSentenceLength: 12,
-    maxWords: 45,
+    maxWords: 50,
     gradeLevel: 5,
-    numSentences: 3
+    numSentences: 4
   },
-  "4": {
-    name: "Medium-Hard",
-    syllableRange: "2-4 syllables, varied words",
-    wordTypes: "broader vocabulary, more abstract concepts, nuanced adjectives and adverbs",
-    examples: ["curiosity", "investigate", "challenging", "phenomenon", "remarkable"],
-    complexity: "More intricate sentence structures, introduction of idiomatic expressions, wider range of vocabulary.",
-    phonetics: "Longer multi-syllable words, prefixes/suffixes, more complex phonics rules.",
+  "7": {
+    name: "Very Advanced",
+    syllableRange: "3-5 syllable words",
+    wordTypes: "academic/specialized vocabulary",
+    examples: ["communication", "organization", "temperature", "community", "information"],
+    complexity: "Complex sentences with clauses",
+    phonetics: "Advanced phonetic patterns",
     maxSentenceLength: 15,
-    maxWords: 55,
+    maxWords: 60,
     gradeLevel: 6,
     numSentences: 4
   },
-  "5": {
-    name: "Hard",
-    syllableRange: "3-5+ syllables, academic words",
-    wordTypes: "specialized vocabulary, technical terms, complex abstract nouns and verbs",
-    examples: ["comprehension", "meticulously", "consequence", "interpretation", "sophisticated"],
-    complexity: "Advanced sentence structures, nuanced meanings, academic and specialized vocabulary, often requiring inferential understanding.",
-    phonetics: "Irregular spelling patterns, advanced phonics, words with silent letters or unusual pronunciations.",
-    maxSentenceLength: 18,
-    maxWords: 65,
-    gradeLevel: 7,
-    numSentences: 4
-  },
-  "6": {
-    name: "Very Hard",
-    syllableRange: "4-6+ syllables, highly advanced words",
-    wordTypes: "highly specialized, theoretical, or abstract vocabulary; philosophical or scientific terms",
-    examples: ["epistemology", "paradoxical", "quintessential", "ubiquitous", "benevolent"],
-    complexity: "Highly complex and varied sentence structures, sophisticated vocabulary, subtle meanings, often requiring deep analysis or background knowledge.",
-    phonetics: "Words with Latin/Greek roots, challenging pronunciation rules, very long words.",
-    maxSentenceLength: 20,
-    maxWords: 75,
-    gradeLevel: 8,
-    numSentences: 5
-  },
-  "7": {
-    name: "Advanced",
-    syllableRange: "4-7+ syllables, highly specialized words, abstract",
-    wordTypes: "academic, theoretical, nuanced, interdisciplinary vocabulary",
-    examples: ["discombobulate", "idiosyncratic", "paradigm", "juxtaposition", "recalcitrant"],
-    complexity: "Very complex and varied sentence structures, sophisticated vocabulary, subtle meanings, often requiring significant background knowledge or inferential understanding. Introduction of complex literary devices.",
-    phonetics: "Extensive use of Latin/Greek roots, highly complex pronunciation, very long and often uncommon words.",
-    maxSentenceLength: 22,
-    maxWords: 85,
-    gradeLevel: 9,
-    numSentences: 5
-  },
   "8": {
     name: "Expert",
-    syllableRange: "5-8+ syllables, philosophical, scientific, technical jargon",
-    wordTypes: "highly advanced, obscure, specialized, or technical vocabulary; philosophical or scientific terms, often requiring deep domain expertise",
-    examples: ["deconstruction", "existentialism", "quantum entanglement", "neologism", "esoteric"],
-    complexity: "Extremely complex and varied sentence structures, highly sophisticated and abstract vocabulary, dense conceptual content, often requiring critical analysis, synthesis, and deep background knowledge. Extensive use of rhetorical devices.",
-    phonetics: "Words derived from multiple languages, highly specialized phonetic structures, extremely long and rarely encountered words.",
-    maxSentenceLength: 25,
-    maxWords: 95,
-    gradeLevel: 10,
+    syllableRange: "4-6+ syllable words",
+    wordTypes: "technical/abstract vocabulary",
+    examples: ["curiosity", "investigate", "challenging", "phenomenon", "remarkable"],
+    complexity: "Highly complex sentences",
+    phonetics: "Specialized phonetic structures",
+    maxSentenceLength: 18,
+    maxWords: 70,
+    gradeLevel: 7,
     numSentences: 5
   }
 };
@@ -1226,7 +1226,8 @@ Generate natural, meaningful phrases that help learners practice pronunciation i
 export async function generateTopicPhrases(
   topic: string,
   difficulty: DifficultyLevel = "4", // Use DifficultyLevel type
-  type: "words" | "phrases" // Default to words as per new requirements
+  type: "words" | "phrases", // Default to words as per new requirements
+  count: number = 8 // Allow custom count, default to 8
 ): Promise<string[]> {
   try {
     console.log(`Generating ${type} related to topic: "${topic}" with difficulty level: ${difficulty}`);
@@ -1238,7 +1239,7 @@ export async function generateTopicPhrases(
     }
 
     const difficultyInfo = DIFFICULTY_SCALE[difficulty]; // Directly use difficulty
-    const numberOfItems = 8; // Always generate 8 items
+    const numberOfItems = count; // Use the passed count parameter
 
     let itemTypeDescription;
     let complexityDescription;
@@ -1502,4 +1503,167 @@ Make the words progressively challenging but appropriate for the specified focus
     console.error('Error generating assignment template:', error);
     throw new Error('Failed to generate assignment template');
   }
+}
+
+/**
+ * Generate word pairs for speech therapy practice using OpenAI
+ */
+export async function generateWordPairs(
+  soundPattern: string,
+  position: 'starts-with' | 'contains' | 'ends-with'
+): Promise<Array<{ word1: string; word2: string }>> {
+  try {
+    let positionPrompt = '';
+    switch (position) {
+      case 'starts-with':
+        positionPrompt = `start with the letter ${soundPattern}`;
+        break;
+      case 'contains':
+        positionPrompt = `contain the letter ${soundPattern}`;
+        break;
+      case 'ends-with':
+        positionPrompt = `end with the letter ${soundPattern}`;
+        break;
+    }
+
+    const prompt = `Give me exactly 10 pairs of logically connected words that ${positionPrompt}. Do not include any introduction, explanation, or closing—just the pairs.
+
+Return a JSON response with this exact format:
+{
+  "pairs": [
+    {"word1": "word1", "word2": "word2"},
+    {"word1": "word3", "word2": "word4"},
+    ...
+  ]
+}
+
+Requirements:
+- Each word in every pair must ${positionPrompt}
+- Words should be logically connected (e.g., cat/dog are both animals, sun/moon are both celestial bodies)
+- Use common, everyday words that are appropriate for speech therapy
+- Avoid technical or overly complex terms
+- Return ONLY the word pairs without any explanations or descriptions`;
+
+    const response = await openai.chat.completions.create({
+      model: MODEL,
+      messages: [
+        {
+          role: "system",
+          content: "You are a speech therapy assistant generating word pairs for pronunciation practice. Always verify that both words in each pair meet the specified criteria."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || '{"pairs": []}');
+    
+    if (!result.pairs || !Array.isArray(result.pairs)) {
+      throw new Error("Invalid response format from OpenAI");
+    }
+
+    // Verify that both words in each pair meet the criteria
+    const verifiedPairs = result.pairs.filter((pair: any) => {
+      const word1 = (pair.word1 || "").toLowerCase();
+      const word2 = (pair.word2 || "").toLowerCase();
+      const sound = soundPattern.toLowerCase();
+      
+      let word1Valid = false;
+      let word2Valid = false;
+      
+      if (position === 'starts-with') {
+        word1Valid = word1.startsWith(sound);
+        word2Valid = word2.startsWith(sound);
+      } else if (position === 'ends-with') {
+        word1Valid = word1.endsWith(sound);
+        word2Valid = word2.endsWith(sound);
+      } else {
+        word1Valid = word1.includes(sound);
+        word2Valid = word2.includes(sound);
+      }
+      
+      return word1Valid && word2Valid;
+    });
+
+    console.log(`Generated ${verifiedPairs.length} verified word pairs for "${soundPattern}" (${position})`);
+
+    // If we don't have enough pairs, generate fallback pairs
+    if (verifiedPairs.length < 10) {
+      const fallbackPairs = getFallbackWordPairs(soundPattern, position, 10 - verifiedPairs.length);
+      return [...verifiedPairs, ...fallbackPairs].slice(0, 10);
+    }
+
+    return verifiedPairs.slice(0, 10);
+
+  } catch (error) {
+    console.error("Error generating word pairs:", error);
+    return getFallbackWordPairs(soundPattern, position, 10);
+  }
+}
+
+function getFallbackWordPairs(
+  soundPattern: string,
+  position: 'starts-with' | 'contains' | 'ends-with',
+  count: number
+): Array<{ word1: string; word2: string }> {
+  const sound = soundPattern.toLowerCase();
+  
+  const fallbackPairs: { [key: string]: Array<{ word1: string; word2: string }> } = {
+    's': [
+      { word1: "sun", word2: "star" },
+      { word1: "cat", word2: "dog" },
+      { word1: "red", word2: "blue" },
+      { word1: "big", word2: "small" },
+      { word1: "happy", word2: "sad" },
+      { word1: "hot", word2: "cold" },
+      { word1: "run", word2: "walk" },
+      { word1: "eat", word2: "drink" },
+      { word1: "book", word2: "pen" },
+      { word1: "car", word2: "bus" }
+    ],
+    'r': [
+      { word1: "red", word2: "green" },
+      { word1: "run", word2: "walk" },
+      { word1: "car", word2: "truck" },
+      { word1: "bread", word2: "butter" },
+      { word1: "rain", word2: "snow" },
+      { word1: "tree", word2: "flower" },
+      { word1: "bird", word2: "fish" },
+      { word1: "chair", word2: "table" },
+      { word1: "paper", word2: "pencil" },
+      { word1: "water", word2: "juice" }
+    ]
+  };
+
+  // Get available pairs for the sound
+  let availablePairs = fallbackPairs[sound] || [
+    { word1: "practice", word2: "exercise" },
+    { word1: "learning", word2: "teaching" },
+    { word1: "speaking", word2: "listening" },
+    { word1: "word", word2: "sentence" }
+  ];
+
+  // Filter by position if needed
+  if (position === 'starts-with') {
+    availablePairs = availablePairs.filter(pair => 
+      pair.word1.toLowerCase().startsWith(sound) && 
+      pair.word2.toLowerCase().startsWith(sound)
+    );
+  } else if (position === 'ends-with') {
+    availablePairs = availablePairs.filter(pair => 
+      pair.word1.toLowerCase().endsWith(sound) && 
+      pair.word2.toLowerCase().endsWith(sound)
+    );
+  } else {
+    availablePairs = availablePairs.filter(pair => 
+      pair.word1.toLowerCase().includes(sound) && 
+      pair.word2.toLowerCase().includes(sound)
+    );
+  }
+
+  return availablePairs.slice(0, count);
 }
