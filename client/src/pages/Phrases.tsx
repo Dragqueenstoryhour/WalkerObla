@@ -29,6 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PronunciationAssessmentResult } from "@/lib/types";
 import { queryClient } from "@/lib/queryClient";
 import { getAuthHeaders } from "@/lib/supabaseClient";
+import { getApiUrl } from "@/lib/utils";
 import {
   MicIcon,
   StopCircleIcon,
@@ -298,7 +299,7 @@ export default function Phrases() {
     setTopicPage(0); // Reset to first page of topics
 
     try {
-      const response = await fetch("/api/content/generate-topic-phrases", {
+      const response = await fetch(getApiUrl("/api/content/generate-topic-phrases"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -450,7 +451,7 @@ export default function Phrases() {
       formData.append("itemType", "phrase");
       formData.append("source", "phrases");
 
-      const response = await fetch("/api/pronunciation/assess", {
+      const response = await fetch(getApiUrl("/api/pronunciation/assess"), {
         method: "POST",
         body: formData,
       });
@@ -560,7 +561,7 @@ export default function Phrases() {
     ssmlText += `</speak>`;
 
     try {
-      const response = await fetch("/api/pronunciation/synthesize", {
+      const response = await fetch(getApiUrl("/api/pronunciation/synthesize"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -641,7 +642,7 @@ export default function Phrases() {
 
     try {
       const authHeaders = await getAuthHeaders();
-      const response = await fetch("/api/user/saved-phrases", {
+      const response = await fetch(getApiUrl("/api/user/saved-phrases"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -720,7 +721,7 @@ export default function Phrases() {
           createdAt: new Date().toISOString()
         }));
 
-        const response = await fetch('/api/user/pronunciation-feedback', {
+        const response = await fetch(getApiUrl('/api/user/pronunciation-feedback'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

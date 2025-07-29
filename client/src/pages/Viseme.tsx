@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Play, Square, Volume2, Gauge } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getApiUrl } from "@/lib/utils";
 
 // Import all viseme images
 import viseme0 from "@/assets/Visemes/viseme-id-0.jpg";
@@ -108,7 +109,7 @@ export default function Viseme() {
     setIsGenerating(true);
     try {
       const speedMultiplier = speed[0] / 100; // Convert percentage to multiplier (e.g., 70 -> 0.7)
-      const response = await fetch("/api/visemes/generate", {
+      const response = await fetch(getApiUrl("/api/visemes/generate"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

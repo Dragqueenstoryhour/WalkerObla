@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { getApiUrl } from '@/lib/utils';
 
 interface UseEnhancedVoiceOptions {
   onVoiceResult?: (result: { action: string; topic?: string; parameters?: any }) => void;
@@ -35,7 +36,7 @@ export function useEnhancedVoice({
       
       // Send to the enhanced voice processing endpoint
       // This will use OpenAI Whisper for transcription on the server
-      const response = await fetch('/api/voice/enhanced', {
+      const response = await fetch(getApiUrl('/api/voice/enhanced'), {
         method: 'POST',
         body: formData,
       });

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Edit2, Mail, HelpCircle } from 'lucide-react';
 import { Link } from 'wouter';
+import { getApiUrl } from '@/lib/utils';
 
 interface ContactFormData {
   category: 'Question' | 'Bug fix' | 'Enhancement Suggestion';
@@ -67,7 +68,7 @@ export default function MyAccount() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/contact', {
+      const response = await fetch(getApiUrl('/api/contact'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

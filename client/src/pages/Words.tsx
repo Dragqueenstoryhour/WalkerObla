@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { PronunciationAssessmentResult } from "@/lib/types";
 import { getAuthHeaders } from "@/lib/supabaseClient";
+import { getApiUrl } from "@/lib/utils";
 import {
   MicIcon,
   StopCircleIcon,
@@ -679,7 +680,7 @@ export default function Words() {
       ssmlText += `</voice>`;
       ssmlText += `</speak>`;
 
-      const response = await fetch("/api/pronunciation/synthesize", {
+      const response = await fetch(getApiUrl("/api/pronunciation/synthesize"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -810,7 +811,7 @@ export default function Words() {
     setIsProcessing(true);
 
     try {
-      const response = await fetch("/api/content/generate-words-with-sound", {
+      const response = await fetch(getApiUrl("/api/content/generate-words-with-sound"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -840,7 +841,7 @@ export default function Words() {
       // Fetch phonetic breakdown for all words
       try {
         const words = newWords.map(word => word.text);
-        const phoneticResponse = await fetch('/api/pronunciation/phonetic-breakdown', {
+        const phoneticResponse = await fetch(getApiUrl('/api/pronunciation/phonetic-breakdown'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -942,7 +943,7 @@ export default function Words() {
           createdAt: new Date().toISOString()
         }));
 
-        const response = await fetch('/api/user/pronunciation-feedback', {
+        const response = await fetch(getApiUrl('/api/user/pronunciation-feedback'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1233,7 +1234,7 @@ export default function Words() {
     setIsProcessing(true);
 
     try {
-      const response = await fetch("/api/content/generate-topic-phrases", {
+      const response = await fetch(getApiUrl("/api/content/generate-topic-phrases"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1280,7 +1281,7 @@ export default function Words() {
       // Fetch phonetic breakdown for all words
       try {
         const words = newWords.map(word => word.text);
-        const phoneticResponse = await fetch('/api/pronunciation/phonetic-breakdown', {
+        const phoneticResponse = await fetch(getApiUrl('/api/pronunciation/phonetic-breakdown'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1423,7 +1424,7 @@ export default function Words() {
       formData.append("itemType", "word");
       formData.append("source", "words");
 
-      const response = await fetch("/api/pronunciation/assess", {
+      const response = await fetch(getApiUrl("/api/pronunciation/assess"), {
         method: "POST",
         body: formData,
       });
@@ -1536,7 +1537,7 @@ export default function Words() {
     ssmlText += `</speak>`;
 
     try {
-      const response = await fetch("/api/pronunciation/synthesize", {
+      const response = await fetch(getApiUrl("/api/pronunciation/synthesize"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1712,7 +1713,7 @@ export default function Words() {
     setAnimationReady(false);
 
     try {
-      const response = await fetch("/api/visemes/generate", {
+      const response = await fetch(getApiUrl("/api/visemes/generate"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -2074,7 +2075,7 @@ export default function Words() {
 
     try {
       const authHeaders = await getAuthHeaders();
-      const response = await fetch("/api/user/saved-words", {
+      const response = await fetch(getApiUrl("/api/user/saved-words"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

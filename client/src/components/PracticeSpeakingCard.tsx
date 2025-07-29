@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { MicIcon, StopCircleIcon, Volume2, Star, BookmarkIcon, Ear, Snail, BookOpen } from 'lucide-react';
 
 import { PronunciationAssessmentResult } from '@/lib/types';
+import { getApiUrl } from '@/lib/utils';
 
 // Helper function to get word color based on phoneme accuracy scores
 const getWordColorFromPhonemes = (wordResult: any): string => {
@@ -212,7 +213,7 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
         formData.append("contentId", contentId.toString());
       }
 
-      const response = await fetch("/api/pronunciation/assess", {
+      const response = await fetch(getApiUrl("/api/pronunciation/assess"), {
         method: "POST",
         body: formData,
       });
@@ -279,7 +280,7 @@ export default function PracticeSpeakingCard({ text, contentId, onAssessmentRece
       ssmlText += `</voice>`;
       ssmlText += `</speak>`;
 
-      const response = await fetch("/api/pronunciation/synthesize", {
+      const response = await fetch(getApiUrl("/api/pronunciation/synthesize"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { prepareAudioForSubmission } from '@/lib/audioUtils';
+import { getApiUrl } from '@/lib/utils';
 
 interface UseWordRecordingResult {
   isRecording: boolean;
@@ -49,7 +50,7 @@ const useWordRecording = (): UseWordRecordingResult => {
       formData.append("itemType", currentItemType);
       formData.append("source", "feedback_panel"); // Or other relevant source
 
-      const response = await fetch("/api/pronunciation/assess", {
+      const response = await fetch(getApiUrl("/api/pronunciation/assess"), {
         method: "POST",
         body: formData,
       });

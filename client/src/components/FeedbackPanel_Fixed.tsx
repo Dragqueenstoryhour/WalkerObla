@@ -11,11 +11,12 @@ import { useToast } from '@/hooks/use-toast';
 import { submitReadingRecording } from '@/lib/azure';
 import useAudioRecording from '@/hooks/useAudioRecording';
 import useEmblaCarousel from 'embla-carousel-react';
+import { getApiUrl } from '@/lib/utils';
 
 // Helper function to get phonetic display from API
 async function getPhoneticDisplay(word: string): Promise<string> {
   try {
-    const response = await fetch(`/api/pronunciation/word?word=${encodeURIComponent(word)}`);
+    const response = await fetch(getApiUrl(`/api/pronunciation/word?word=${encodeURIComponent(word)}`));
     if (!response.ok) {
       throw new Error('Failed to get pronunciation');
     }
@@ -170,7 +171,7 @@ const FeedbackPanel = () => {
       formData.append("itemType", "word");
       formData.append("source", "feedback");
 
-      const response = await fetch("/api/pronunciation/assess", {
+      const response = await fetch(getApiUrl("/api/pronunciation/assess"), {
         method: "POST",
         body: formData,
       });
@@ -353,7 +354,7 @@ const FeedbackPanel = () => {
     }
 
     try {
-      const response = await fetch("/api/saved-words", {
+      const response = await fetch(getApiUrl("/api/saved-words"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

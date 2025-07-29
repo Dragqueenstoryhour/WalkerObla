@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabaseClient, getAuthHeaders } from "../lib/supabaseClient";
+import { getApiUrl } from "../lib/utils";
 
 export function useAuth() {
   const queryClient = useQueryClient();
@@ -11,7 +12,7 @@ export function useAuth() {
       const authHeaders = await getAuthHeaders();
       console.log('Auth headers prepared:', Object.keys(authHeaders).length > 0 ? 'Token present' : 'No token');
       
-      const response = await fetch("/api/auth/user", {
+      const response = await fetch(getApiUrl("/api/auth/user"), {
         headers: authHeaders,
         credentials: "include",
       });
@@ -56,7 +57,7 @@ export function useAuth() {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(getApiUrl('/api/auth/login'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,7 +87,7 @@ export function useAuth() {
           console.log('Re-fetching user data after login...');
           const authHeaders = await getAuthHeaders();
           
-          const userResponse = await fetch("/api/auth/user", {
+          const userResponse = await fetch(getApiUrl("/api/auth/user"), {
             headers: authHeaders,
             credentials: "include",
           });
@@ -130,7 +131,7 @@ export function useAuth() {
       queryClient.clear();
       
       // Step 4: Notify backend (non-blocking)
-      fetch('/api/auth/logout', {
+      fetch(getApiUrl('/api/auth/logout'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       }).then(response => {
@@ -165,7 +166,7 @@ export function useAuth() {
         queryFn: async () => {
           const authHeaders = await getAuthHeaders();
           
-          const response = await fetch("/api/auth/user", {
+          const response = await fetch(getApiUrl("/api/auth/user"), {
             headers: authHeaders,
             credentials: "include",
           });
@@ -195,7 +196,7 @@ export function useAuth() {
   // User is authenticated if we have user data and no 401 error
   const signUp = async (email: string, password: string) => {
     try {
-      const response = await fetch('/api/auth/signup', {
+      const response = await fetch(getApiUrl('/api/auth/signup'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -221,7 +222,7 @@ export function useAuth() {
           console.log('Re-fetching user data after signup...');
           const authHeaders = await getAuthHeaders();
           
-          const userResponse = await fetch("/api/auth/user", {
+          const userResponse = await fetch(getApiUrl("/api/auth/user"), {
             headers: authHeaders,
             credentials: "include",
           });

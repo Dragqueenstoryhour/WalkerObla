@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { getApiUrl } from '@/lib/utils';
 
 interface UseRealTimeVoiceOptions {
   onVoiceResult?: (result: { action: string; topic?: string; parameters?: any }) => void;
@@ -26,7 +27,7 @@ export function useRealTimeVoice({
   const startRealtimeSession = useCallback(async () => {
     try {
       // Get a new session ID from the server
-      const response = await fetch('/api/voice/realtime/session', {
+      const response = await fetch(getApiUrl('/api/voice/realtime/session'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });

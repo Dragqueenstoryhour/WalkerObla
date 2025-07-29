@@ -8,6 +8,7 @@ import { AlertCircle, CheckCircle, Mic, Play, Square, Upload, Volume2, Type } fr
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getApiUrl } from '@/lib/utils';
 
 interface BlendshapeData {
   timeCode: number;
@@ -102,7 +103,7 @@ const Animation = () => {
       formData.append('audio', audioBlob, 'recording.wav');
       formData.append('model', selectedModel);
       
-      const response = await fetch('/api/animation/generate-from-audio', {
+      const response = await fetch(getApiUrl('/api/animation/generate-from-audio'), {
         method: 'POST',
         body: formData
       });
@@ -207,7 +208,7 @@ const Animation = () => {
     setError(null);
     
     try {
-      const response = await fetch('/api/tts/generate', {
+      const response = await fetch(getApiUrl('/api/tts/generate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -11,6 +11,7 @@ import useEnhancedVoice from '@/hooks/useEnhancedVoice';
 import { PronunciationAssessmentResult } from '@/lib/types';
 import { queryClient } from '@/lib/queryClient';
 import { getAuthHeaders } from '@/lib/supabaseClient';
+import { getApiUrl } from '@/lib/utils';
 
 // Helper function to get word color based on phoneme accuracy scores
 const getWordColorFromPhonemes = (wordResult: any): string => {
@@ -471,7 +472,7 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
         formData.append("contentId", contentId.toString());
       }
 
-      const response = await fetch("/api/pronunciation/assess", {
+      const response = await fetch(getApiUrl("/api/pronunciation/assess"), {
         method: "POST",
         body: formData,
       });
@@ -530,7 +531,7 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
     ssmlText += `</speak>`;
 
     try {
-      const response = await fetch("/api/pronunciation/synthesize", {
+      const response = await fetch(getApiUrl("/api/pronunciation/synthesize"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -660,7 +661,7 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
   const handleSaveReading = async () => {
     try {
       // Check if user is authenticated
-      const userResponse = await fetch("/api/auth/user");
+      const userResponse = await fetch(getApiUrl("/api/auth/user"));
       if (!userResponse.ok) {
         return;
       }
@@ -670,7 +671,7 @@ const ConsolidatedReadingPractice = ({ onAssessmentReceived, onNewContent, conte
       }
 
       const authHeaders = await getAuthHeaders();
-      const response = await fetch("/api/user/saved-readings", {
+      const response = await fetch(getApiUrl("/api/user/saved-readings"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

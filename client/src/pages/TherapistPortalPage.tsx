@@ -18,6 +18,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthHeaders } from "@/lib/supabaseClient";
+import { getApiUrl } from "@/lib/utils";
 import { AssignmentScorecard } from "@/components/AssignmentScorecard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
@@ -984,7 +985,7 @@ export default function TherapistPortal() {
       
       try {
         const authHeaders = await getAuthHeaders();
-        const response = await fetch('/api/content/generate-word-pairs', {
+        const response = await fetch(getApiUrl('/api/content/generate-word-pairs'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1227,7 +1228,7 @@ export default function TherapistPortal() {
     setIsGeneratingSoundWords(true);
     try {
       const authHeaders = await getAuthHeaders();
-      const response = await fetch('/api/therapist/generate-words', {
+      const response = await fetch(getApiUrl('/api/therapist/generate-words'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

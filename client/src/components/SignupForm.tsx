@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabaseClient } from '@/lib/supabaseClient';
+import { getApiUrl } from '@/lib/utils';
 
 interface SignupFormProps {
   invitationToken?: string; // Optional invitation token for therapist association
@@ -24,7 +25,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ invitationToken }) => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/auth/signup', {
+      const response = await fetch(getApiUrl('/api/auth/signup'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

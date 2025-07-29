@@ -7,7 +7,7 @@ import { PronunciationIssue, SuggestedExercise } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import useEmblaCarousel from 'embla-carousel-react';
 import WordPracticeCard from '@/components/WordPracticeCard'; // Import the new component
-import { mapSyllablesToDisplay } from '@/lib/utils'; // Import from utils
+import { mapSyllablesToDisplay, getApiUrl } from '@/lib/utils'; // Import from utils
 import { useQuery, useMutation } from '@tanstack/react-query';
 
 // Constants for FeedbackPanel
@@ -19,7 +19,7 @@ const NORMAL_PLAYBACK_SPEED = 1.0;
 // Helper function to get phonetic display from API
 async function getPhoneticDisplay(word: string): Promise<string> {
   try {
-    const response = await fetch(`/api/pronunciation/word?word=${encodeURIComponent(word)}`);
+    const response = await fetch(getApiUrl(`/api/pronunciation/word?word=${encodeURIComponent(word)}`));
     if (!response.ok) {
       throw new Error('Failed to get pronunciation');
     }
@@ -87,7 +87,7 @@ const FeedbackPanel = () => {
     queryKey: ['syllabication', pronunciationIssues.map(issue => issue.word)],
     queryFn: async () => {
       const wordsToSyllabicate = pronunciationIssues.map(issue => issue.word);
-      const response = await fetch('/api/pronunciation/syllabication', {
+      const response = await fetch(getApiUrl('/api/pronunciation/syllabication'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -164,7 +164,7 @@ const FeedbackPanel = () => {
     }
 
     try {
-      const response = await fetch('/api/speech/synthesize', {
+      const response = await fetch(getApiUrl('/api/speech/synthesize'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -234,7 +234,7 @@ const FeedbackPanel = () => {
     }
 
     try {
-      const response = await fetch("/api/saved-words", {
+      const response = await fetch(getApiUrl("/api/saved-words"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

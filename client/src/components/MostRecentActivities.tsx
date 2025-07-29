@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Book, MessageSquare, BookOpen, Lightbulb, Ch
 import { format } from 'date-fns';
 import { useLocation } from 'wouter';
 import { getAuthHeaders } from '@/lib/supabaseClient';
+import { getApiUrl } from '@/lib/utils';
 
 interface Activity {
   id: number;
@@ -107,7 +108,7 @@ export function MostRecentActivities({ className }: MostRecentActivitiesProps) {
     queryKey: ['/api/user/recent-activities', currentPage, limit],
     queryFn: async () => {
       const authHeaders = await getAuthHeaders();
-      const response = await fetch(`/api/user/recent-activities?page=${currentPage}&limit=${limit}`, {
+      const response = await fetch(getApiUrl(`/api/user/recent-activities?page=${currentPage}&limit=${limit}`), {
         headers: authHeaders,
         credentials: 'include'
       });
@@ -125,7 +126,7 @@ export function MostRecentActivities({ className }: MostRecentActivitiesProps) {
     queryKey: ['/api/user/pronunciation-feedback'],
     queryFn: async () => {
       const authHeaders = await getAuthHeaders();
-      const response = await fetch('/api/user/pronunciation-feedback', {
+      const response = await fetch(getApiUrl('/api/user/pronunciation-feedback'), {
         headers: authHeaders,
         credentials: 'include'
       });

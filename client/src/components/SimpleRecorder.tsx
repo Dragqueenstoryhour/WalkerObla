@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { submitReadingRecording } from '@/lib/azure';
 import { PronunciationAssessmentResult } from '@/lib/types';
 import { getAuthHeaders } from '@/lib/supabaseClient';
+import { getApiUrl } from '@/lib/utils';
 
 interface SimpleRecorderProps {
   referenceText?: string;
@@ -175,7 +176,7 @@ export function SimpleRecorder({
       });
 
       const authHeaders = await getAuthHeaders();
-      const response = await fetch("/api/pronunciation/assess", {
+      const response = await fetch(getApiUrl("/api/pronunciation/assess"), {
         method: "POST",
         headers: {
           ...authHeaders,

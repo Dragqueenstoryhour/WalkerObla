@@ -3,6 +3,7 @@ import { X, ArrowLeft, Sparkles, Play, Volume2, ChevronDown, Trash2 } from 'luci
 import { apiRequest } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/useAuth';
 import { getAuthHeaders } from '@/lib/supabaseClient';
+import { getApiUrl } from '@/lib/utils';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragOverlay, useDroppable, useDraggable } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, rectSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -318,7 +319,7 @@ const AppleAssignmentModal: React.FC<AppleAssignmentModalProps> = ({
       };
 
       const authHeaders = await getAuthHeaders();
-      const response = await fetch('/api/assignments', {
+      const response = await fetch(getApiUrl('/api/assignments'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

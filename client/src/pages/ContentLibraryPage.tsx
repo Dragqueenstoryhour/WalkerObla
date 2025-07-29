@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { BookOpen, Search, GripVertical, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getAuthHeaders } from "@/lib/supabaseClient";
+import { getApiUrl } from "@/lib/utils";
 import AssignmentCustomizationModal from "@/components/modals/AssignmentCustomizationModal";
 
 interface ContentLibraryItem {
@@ -83,7 +84,7 @@ export default function ContentLibraryPage() {
     try {
       setIsLoading(true);
       const authHeaders = await getAuthHeaders();
-      const response = await fetch('/api/therapist/library', {
+      const response = await fetch(getApiUrl('/api/therapist/library'), {
         headers: {
           ...authHeaders,
         },
@@ -148,7 +149,7 @@ export default function ContentLibraryPage() {
         
         // Create a new content library item from the default template
         const authHeaders = await getAuthHeaders();
-        const response = await fetch('/api/therapist/library', {
+        const response = await fetch(getApiUrl('/api/therapist/library'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -204,7 +205,7 @@ export default function ContentLibraryPage() {
         updateData.description = updatedDescription;
       }
       
-      const response = await fetch(`/api/therapist/library/${contentId}`, {
+      const response = await fetch(getApiUrl(`/api/therapist/library/${contentId}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

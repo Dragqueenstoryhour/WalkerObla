@@ -27,6 +27,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { PronunciationAssessmentResult } from "@/lib/types";
+import { getApiUrl } from "@/lib/utils";
 import {
   MicIcon,
   StopCircleIcon,
@@ -199,7 +200,7 @@ export default function Phrases() {
     setIsProcessing(true);
 
     try {
-      const response = await fetch("/api/content/generate-topic-phrases", {
+      const response = await fetch(getApiUrl("/api/content/generate-topic-phrases"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -319,7 +320,7 @@ export default function Phrases() {
       formData.append("itemType", "phrase");
       formData.append("source", "phrases");
 
-      const response = await fetch("/api/pronunciation/assess", {
+      const response = await fetch(getApiUrl("/api/pronunciation/assess"), {
         method: "POST",
         body: formData,
       });
@@ -428,7 +429,7 @@ export default function Phrases() {
     ssmlText += `</speak>`;
 
     try {
-      const response = await fetch("/api/speech/synthesize", {
+      const response = await fetch(getApiUrl("/api/speech/synthesize"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -508,7 +509,7 @@ export default function Phrases() {
     if (!phrase) return;
 
     try {
-      const response = await fetch("/api/user/saved-phrases", {
+      const response = await fetch(getApiUrl("/api/user/saved-phrases"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -553,7 +554,7 @@ export default function Phrases() {
       setIsProcessing(true);
 
       try {
-        const response = await fetch(`/api/share/${shareId}`);
+        const response = await fetch(getApiUrl(`/api/share/${shareId}`));
 
         if (!response.ok) {
           throw new Error("Failed to load shared phrases");

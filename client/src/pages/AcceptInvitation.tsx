@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CheckCircle, XCircle, Loader2, Users } from 'lucide-react';
+import { getApiUrl } from '@/lib/utils';
 
 interface InvitationDetails {
   therapistName: string;
@@ -53,7 +54,7 @@ export default function AcceptInvitation() {
 
   const fetchInvitationDetails = async () => {
     try {
-      const response = await fetch(`/api/therapist/invitation/${token}`);
+      const response = await fetch(getApiUrl(`/api/therapist/invitation/${token}`));
       if (response.ok) {
         const data = await response.json();
         setInvitation(data.data);
@@ -73,7 +74,7 @@ export default function AcceptInvitation() {
     setIsAccepting(true);
     try {
       console.log("Attempting to accept invitation with token:", token, "and user access token:", user.access_token);
-      const response = await fetch(`/api/accept-invitation/accept/${token}`, {
+      const response = await fetch(getApiUrl(`/api/accept-invitation/accept/${token}`), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${user.access_token}`,

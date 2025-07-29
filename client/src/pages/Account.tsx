@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { useToast } from '@/hooks/use-toast';
 import { Link, useLocation } from 'wouter';
+import { getApiUrl } from '@/lib/utils';
 import { Star, Trophy, Clock, BarChart2, Flame, BookOpen } from 'lucide-react';
 
 const Account = () => {
@@ -39,15 +40,15 @@ const Account = () => {
       if (user) {
         try {
           // Fetch saved phrases count
-          const savedPhrasesResponse = await fetch('/api/phrases/saved');
+          const savedPhrasesResponse = await fetch(getApiUrl('/api/phrases/saved'));
           const savedPhrasesData = savedPhrasesResponse.ok ? await savedPhrasesResponse.json() : { savedPhrases: [] };
           
           // Fetch practice groups count
-          const practiceGroupsResponse = await fetch('/api/practice-groups');
+          const practiceGroupsResponse = await fetch(getApiUrl('/api/practice-groups'));
           const practiceGroupsData = practiceGroupsResponse.ok ? await practiceGroupsResponse.json() : { groups: [] };
           
           // Fetch reading sessions for articles read
-          const readingSessionsResponse = await fetch('/api/reading-sessions');
+          const readingSessionsResponse = await fetch(getApiUrl('/api/reading-sessions'));
           const readingSessionsData = readingSessionsResponse.ok ? await readingSessionsResponse.json() : { sessions: [] };
           
           // Update stats with real data

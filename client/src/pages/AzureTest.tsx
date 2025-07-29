@@ -8,6 +8,7 @@ import { MicIcon, StopCircleIcon, VolumeIcon, RotateCw, Ear } from 'lucide-react
 import { useToast } from '@/hooks/use-toast';
 import useAudioRecording from '@/hooks/useAudioRecording';
 import { PronunciationAssessmentResult } from '@/lib/types';
+import { getApiUrl } from '@/lib/utils';
 
 export default function AzureTest() {
   const { toast } = useToast();
@@ -68,7 +69,7 @@ export default function AzureTest() {
       formData.append('text', testText);
 
       // Call the debug endpoint for detailed diagnostics
-      const response = await fetch('/api/debug/pronunciation', {
+      const response = await fetch(getApiUrl('/api/debug/pronunciation'), {
         method: 'POST',
         body: formData
       });

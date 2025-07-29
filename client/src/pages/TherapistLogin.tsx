@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Stethoscope, Users, BarChart3, CheckCircle } from "lucide-react";
+import { getApiUrl } from "@/lib/utils";
 
 const US_STATES = [
   "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", 
@@ -72,7 +73,7 @@ export default function TherapistLogin() {
     try {
       if (isSignUp) {
         // Sign up logic
-        const response = await fetch('/api/auth/signup', {
+        const response = await fetch(getApiUrl('/api/auth/signup'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

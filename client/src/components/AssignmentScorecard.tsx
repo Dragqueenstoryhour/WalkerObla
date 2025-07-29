@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getApiUrl } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -73,7 +74,7 @@ export function AssignmentScorecard({
     const fetchResults = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/assignments/${assignmentId}/comprehensive-results`);
+        const response = await fetch(getApiUrl(`/api/assignments/${assignmentId}/comprehensive-results`));
         
         if (!response.ok) {
           throw new Error('Failed to fetch assignment results');
@@ -96,7 +97,7 @@ export function AssignmentScorecard({
     const fetchInsights = async () => {
       if (!isTherapistView) return;
       try {
-        const response = await fetch(`/api/assignments/${assignmentId}/insights`);
+        const response = await fetch(getApiUrl(`/api/assignments/${assignmentId}/insights`));
         if (!response.ok) {
           throw new Error('Failed to fetch insights');
         }

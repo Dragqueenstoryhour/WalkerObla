@@ -12,6 +12,7 @@ import { UserCompletionReport } from '@/components/UserCompletionReport';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { getAuthHeaders } from '@/lib/supabaseClient';
+import { getApiUrl } from '@/lib/utils';
 import { Link } from 'wouter';
 import useEmblaCarousel from 'embla-carousel-react';
 import {
@@ -208,7 +209,7 @@ const AssignmentPractice: React.FC = () => {
     queryKey: [`/api/assignments/${assignmentId}`],
     queryFn: async () => {
       const authHeaders = await getAuthHeaders();
-      const response = await fetch(`/api/assignments/${assignmentId}`, {
+      const response = await fetch(getApiUrl(`/api/assignments/${assignmentId}`), {
         headers: {
           ...authHeaders,
           'Content-Type': 'application/json',
@@ -255,7 +256,7 @@ const AssignmentPractice: React.FC = () => {
     try {
       // Save result to server
       const authHeaders = await getAuthHeaders();
-      const response = await fetch(`/api/assignments/${assignmentId}/results`, {
+      const response = await fetch(getApiUrl(`/api/assignments/${assignmentId}/results`), {
         method: 'POST',
         headers: {
           ...authHeaders,
@@ -327,7 +328,7 @@ const AssignmentPractice: React.FC = () => {
       ssmlText += `</voice>`;
       ssmlText += `</speak>`;
       
-      const response = await fetch('/api/pronunciation/synthesize', {
+      const response = await fetch(getApiUrl('/api/pronunciation/synthesize'), {
         method: 'POST',
         headers: {
           ...authHeaders,
@@ -533,7 +534,7 @@ const AssignmentPractice: React.FC = () => {
     setAnimationReady(false);
 
     try {
-      const response = await fetch("/api/visemes/generate", {
+      const response = await fetch(getApiUrl("/api/visemes/generate"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1011,7 +1012,7 @@ const AssignmentPractice: React.FC = () => {
           
           // Save results to the server
           try {
-            const response = await fetch(`/api/assignments/${assignment.id}/complete`, {
+            const response = await fetch(getApiUrl(`/api/assignments/${assignment.id}/complete`), {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -1068,7 +1069,7 @@ const AssignmentPractice: React.FC = () => {
           
           // Save detailed results to the server using new comprehensive endpoint
           try {
-            const response = await fetch(`/api/assignments/${assignment.id}/complete`, {
+            const response = await fetch(getApiUrl(`/api/assignments/${assignment.id}/complete`), {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabaseClient } from '@/lib/supabaseClient';
+import { getApiUrl } from '@/lib/utils';
 
 interface InvitationDetails {
   therapistName: string;
@@ -61,7 +62,7 @@ export default function InvitationLanding() {
 
   const fetchInvitationDetails = async () => {
     try {
-      const response = await fetch(`/api/therapist/invitation/${token}`);
+      const response = await fetch(getApiUrl(`/api/therapist/invitation/${token}`));
       if (response.ok) {
         const data = await response.json();
         setInvitation(data.data);
@@ -107,7 +108,7 @@ export default function InvitationLanding() {
     setIsSettingPassword(true);
 
     try {
-      const response = await fetch('/api/invitation/accept', {
+      const response = await fetch(getApiUrl('/api/invitation/accept'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

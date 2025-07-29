@@ -15,6 +15,7 @@ import { ChevronLeft, ChevronRight, Volume2, Shuffle, BookOpen, MicIcon, StopCir
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { getAuthHeaders } from '@/lib/supabaseClient';
+import { getApiUrl } from '@/lib/utils';
 import { CombinedLineChart } from '@/components/CombinedLineChart'; // Import the chart component
 import { MostRecentActivities } from '@/components/MostRecentActivities';
 import { CalendarDays, Users, ExternalLink } from 'lucide-react';
@@ -405,7 +406,7 @@ function AssignmentCarousel({ items, assignmentId }: { items: AssignmentItem[], 
       formData.append("audio", blob, "recording.webm");
       formData.append("referenceText", item.text);
 
-      const response = await fetch("/api/pronunciation/assess", {
+      const response = await fetch(getApiUrl("/api/pronunciation/assess"), {
         method: "POST",
         body: formData,
       });
@@ -420,7 +421,7 @@ function AssignmentCarousel({ items, assignmentId }: { items: AssignmentItem[], 
       // Record the assignment result
       try {
         const authHeaders = await getAuthHeaders();
-        const assignmentResponse = await fetch(`/api/assignments/${assignmentId}/results`, {
+        const assignmentResponse = await fetch(getApiUrl(`/api/assignments/${assignmentId}/results`), {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -485,7 +486,7 @@ function AssignmentCarousel({ items, assignmentId }: { items: AssignmentItem[], 
   // Play assignment item audio
   const playAssignmentAudio = async (item: ProcessedItem, slow: boolean = false) => {
     try {
-      const response = await fetch("/api/pronunciation/synthesize", {
+      const response = await fetch(getApiUrl("/api/pronunciation/synthesize"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1189,7 +1190,7 @@ function PracticeWordsCarousel({
       formData.append("audio", blob, "recording.webm");
       formData.append("referenceText", word.text);
 
-      const response = await fetch("/api/pronunciation/assess", {
+      const response = await fetch(getApiUrl("/api/pronunciation/assess"), {
         method: "POST",
         body: formData,
       });
@@ -1204,7 +1205,7 @@ function PracticeWordsCarousel({
       // Record activity
       try {
         const authHeaders = await getAuthHeaders();
-        await fetch('/api/user/activity', {
+        await fetch(getApiUrl('/api/user/activity'), {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -1282,7 +1283,7 @@ function PracticeWordsCarousel({
       ssmlText += `</voice>`;
       ssmlText += `</speak>`;
 
-      const response = await fetch("/api/pronunciation/synthesize", {
+      const response = await fetch(getApiUrl("/api/pronunciation/synthesize"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1689,7 +1690,7 @@ function PracticePhrasesCarousel({
       formData.append("audio", blob, "recording.webm");
       formData.append("referenceText", phrase.text);
 
-      const response = await fetch("/api/pronunciation/assess", {
+      const response = await fetch(getApiUrl("/api/pronunciation/assess"), {
         method: "POST",
         body: formData,
       });
@@ -1704,7 +1705,7 @@ function PracticePhrasesCarousel({
       // Record activity
       try {
         const authHeaders = await getAuthHeaders();
-        await fetch('/api/user/activity', {
+        await fetch(getApiUrl('/api/user/activity'), {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -1782,7 +1783,7 @@ function PracticePhrasesCarousel({
       ssmlText += `</voice>`;
       ssmlText += `</speak>`;
 
-      const response = await fetch("/api/pronunciation/synthesize", {
+      const response = await fetch(getApiUrl("/api/pronunciation/synthesize"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

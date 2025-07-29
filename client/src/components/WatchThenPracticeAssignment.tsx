@@ -6,6 +6,7 @@ import { Play, Eye, Mic, ArrowRight, CheckCircle, RotateCcw, Trophy, Star, Trend
 import { FacialAnimation } from '@/components/FacialAnimation';
 import { SimpleRecorder } from '@/components/SimpleRecorder';
 import { useToast } from '@/hooks/use-toast';
+import { getApiUrl } from '@/lib/utils';
 
 interface WatchThenPracticeProps {
   assignment: {
@@ -90,7 +91,7 @@ export function WatchThenPracticeAssignment({ assignment, items, onComplete }: W
       setPhrasesLoading(true);
       const soundPattern = assignment.metadata?.soundPattern?.sound || 'default';
       
-      const response = await fetch('/api/content/generate-word-phrases', {
+      const response = await fetch(getApiUrl('/api/content/generate-word-phrases'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

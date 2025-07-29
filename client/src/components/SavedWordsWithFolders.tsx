@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { getApiUrl } from '@/lib/utils';
 import { 
   FolderPlus, 
   Folder, 
@@ -66,7 +67,7 @@ export function SavedWordsWithFolders() {
   // Create folder mutation
   const createFolderMutation = useMutation({
     mutationFn: async (folderData: { name: string; description?: string; color: string }) => {
-      const response = await fetch('/api/word-folders', {
+      const response = await fetch(getApiUrl('/api/word-folders'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(folderData),
@@ -90,7 +91,7 @@ export function SavedWordsWithFolders() {
   // Delete folder mutation
   const deleteFolderMutation = useMutation({
     mutationFn: async (folderId: number) => {
-      const response = await fetch(`/api/word-folders/${folderId}`, {
+      const response = await fetch(getApiUrl(`/api/word-folders/${folderId}`), {
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('Failed to delete folder');
@@ -112,7 +113,7 @@ export function SavedWordsWithFolders() {
   // Delete word mutation
   const deleteWordMutation = useMutation({
     mutationFn: async (word: string) => {
-      const response = await fetch(`/api/saved-words/${encodeURIComponent(word)}`, {
+      const response = await fetch(getApiUrl(`/api/saved-words/${encodeURIComponent(word)}`), {
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('Failed to delete word');
@@ -162,7 +163,7 @@ export function SavedWordsWithFolders() {
       ssmlText += `</voice>`;
       ssmlText += `</speak>`;
 
-      const response = await fetch("/api/pronunciation/synthesize", {
+      const response = await fetch(getApiUrl("/api/pronunciation/synthesize"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

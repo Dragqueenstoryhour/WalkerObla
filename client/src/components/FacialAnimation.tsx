@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImageAnimatedViseme } from './ImageAnimatedViseme';
+import { getApiUrl } from '@/lib/utils';
 
 // Import viseme images
 import viseme0 from "@/assets/Visemes/viseme-id-0.jpg";
@@ -134,7 +135,7 @@ export function FacialAnimation({
       setPlaying(false);
       
       // Call server API to generate viseme data
-      const response = await fetch('/api/visemes/generate', {
+      const response = await fetch(getApiUrl('/api/visemes/generate'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

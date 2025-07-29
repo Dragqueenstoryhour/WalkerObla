@@ -5,6 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Zap, Mic, ArrowRight, CheckCircle, RotateCcw, Trophy } from 'lucide-react';
 import { SimpleRecorder } from '@/components/SimpleRecorder';
 import { useToast } from '@/hooks/use-toast';
+import { getApiUrl } from '@/lib/utils';
 
 interface WordPairsAssignmentProps {
   assignment: {
@@ -84,7 +85,7 @@ export function WordPairsAssignment({ assignment, items, onComplete }: WordPairs
       formData.append('targetWords', JSON.stringify([currentPair.word1, currentPair.word2]));
 
       // Send to Azure for processing
-      const response = await fetch('/api/pronunciation/assess-word-pairs', {
+      const response = await fetch(getApiUrl('/api/pronunciation/assess-word-pairs'), {
         method: 'POST',
         body: formData,
       });

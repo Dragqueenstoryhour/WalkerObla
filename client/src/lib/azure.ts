@@ -54,7 +54,7 @@ export async function submitReadingRecording(
  */
 export async function getWordPronunciation(word: string): Promise<string> {
   try {
-    const response = await fetch(`/api/pronunciation/word?word=${encodeURIComponent(word)}`, {
+    const response = await fetch(getApiUrl(`/api/pronunciation/word?word=${encodeURIComponent(word)}`), {
       method: 'GET',
       credentials: 'include',
     });
