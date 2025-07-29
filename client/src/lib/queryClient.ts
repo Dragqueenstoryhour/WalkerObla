@@ -1,5 +1,6 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { getAuthHeaders } from "./supabaseClient";
+import { getApiUrl } from "./utils";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -21,7 +22,7 @@ export async function apiRequest(
     ...options.headers,
   };
 
-  const res = await fetch(url, {
+  const res = await fetch(getApiUrl(url), {
     ...options,
     headers,
     credentials: "include",
@@ -38,7 +39,7 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const authHeaders = await getAuthHeaders();
-    const res = await fetch(queryKey[0] as string, {
+    const res = await fetch(getApiUrl(queryKey[0] as string), {
       credentials: "include",
       headers: authHeaders,
     });

@@ -5,6 +5,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export function getApiUrl(endpoint: string): string {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL;
+  
+  if (baseUrl) {
+    return `${baseUrl}${endpoint}`;
+  }
+  
+  return endpoint;
+}
+
 // Constants for syllable coloring
 const ACCURACY_THRESHOLD_GREEN = 70;
 const COLOR_GREEN = '#2a9d8f';
