@@ -116,6 +116,15 @@ router.post('/', protect, catchAsync(async (req: any, res) => {
   
   try {
     const parsedAssignmentData = insertAssignmentSchema.parse(assignmentData);
+    
+    if (parsedAssignmentData.userId && !parsedAssignmentData.clientEmail) {
+      const client = await storage.getUser(parsedAssignmentData.userId);
+      if (client && client.email) {
+        parsedAssignmentData.clientEmail = client.email;
+        console.log('🔧 ASSIGNMENT FIX: Added clientEmail for registered user:', client.email);
+      }
+    }
+    
     const assignment = await storage.createAssignment(parsedAssignmentData);
   
   // Create assignment items if provided
