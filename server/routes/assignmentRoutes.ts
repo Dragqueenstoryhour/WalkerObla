@@ -649,28 +649,27 @@ router.get('/debug/recent/:type', catchAsync(async (req: any, res) => {
   return error(res, 'Invalid debug type. Use /debug/recent/invitations or /debug/recent/assignments', 400);
 }));
 
-// Debug endpoint to check specific tokens and assignments
-router.get('/debug/:type/:value', catchAsync(async (req: any, res) => {
-  const { type, value } = req.params;
-  
-  if (type === 'token') {
-    const invitation = await storage.getClientInvitationByToken(value);
-    return success(res, {
-      token: value,
-      found: !!invitation,
-      invitation: invitation || null
-    });
-  } else if (type === 'assignment') {
-    const assignmentId = parseInt(value);
-    const assignment = await storage.getAssignment(assignmentId);
-    return success(res, {
-      assignmentId,
-      found: !!assignment,
-      assignment: assignment || null
-    });
-  }
-  
-  return error(res, 'Invalid debug type. Use /debug/token/{token} or /debug/assignment/{id}', 400);
+// Debug endpoint to check specific tokens
+router.get('/debug/token/:value', catchAsync(async (req: any, res) => {
+  const { value } = req.params;
+  const invitation = await storage.getClientInvitationByToken(value);
+  return success(res, {
+    token: value,
+    found: !!invitation,
+    invitation: invitation || null
+  });
+}));
+
+// Debug endpoint to check specific assignments
+router.get('/debug/assignment/:value', catchAsync(async (req: any, res) => {
+  const { value } = req.params;
+  const assignmentId = parseInt(value);
+  const assignment = await storage.getAssignment(assignmentId);
+  return success(res, {
+    assignmentId,
+    found: !!assignment,
+    assignment: assignment || null
+  });
 }));
 
 export default router;
