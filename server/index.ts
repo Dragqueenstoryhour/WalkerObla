@@ -115,6 +115,14 @@ app.get('/test-supabase-auth', async (req, res) => {
 
   // Use PORT environment variable in production, fallback to 3001 for development
   const port = process.env.PORT ? parseInt(process.env.PORT) : 3001;
+  
+  // Log Loops configuration on server startup
+  console.log('📧 Loops Configuration Status:');
+  console.log('  LOOPS_API_KEY:', process.env.LOOPS_API_KEY ? '✅ Set' : '❌ Not set');
+  console.log('  LOOPS_CLIENT_INVITATION_TEMPLATE_ID:', process.env.LOOPS_CLIENT_INVITATION_TEMPLATE_ID || '❌ Not set');
+  console.log('  LOOPS_ASSIGNMENT_TEMPLATE_ID:', process.env.LOOPS_ASSIGNMENT_TEMPLATE_ID || '❌ Not set');
+  console.log('  LOOPS_PASSWORD_SETUP_TEMPLATE_ID:', process.env.LOOPS_PASSWORD_SETUP_TEMPLATE_ID || '❌ Not set');
+  
   server.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
   });

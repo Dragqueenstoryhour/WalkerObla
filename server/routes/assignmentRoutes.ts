@@ -589,4 +589,22 @@ router.post('/templates', protect, catchAsync(async (req: any, res) => {
   return success(res, { words });
 }));
 
+// Test email endpoint (no auth required for debugging)
+router.post('/test-email', catchAsync(async (req: any, res) => {
+  console.log('🧪 Test email endpoint called');
+  
+  const result = await sendAssignmentNotification({
+    clientEmail: 'adamlowendick@gmail.com',
+    clientName: 'Adam Test',
+    therapistName: 'Dr. Test Smith',
+    assignmentTitle: 'Debug Test Assignment',
+    assignmentDescription: 'Testing email functionality with debugging',
+    dueDate: '2024-08-01',
+    assignmentId: 999,
+    baseUrl: 'http://localhost:3001'
+  });
+  
+  return success(res, { emailSent: result, message: 'Test email attempt completed' });
+}));
+
 export default router;
