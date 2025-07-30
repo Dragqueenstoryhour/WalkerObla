@@ -146,7 +146,7 @@ router.post('/', protect, catchAsync(async (req: any, res) => {
         ? `${therapist.firstName} ${therapist.lastName}` 
         : therapist.username;
       
-      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const baseUrl = process.env.CLIENT_BASE_URL || `${req.protocol}://${req.get('host')}`;
       
       await sendAssignmentNotification({
         clientEmail,
