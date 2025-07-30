@@ -142,7 +142,7 @@ export async function sendAssignmentNotification(data: AssignmentNotificationDat
 
   console.log('🔗 Generated assignment link:', deepLink);
 
-  return callLoops('assignment_notification', {
+  const payload = {
     to: data.clientEmail,
     dataVariables: {
       clientName: clientDisplayName,
@@ -153,5 +153,9 @@ export async function sendAssignmentNotification(data: AssignmentNotificationDat
       assignmentLink: deepLink,
       baseUrl: data.baseUrl
     }
-  });
+  };
+  
+  console.log('📤 LOOPS PAYLOAD DEBUG: Assignment notification payload:', JSON.stringify(payload, null, 2));
+  
+  return callLoops('assignment_notification', payload);
 }

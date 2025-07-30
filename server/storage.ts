@@ -1417,6 +1417,26 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  async getRecentInvitations(limit: number = 10): Promise<ClientInvitation[]> {
+    const invitations = await db
+      .select()
+      .from(clientInvitations)
+      .orderBy(desc(clientInvitations.sentAt))
+      .limit(limit);
+    
+    return invitations;
+  }
+
+  async getRecentAssignments(limit: number = 10): Promise<Assignment[]> {
+    const recentAssignments = await db
+      .select()
+      .from(assignments)
+      .orderBy(desc(assignments.createdAt))
+      .limit(limit);
+    
+    return recentAssignments;
+  }
+
   // Health check for deployment readiness
   async healthCheck(): Promise<void> {
     try {

@@ -43,18 +43,27 @@ router.get('/', protect, catchAsync(async (req: any, res) => {
 
 router.get('/:id', protect, catchAsync(async (req: any, res) => {
   const assignmentId = parseInt(req.params.id);
+  console.log('🎯 ASSIGNMENT ACCESS DEBUG: Looking for assignment ID:', assignmentId);
+  
   const assignment = await storage.getAssignment(assignmentId);
+  console.log('🎯 ASSIGNMENT ACCESS DEBUG: Assignment found:', assignment ? 'YES' : 'NO');
   
   if (!assignment) {
+    console.log('🎯 ASSIGNMENT ACCESS DEBUG: Assignment not found in database');
     return error(res, "Assignment not found", 404);
   }
   
   const userId = req.user.claims.sub;
   const user = await storage.getUser(userId);
+  console.log('🎯 ASSIGNMENT ACCESS DEBUG: User ID:', userId);
+  console.log('🎯 ASSIGNMENT ACCESS DEBUG: Assignment userId:', assignment.userId);
+  console.log('🎯 ASSIGNMENT ACCESS DEBUG: Assignment clientEmail:', assignment.clientEmail);
+  console.log('🎯 ASSIGNMENT ACCESS DEBUG: User email:', user?.email);
   
   // Check access: user must be the assigned client or match the email
   const hasAccess = assignment.userId === userId || 
                    (assignment.clientEmail && user?.email === assignment.clientEmail);
+  console.log('🎯 ASSIGNMENT ACCESS DEBUG: Has access:', hasAccess);
   
   if (!hasAccess) {
     return error(res, "Access denied", 403);
@@ -148,7 +157,14 @@ router.post('/', protect, catchAsync(async (req: any, res) => {
       
       const baseUrl = process.env.CLIENT_BASE_URL || `${req.protocol}://${req.get('host')}`;
       
-      await sendAssignmentNotification({
+      console.log('📧 ASSIGNMENT EMAIL DEBUG: Attempting to send email to:', clientEmail);
+      console.log('📧 ASSIGNMENT EMAIL DEBUG: Assignment ID:', assignment.id);
+      console.log('📧 ASSIGNMENT EMAIL DEBUG: Base URL:', baseUrl);
+      console.log('📧 ASSIGNMENT EMAIL DEBUG: Assignment title:', parsedAssignmentData.title);
+      console.log('📧 ASSIGNMENT EMAIL DEBUG: Therapist name:', therapistName);
+      console.log('📧 ASSIGNMENT EMAIL DEBUG: Client name:', clientName);
+      
+      const emailResult = await sendAssignmentNotification({
         clientEmail,
         clientName: clientName || 'Student',
         therapistName,
@@ -158,6 +174,8 @@ router.post('/', protect, catchAsync(async (req: any, res) => {
         assignmentId: assignment.id,
         baseUrl
       });
+      
+      console.log('📧 ASSIGNMENT EMAIL DEBUG: Email send result:', emailResult);
     }
   } catch (emailError) {
     console.error('Failed to send assignment notification email:', emailError);
@@ -239,17 +257,7 @@ router.post('/:id/complete', protect, catchAsync(async (req: any, res) => {
             accuracyScore: sentence.word1Detected && sentence.word2Detected ? 100 : 0,
             fluencyScore: Math.round((sentence.word1Score + sentence.word2Score) / 2),
             completenessScore: sentence.word1Detected && sentence.word2Detected ? 100 : 0,
-            practiceDate: new Date().toISOString(),
-            metadata: {
-              word1: word1,
-              word2: word2,
-              word1Score: sentence.word1Score,
-              word2Score: sentence.word2Score,
-              word1Detected: sentence.word1Detected,
-              word2Detected: sentence.word2Detected,
-              transcription: sentence.transcription,
-              connection: connection
-            }
+            practiceDate: new Date().toISOString()
           });
           savedResults.push(pairResultSaved);
         }
@@ -589,5 +597,71 @@ router.post('/templates', protect, catchAsync(async (req: any, res) => {
   return success(res, { words });
 }));
 
+
+// Debug endpoint to check specific tokens and assignments
+router.get('/debug/:type/:value', catchAsync(async (req: any, res) => {
+  const { type, value } = req.params;
+  
+  if (type === 'token') {
+    const invitation = await storage.getClientInvitationByToken(value);
+    return success(res, {
+      token: value,
+      found: !!invitation,
+      invitation: invitation || null
+    });
+  } else if (type === 'assignment') {
+    const assignmentId = parseInt(value);
+    const assignment = await storage.getAssignment(assignmentId);
+    return success(res, {
+      assignmentId,
+      found: !!assignment,
+      assignment: assignment || null
+    });
+  }
+  
+  return error(res, 'Invalid debug type. Use /debug/token/{token} or /debug/assignment/{id}', 400);
+}));
+
+// Database query endpoint to check recent invitations and assignments
+router.get('/debug/recent/:type', catchAsync(async (req: any, res) => {
+  const { type } = req.params;
+  const limit = parseInt(req.query.limit as string) || 10;
+  
+  if (type === 'invitations') {
+    try {
+      const recentInvitations = await storage.getRecentInvitations(limit);
+      return success(res, {
+        type: 'recent_invitations',
+        count: recentInvitations.length,
+        invitations: recentInvitations
+      });
+    } catch (error) {
+      console.log('⚠️ getRecentInvitations not implemented in storage, using fallback');
+      return success(res, {
+        type: 'recent_invitations',
+        message: 'getRecentInvitations method not implemented in storage layer',
+        fallback: true
+      });
+    }
+  } else if (type === 'assignments') {
+    try {
+      const recentAssignments = await storage.getRecentAssignments(limit);
+      return success(res, {
+        type: 'recent_assignments',
+        count: recentAssignments.length,
+        assignments: recentAssignments
+      });
+    } catch (error) {
+      console.log('⚠️ getRecentAssignments not implemented in storage, using fallback');
+      return success(res, {
+        type: 'recent_assignments',
+        message: 'getRecentAssignments method not implemented in storage layer',
+        fallback: true
+      });
+    }
+  }
+  
+  return error(res, 'Invalid debug type. Use /debug/recent/invitations or /debug/recent/assignments', 400);
+}));
 
 export default router;

@@ -129,6 +129,9 @@ router.post('/clients', protect, catchAsync(async (req: any, res) => {
               expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
             });
             
+            console.log('🎯 INVITATION DEBUG: Created invitation with token:', invitation.invitationToken);
+            console.log('🎯 INVITATION DEBUG: Full invitation object:', JSON.stringify(invitation, null, 2));
+            
             const baseUrl = process.env.CLIENT_BASE_URL || 'https://www.oblaai.com';
             
             await sendClientInvitation({
@@ -172,6 +175,9 @@ router.post('/clients', protect, catchAsync(async (req: any, res) => {
           clientEmail: existingUser.email!,
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
         });
+        
+        console.log('🎯 INVITATION DEBUG: Created invitation with token:', invitation.invitationToken);
+        console.log('🎯 INVITATION DEBUG: Full invitation object:', JSON.stringify(invitation, null, 2));
         
         const baseUrl = process.env.CLIENT_BASE_URL || 'https://www.oblaai.com';
         
@@ -249,6 +255,9 @@ router.post('/clients', protect, catchAsync(async (req: any, res) => {
         clientEmail: newUser.email!,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
       });
+      
+      console.log('🎯 INVITATION DEBUG: Created invitation with token:', invitation.invitationToken);
+      console.log('🎯 INVITATION DEBUG: Full invitation object:', JSON.stringify(invitation, null, 2));
       
       const baseUrl = process.env.CLIENT_BASE_URL || 'https://www.oblaai.com';
       
@@ -554,8 +563,11 @@ router.post('/resolve-pending-invitations', protect, catchAsync(async (req: any,
 router.get('/invitation/:token', catchAsync(async (req: any, res) => {
   const { token } = req.params;
   
+  console.log('🔍 INVITATION LOOKUP: Searching for token:', token);
   const invitation = await storage.getClientInvitationByToken(token);
+  console.log('🔍 INVITATION LOOKUP: Found invitation:', invitation ? 'YES' : 'NO');
   if (!invitation) {
+    console.log('🔍 INVITATION LOOKUP: Token not found in database');
     return error(res, 'Invitation not found or expired', 404);
   }
   
