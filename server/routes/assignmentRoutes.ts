@@ -598,31 +598,7 @@ router.post('/templates', protect, catchAsync(async (req: any, res) => {
 }));
 
 
-// Debug endpoint to check specific tokens and assignments
-router.get('/debug/:type/:value', catchAsync(async (req: any, res) => {
-  const { type, value } = req.params;
-  
-  if (type === 'token') {
-    const invitation = await storage.getClientInvitationByToken(value);
-    return success(res, {
-      token: value,
-      found: !!invitation,
-      invitation: invitation || null
-    });
-  } else if (type === 'assignment') {
-    const assignmentId = parseInt(value);
-    const assignment = await storage.getAssignment(assignmentId);
-    return success(res, {
-      assignmentId,
-      found: !!assignment,
-      assignment: assignment || null
-    });
-  }
-  
-  return error(res, 'Invalid debug type. Use /debug/token/{token} or /debug/assignment/{id}', 400);
-}));
-
-// Database query endpoint to check recent invitations and assignments
+// Database query endpoint to check recent invitations and assignments (must come before general debug route)
 router.get('/debug/recent/:type', catchAsync(async (req: any, res) => {
   const { type } = req.params;
   const limit = parseInt(req.query.limit as string) || 10;
@@ -662,6 +638,30 @@ router.get('/debug/recent/:type', catchAsync(async (req: any, res) => {
   }
   
   return error(res, 'Invalid debug type. Use /debug/recent/invitations or /debug/recent/assignments', 400);
+}));
+
+// Debug endpoint to check specific tokens and assignments
+router.get('/debug/:type/:value', catchAsync(async (req: any, res) => {
+  const { type, value } = req.params;
+  
+  if (type === 'token') {
+    const invitation = await storage.getClientInvitationByToken(value);
+    return success(res, {
+      token: value,
+      found: !!invitation,
+      invitation: invitation || null
+    });
+  } else if (type === 'assignment') {
+    const assignmentId = parseInt(value);
+    const assignment = await storage.getAssignment(assignmentId);
+    return success(res, {
+      assignmentId,
+      found: !!assignment,
+      assignment: assignment || null
+    });
+  }
+  
+  return error(res, 'Invalid debug type. Use /debug/token/{token} or /debug/assignment/{id}', 400);
 }));
 
 export default router;
