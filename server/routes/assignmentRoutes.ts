@@ -60,9 +60,10 @@ router.get('/:id', protect, catchAsync(async (req: any, res) => {
   console.log('🎯 ASSIGNMENT ACCESS DEBUG: Assignment clientEmail:', assignment.clientEmail);
   console.log('🎯 ASSIGNMENT ACCESS DEBUG: User email:', user?.email);
   
-  // Check access: user must be the assigned client or match the email
+  // Check access: user must be the assigned client, match the email, or be the creator
   const hasAccess = assignment.userId === userId || 
-                   (assignment.clientEmail && user?.email === assignment.clientEmail);
+                   (assignment.clientEmail && user?.email === assignment.clientEmail) ||
+                   (!assignment.clientEmail && assignment.userId === userId);
   console.log('🎯 ASSIGNMENT ACCESS DEBUG: Has access:', hasAccess);
   
   if (!hasAccess) {
