@@ -90,6 +90,7 @@ interface Assignment {
   description?: string;
   therapistName: string;
   dueDate?: string;
+  metadata?: any;
   progress: {
     totalItems: number;
     completedItems: number;
@@ -105,6 +106,8 @@ interface AssignmentItem {
   phonetic?: string;
   definition?: string;
   difficulty?: string;
+  word1?: string;
+  word2?: string;
   isCompleted: boolean;
   lastScore?: number;
   bestScore?: number;
@@ -283,7 +286,7 @@ const AssignmentPractice: React.FC = () => {
     const shouldAutoAdvance = newAttempts >= 3 || score >= 80;
     
     if (shouldAutoAdvance) {
-      setCompletedItems(prev => new Set([...prev, itemId]));
+      setCompletedItems(prev => new Set(Array.from(prev).concat([itemId])));
       
       // Wait 3 seconds before auto-advancing
       setTimeout(() => {
@@ -1088,17 +1091,17 @@ const AssignmentPractice: React.FC = () => {
                     itemId: matchedItem?.id,
                     word: wordResult.word,
                     animationPlays: wordResult.animationPlays,
-                    wordPractice: wordResult.wordPracticeAttempts.map((attempt, index) => ({
+                    wordPractice: wordResult.wordPracticeAttempts.map((attempt: any, index: number) => ({
                       attemptNumber: index + 1,
                       pronunciationScore: attempt.score,
                       accuracyScore: attempt.accuracy,
                       fluencyScore: attempt.fluency,
                       completenessScore: attempt.completeness
                     })),
-                    phrasePractice: wordResult.phraseResults.map((phraseResult, phraseIndex) => ({
+                    phrasePractice: wordResult.phraseResults.map((phraseResult: any, phraseIndex: number) => ({
                       phraseIndex: phraseIndex + 1,
                       phrase: phraseResult.phrase,
-                      attempts: phraseResult.attempts.map((attempt, attemptIndex) => ({
+                      attempts: phraseResult.attempts.map((attempt: any, attemptIndex: number) => ({
                         attemptNumber: attemptIndex + 1,
                         pronunciationScore: attempt.score,
                         accuracyScore: attempt.accuracy,
@@ -1144,7 +1147,7 @@ const AssignmentPractice: React.FC = () => {
       <UserCompletionReport 
         assignmentId={assignmentId!} 
         assignmentTitle={assignment?.title || 'Assignment'} 
-        onDismiss={() => window.location.href = '/my-words'} 
+        onContinue={() => { window.location.href = '/my-words'; }} 
       />
     );
   }
@@ -1163,16 +1166,16 @@ const AssignmentPractice: React.FC = () => {
                 </Button>
               </Link>
               <div>
-                <h1 className="text-xl font-semibold">{assignment.title}</h1>
+                <h1 className="text-xl font-semibold">{assignment?.title}</h1>
                 <div className="flex items-center space-x-4 text-sm text-gray-600">
                   <div className="flex items-center">
                     <User className="w-4 h-4 mr-1" />
-                    {assignment.therapistName}
+                    {assignment?.therapistName}
                   </div>
-                  {assignment.dueDate && (
+                  {assignment?.dueDate && (
                     <div className="flex items-center">
                       <Clock className="w-4 h-4 mr-1" />
-                      Due {new Date(assignment.dueDate).toLocaleDateString()}
+                      Due {new Date(assignment!.dueDate!).toLocaleDateString()}
                     </div>
                   )}
                 </div>

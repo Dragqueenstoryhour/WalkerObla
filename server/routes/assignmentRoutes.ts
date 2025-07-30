@@ -179,8 +179,8 @@ router.post('/', protect, catchAsync(async (req: any, res) => {
         clientName: clientName || 'Student',
         therapistName,
         assignmentTitle: parsedAssignmentData.title,
-        assignmentDescription: parsedAssignmentData.description || undefined,
-        dueDate: parsedAssignmentData.dueDate?.toISOString() || undefined,
+        assignmentDescription: parsedAssignmentData.description || 'No description provided',
+        dueDate: parsedAssignmentData.dueDate?.toISOString() || 'No due date set',
         assignmentId: assignment.id,
         baseUrl
       });

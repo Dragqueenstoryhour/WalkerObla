@@ -125,7 +125,7 @@ export default function InvitationLanding() {
         throw new Error(data.error || 'Failed to create account');
       }
 
-      const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
+      const { data: signInData, error: signInError } = await supabaseClient!.auth.signInWithPassword({
         email: invitation!.clientEmail,
         password: password
       });
