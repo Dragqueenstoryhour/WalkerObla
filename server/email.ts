@@ -24,9 +24,9 @@ async function callLoops(emailType: string, data: any): Promise<boolean> {
     // Map email types to transactional IDs (these will need to be created in Loops dashboard)
     const transactionalIds = {
       'contact': process.env.LOOPS_CONTACT_TEMPLATE_ID || 'contact-form',
-      'client_invitation': process.env.LOOPS_CLIENT_INVITATION_TEMPLATE_ID || 'client-invitation',
-      'assignment_notification': process.env.LOOPS_ASSIGNMENT_TEMPLATE_ID || 'assignment-notification',
-      'password_setup_invitation': process.env.LOOPS_PASSWORD_SETUP_TEMPLATE_ID || 'password-setup'
+      'client_invitation': process.env.LOOPS_CLIENT_INVITATION_TEMPLATE_ID || 'cmdp2u4m601rq430jt58dl81o',
+      'assignment_notification': process.env.LOOPS_ASSIGNMENT_TEMPLATE_ID || 'cmdp2sl6n09qq2i0i3u5stj4q',
+      'password_setup_invitation': process.env.LOOPS_PASSWORD_SETUP_TEMPLATE_ID || 'cmdp3ucdt08460h0ieaiqez0l'
     };
 
     const transactionalId = transactionalIds[emailType as keyof typeof transactionalIds];

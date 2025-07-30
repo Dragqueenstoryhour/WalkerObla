@@ -129,7 +129,7 @@ router.post('/clients', protect, catchAsync(async (req: any, res) => {
               expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
             });
             
-            const baseUrl = process.env.CLIENT_BASE_URL || 'http://localhost:3001';
+            const baseUrl = process.env.CLIENT_BASE_URL || 'https://www.oblaai.com';
             
             await sendClientInvitation({
               clientEmail: existingUser.email!,
@@ -173,7 +173,7 @@ router.post('/clients', protect, catchAsync(async (req: any, res) => {
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
         });
         
-        const baseUrl = process.env.CLIENT_BASE_URL || 'http://localhost:3001';
+        const baseUrl = process.env.CLIENT_BASE_URL || 'https://www.oblaai.com';
         
         await sendClientInvitation({
           clientEmail: existingUser.email!,
@@ -250,7 +250,7 @@ router.post('/clients', protect, catchAsync(async (req: any, res) => {
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
       });
       
-      const baseUrl = process.env.CLIENT_BASE_URL || 'http://localhost:3001';
+      const baseUrl = process.env.CLIENT_BASE_URL || 'https://www.oblaai.com';
       
       await sendClientInvitation({
         clientEmail: newUser.email!,
